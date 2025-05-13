@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   ipfs:
     build: .
@@ -9,19 +8,99 @@ services:
       - ipns_fuse:/ipns
     environment:
       - IPFS_PATH=/data/ipfs
+      # Enable CORS for the API and Gateway
+      - IPFS_PROFILE=server
+      - IPFS_GATEWAY_WRITABLE=true
+      # Configure CORS headers through environment variables
+      - IPFS_API_CORS_ALLOWED_ORIGINS=["*"]
+      - IPFS_API_CORS_ALLOWED_METHODS=["PUT", "POST", "GET"]
+      - IPFS_GATEWAY_CORS_ALLOWED_ORIGINS=["*"]
+      - IPFS_GATEWAY_CORS_ALLOWED_METHODS=["GET", "POST"]
     ports:
-      # Swarm listens on all interfaces, so is remotely reachable.
+      # Swarm ports for peer discovery and data transfer
       - 4001:4001/tcp
       - 4001:4001/udp
       
-      # The following ports only listen on the loopback interface, so are not remotely reachable by default.
-      # If you want to override these or add more ports, see https://docs.docker.com/compose/extends/ .
+      # API port (localhost only)
+      # - 127.0.0.1:5001:5001
       
-      # API port, which includes admin operations, so you probably don't want this remotely accessible.
-      - 127.0.0.1:5001:5001
+      # HTTP Gateway (localhost only)
+      # - 127.0.0.1:8080:8080
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
       
-      # HTTP Gateway
-      - 127.0.0.1:8080:8080
+      # API service configuration
+      - "traefik.http.routers.ipfs-api.rule=Host(`ipfs.prometheusags.ai`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.ipfs-api.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-api.tls.certresolver=myresolver"
+      - "traefik.http.services.ipfs-api.loadbalancer.server.port=5001"
+      
+      # Gateway service configuration
+      - "traefik.http.routers.ipfs-gateway.rule=Host(`ipfs.prometheusags.ai`) && (PathPrefix(`/ipfs`) || PathPrefix(`/ipns`))"
+      - "traefik.http.routers.ipfs-gateway.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-gateway.tls.certresolver=myresolver"
+      - "traefik.http.services.ipfs-gateway.loadbalancer.server.port=8080"
+      
+      # WebUI service configuration
+      - "traefik.http.routers.ipfs-webui.rule=Host(`ipfs.prometheusags.ai`) && PathPrefix(`/webui`)"
+      - "traefik.http.routers.ipfs-webui.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-webui.tls.certresolver=myresolver"
+      - "traefik.http.services.ipfs-webui.loadbalancer.server.port=5001"
+      
+      # Root path redirects to WebUI
+      - "traefik.http.routers.ipfs-root.rule=Host(`ipfs.prometheusags.ai`) && Path(`/`)"
+      - "traefik.http.routers.ipfs-root.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-root.tls.certresolver=myresolver"
+      - "traefik.http.routers.ipfs-root.middlewares=redirect-to-webui"
+      - "traefik.http.middlewares.redirect-to-webui.redirectregex.regex=^https://ipfs.prometheusags.ai/?$"
+      - "traefik.http.middlewares.redirect-to-webui.redirectregex.replacement=https://ipfs.prometheusags.ai/webui"
+      - "traefik.http.middlewares.redirect-to-webui.redirectregex.permanent=true"
+      
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.ipfs-redirect.rule=Host(`ipfs.prometheusags.ai`)"
+      - "traefik.http.routers.ipfs-redirect.entrypoints=web"
+      - "traefik.http.routers.ipfs-redirect.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    networks:
+      - traefik_network
+    # Initialize IPFS repo before starting the daemon
+    entrypoint: >
+      /bin/sh -c "
+        # Check if the repository exists, if not initialize it
+        if [ ! -f /data/ipfs/config ]; then
+          echo 'Initializing IPFS repository...'
+          ipfs init --profile=server
+          
+          # Set default bootstrap nodes
+          ipfs bootstrap add --default
+        fi
+        
+        # Configure IPFS
+        echo 'Configuring IPFS...'
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '[\"*\"]'
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '[\"PUT\", \"POST\", \"GET\"]'
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '[\"Authorization\"]'
+        ipfs config --json API.HTTPHeaders.Access-Control-Expose-Headers '[\"Location\"]'
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '[\"true\"]'
+        ipfs config --json Addresses.Gateway '[\"/ip4/0.0.0.0/tcp/8080\"]'
+        ipfs config --json Addresses.API '[\"/ip4/0.0.0.0/tcp/5001\"]'
+        
+        # WebUI and Gateway configuration
+        ipfs config --json Gateway.PublicGateways '{\"/ip4/0.0.0.0/tcp/8080\": {\"Paths\": [\"/ipfs\", \"/ipns\"], \"UseSubdomains\": false}}'
+        ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Origin '[\"*\"]'
+        ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Methods '[\"GET\", \"POST\"]'
+        ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Headers '[\"X-Requested-With\", \"Range\", \"User-Agent\"]'
+        ipfs config --json Gateway.RootRedirect '\"/webui\"'
+        
+        # Start the daemon
+        echo 'Starting IPFS daemon...'
+        exec ipfs daemon --migrate=true
+      "
+
+networks:
+  traefik_network:
+    external: true  # This assumes your Traefik service is on an external network
 volumes:
   ipfs_path:
   ipfs_fuse:
