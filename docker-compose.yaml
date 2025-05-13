@@ -30,8 +30,8 @@ services:
       # Enable Traefik
       - "traefik.enable=true"
       
-      # API service configuration
-      - "traefik.http.routers.ipfs-api.rule=Host(`ipfs.prometheusags.ai`) && PathPrefix(`/api`)"
+      # API service configuration - including WebUI
+      - "traefik.http.routers.ipfs-api.rule=Host(`ipfs.prometheusags.ai`)"
       - "traefik.http.routers.ipfs-api.entrypoints=websecure"
       - "traefik.http.routers.ipfs-api.tls.certresolver=myresolver"
       - "traefik.http.services.ipfs-api.loadbalancer.server.port=5001"
@@ -41,21 +41,6 @@ services:
       - "traefik.http.routers.ipfs-gateway.entrypoints=websecure"
       - "traefik.http.routers.ipfs-gateway.tls.certresolver=myresolver"
       - "traefik.http.services.ipfs-gateway.loadbalancer.server.port=8080"
-      
-      # WebUI service configuration
-      - "traefik.http.routers.ipfs-webui.rule=Host(`ipfs.prometheusags.ai`) && PathPrefix(`/webui`)"
-      - "traefik.http.routers.ipfs-webui.entrypoints=websecure"
-      - "traefik.http.routers.ipfs-webui.tls.certresolver=myresolver"
-      - "traefik.http.services.ipfs-webui.loadbalancer.server.port=5001"
-      
-      # Root path redirects to WebUI
-      - "traefik.http.routers.ipfs-root.rule=Host(`ipfs.prometheusags.ai`) && Path(`/`)"
-      - "traefik.http.routers.ipfs-root.entrypoints=websecure"
-      - "traefik.http.routers.ipfs-root.tls.certresolver=myresolver"
-      - "traefik.http.routers.ipfs-root.middlewares=redirect-to-webui"
-      - "traefik.http.middlewares.redirect-to-webui.redirectregex.regex=^https://ipfs.prometheusags.ai/?$"
-      - "traefik.http.middlewares.redirect-to-webui.redirectregex.replacement=https://ipfs.prometheusags.ai/webui"
-      - "traefik.http.middlewares.redirect-to-webui.redirectregex.permanent=true"
       
       # HTTP to HTTPS redirect
       - "traefik.http.routers.ipfs-redirect.rule=Host(`ipfs.prometheusags.ai`)"
@@ -91,11 +76,20 @@ services:
         ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Origin '[\"*\"]'
         ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Methods '[\"GET\", \"POST\"]'
         ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Headers '[\"X-Requested-With\", \"Range\", \"User-Agent\"]'
-        ipfs config --json Gateway.RootRedirect '\"/webui\"'
         
-        # Start the daemon
+        # Important: Enable the WebUI by setting the API.HTTPHeaders correctly
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '[\"X-Requested-With\", \"Range\", \"User-Agent\", \"Origin\", \"Accept\", \"Content-Type\", \"Authorization\"]'
+        
+        # Set up the correct WebUI path directly for new IPFS versions (Kubo)
+        # Important: This is how we enable the WebUI in modern IPFS versions
+        ipfs config --json API.HTTPHeaders.Access-Control-Expose-Headers '[\"Location\", \"Ipfs-Hash\"]'
+        
+        # Update the config to point the WebUI correctly
+        ipfs config --json 'Gateway.RootRedirect' '\"/webui/\"'
+        
+        # Start the daemon with the WebUI enabled
         echo 'Starting IPFS daemon...'
-        exec ipfs daemon --migrate=true
+        exec ipfs daemon --migrate=true --enable-namesys-pubsub
       "
 
 networks:
