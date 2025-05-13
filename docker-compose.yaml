@@ -21,11 +21,11 @@ services:
       - 4001:4001/tcp
       - 4001:4001/udp
       
-      # API port (localhost only)
-      # - 127.0.0.1:5001:5001
+      # API port (localhost only for security)
+      - 127.0.0.1:5001:5001
       
-      # HTTP Gateway (localhost only)
-      # - 127.0.0.1:8080:8080
+      # HTTP Gateway (on a different port to avoid conflicts)
+      - 127.0.0.1:8089:8089
     labels:
       # Enable Traefik
       - "traefik.enable=true"
@@ -33,20 +33,28 @@ services:
       # API service configuration - including WebUI
       - "traefik.http.routers.ipfs-api.rule=Host(`ipfs.prometheusags.ai`)"
       - "traefik.http.routers.ipfs-api.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-api.tls=true"
       - "traefik.http.routers.ipfs-api.tls.certresolver=myresolver"
       - "traefik.http.services.ipfs-api.loadbalancer.server.port=5001"
       
-      # Gateway service configuration
+      # Gateway service configuration with the new port
       - "traefik.http.routers.ipfs-gateway.rule=Host(`ipfs.prometheusags.ai`) && (PathPrefix(`/ipfs`) || PathPrefix(`/ipns`))"
       - "traefik.http.routers.ipfs-gateway.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-gateway.tls=true"
       - "traefik.http.routers.ipfs-gateway.tls.certresolver=myresolver"
-      - "traefik.http.services.ipfs-gateway.loadbalancer.server.port=8080"
+      - "traefik.http.services.ipfs-gateway.loadbalancer.server.port=8089"
       
       # HTTP to HTTPS redirect
       - "traefik.http.routers.ipfs-redirect.rule=Host(`ipfs.prometheusags.ai`)"
       - "traefik.http.routers.ipfs-redirect.entrypoints=web"
       - "traefik.http.routers.ipfs-redirect.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+      
+      # Priority setting to ensure correct routing order
+      - "traefik.http.routers.ipfs-api.priority=100"
+      - "traefik.http.routers.ipfs-gateway.priority=90"
+      - "traefik.http.routers.ipfs-redirect.priority=10"
     networks:
       - traefik_network
     # Initialize IPFS repo before starting the daemon
@@ -68,11 +76,13 @@ services:
         ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '[\"Authorization\"]'
         ipfs config --json API.HTTPHeaders.Access-Control-Expose-Headers '[\"Location\"]'
         ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '[\"true\"]'
-        ipfs config --json Addresses.Gateway '[\"/ip4/0.0.0.0/tcp/8080\"]'
+        
+        # Change the gateway port to avoid conflicts
+        ipfs config --json Addresses.Gateway '[\"/ip4/0.0.0.0/tcp/8089\"]'
         ipfs config --json Addresses.API '[\"/ip4/0.0.0.0/tcp/5001\"]'
         
         # WebUI and Gateway configuration
-        ipfs config --json Gateway.PublicGateways '{\"/ip4/0.0.0.0/tcp/8080\": {\"Paths\": [\"/ipfs\", \"/ipns\"], \"UseSubdomains\": false}}'
+        ipfs config --json Gateway.PublicGateways '{\"/ip4/0.0.0.0/tcp/8089\": {\"Paths\": [\"/ipfs\", \"/ipns\"], \"UseSubdomains\": false}}'
         ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Origin '[\"*\"]'
         ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Methods '[\"GET\", \"POST\"]'
         ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Headers '[\"X-Requested-With\", \"Range\", \"User-Agent\"]'
@@ -81,7 +91,6 @@ services:
         ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '[\"X-Requested-With\", \"Range\", \"User-Agent\", \"Origin\", \"Accept\", \"Content-Type\", \"Authorization\"]'
         
         # Set up the correct WebUI path directly for new IPFS versions (Kubo)
-        # Important: This is how we enable the WebUI in modern IPFS versions
         ipfs config --json API.HTTPHeaders.Access-Control-Expose-Headers '[\"Location\", \"Ipfs-Hash\"]'
         
         # Update the config to point the WebUI correctly
