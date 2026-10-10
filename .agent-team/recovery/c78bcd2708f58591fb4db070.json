@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "file": ".opencode/agents/ipfs-agent-architect.md",
+      "before": null,
+      "afterSha256": "d5629171eaa1bc1e299f72d407bc6c5a6b3e217f47b9c64ebc4a000ca73b1378"
+    },
+    {
+      "file": ".opencode/agents/mcp-server-engineer.md",
+      "before": null,
+      "afterSha256": "bd0d9d06e06190ab76bf8c1063d206a3335b4f6728d371a1d867fb84bc9a980b"
+    },
+    {
+      "file": ".opencode/agents/skills-plugin-specialist.md",
+      "before": null,
+      "afterSha256": "1c30e2286fa3582c275d96c62b6047605711c0ba3306af92332666a4d463cab8"
+    },
+    {
+      "file": ".opencode/agents/ui-ux-engineer.md",
+      "before": null,
+      "afterSha256": "c215df32de580c7beb503a5d1e505c659d9dea16b9f52a8395f659abe87c9191"
+    },
+    {
+      "file": ".opencode/agents/security-reviewer.md",
+      "before": null,
+      "afterSha256": "d277bed109e23c4418679e9426844c11c9aeaaf2d03696dcebe726c81f11f9e2"
+    },
+    {
+      "file": ".opencode/agents/reviewer.md",
+      "before": null,
+      "afterSha256": "fbb65855051f7b3c3b6ec67d2181d832f5c05dce5f4630ae7abf1d5d80bfdb98"
+    },
+    {
+      "file": ".agent-team/project-routing.json",
+      "before": "{\n  \"schemaVersion\": 1,\n  \"activeTeam\": \"kubo-ipfs-agentic\",\n  \"manifest\": \".agent-team/kubo-ipfs-agentic/team.json\",\n  \"target\": \"kimi\",\n  \"nativeDefinitions\": [\n    \".kimi-code/agents/ipfs-agent-architect.md\",\n    \".kimi-code/agents/mcp-server-engineer.md\",\n    \".kimi-code/agents/skills-plugin-specialist.md\",\n    \".kimi-code/agents/ui-ux-engineer.md\",\n    \".kimi-code/agents/security-reviewer.md\",\n    \".kimi-code/agents/reviewer.md\"\n  ],\n  \"instructionFiles\": [\n    \"AGENTS.md\",\n    \"CLAUDE.md\"\n  ],\n  \"delegation\": \"native-definitions\",\n  \"limitations\": [\n    \"Native definition presence is not live invocation evidence. The active harness owns permissions, models, concurrency and delegation.\",\n    \"When delegation is unavailable, use selected role instructions sequentially and report it; builder-context review is not independent.\",\n    \"Zed external ACP agents use their native configuration; Zed parallel threads are not an automatic delegation API.\"\n  ]\n}\n",
+      "afterSha256": "429456b4d5ab0fbe852854b3ad324b9e104ecdf38c42ff4c3609b48674d2730f"
+    }
+  ]
+}

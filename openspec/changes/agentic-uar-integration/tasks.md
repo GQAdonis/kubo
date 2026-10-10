@@ -1,0 +1,12 @@
+# Tasks: agentic-uar-integration
+
+Plan reference: `.kbd-orchestrator/phases/ipfs-mcp-server/plan.md` (plan revision 2), section TASK MODEL ASSIGNMENTS, phase path `ipfs-mcp-server`, change ID `agentic-uar-integration`, backend task IDs 1.1, 1.2, 1.3, 1.4. Route, model and prerequisites (every task requires PR-1) come from those rows only.
+Change-level prerequisites (plan revision 2): every task in this change also requires completion of: `uar-integration-spike`. Scheduled in Round 7.
+
+## 1. Topology B (conditional)
+
+- [ ] 1.1 DEFERRED (unmet; topology-B gate NO-GO, ADR-0008). Write the UAR profile in `mcp/uar/profile/` with the safe settings and HTTP-only `mcp.json`. Verify: a checklist test asserts each safe setting, no stdio entry and no reserved port
+- [ ] 1.2 DEFERRED (unmet; topology-B gate NO-GO, ADR-0008). Write the `kind: uar` principal snippet and pin the minimum UAR version with the check-uar refusal test. The pin is `minVersion`, `settingsPath` and `pinnedFrom` in `mcp/contract/agentic/uar-preflight.json`, set together by the architect from `mcp/uar/spike/REPORT.md` (ADR-0007); `mcp/uar/profile/` references it and holds no copy. Verify: the contract validator accepts the snippet, and an older card version is refused
+- [ ] 1.3 DEFERRED (unmet; topology-B gate NO-GO, ADR-0008). Add end-to-end tests against the published UAR release: AG-UI and A2A reads, prompt-gated writes, loopback-only network, agent card path and task states. Verify: `make build && go test ./test/cli/... -run TestMCPUAR -v` passes against the published artifact
+- [ ] 1.4 DEFERRED (unmet; topology-B gate NO-GO, ADR-0008). Write `mcp/uar/profile/README.md` with numbered steps from published artifacts and the topology-B limitations. Verify: the step count is recorded and every step references a published artifact
+- [ ] 1.5 DEFERRED (unmet; topology-B gate NO-GO, ADR-0008). Moved from `mcp-llm-proxy-loop` (Round 6): when the topology-A LLM backend is a UAR instance (its agent card answers at the backend's base URL), verify UAR's effective upstream model provider per agent session with the `check-uar` settings read, and send no `contentEgress` result to the backend unless `llm.provider_host` is `local`, `disabled` or covered by the principal's `egress_ack`; unreadable settings refuse `contentEgress` results under `check: verify`. Verify: unit tests with recorded settings from the pinned release show a remote upstream not in `egress_ack` gets the structured refusal, and an unreadable settings read refuses

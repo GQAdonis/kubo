@@ -1,0 +1,47 @@
+{
+  "mode": "artifact",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan omits required Kimi Code plugin/marketplace packaging despite G5 explicitly requiring Kimi Code.",
+      "evidence": "Goal G5 requires \"packaged as plugins and marketplaces for Claude Code, Codex, OpenCode and Kimi Code\", but the plan cuts it: \"Kimi plugin packaging is cut this phase\" and mcp-plugin-marketplaces covers only \"Claude Code, Codex and OpenCode.\"",
+      "suggested_fix": "Add a Kimi Code plugin/marketplace change or explicitly revise the goal/scope with an approved waiver before planning execution."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The execution order schedules work before its stated dependency on operator approval is satisfied.",
+      "evidence": "mcp-adrs-and-team-ownership task 1.5 has prerequisite \"PR-1\" and change details include updating team ownership and granting root go.mod/go.sum paths; Round 1 runs \"mcp-tool-contract\", \"mcp-adrs-and-team-ownership\", and \"webmcp-host-spike\" in parallel, while mcp-tool-contract task 1.5 changes root dependencies via \"google/jsonschema-go via go get + make mod_tidy\" before the ownership grant in 1.5 can complete.",
+      "suggested_fix": "Make the approval/ownership grant an initial serial prerequisite before any change that touches newly governed paths or root go.mod/go.sum."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan conflicts with the project constraint that AGENTS.md changes ship separately.",
+      "evidence": "The constraint says \"AGENTS.md changes ship in their own PR, never alongside code\", while the plan says \"No separate AGENTS.md commit task\" and \"Operator approval and commit including AGENTS.md.\"",
+      "suggested_fix": "Either remove AGENTS.md from the final mixed commit or record a formal constraint waiver outside the plan mechanism that the phase boundary can enforce."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "Acceptance for the cross-family review gate is ambiguous because the plan allows proceeding when the required judge prerequisite is unresolved.",
+      "evidence": "G7 requires \"independent security and quality review at the phase boundary\" and phase-boundary-review task 1.4 depends on \"PR-3\"; the risks section states \"If PR-3 stays unresolved, the phase boundary has same-family review only, and the reflection must say so,\" which contradicts treating the cross-family judge as part of the phase boundary gate.",
+      "suggested_fix": "Make PR-3 blocking for phase completion or define an explicit approved fallback review route with acceptance criteria before execution."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

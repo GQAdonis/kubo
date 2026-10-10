@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "mcp/webmcp/spike/index.html"
+        ],
+        "createdAt": "2026-10-09T13:07:54.281Z",
+        "reason": "Promethity identity v1 light-theme tokens (Ash #F5F2EE, Paper #FBF9F6) from /Users/gqadonis/Projects/promethity/branding; operator chose the Promethity brand for this product (PRODUCT.md); page defaults to the brand's dark Char ground"
+      }
+    ]
+  }
+}

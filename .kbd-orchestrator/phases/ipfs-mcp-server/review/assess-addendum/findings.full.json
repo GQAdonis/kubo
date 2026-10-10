@@ -1,0 +1,85 @@
+{
+  "mode": "decision",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "decision_fields.missing_fields",
+      "claim": "The parsed decision is unfalsifiable and has no stated assumptions at the decision-field level, despite being explicitly conditional.",
+      "evidence": "`decision_fields.missing_fields` contains `[\"assumptions\", \"falsifier\"]`; `decision_fields.falsifier` is `null`; `decision_fields.assumptions` is `[]`; the parsed decision says: \"This principle is conditional on the assumptions above. Every falsifier defers by default rather than shipping a weaker result.\"",
+      "suggested_fix": "Populate the decision fields with the load-bearing assumptions and the concrete falsifiers from the addendum, or make the committed decision text self-contained with measurable falsifiers."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "decision_document / Orchestrator adjudication vs DECISION",
+      "claim": "The document contains a superseding adjudication that contradicts the stated decision, so the decision being committed is internally inconsistent.",
+      "evidence": "The DECISION says: \"UAR owns the agent loop, the LLM client, AG-UI/A2A, embeddings and SurrealDB. Kubo grows no LLM client, no vector store and no chat backend.\" Later, the unresolved/adjudicated finding says: \"Provisional decision of record pending the operator's answer to question 1: G9 = (a) AG-UI + A2A endpoints in `ipfs mcp`...; G10 = L3, `ipfs mcp` proxies LLM calls to an operator-configured UAR instance or OpenAI-compatible server... The plan must not treat (d) as decided.\"",
+      "suggested_fix": "Rewrite the DECISION section to reflect the adjudicated decision of record, or remove/supersede the adjudication with a dated rationale for reverting to UAR ownership."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "decision_document / Unresolved review findings",
+      "claim": "A critical upheld finding says the addendum's own scoring method excludes the option it selects, yet the selected UAR-hosted architecture remains in the decision text.",
+      "evidence": "The carried finding states: \"Applied as written, the addendum's own scoring method excludes the option it selects... With (d) excluded... the decision of record flips to (a).\" The orchestrator adjudication says: \"CRITICAL... upheld... The plan must not treat (d) as decided.\" But the DECISION still says: \"G9: (d) UAR-hosted AG-UI and A2A...\"",
+      "suggested_fix": "Either change G9 to option (a) in `ipfs mcp`, or explicitly amend the scoring method and re-score before selecting (d)."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "decision_document / G12 and cross-model adjudication",
+      "claim": "The decision does not satisfy the original G12 requirement for both embedded and remote SurrealDB modes, and this defect is already upheld in the document.",
+      "evidence": "Original intent G12 requires \"stored in SurrealDB with vector search, supporting both embedded and remote SurrealDB modes\". The decision says: \"G12: E1, UAR owns embeddings and SurrealDB\" and refuses Kubo embedding paths. The cross-model adjudication says: \"G12 not met for embedded + remote SurrealDB: upheld. Plan revision 2 must deliver both modes concretely and state the mechanism for each.\"",
+      "suggested_fix": "Specify concrete embedded and remote SurrealDB delivery mechanisms, acceptance tests, and configuration paths, or mark G12 unmet rather than decided."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "decision_document / KUBO-SIDE ENFORCEMENT",
+      "claim": "The claimed no-egress guarantee is knowingly partial because stdio-spawned UAR is outside enforcement, contradicting the original G12 no-content-leaves-machine requirement.",
+      "evidence": "Original intent G12 requires \"no content leaves the machine without explicit operator configuration\". The addendum says: \"No node content reaches a remote model without operator configuration | Yes, over HTTP... No over stdio\" and \"G10/G12 partially met: met over HTTP; the stdio-spawned UAR path is documented as unsupported for the egress guarantee.\" The cross-model adjudication says this finding is \"upheld\".",
+      "suggested_fix": "Forbid stdio-spawned UAR for any content-egress-capable topology, or make the committed decision explicitly state that G12 is only partially met and not claim full no-egress compliance."
+    },
+    {
+      "severity": "WARNING",
+      "file": "decision_document / KUBO-SIDE ENFORCEMENT item 3",
+      "claim": "The out-of-band confirmation mechanism is treated as a human gate but can be reached by same-user local processes, including an agent runtime with shell-capable tools.",
+      "evidence": "The decision claims: \"A human confirms every node write | Yes\" and proposes `ipfs mcp confirm <id>` via \"a local control socket under the user's runtime directory, mode 0600\" or a loopback page. The unresolved review finding, upheld by adjudication, says UAR has `terminal_exec` and that \"mode 0600 admits every process of the same user\"; adjudication requires \"a human-presence check\" and refusing shell-capable tools.",
+      "suggested_fix": "Add a human-presence factor and an acceptance test where the agent attempts to self-confirm; make `check-uar` refuse shell-capable tools for write principals."
+    },
+    {
+      "severity": "WARNING",
+      "file": "decision_document / KUBO-SIDE ENFORCEMENT item 4",
+      "claim": "`check-uar` is relied on as an enforcement control even though its critical settings fields are unverified and runtime settings can change after startup.",
+      "evidence": "The enforcement section says the settings fields for effective model, embedders and governance state are \"[unverified]\" and that preflight \"runs automatically at startup\". The upheld review finding states that UAR exposes runtime settings update and that \"refuses unsafe instances\" holds only at the moment of the check.",
+      "suggested_fix": "Re-check effective settings before each content-egress or write call, fail closed on drift, and remove claims that startup preflight alone refuses unsafe instances."
+    },
+    {
+      "severity": "WARNING",
+      "file": "decision_document / ASSUMPTIONS AND FALSIFIERS",
+      "claim": "The UAR delivery gate can pass on merged source code even when no installable artifact contains the required fixes.",
+      "evidence": "A9.1 falsifier checks whether items are \"merged on UAR `main` (checked by commit or PR state)\", while A10.2/N2 require setup \"using only published artifacts\". The upheld adjudication says: \"Only items in a published, installable UAR artifact count as delivered.\"",
+      "suggested_fix": "Change all UAR dependency gates to require a published tag/image/package digest and pin the minimum UAR version in the shipped profile."
+    },
+    {
+      "severity": "WARNING",
+      "file": "decision_document / G11",
+      "claim": "The preferred chat UI keeps agent chat in the admin-privileged Web UI origin while the document acknowledges this may be the less secure option and is operator-preference dependent.",
+      "evidence": "The decision chooses \"U2, a React 19 chat island in the Web UI fork\". The facts say \"The Web UI origin is admin-privileged\" and \"Kubo sets no CSP\"; risks say \"an XSS in the island is still admin RPC\"; G11 scoring says U3 wins if security is weighted higher and \"Keeping the chat out of the admin origin is a legitimate operator preference\".",
+      "suggested_fix": "Make Desktop-only/out-of-admin-origin the default unless the operator explicitly accepts the admin-origin risk, or add CSP/isolation requirements as blocking acceptance criteria."
+    },
+    {
+      "severity": "WARNING",
+      "file": "decision_document / G10 ASSUMPTIONS",
+      "claim": "The setup-cost falsifier threshold is arbitrary and can determine whether UAR is accepted without a stated basis.",
+      "evidence": "A10.2 uses \"more than 30 minutes or more than 15 operator steps\" as the falsifier. Operator question 11 asks whether this is \"the right falsifier, or do you want a different number?\", showing the threshold has no settled source.",
+      "suggested_fix": "Tie the threshold to an operator-approved requirement or prior install benchmark before using it as a GO/NO-GO gate."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

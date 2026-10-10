@@ -40,3 +40,16 @@ docs/examples/go-ipfs-as-a-library/example-folder/Qm*
 /parts
 /stage
 /prime
+
+# prometheus-context-bootstrap
+.prometheus/.writer.lock
+.prometheus/.review-pending
+.claude/settings.json.bak.*
+
+# Prebuilt third-party skill binaries (no license file shipped; fetched locally, not redistributed)
+.agents/skills/impeccable/scripts/bin/
+.claude/skills/impeccable/scripts/bin/
+.opencode/skills/impeccable/scripts/bin/
+
+# Python bytecode from docs tooling
+__pycache__/

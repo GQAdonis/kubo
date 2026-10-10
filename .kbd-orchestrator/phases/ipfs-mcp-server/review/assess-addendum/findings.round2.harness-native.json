@@ -1,0 +1,108 @@
+{
+  "mode": "decision",
+  "verdict": "BLOCK",
+  "judge_model": "anthropic/claude-opus-5-5 (harness-native fresh-context subagent)",
+  "isolation_mode": "harness-native",
+  "producer_model": "claude-opus-5-5",
+  "cross_model_check": "same-model-collision",
+  "confidence": 70,
+  "what_would_change_this": "(1) A re-score of G9 (d) and G12 E1 goal fit under the addendum's own rule 'N1 items are not credited', showing goal fit stays above 2 with a stated reason why a G9 that A9.1 reports as 'unmet' still scores 4; or an explicit amendment that the goal-fit gate is evaluated after N1. (2) A stated mechanism by which `ipfs mcp confirm` / the loopback confirmation page proves a human rather than any same-user process, or a check-uar refusal when UAR has a code-execution tool or a non-Kubo shell-capable MCP server configured. (3) Evidence that check-uar re-checks on every call or subscribes to UAR settings changes, and can observe the bind address. Any of these would downgrade the corresponding finding.",
+  "disconfirming": [
+    "Revision 2 genuinely adds falsifiers with observable thresholds and a defer-by-default rule (assessment-addendum.md:441-486); all weighted-sum arithmetic in the four tables was recomputed and is correct, and the addendum itself reports the G9 and G11 margins as not decisive (lines 202-203, 326, 770).",
+    "UAR's terminal_exec tool is disabled by default (uar:src/config.rs:2523-2525) and its web_fetch tool blocks loopback addresses (uar:src/uar/tools/fetch_guard.rs:146, 161), so the self-confirmation path needs an operator configuration change, not UAR's out-of-box state.",
+    "The decision remains largely two-way: no daemon listener, no config/ key and no new Go dependency (line 698), so reversing to (a)/L2 later is mostly new work rather than unwinding shipped Kubo surface.",
+    "The addendum states the stdio egress gap and the 'What Kubo cannot enforce' table openly (lines 418-426) instead of hiding it."
+  ],
+  "round1_resolution": [
+    {
+      "round1_finding": "CRITICAL: no stated falsifier or assumptions; non-delivery defaulted to shipping non-conformant",
+      "status": "RESOLVED",
+      "evidence": "assessment-addendum.md:441 'The default on any falsified assumption is the safe one: the dependent changes are deferred and the goal is reported unmet.' Per-goal assumption/falsifier tables at 443-473 with observable falsifiers; A10.2 threshold 'more than 30 minutes or more than 15 operator steps' (456); G9 decision item 5 (507) 'Default on non-delivery: defer'. Residual gap in A9.1's falsifier is reported as a new WARNING."
+    },
+    {
+      "round1_finding": "CRITICAL: G10/G12 no-egress and no-default-endpoint guarantees delegated to a runtime that breaks them by default; ADR-0006 'nothing leaves the machine by default'",
+      "status": "PARTIALLY",
+      "evidence": "Resolved in part: N8 enforcement (381-435), ADR-0006 sentence replaced (671-672), stdio gap stated (422). Not resolved: the replacement enforcement, check-uar, is a startup-only check (400) against a UAR whose settings are mutable at runtime ('settings.update', PUT, NextTurn: uar:src/uar/api/administration_capabilities.rs:157), relies on settings fields marked [unverified] (401), and falls back to an operator waiver (407). ADR-0004 still says check-uar 'refuses unsafe instances' (605). See new WARNING."
+    },
+    {
+      "round1_finding": "WARNING: 'the human gate holds today' over A2A, while approval is not wired to A2A",
+      "status": "RESOLVED",
+      "evidence": "Claim removed (505 'This addendum makes no claim that it holds today'); A2A gated-write case added to N2 GO criterion 2 (478); UAR principal read-only until N2 passes (506); governance bypass documented (74-79). The replacement gate has its own defect, reported as a new WARNING."
+    },
+    {
+      "round1_finding": "WARNING: G10 reinterpreted so the non-UAR alternative also requires UAR",
+      "status": "RESOLVED",
+      "evidence": "Line 517 'G10: PENDING operator question 2'; 211 and 520-521 state L1 'narrows' G10 and the non-UAR path is 'unmet' under L1; L3 re-presented at 219-226 and 522-525."
+    },
+    {
+      "round1_finding": "WARNING: scores without weights; (d) Security and Rules fit inflated",
+      "status": "PARTIALLY",
+      "evidence": "Weights, aggregation and the goal-fit gate are now stated (141-149) and (d) is scored as-shipped vs with-N8 (195-196). But the goal-fit column is inconsistent with the stated non-crediting rule and the addendum's own A9.1/A12.1 consequences (new CRITICAL), and Kubo surface for the same N8 controls is scored 4 for G9 (196) and 5 for G12 (371)."
+    },
+    {
+      "round1_finding": "WARNING: G12 silently narrowed to UAR-routed content",
+      "status": "RESOLVED",
+      "evidence": "Line 569 'Limitation (explicit scope narrowing)', N9 opt-in hook (570-572), operator question 8 (781)."
+    },
+    {
+      "round1_finding": "SUGGESTION: pin_rm vector deletion ignores remaining pins",
+      "status": "RESOLVED",
+      "evidence": "Line 566 'vectors are deleted only if `pin ls --type=all <cid>` reports no remaining direct, recursive or indirect pin'; 567 repo_gc limited to GC-reported removals; A12.3 test (473)."
+    },
+    {
+      "round1_finding": "SUGGESTION (meta): no cross-model guarantee; judge and producer are the same model",
+      "status": "UNRESOLVED",
+      "evidence": "Round 2 is again judged by claude-opus-5-5 in a harness-native subagent against a claude-opus-5-5 producer. findings.schema.json allOf requires cross_model_check = 'verified-distinct' when mode = 'decision', so this file is expected to fail schema validation as instructed."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 196,
+      "claim": "Applied as written, the addendum's own scoring method excludes the option it selects: (d) gets G9 goal fit 4 although the rule says N1 delivery is not credited, and without N1 the addendum itself reports G9 as unmet, which by its goal-fit gate means exclusion; then (a) wins outright.",
+      "evidence": "Line 149: 'Items that need UAR-team delivery (N1) are not credited in either row.' Line 144: 'An option with goal fit at or below 2 is excluded before aggregation: it does not meet the operator's goal.' Line 447 (A9.1, no N1 delivery): 'Default: N3's A2A/AG-UI conformance tasks and any G9 conformance claim are deferred; G9 is reported unmet.' Line 426: 'UAR answers A2A and AG-UI per spec | No (UAR code) | G9 conformance unmet until N1 delivers.' Yet line 196 scores '(d) UAR-hosted, with Kubo enforcement (N8) | 4' for goal fit, while (e1), which does deliver a conformant A2A layer, is excluded at goal fit 2 (197). With (d) excluded, the remaining scores are (a) 51, (c) 49 (192, 194), so the decision of record flips to (a). The same contradiction holds for G12: E1 goal fit 4 (371), but A12.1 (471) says that without a UAR change to /api/ingest 'N7 is deferred, and G12 is unmet'. The (d) 'Time to working result 3' (196) also conflicts with Risk 1 (756): 'G9-G12 may deliver nothing in this phase'.",
+      "suggested_fix": "Either score (d) and E1 goal fit for UAR as it is without N1 (at or below 2, which excludes them and makes (a)/E3 the in-method choice), or state openly that the goal-fit gate is waived for options contingent on another team and justify why that waiver does not also apply to (e1). Record that the G9 choice of (d) is then a judgment call outside the stated method, not its output."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 425,
+      "claim": "The out-of-band confirmation is declared to guarantee that 'a human confirms every node write', but `ipfs mcp confirm <id>` and the loopback confirmation page accept any same-user local process, and UAR can run shell commands as that user when its terminal_exec tool or any shell-capable MCP server is configured; nothing in N8 or check-uar detects that.",
+      "evidence": "Line 425: 'A human confirms every node write | Yes (item 3; elicitation otherwise). | Met, independent of UAR's approval and its governance bypass.' Line 394: 'No self-confirmation. The two-step token is not accepted from such principals, because the agent could confirm by itself.' Line 396: '`ipfs mcp confirm <id>` ... through a local control socket under the user's runtime directory, mode 0600' (mode 0600 admits every process of the same user, which includes a loopback UAR). UAR ships 'terminal_exec' ('Execute a shell command and return its stdout, stderr, and exit code', uar:src/uar/tools/terminal_exec.rs:22-27), opt-in via config (uar:src/config.rs:2523-2525). The check-uar refusal list (402-406) and the shipped profile (410-416) say nothing about code-execution tools or other MCP servers in UAR's mcp.json. Line 397 also lets the chat island, which runs in the admin origin where Risk 7 (767) admits 'an XSS in the island is still admin RPC', embed the confirmation page. The confirmation acceptance test (435) would pass while this path stays open, so the gap would surface only in use.",
+      "suggested_fix": "List 'the agent runtime cannot reach the confirmation surface' as an assumption with a falsifier. Make check-uar refuse write groups when UAR reports terminal_exec or any non-Kubo MCP server with code-execution effect, pin `native_tools.terminal_exec_enabled: false` in the shipped profile, and require a human-presence factor for `confirm` (TTY check plus a code shown only on the page, or vice versa). Add an N2 case where the agent is asked to confirm its own pending write through terminal_exec."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 400,
+      "claim": "check-uar is a startup-time check against a UAR whose model, embedder and governance settings can change at runtime, and it cannot observe the bind address from a loopback client, so 'refuses unsafe instances' (ADR-0004) holds only at the moment of the check.",
+      "evidence": "Line 400: '`ipfs mcp check-uar <url>` preflight. It also runs automatically at startup for each principal marked `kind: uar`.' UAR exposes 'settings.update', 'PUT', '/api/uar/settings/{key}', Admin, NextTurn (uar:src/uar/api/administration_capabilities.rs:157), and governance follows 'the operator's stored preference' (77). Line 403: refuses when 'the bind is not loopback', but a 0.0.0.0-bound UAR answers identically on 127.0.0.1, and the settings fields are '[unverified]' (401). If they are unreadable, line 407 falls back to 'check: assert', an operator waiver. Line 605 (ADR-0004): 'a `check-uar` preflight that refuses unsafe instances.' The acceptance test (432) checks only a UAR running all defaults at once, where the unauthenticated probe alone triggers refusal.",
+      "suggested_fix": "Re-run the effective-settings check before each contentEgress or write call, or periodically with fail-closed behavior on drift (UAR exposes /api/uar/settings/drift). Drop 'bind is not loopback' from what check-uar claims unless the settings API confirms it, and add an acceptance case: JWT on, bind 0.0.0.0, remote model switched in after startup."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 447,
+      "claim": "The A9.1/A11.2/A12.1 falsifier passes when the items are merged on UAR main, but A10.2 and N2 allow only published artifacts with no source build, so the gate can report the dependency delivered while no installable UAR contains it.",
+      "evidence": "Line 447: 'By the end of Round 4, those items are not merged on UAR `main` (checked by commit or PR state)'. Line 456 (A10.2): 'using only published artifacts (Docker image or native package, no source build)'. Line 479: 'using published artifacts only'. No assumption covers a UAR release cadence or a minimum UAR version for the shipped profile.",
+      "suggested_fix": "Change the falsifier to 'contained in a published UAR release (tag or image digest) by the end of Round 4', pin that minimum UAR version in `mcp/uar/profile/`, and have check-uar refuse older versions via the agent card."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 732,
+      "claim": "The change counts do not add up: the 'New changes' table lists 10 changes but is titled 9, and 22 + 10 is 32, not the stated 31.",
+      "evidence": "Line 715: 'New changes (9, three conditional)'; rows N1, N2, N8, N3, N10, N4, N5, N6, N7, N9 (719-728) = 10. Line 732: 'The plan grows from 22 to 31 changes'.",
+      "suggested_fix": "Correct the count before plan revision 2 sizes the rounds on it."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 371,
+      "claim": "The same N8 controls are scored as costing Kubo surface for G9 but not for G12, which biases E1.",
+      "evidence": "Line 195-196: (d) Kubo surface 5 as shipped, 4 with N8. Line 370-371: E1 Kubo surface 5 both as shipped and 'with Kubo enforcement (N8 profile and preflight)'.",
+      "suggested_fix": "Score E1+N8 Kubo surface 4 for consistency (E1 still wins at 52 against 36 and 31)."
+    }
+  ]
+}
