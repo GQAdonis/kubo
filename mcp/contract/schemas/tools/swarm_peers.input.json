@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "swarm_peers input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cursor": {
+      "$ref": "../common.json#/$defs/Cursor"
+    },
+    "limit": {
+      "$ref": "../common.json#/$defs/Limit"
+    }
+  }
+}

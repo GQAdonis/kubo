@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pin_update output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "from": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "to": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "unpinned_old": {
+      "type": "boolean"
+    },
+    "warnings": {
+      "$ref": "../common.json#/$defs/Warnings"
+    }
+  },
+  "required": [
+    "from",
+    "to",
+    "unpinned_old"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_add output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "size": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "name": {
+      "type": "string"
+    },
+    "pinned": {
+      "type": "boolean"
+    },
+    "provided": {
+      "type": "boolean",
+      "description": "False when provide was false or the node has providing disabled."
+    },
+    "resource": {
+      "$ref": "../common.json#/$defs/ResourceRef"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Non-fatal warnings, for example an indexing failure."
+    }
+  },
+  "required": [
+    "cid",
+    "size",
+    "pinned",
+    "provided"
+  ]
+}

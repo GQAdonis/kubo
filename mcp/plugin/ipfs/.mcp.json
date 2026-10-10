@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ipfs": {
+      "type": "stdio",
+      "command": "ipfs",
+      "args": ["mcp"]
+    }
+  }
+}

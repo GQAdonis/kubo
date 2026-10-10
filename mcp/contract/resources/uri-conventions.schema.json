@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IPFS MCP resource URI conventions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemes": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scheme", "template", "schemaDef", "returnsUntrustedContent", "contentEgress", "listable", "description"],
+        "properties": {
+          "scheme": { "type": "string", "enum": ["ipfs", "ipns", "ui"] },
+          "template": { "type": "string", "description": "RFC 6570 URI template." },
+          "schemaDef": { "type": "string", "enum": ["IpfsUri", "IpnsUri", "UiUri"] },
+          "contentPath": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "returnsUntrustedContent": { "type": "boolean" },
+          "contentEgress": { "type": "boolean" },
+          "listable": { "type": "boolean", "description": "Listed by resources/list. Content schemes are templates only." },
+          "views": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }, "uniqueItems": true },
+          "description": { "type": "string", "minLength": 10 }
+        }
+      }
+    }
+  }
+}

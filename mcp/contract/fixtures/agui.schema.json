@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AG-UI fixture",
+  "description": "A RunAgentInput and the event sequence ipfs mcp emits for it on POST /agui. Event and field names follow the AG-UI core events and the interrupt-aware run lifecycle (https://docs.ag-ui.com/concepts/events, https://docs.ag-ui.com/concepts/interrupts, fetched 2026-10-09). Only the subset ipfs mcp emits is modeled; mcp-agui-endpoint 1.1 re-validates against the published @ag-ui/core schemas. Rules ipfs mcp follows and clients may rely on: (a) No default client endpoint: a client is configured with the /agui URL explicitly; 127.0.0.1:5050 is only the server's default listen address when HTTP is enabled, and clients may show it as a suggestion, never connect to it unconfigured. (b) The client sends the full message history, but ipfs mcp keeps the conversation per threadId in memory (idle TTL 30 minutes, at most 64 threads) and takes only the last input message, which must be a user message; client-supplied assistant and tool messages are ignored. After eviction or a restart the thread starts over. (c) Every parentMessageId of a TOOL_CALL_START names an assistant message that is in the input, or that the run introduces (TEXT_MESSAGE_START or a MESSAGES_SNAPSHOT carrying it with its toolCalls) before the first TOOL_CALL_RESULT, RUN_FINISHED or RUN_ERROR that follows; the client records that message with its toolCalls and sends it back in later history. (d) A resumed call is reported with TOOL_CALL_RESULT on the original toolCallId and is never re-emitted with TOOL_CALL_START; a declined or expired call is reported the same way with a ToolError (confirmation_declined, confirmation_expired), so every interrupt ends in a TOOL_CALL_RESULT. (e) Browser access to /agui needs the page origin in config agent.origin_allowlist (CORS). (f) A failure after RUN_STARTED ends the stream with RUN_ERROR carrying a RunErrorCode and no RUN_FINISHED; a failure before it is an HTTP error with a ToolError body and no stream (run-error-*.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["description", "provenance", "principalKind", "input", "events"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "description": { "type": "string", "minLength": 10 },
+    "provenance": {
+      "type": "string",
+      "enum": ["authored-from-spec", "recorded"],
+      "description": "authored-from-spec until mcp-agui-endpoint replaces the file with a recording from a real run."
+    },
+    "principalKind": { "type": "string", "enum": ["ui"] },
+    "input": { "$ref": "#/$defs/RunAgentInput" },
+    "events": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/Event" }
+    }
+  },
+  "$defs": {
+    "Id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "RunErrorCode": {
+      "type": "string",
+      "enum": ["max_steps", "max_tokens", "wall_clock", "backend_error", "session_busy", "session_full", "interrupt_open"],
+      "description": "Why a run that had started ended with RUN_ERROR (AG-UI's code field). Not the shared ErrorCode: max_steps, max_tokens and wall_clock are the loop limit reasons (AG-UI has no limit outcome); backend_error is a model backend or transport failure after RUN_STARTED; session_busy, session_full and interrupt_open are thread conflicts that arose after the stream began. The same conflicts before the stream are HTTP errors with the shared ErrorCode (session_busy, failed_precondition)."
+    },
+    "Message": {
+      "type": "object",
+      "required": ["id", "role"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "role": { "type": "string", "enum": ["developer", "system", "assistant", "user", "tool"] },
+        "content": { "type": "string" },
+        "toolCallId": { "$ref": "#/$defs/Id" },
+        "toolCalls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "function"],
+            "properties": {
+              "id": { "$ref": "#/$defs/Id" },
+              "type": { "const": "function" },
+              "function": {
+                "type": "object",
+                "required": ["name", "arguments"],
+                "properties": { "name": { "type": "string" }, "arguments": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "RunAgentInput": {
+      "type": "object",
+      "required": ["threadId", "runId", "messages", "tools", "context"],
+      "properties": {
+        "threadId": { "$ref": "#/$defs/Id" },
+        "runId": { "$ref": "#/$defs/Id" },
+        "parentRunId": { "$ref": "#/$defs/Id" },
+        "state": { "description": "Accepted and ignored: ipfs mcp keeps no client state." },
+        "messages": { "type": "array", "items": { "$ref": "#/$defs/Message" } },
+        "tools": {
+          "type": "array",
+          "description": "Accepted and ignored (real clients send []). ipfs mcp offers the model only the contract tools enabled for the principal; client-declared tools are never offered or executed, whatever this array holds."
+        },
+        "context": { "type": "array", "description": "Accepted and ignored." },
+        "forwardedProps": { "description": "Accepted and ignored." },
+        "resume": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Answers to the open interrupts of the previous run. resolved + {approved: true}: approve (refused with HTTP 422 when the interrupt has requires_native_prompt). resolved + {approved: false}: deny; the call is reported as confirmation_declined. resolved + {wait: true}: only for requires_native_prompt interrupts; the run stays open until the system prompt decides or the confirmation expires (confirmation.ttl), then reports the outcome on the original toolCallId. cancelled: withdraws the open interrupt and is a denial, reported as confirmation_declined, or confirmation_expired if it had already expired. A resume holds exactly one entry, for the one open interrupt of the thread (a run carries at most one interrupt, ADR-0004 Round 6 amendment); an entry naming any other interrupt gets HTTP 422 and no run, and nothing is resolved. Expiry is denial: a client sends no resume for an interrupt that expired on its own, and a new RunAgentInput without resume (a new user message) is accepted once every open interrupt has expired. A resume for an expired interrupt is answered with confirmation_expired, never executed. A payload that does not match the interrupt's responseSchema gets HTTP 422 and no run.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["interruptId", "status"],
+            "properties": {
+              "interruptId": { "$ref": "#/$defs/Id" },
+              "status": { "type": "string", "enum": ["resolved", "cancelled"] },
+              "payload": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["approved"],
+                    "properties": { "approved": { "type": "boolean" } }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["wait"],
+                    "properties": { "wait": { "const": true } },
+                    "description": "Observe a requires_native_prompt interrupt until the system prompt decides."
+                  }
+                ]
+              },
+              "metadata": { "type": "object" }
+            },
+            "allOf": [
+              { "if": { "properties": { "status": { "const": "resolved" } } }, "then": { "required": ["payload"] } },
+              { "if": { "properties": { "status": { "const": "cancelled" } } }, "then": { "not": { "required": ["payload"] } } }
+            ]
+          }
+        }
+      }
+    },
+    "Interrupt": {
+      "type": "object",
+      "required": ["id", "reason", "message", "toolCallId", "metadata"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "reason": { "const": "tool_call" },
+        "message": { "type": "string", "minLength": 5 },
+        "toolCallId": { "$ref": "#/$defs/Id" },
+        "responseSchema": { "type": "object" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "metadata": {
+          "type": "object",
+          "required": ["ipfs-mcp"],
+          "properties": {
+            "ipfs-mcp": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["confirmation_id", "tool", "class", "requires_native_prompt"],
+              "properties": {
+                "confirmation_id": { "type": "string", "pattern": "^cf_[A-Za-z0-9_-]{16,64}$" },
+                "tool": { "type": "string" },
+                "class": { "type": "string", "enum": ["write", "destructive"] },
+                "requires_native_prompt": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Event": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "RUN_STARTED", "RUN_FINISHED", "RUN_ERROR",
+            "TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END",
+            "TOOL_CALL_START", "TOOL_CALL_ARGS", "TOOL_CALL_END", "TOOL_CALL_RESULT",
+            "MESSAGES_SNAPSHOT", "STATE_SNAPSHOT"
+          ]
+        },
+        "timestamp": { "type": "integer" }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "RUN_STARTED" } } }, "then": { "required": ["threadId", "runId"] } },
+        {
+          "if": { "properties": { "type": { "const": "RUN_FINISHED" } } },
+          "then": {
+            "required": ["threadId", "runId"],
+            "properties": {
+              "outcome": {
+                "oneOf": [
+                  { "type": "object", "required": ["type"], "properties": { "type": { "const": "success" } } },
+                  {
+                    "type": "object",
+                    "required": ["type", "interrupts"],
+                    "properties": {
+                      "type": { "const": "interrupt" },
+                      "interrupts": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/$defs/Interrupt" }, "description": "ipfs mcp ends a run at the first call of a model reply that needs confirmation, so a run carries exactly one interrupt; later calls of that reply are announced in the same run and wait in the session queue (ADR-0004, Round 6 amendment)." }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "RUN_ERROR" } } },
+          "then": {
+            "required": ["message", "code"],
+            "properties": {
+              "message": { "type": "string", "minLength": 1, "description": "Fixed text per code. For backend_error it names at most the backend's HTTP status, never its body: a backend error can quote the conversation." },
+              "code": { "$ref": "#/$defs/RunErrorCode" }
+            }
+          }
+        },
+        { "if": { "properties": { "type": { "const": "TEXT_MESSAGE_START" } } }, "then": { "required": ["messageId", "role"] } },
+        { "if": { "properties": { "type": { "const": "TEXT_MESSAGE_CONTENT" } } }, "then": { "required": ["messageId", "delta"], "properties": { "delta": { "type": "string", "minLength": 1 } } } },
+        { "if": { "properties": { "type": { "const": "TEXT_MESSAGE_END" } } }, "then": { "required": ["messageId"] } },
+        { "if": { "properties": { "type": { "const": "TOOL_CALL_START" } } }, "then": { "required": ["toolCallId", "toolCallName"] } },
+        { "if": { "properties": { "type": { "const": "TOOL_CALL_ARGS" } } }, "then": { "required": ["toolCallId", "delta"] } },
+        { "if": { "properties": { "type": { "const": "TOOL_CALL_END" } } }, "then": { "required": ["toolCallId"] } },
+        { "if": { "properties": { "type": { "const": "TOOL_CALL_RESULT" } } }, "then": { "required": ["messageId", "toolCallId", "content"], "properties": { "content": { "type": "string" } } } },
+        { "if": { "properties": { "type": { "const": "MESSAGES_SNAPSHOT" } } }, "then": { "required": ["messages"], "properties": { "messages": { "type": "array", "items": { "$ref": "#/$defs/Message" } } } } },
+        { "if": { "properties": { "type": { "const": "STATE_SNAPSHOT" } } }, "then": { "required": ["snapshot"] } }
+      ]
+    }
+  }
+}

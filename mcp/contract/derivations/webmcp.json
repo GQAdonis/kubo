@@ -1,0 +1,16 @@
+{
+  "$schema": "./derivation-rules.schema.json",
+  "source": "WebMCP Draft Community Group Report, 8 October 2026 (https://webmachinelearning.github.io/webmcp/): ToolAnnotations has exactly readOnlyHint, untrustedContentHint, consequentialHint and debugging.",
+  "description": "WebMCP annotations are derived from catalog fields, never authored. Rule forms: copy:<field> and not-equal:<field>:<value>, where field is annotations.readOnlyHint, confirmation, returnsUntrustedContent, contentEgress or group.diagnostic. The Go validator and the mcp/webmcp generator interpret the same rules.",
+  "rules": {
+    "readOnlyHint": "copy:annotations.readOnlyHint",
+    "consequentialHint": "not-equal:confirmation:none",
+    "untrustedContentHint": "copy:returnsUntrustedContent",
+    "debugging": "copy:group.diagnostic",
+    "exposed": "not-equal:confirmation:destructive"
+  },
+  "notes": {
+    "exposed": "Not a WebMCP annotation: whether the tool is registered in the browser at all. Destructive tools are never registered through WebMCP (webmcp-tool-package).",
+    "dropped": "destructiveHint, idempotentHint and openWorldHint are not defined by the WebMCP draft and are not emitted."
+  }
+}

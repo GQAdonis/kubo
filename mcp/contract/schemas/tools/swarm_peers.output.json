@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "swarm_peers output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "peers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "addr"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "../common.json#/$defs/PeerId"
+          },
+          "addr": {
+            "$ref": "../common.json#/$defs/Multiaddr"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "inbound",
+              "outbound",
+              "unknown"
+            ]
+          },
+          "latency": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    }
+  },
+  "required": [
+    "peers",
+    "page"
+  ]
+}

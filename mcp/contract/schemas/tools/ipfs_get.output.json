@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_get output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath"
+    },
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "file",
+        "directory",
+        "symlink",
+        "unknown"
+      ]
+    },
+    "size": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "resource": {
+      "$ref": "../common.json#/$defs/ResourceRef"
+    },
+    "encoding": {
+      "$ref": "../common.json#/$defs/Encoding"
+    },
+    "content": {
+      "type": "string",
+      "description": "Inline bytes when small enough. Untrusted content."
+    },
+    "truncated": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "path",
+    "cid",
+    "type",
+    "resource"
+  ]
+}

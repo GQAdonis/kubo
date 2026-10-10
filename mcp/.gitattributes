@@ -1,0 +1,9 @@
+# Binary assets under mcp/ (the root .gitattributes defaults to text)
+*.woff2 binary
+*.woff binary
+*.ttf binary
+*.otf binary
+*.ico binary
+*.jpg binary
+*.webp binary
+*.wasm binary

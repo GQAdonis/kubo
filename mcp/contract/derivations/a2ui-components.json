@@ -1,0 +1,25 @@
+{
+  "$schema": "./a2ui-components.schema.json",
+  "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+  "catalogAliases": ["ipfs-mcp"],
+  "description": "A2UI component binding references. Catalog tools name a view component in ui.a2uiComponent; mcp/ui implements each component against the bound tools' output schemas and publishes the A2UI v0.9 catalog manifest. catalogId is the canonical A2UI catalog ID: a URI used only as an identifier, never fetched; it equals the manifest $id, and servers list it in supportedCatalogIds and use it in createSurface.catalogId. catalogAliases are short names for docs, logs and configuration; they are never sent as an A2UI catalogId. Chat components wrap every tool call in the agent chat; which chat elements apply to a tool is derived by the chatRules, never authored per tool.",
+  "components": [
+    { "name": "ContentCard", "kind": "view", "description": "File bytes, directory listing or search hit for a CID or path, with untrusted-content framing." },
+    { "name": "PinList", "kind": "view", "description": "Pins with type, name and verification state; paginated." },
+    { "name": "MfsTree", "kind": "view", "description": "MFS directory tree and file details." },
+    { "name": "DagViewer", "kind": "view", "description": "IPLD node, DAG statistics and CAR import/export results." },
+    { "name": "IpnsRecordCard", "kind": "view", "description": "IPNS name, resolved value and keystore keys (never key material)." },
+    { "name": "ConfirmationDialog", "kind": "view", "description": "Renders a confirmation Summary for elicitation-capable surfaces." },
+    { "name": "NodeStatusPanel", "kind": "view", "description": "Node identity, server status, peers, provider and peer lookups, provide announcements, bandwidth, repo and index status." },
+    { "name": "MessageStream", "kind": "chat", "description": "AG-UI text message stream." },
+    { "name": "ToolCallCard", "kind": "chat", "description": "One tool call with arguments and result; embeds the tool's view component when it has one." },
+    { "name": "ApprovalCard", "kind": "chat", "description": "Interrupt state for a write or destructive call: pending, approved, denied, expired, waiting for the system prompt. Shows no approve control when the approval is out of band." },
+    { "name": "EgressBadge", "kind": "chat", "description": "Marks results that carry node content and states which acknowledged host may receive it." }
+  ],
+  "chatRules": {
+    "ToolCallCard": "always",
+    "ApprovalCard": "not-equal:confirmation:none",
+    "EgressBadge": "copy:contentEgress",
+    "untrustedFrame": "copy:returnsUntrustedContent"
+  }
+}

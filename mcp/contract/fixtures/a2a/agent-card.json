@@ -1,0 +1,20 @@
+{
+  "$schema": "../a2a.schema.json",
+  "description": "Agent card for a principal granted read access to the node and pin groups only; skills for other groups are not listed. The URL is the default listener.",
+  "provenance": "authored-from-spec",
+  "card": {
+    "name": "ipfs mcp",
+    "description": "IPFS agent for the connected Kubo node. Writes wait for human approval on this machine; no A2A message can approve them.",
+    "supportedInterfaces": [{ "url": "http://127.0.0.1:5050/a2a", "protocolBinding": "JSONRPC", "protocolVersion": "1.0" }],
+    "version": "0.1.0",
+    "capabilities": { "streaming": true, "pushNotifications": false },
+    "securitySchemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer" } } },
+    "securityRequirements": [{ "schemes": { "bearer": { "list": [] } } }],
+    "defaultInputModes": ["text/plain", "application/json"],
+    "defaultOutputModes": ["text/plain", "application/json"],
+    "skills": [
+      { "id": "ipfs-node", "name": "IPFS node status", "description": "Report the connected Kubo node's identity, server status, peers, bandwidth and repository; run garbage collection with human approval.", "tags": ["ipfs", "kubo", "diagnostics"], "examples": ["What node am I connected to?"] },
+      { "id": "ipfs-pinning", "name": "IPFS pinning", "description": "List, verify, add, update and remove pins. Changes need human approval.", "tags": ["ipfs", "pin"], "examples": ["List my recursive pins."] }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "routing_findprovs input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "num_providers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 20
+    }
+  },
+  "required": [
+    "cid"
+  ]
+}

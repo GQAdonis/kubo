@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_cp input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "$ref": "../common.json#/$defs/MfsCopySource",
+      "description": "An MFS path or an /ipfs/<cid>[/path] content path. The only MFS tool field that accepts a content path."
+    },
+    "destination": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    },
+    "parents": {
+      "type": "boolean",
+      "default": false
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "source",
+    "destination"
+  ]
+}

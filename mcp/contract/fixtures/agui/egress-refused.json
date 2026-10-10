@@ -1,0 +1,31 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "contentEgress tool whose result may not reach the model host: the loop sends the structured refusal instead of the bytes.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-cat-1",
+    "runId": "run-1",
+    "messages": [{ "id": "msg-u1", "role": "user", "content": "Summarize bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/readme.md" }],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-cat-1", "runId": "run-1" },
+    { "type": "TOOL_CALL_START", "toolCallId": "tc-9", "toolCallName": "ipfs_cat", "parentMessageId": "msg-a1" },
+    { "type": "TOOL_CALL_ARGS", "toolCallId": "tc-9", "delta": "{\"path\":\"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/readme.md\"}" },
+    { "type": "TOOL_CALL_END", "toolCallId": "tc-9" },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        { "id": "msg-u1", "role": "user", "content": "Summarize bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/readme.md" },
+        { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-9", "type": "function", "function": { "name": "ipfs_cat", "arguments": "{\"path\":\"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/readme.md\"}" } }] }
+      ]
+    },
+    { "type": "TOOL_CALL_RESULT", "messageId": "msg-t9", "toolCallId": "tc-9", "role": "tool", "content": "{\"error\":{\"code\":\"egress_not_acknowledged\",\"message\":\"Content not sent: model.example.net is not in egress_ack.\",\"retryable\":false,\"tool\":\"ipfs_cat\"}}" },
+    { "type": "TEXT_MESSAGE_START", "messageId": "msg-a2", "role": "assistant" },
+    { "type": "TEXT_MESSAGE_CONTENT", "messageId": "msg-a2", "delta": "I cannot read that file: its content may not be sent to the configured model." },
+    { "type": "TEXT_MESSAGE_END", "messageId": "msg-a2" },
+    { "type": "RUN_FINISHED", "threadId": "thread-cat-1", "runId": "run-1", "outcome": { "type": "success" } }
+  ]
+}

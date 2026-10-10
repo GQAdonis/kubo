@@ -1,0 +1,17 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Backend failure after RUN_STARTED: the model backend answers HTTP 500 with a body. The stream had begun, so the failure is RUN_ERROR code backend_error, not an HTTP error. The message names the backend's HTTP status only and never forwards the backend body, which can quote the conversation. Replay with a model server that has no scripted step (it answers 500).",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-fail-1",
+    "runId": "run-1",
+    "messages": [{ "id": "msg-u1", "role": "user", "content": "Which recursive pins do I have?" }],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-fail-1", "runId": "run-1" },
+    { "type": "RUN_ERROR", "message": "The model backend answered HTTP 500.", "code": "backend_error" }
+  ]
+}

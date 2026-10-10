@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "car_export output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "root": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "size": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "car_base64": {
+      "type": "string",
+      "contentEncoding": "base64"
+    },
+    "resource": {
+      "$ref": "../common.json#/$defs/ResourceRef"
+    },
+    "inline": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "root",
+    "inline"
+  ]
+}

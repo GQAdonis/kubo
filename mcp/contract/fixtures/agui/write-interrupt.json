@@ -1,0 +1,45 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Write tool proposed: pin_add ends the run with an interrupt outcome. Nothing is pinned before the resume. Messages are snapshotted before RUN_FINISHED as the interrupt lifecycle requires.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-pin-2",
+    "runId": "run-1",
+    "messages": [{ "id": "msg-u1", "role": "user", "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku" }],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-pin-2", "runId": "run-1" },
+    { "type": "TOOL_CALL_START", "toolCallId": "tc-7", "toolCallName": "pin_add", "parentMessageId": "msg-a1" },
+    { "type": "TOOL_CALL_ARGS", "toolCallId": "tc-7", "delta": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}" },
+    { "type": "TOOL_CALL_END", "toolCallId": "tc-7" },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        { "id": "msg-u1", "role": "user", "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku" },
+        { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-7", "type": "function", "function": { "name": "pin_add", "arguments": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}" } }] }
+      ]
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "thread-pin-2",
+      "runId": "run-1",
+      "outcome": {
+        "type": "interrupt",
+        "interrupts": [
+          {
+            "id": "int-cf_Zr4Yt1nB6kq0HdUe",
+            "reason": "tool_call",
+            "message": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)",
+            "toolCallId": "tc-7",
+            "responseSchema": { "type": "object", "properties": { "approved": { "type": "boolean" } }, "required": ["approved"] },
+            "expiresAt": "2026-10-09T12:02:00Z",
+            "metadata": { "ipfs-mcp": { "confirmation_id": "cf_Zr4Yt1nB6kq0HdUe", "tool": "pin_add", "class": "write", "requires_native_prompt": false } }
+          }
+        ]
+      }
+    }
+  ]
+}

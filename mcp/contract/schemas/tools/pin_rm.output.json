@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pin_rm output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "unpinned": {
+      "type": "array",
+      "items": {
+        "$ref": "../common.json#/$defs/Cid"
+      }
+    },
+    "warnings": {
+      "$ref": "../common.json#/$defs/Warnings"
+    }
+  },
+  "required": [
+    "unpinned"
+  ]
+}

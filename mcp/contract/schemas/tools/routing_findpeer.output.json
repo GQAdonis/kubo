@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "routing_findpeer output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "../common.json#/$defs/PeerId"
+    },
+    "addrs": {
+      "type": "array",
+      "items": {
+        "$ref": "../common.json#/$defs/Multiaddr"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "addrs"
+  ]
+}

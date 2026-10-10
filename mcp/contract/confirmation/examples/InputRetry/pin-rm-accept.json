@@ -1,0 +1,10 @@
+{
+  "name": "pin_rm",
+  "arguments": {
+    "path": "/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+  },
+  "inputResponses": {
+    "confirm": { "action": "accept", "content": { "confirm": true } }
+  },
+  "requestState": "eyJ2IjoxLCJ1c2UiOiJyZXF1ZXN0X3N0YXRlIn0_c2lnbmF0dXJlLXBsYWNlaG9sZGVy"
+}

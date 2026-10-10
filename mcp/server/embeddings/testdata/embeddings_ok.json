@@ -1,0 +1,1 @@
+{"object":"list","data":[{"object":"embedding","embedding":[0.5,0.25,0.125,0.0625],"index":1},{"object":"embedding","embedding":[1,0,0,0],"index":0}],"model":"bge-m3","usage":{"prompt_tokens":4,"total_tokens":4}}

@@ -1,0 +1,69 @@
+{
+  "name": "@gqadonis/ipfs-agent-chat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "<ipfs-agent-chat>: a React 19 shadow-root chat island with a right-side sliding sidebar. Talks only to `ipfs mcp` /agui. Built from @gqadonis/ipfs-mcp-ui.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "sideEffects": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/ipfs-agent-chat.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/ipfs-agent-chat.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "node -e \"for (const d of ['dist','dist-harness']) require('node:fs').rmSync(d,{recursive:true,force:true})\"",
+    "build:css": "node scripts/build-css.mjs",
+    "build:lib": "vite build",
+    "build:harness": "vite build --mode harness",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build": "pnpm clean && pnpm build:css && pnpm build:lib && pnpm build:types",
+    "typecheck": "pnpm build:css && tsc --noEmit -p tsconfig.json",
+    "test": "pnpm build:css && vitest run",
+    "test:scan": "node scripts/scan-external-urls.mjs",
+    "measure": "node scripts/measure-size.mjs",
+    "test:visual": "pnpm build && pnpm build:harness && playwright test",
+    "test:visual:update": "pnpm build && pnpm build:harness && playwright test --update-snapshots",
+    "check": "pnpm typecheck && pnpm test && pnpm build && pnpm test:scan && pnpm measure"
+  },
+  "dependencies": {
+    "@a2ui/react": "0.12.0",
+    "@a2ui/web_core": "0.12.0",
+    "@gqadonis/ipfs-mcp-ui": "link:../ui",
+    "clsx": "2.1.1",
+    "lucide-react": "1.53.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5",
+    "zod-v3": "npm:zod@3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "axe-core": "4.14.0",
+    "electron": "44.3.0",
+    "jsdom": "30.1.2",
+    "postcss": "8.5.29",
+    "tachyons": "4.12.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}

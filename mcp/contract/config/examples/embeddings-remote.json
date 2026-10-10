@@ -1,0 +1,21 @@
+{
+  "embeddings": {
+    "mode": "remote",
+    "remote": {
+      "endpoint": "https://surreal.internal.example:8000",
+      "namespace": "ipfs",
+      "database": "index",
+      "credential": {
+        "env": "SURREAL_CREDENTIALS"
+      }
+    },
+    "embedder": {
+      "base_url": "https://embed.internal.example/v1",
+      "model": "bge-m3",
+      "dimensions": 1024,
+      "api_key": {
+        "file": "/etc/ipfs-mcp/embedder.key"
+      }
+    }
+  }
+}

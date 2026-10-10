@@ -1,0 +1,1 @@
+{"id":1,"result":[{"details":{"details":{"name":"nosuch_table_x"},"kind":"Table"},"kind":"NotFound","result":"The table 'nosuch_table_x' does not exist","status":"ERR","time":"498.334µs","type":null}]}

@@ -1,0 +1,24 @@
+{
+  "$schema": "../a2a.schema.json",
+  "description": "Delegated read: a data part names one contract tool; the task completes with the tool result as an artifact.",
+  "provenance": "authored-from-spec",
+  "principalKind": "a2a",
+  "exchanges": [
+    {
+      "request": {
+        "jsonrpc": "2.0", "id": 1, "method": "SendMessage",
+        "params": { "message": { "messageId": "m-1", "role": "ROLE_USER", "parts": [{ "data": { "tool": "pin_ls", "arguments": { "type": "recursive" } }, "mediaType": "application/json" }] } }
+      },
+      "response": {
+        "jsonrpc": "2.0", "id": 1,
+        "result": {
+          "task": {
+            "id": "task-1", "contextId": "ctx-1",
+            "status": { "state": "TASK_STATE_COMPLETED", "timestamp": "2026-10-09T12:00:01Z" },
+            "artifacts": [{ "artifactId": "art-1", "name": "pin_ls", "parts": [{ "data": { "pins": [{ "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", "type": "recursive" }], "page": { "has_more": false } }, "mediaType": "application/json" }] }]
+          }
+        }
+      }
+    }
+  ]
+}

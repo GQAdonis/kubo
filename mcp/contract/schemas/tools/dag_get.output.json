@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dag_get output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath"
+    },
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "codec": {
+      "type": "string"
+    },
+    "node": {
+      "description": "The node decoded from dag-json. Untrusted content."
+    },
+    "resource": {
+      "$ref": "../common.json#/$defs/ResourceRef"
+    },
+    "truncated": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "path",
+    "cid",
+    "truncated"
+  ]
+}

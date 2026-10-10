@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_reconcile output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "checked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "deleted": {
+      "type": "array",
+      "items": {
+        "$ref": "../common.json#/$defs/Cid"
+      }
+    },
+    "kept": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    },
+    "warnings": {
+      "$ref": "../common.json#/$defs/Warnings"
+    }
+  },
+  "required": [
+    "checked",
+    "deleted",
+    "kept",
+    "dry_run",
+    "page"
+  ]
+}

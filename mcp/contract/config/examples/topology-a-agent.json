@@ -1,0 +1,48 @@
+{
+  "http": {
+    "enabled": true,
+    "listen": "127.0.0.1:5050"
+  },
+  "principals": [
+    {
+      "name": "webui-chat",
+      "kind": "ui",
+      "credential": {
+        "env": "IPFS_MCP_UI_TOKEN"
+      },
+      "groups": [
+        "*"
+      ],
+      "write_groups": [
+        "pin",
+        "content"
+      ],
+      "egress_ack": [
+        "127.0.0.1:11434"
+      ]
+    },
+    {
+      "name": "peer-agent",
+      "kind": "a2a",
+      "credential": {
+        "file": "/etc/ipfs-mcp/peer-agent.token"
+      },
+      "groups": [
+        "node",
+        "pin"
+      ]
+    }
+  ],
+  "llm": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "model": "qwen3:8b"
+  },
+  "agent": {
+    "agui": true,
+    "a2a": true,
+    "origin_allowlist": [
+      "webui://localhost",
+      "http://127.0.0.1:5001"
+    ]
+  }
+}

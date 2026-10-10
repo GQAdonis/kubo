@@ -1,0 +1,63 @@
+# claude 2.1.296 (Claude Code)
+$ claude plugin validate mcp/plugin/ipfs
+Validating plugin manifest: /Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs/.claude-plugin/plugin.json
+
+✔ Validation passed
+$ claude plugin validate .
+Validating marketplace manifest: /Users/gqadonis/Projects/references/kubo/.claude-plugin/marketplace.json
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /Users/gqadonis/Projects/references/kubo/README.md: This README has no line that installs "ipfs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later.
+      /plugin install ipfs --marketplace GQAdonis/kubo
+
+✔ Validation passed
+$ claude plugin marketplace add <repo>
+Adding marketplace…✔ Successfully added marketplace: kubo-ipfs (declared in user settings)
+$ claude plugin install ipfs@kubo-ipfs
+Installing plugin "ipfs@kubo-ipfs"...✔ Successfully installed plugin: ipfs@kubo-ipfs (scope: user)
+$ claude plugin list
+Installed plugins:
+
+  ❯ ipfs@kubo-ipfs
+    Version: 0.1.0
+    Read from: /Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs
+    Scope: user
+    Status: ✔ enabled
+
+$ claude plugin details ipfs
+IPFS (Kubo MCP) (ipfs) 0.1.0
+  Description: Eight IPFS skills plus the 'ipfs mcp' stdio server, launched from PATH against your own Kubo node.
+  Source: ipfs@kubo-ipfs
+
+Component inventory
+  Skills (8)  ipfs-content-search, ipfs-dag-car, ipfs-ipns-names, ipfs-mfs-workspace, ipfs-pin-management, ipfs-publish-content, ipfs-retrieve-verify, ipfs-troubleshooting
+  Agents (0)
+  Hooks (0)
+  MCP servers (1)  ipfs  (tool schemas resolved at runtime; not counted)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~1,117 tok   added to every session
+
+Per-component (rounded)
+  component             always-on  on-invoke
+  ipfs-pin-management        ~130      ~1.2k
+  ipfs-content-search        ~150       ~740
+  ipfs-publish-content       ~120      ~1.1k
+  ipfs-dag-car               ~140       ~950
+  ipfs-troubleshooting       ~170      ~1.4k
+  ipfs-ipns-names            ~140      ~1.1k
+  ipfs-mfs-workspace         ~140       ~970
+  ipfs-retrieve-verify       ~130       ~920
+
+  On-invoke cost is paid each time a skill or agent fires.
+  Token counts are estimates and may differ from actual usage.
+$ claude mcp list   (health check starts 'ipfs mcp' against the private daemon)
+Checking MCP server health…
+
+plugin:ipfs:ipfs: ipfs mcp - ✔ Connected
+$ claude auth status   (a model session needs the operator's login; not used)
+{
+  "loggedIn": false,
+  "authMethod": "none",

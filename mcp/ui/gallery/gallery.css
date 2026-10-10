@@ -1,0 +1,38 @@
+/* Harness-only layout. Everything here sits inside the library root, so it can use the tokens. */
+html,
+body {
+  margin: 0;
+}
+
+.iu-ground {
+  min-height: 100vh;
+}
+
+.gallery-main {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-4) 16px var(--space-6);
+}
+
+.gallery-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.gallery-scene-title {
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gallery-stack {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}

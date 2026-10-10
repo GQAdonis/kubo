@@ -1,0 +1,9 @@
+{
+  "revision": "profile-1",
+  "llm": {"model": "qwen3:8b", "provider_host": "127.0.0.1:11434"},
+  "knowledge_base_embedder": {"model": "bge-small-en-v1.5", "provider_host": "local"},
+  "memory_embedder": {"model": "bge-small-en-v1.5", "provider_host": "local"},
+  "governance": {"enabled": true},
+  "native_tools": {"terminal_exec_enabled": false},
+  "mcp_servers": [{"name": "ipfs", "transport": "http", "url": "http://127.0.0.1:5050/mcp"}]
+}

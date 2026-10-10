@@ -1,0 +1,93 @@
+/* Base rules, all under the library root so nothing leaks into the host page. */
+[data-ipfs-ui] {
+  display: block;
+  box-sizing: border-box;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--iu-text-body);
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-ipfs-ui].iu-ground {
+  background: var(--ground);
+}
+
+[data-ipfs-ui] *,
+[data-ipfs-ui] *::before,
+[data-ipfs-ui] *::after {
+  box-sizing: inherit;
+}
+
+[data-ipfs-ui] :is(h1, h2, h3, h4, p, ul, ol, dl, dd, figure, pre) {
+  margin: 0;
+}
+
+[data-ipfs-ui] :is(ul, ol) {
+  padding: 0;
+  list-style: none;
+}
+
+[data-ipfs-ui] ::selection {
+  background: var(--accent-tint);
+  color: var(--text);
+}
+
+/* Focus: solid 2px accent, offset 2px, on everything focusable. Never removed. */
+[data-ipfs-ui] :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--iu-focus);
+  outline-offset: var(--iu-focus-offset);
+}
+
+[data-ipfs-ui] :is(a, button, summary, [role='button']) {
+  cursor: pointer;
+}
+
+[data-ipfs-ui] a {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-underline-offset: 0.2em;
+}
+
+[data-ipfs-ui] code,
+[data-ipfs-ui] pre,
+[data-ipfs-ui] kbd,
+[data-ipfs-ui] samp {
+  font-family: var(--font-mono);
+  font-size: var(--iu-text-code);
+  line-height: 1.7;
+}
+
+/* Browser surfaces that belong to the design: scrollbars and the caret. */
+[data-ipfs-ui] * {
+  scrollbar-color: var(--control) transparent;
+  scrollbar-width: thin;
+  caret-color: var(--accent-text);
+}
+
+.iu-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Motion: state only, 150-250ms, and none when the user asks for none. */
+@media (prefers-reduced-motion: reduce) {
+  [data-ipfs-ui],
+  [data-ipfs-ui] *,
+  [data-ipfs-ui] *::before,
+  [data-ipfs-ui] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

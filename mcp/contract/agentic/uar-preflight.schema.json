@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "check-uar preflight pins",
+  "description": "Values check-uar takes from the contract rather than from operator config (ADR-0007). minVersion and settingsPath are pinned together from one published UAR release that passed the topology-B gate (mcp/uar/requests/CONFORMANCE.md, gate recorded in mcp/uar/spike/REPORT.md); both stay null until then. They are set only by the architect in agentic-uar-integration task 1.2. recheckInterval is a security bound, not an operator preference.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["minVersion", "settingsPath", "settingsSchema", "recheckInterval", "pinnedFrom"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "minVersion": {
+      "description": "Minimum published UAR release (x.y.z) for every kind uar principal whose uar.min_version is null. null: no shipped pin; such a principal is refused with min_version_not_set.",
+      "type": ["string", "null"],
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "settingsPath": {
+      "description": "Path of UAR's documented effective-settings endpoint, relative to the base of the principal's uar.card_url. The admin credential is sent there as Authorization: Bearer. null: no documented endpoint is pinned; settings are unreadable, the auth probe is inconclusive, and check verify refuses (check assert records the operator's own verification).",
+      "type": ["string", "null"],
+      "pattern": "^/[A-Za-z0-9._~/-]*$",
+      "maxLength": 512
+    },
+    "settingsSchema": {
+      "description": "The schema a settings response must validate against, relative to this file.",
+      "const": "./uar-effective-settings.schema.json"
+    },
+    "recheckInterval": {
+      "description": "Longest time a UAR verdict is reused between session initializes; the next request after it re-runs the check. Checks are request-driven: no background traffic.",
+      "type": "string",
+      "pattern": "^[0-9]+s$"
+    },
+    "pinnedFrom": {
+      "description": "Evidence for minVersion and settingsPath, or null while they are null.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag", "artifact", "report"],
+          "properties": {
+            "tag": { "type": "string", "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$" },
+            "artifact": { "type": "string", "pattern": "^(sha256:[0-9a-f]{64}|[a-z0-9]+:.+)$" },
+            "report": { "const": "mcp/uar/spike/REPORT.md" }
+          }
+        }
+      ]
+    }
+  }
+}

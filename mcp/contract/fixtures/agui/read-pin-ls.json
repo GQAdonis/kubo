@@ -1,0 +1,31 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Read-only run: the model calls pin_ls once and answers. No interrupt. The MESSAGES_SNAPSHOT after TOOL_CALL_END introduces msg-a1, the assistant message named by parentMessageId, with its toolCalls; the client sends it back in later history.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-pins-1",
+    "runId": "run-1",
+    "messages": [{ "id": "msg-u1", "role": "user", "content": "Which recursive pins do I have?" }],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-pins-1", "runId": "run-1" },
+    { "type": "TOOL_CALL_START", "toolCallId": "tc-1", "toolCallName": "pin_ls", "parentMessageId": "msg-a1" },
+    { "type": "TOOL_CALL_ARGS", "toolCallId": "tc-1", "delta": "{\"type\":\"recursive\",\"limit\":20}" },
+    { "type": "TOOL_CALL_END", "toolCallId": "tc-1" },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        { "id": "msg-u1", "role": "user", "content": "Which recursive pins do I have?" },
+        { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-1", "type": "function", "function": { "name": "pin_ls", "arguments": "{\"type\":\"recursive\",\"limit\":20}" } }] }
+      ]
+    },
+    { "type": "TOOL_CALL_RESULT", "messageId": "msg-t1", "toolCallId": "tc-1", "role": "tool", "content": "{\"pins\":[{\"cid\":\"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\",\"type\":\"recursive\",\"name\":\"wiki\"}],\"page\":{\"has_more\":false}}" },
+    { "type": "TEXT_MESSAGE_START", "messageId": "msg-a2", "role": "assistant" },
+    { "type": "TEXT_MESSAGE_CONTENT", "messageId": "msg-a2", "delta": "You have one recursive pin, named wiki." },
+    { "type": "TEXT_MESSAGE_END", "messageId": "msg-a2" },
+    { "type": "RUN_FINISHED", "threadId": "thread-pins-1", "runId": "run-1", "outcome": { "type": "success" } }
+  ]
+}

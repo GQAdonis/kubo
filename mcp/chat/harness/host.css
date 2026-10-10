@@ -1,0 +1,43 @@
+/* Global rules of the kind a CRA application carries, written to be hostile to a component that is not
+   isolated: element selectors that restyle headings, buttons, inputs, paragraphs and links, and
+   inheritable text properties on body. A closed island must change nothing here, and an open one must
+   look the same whatever this says. */
+body {
+  margin: 0;
+  font-family: Montserrat, 'Open Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  word-spacing: 0.05em;
+  text-transform: none;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Georgia, serif;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #c026d3;
+  margin: 1.5em 0 0.7em;
+}
+
+p { margin: 1.2em 0; }
+
+a { color: #dc2626; text-decoration: underline wavy; }
+
+button, input, textarea, select {
+  font: inherit;
+  background: #84cc16;
+  color: #1d4ed8;
+  border: 3px solid #dc2626;
+  border-radius: 0;
+  padding: 18px;
+}
+
+summary { color: #dc2626; }
+table { border-spacing: 8px; }
+ol, ul { padding-left: 3em; list-style: disc; }
+li { margin: 0.5em 0; }
+code, pre { font-family: 'Comic Sans MS', cursive; color: #c026d3; }
+
+*:focus { outline: 4px dotted #0ea5e9; }

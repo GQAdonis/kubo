@@ -1,0 +1,7 @@
+{
+  "$schema": "../../agentic/uar-effective-settings.schema.json",
+  "revision": "rev-noinv-1",
+  "llm": { "model": "ollama/qwen3", "provider_host": "127.0.0.1:11434" },
+  "knowledge_base_embedder": { "provider_host": "local" },
+  "memory_embedder": { "provider_host": "local" }
+}

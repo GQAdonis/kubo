@@ -1,0 +1,26 @@
+{
+  "$schema": "../a2a.schema.json",
+  "description": "Out-of-scope request: destructive tools are off by default and the principal has no destructive grant for the pin group, so pin_rm becomes TASK_STATE_AUTH_REQUIRED and nothing is removed.",
+  "provenance": "authored-from-spec",
+  "principalKind": "a2a",
+  "exchanges": [
+    {
+      "request": {
+        "jsonrpc": "2.0", "id": 5, "method": "SendMessage",
+        "params": { "message": { "messageId": "m-5", "role": "ROLE_USER", "parts": [{ "data": { "tool": "pin_rm", "arguments": { "path": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi" } }, "mediaType": "application/json" }] } }
+      },
+      "response": {
+        "jsonrpc": "2.0", "id": 5,
+        "result": {
+          "task": {
+            "id": "task-5", "contextId": "ctx-5",
+            "status": {
+              "state": "TASK_STATE_AUTH_REQUIRED",
+              "message": { "messageId": "m-5a", "role": "ROLE_AGENT", "parts": [{ "text": "pin_rm needs a destructive grant for group pin, which this principal does not have." }] }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

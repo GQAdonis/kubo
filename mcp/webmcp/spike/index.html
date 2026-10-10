@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>WebMCP host probe</title>
+<link rel="stylesheet" href="probe.css">
+</head>
+<body>
+<a class="skip" href="#readout-heading">Skip to readout</a>
+<main>
+  <header>
+    <p class="eyebrow">WebMCP host probe</p>
+    <h1>Echo tool probe</h1>
+    <p class="lead">This page registers one tool, <code>echo</code>, through <code>document.modelContext</code> and shows what your host exposed. Ask the host agent to call it. It makes no network requests and does not touch IPFS.</p>
+  </header>
+
+  <section class="panel panel--nonce" aria-labelledby="nonce-heading">
+    <h2 id="nonce-heading" class="sr-only">Registration result and nonce</h2>
+    <div class="status-row">
+      <span id="reg-badge" class="badge badge--idle" role="status">Checking</span>
+      <span id="call-badge" class="badge badge--idle" role="status">Not called</span>
+    </div>
+    <p class="nonce-label" id="nonce-label">Page-load nonce</p>
+    <p class="nonce" id="nonce" aria-labelledby="nonce-label">----</p>
+    <p class="summary" id="summary" aria-live="polite">Running feature detection.</p>
+    <div class="actions">
+      <button type="button" class="primary" id="copy-evidence">Copy evidence JSON</button>
+      <button type="button" id="copy-nonce">Copy nonce</button>
+      <span class="copy-state" id="copy-state" role="status"></span>
+    </div>
+  </section>
+
+  <section aria-labelledby="readout-heading">
+    <h2 id="readout-heading">Readout</h2>
+    <dl class="readout" id="readout"></dl>
+    <p class="note">The deprecated <code>navigator.modelContext</code> is reported as evidence only. The probe never calls it and never calls host-internal properties.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="log-heading">
+    <h2 id="log-heading">Tool calls received</h2>
+    <ol class="log" id="log" aria-live="polite"><li class="empty">No calls yet. A call by the host agent appears here with its time and input.</li></ol>
+  </section>
+
+  <section class="panel" aria-labelledby="evidence-heading">
+    <h2 id="evidence-heading">Evidence JSON</h2>
+    <pre class="evidence" id="evidence" tabindex="0">{}</pre>
+    <p class="note">Screenshot this page and save the agent transcript. The nonce in the transcript must match the nonce above.</p>
+  </section>
+</main>
+<script src="probe.js"></script>
+</body>
+</html>

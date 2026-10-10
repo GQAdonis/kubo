@@ -1,0 +1,103 @@
+/* Promethity tokens v1 (design-system/tokens.css), scoped to the library root so
+   they work inside iframes and shadow roots. Dark is the primary theme.
+   Values are verbatim from the brand; tests recompute their contrast. */
+[data-ipfs-ui] {
+  /* Inherited text properties (text-transform, letter-spacing, line-height, direction) cross a shadow
+     boundary and an iframe-less host page alike. Reset the root so a host's body styles cannot restyle
+     the library; base.css then sets what the library wants. Custom properties are unaffected by `all`. */
+  all: initial;
+  --ground: #0c0b0a;
+  --surface: #171614;
+  --raised: #222120;
+  --control: #2d2c2a;
+  --text: #f5f2ee;
+  --text-muted: #a09890;
+  --accent: #e96a12;
+  --on-accent: #0c0b0a;
+  --accent-text: #e96a12;
+  --accent-tint: #342214;
+  --glow: #f49e12;
+  --ok: #5fbf7a;
+  --ok-tint: #212e22;
+  --warn: #f2b33d;
+  --warn-tint: #362c1a;
+  --err: #f0705a;
+  --err-tint: #35231e;
+  --info: #7fb2d9;
+  --info-tint: #262c30;
+  color-scheme: dark;
+}
+
+[data-ipfs-ui][data-theme='light'] {
+  --ground: #f5f2ee;
+  --surface: #fbf9f6;
+  --raised: #ece7e0;
+  --control: #e1dbd2;
+  --text: #141210;
+  --text-muted: #5e5750;
+  --accent: #ce3012;
+  --on-accent: #ffffff;
+  --accent-text: #b02a10;
+  --accent-tint: #f6e5df;
+  --glow: #f49e12;
+  --ok: #1a6b35;
+  --ok-tint: #e4ebe3;
+  --warn: #8a5a00;
+  --warn-tint: #f0e9dd;
+  --err: #b3261e;
+  --err-tint: #f4e4e0;
+  --info: #1f5e8c;
+  --info-tint: #e5eaeb;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  [data-ipfs-ui][data-theme='auto'] {
+    --ground: #f5f2ee;
+    --surface: #fbf9f6;
+    --raised: #ece7e0;
+    --control: #e1dbd2;
+    --text: #141210;
+    --text-muted: #5e5750;
+    --accent: #ce3012;
+    --on-accent: #ffffff;
+    --accent-text: #b02a10;
+    --accent-tint: #f6e5df;
+    --glow: #f49e12;
+    --ok: #1a6b35;
+    --ok-tint: #e4ebe3;
+    --warn: #8a5a00;
+    --warn-tint: #f0e9dd;
+    --err: #b3261e;
+    --err-tint: #f4e4e0;
+    --info: #1f5e8c;
+    --info-tint: #e5eaeb;
+    color-scheme: light;
+  }
+}
+
+/* Shape, space and type: brand values, with the Operate narrowing from DESIGN.md. */
+[data-ipfs-ui] {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 14px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 56px;
+  --space-7: 88px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --font-heading: 'IPFS UI Syne', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IPFS UI Hanken Grotesk', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --font-quote: Newsreader, Georgia, 'Times New Roman', serif;
+  --font-mono: 'IPFS UI JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --iu-text-body: 15px;
+  --iu-text-small: 14px;
+  --iu-text-code: 13px;
+  --iu-focus: 2px solid var(--accent);
+  --iu-focus-offset: 2px;
+  --iu-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --iu-duration: 180ms;
+}

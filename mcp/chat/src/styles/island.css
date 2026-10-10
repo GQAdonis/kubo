@@ -1,0 +1,129 @@
+/* Tailwind 4 entry for the chat island. Compiled by scripts/build-css.mjs, never loaded as a page
+   stylesheet: the result is adopted into the island's shadow root only.
+
+   Deliberately NOT imported: tailwindcss/preflight.css. Preflight is a page reset that selects
+   `html`, `body`, `*`, and `::file-selector-button`; it would be wrong inside a shadow root and, if it
+   ever reached a document, would restyle the host. The library's own base.css (scoped to
+   [data-ipfs-ui]) already provides the reset this surface needs.
+
+   Colors, type and space are the Promethity tokens from @gqadonis/ipfs-mcp-ui (tokens.css, scoped to
+   [data-ipfs-ui]). `@theme inline` makes each utility read the token at use, so one token set themes
+   dark, light and auto. DESIGN.md is the visual authority. */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@source '../';
+
+@theme inline {
+  /* shadcn semantic names, mapped to Promethity. The sidebar is a `surface`; nested wells are `raised`. */
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-background: var(--ground);
+  --color-foreground: var(--text);
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--text);
+  --color-sidebar-accent: var(--raised);
+  --color-sidebar-accent-foreground: var(--text);
+  --color-sidebar-primary: var(--accent);
+  --color-sidebar-primary-foreground: var(--on-accent);
+  --color-sidebar-ring: var(--accent);
+  --color-muted: var(--raised);
+  --color-muted-foreground: var(--text-muted);
+  --color-control: var(--control);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+
+  /* The library's own custom properties are --font-heading, --font-body, --font-mono and --radius-*.
+     Tailwind's theme uses the same names for its own namespaces, so redefining them here would make a
+     variable refer to itself. The utilities therefore get distinct names (font-ui-*, rounded-ui-*). */
+  --font-ui-body: var(--font-body);
+  --font-ui-heading: var(--font-heading);
+  --font-ui-mono: var(--font-mono);
+
+  --radius-ui-sm: var(--radius-sm);
+  --radius-ui-md: var(--radius-md);
+  --radius-ui-lg: var(--radius-lg);
+
+  /* DESIGN.md spacing steps 4, 8, 14, 24, 40, 56, 88 as s1..s7. Named, so shadcn's numeric
+     spacing meaning (p-4 = 16px) is never confused with the product scale. */
+  --spacing-s1: var(--space-1);
+  --spacing-s2: var(--space-2);
+  --spacing-s3: var(--space-3);
+  --spacing-s4: var(--space-4);
+  --spacing-s5: var(--space-5);
+  --spacing-s6: var(--space-6);
+  --spacing-s7: var(--space-7);
+
+  --ease-ui: var(--iu-ease);
+}
+
+/* The sidebar's own geometry. Handwritten, not utilities: the slide is a single transform, which must
+   not depend on Tailwind's @property-registered --tw-* variables (a shadow root cannot register them). */
+@layer components {
+  .ac-sidebar {
+    --ac-width: min(416px, 100vw);
+    position: fixed;
+    inset-block: 0;
+    inset-inline-end: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    inline-size: var(--ac-width);
+    max-inline-size: 100vw;
+    padding-inline-start: var(--space-2);
+    background: var(--surface);
+    color: var(--text);
+    pointer-events: auto;
+    /* Closed: off the right edge, hidden from sight, focus and the accessibility tree. The visibility
+       change waits for the slide so the panel is seen leaving. */
+    transform: translateX(100%);
+    visibility: hidden;
+    transition:
+      transform var(--iu-duration) var(--iu-ease),
+      visibility 0s linear var(--iu-duration);
+  }
+
+  .ac-sidebar[data-state='open'] {
+    transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform var(--iu-duration) var(--iu-ease),
+      visibility 0s;
+  }
+
+  /* The panel's edge is a fill, not a border or a shadow (DESIGN.md): a `raised` strip down the
+     leading edge, which is also where a pointer finds the panel. */
+  .ac-sidebar::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--space-2);
+    background: var(--raised);
+  }
+
+  /* The composer grows with its text up to six lines, then scrolls. */
+  .ac-field {
+    field-sizing: content;
+    min-block-size: 44px;
+    max-block-size: 152px;
+    resize: none;
+  }
+
+  .ac-field::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ac-sidebar,
+    .ac-sidebar[data-state='open'] {
+      transition: none;
+    }
+  }
+}

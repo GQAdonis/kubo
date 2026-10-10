@@ -1,0 +1,9 @@
+{
+  "principals": [
+    {
+      "name": "ui",
+      "kind": "ui",
+      "credential": "s3cr3t-token"
+    }
+  ]
+}

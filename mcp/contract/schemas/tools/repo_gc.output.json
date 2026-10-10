@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "repo_gc output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "removed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "removed_sample": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "../common.json#/$defs/Cid"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "$ref": "../common.json#/$defs/Warnings"
+    }
+  },
+  "required": [
+    "removed_count"
+  ]
+}

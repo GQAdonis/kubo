@@ -1,0 +1,22 @@
+{
+  "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+  "state": "pending",
+  "summary": {
+    "tool": "pin_rm",
+    "class": "destructive",
+    "text": "Remove the pin on bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi (recursive=true)",
+    "targets": [
+      {
+        "kind": "cid",
+        "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+      }
+    ]
+  },
+  "expires_at": "2026-10-09T12:02:00Z",
+  "resolvers": [
+    "desktop",
+    "macos-localauth"
+  ],
+  "confirm_token": "eyJ2IjoxLCJjaWQiOiJjZl8zcFFtOHZLMnhSN3RMdzlhIn0_c2lnbmF0dXJlLXBsYWNlaG9sZGVy",
+  "principal_kind": "human-mcp"
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_node_info output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "peer_id": {
+      "$ref": "../common.json#/$defs/PeerId"
+    },
+    "agent_version": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "description": "Kubo version reported by /api/v0/version."
+    },
+    "commit": {
+      "type": "string"
+    },
+    "repo_version": {
+      "type": "string"
+    },
+    "addresses": {
+      "type": "array",
+      "items": {
+        "$ref": "../common.json#/$defs/Multiaddr"
+      },
+      "description": "Addresses the node announces."
+    }
+  },
+  "required": [
+    "peer_id",
+    "version",
+    "addresses"
+  ]
+}

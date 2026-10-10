@@ -1,0 +1,276 @@
+{
+  "source": "mcp/contract/fixtures/agui/*.json",
+  "server": "tests/helpers/fixture-server.ts, 127.0.0.1, port chosen by the OS per run",
+  "liveIpfsMcp": false,
+  "results": [
+    {
+      "fixture": "read-pin-ls",
+      "provenance": "authored-from-spec",
+      "requests": 1,
+      "matchedFixtures": [
+        "read-pin-ls"
+      ],
+      "eventsReplayed": 10,
+      "finalRun": "finished",
+      "interrupts": [],
+      "toolCalls": [
+        {
+          "name": "pin_ls",
+          "status": "done"
+        }
+      ],
+      "messages": [
+        "user: Which recursive pins do I have?",
+        "assistant: You have one recursive pin, named wiki."
+      ]
+    },
+    {
+      "fixture": "egress-refused",
+      "provenance": "authored-from-spec",
+      "requests": 1,
+      "matchedFixtures": [
+        "egress-refused"
+      ],
+      "eventsReplayed": 10,
+      "finalRun": "finished",
+      "interrupts": [],
+      "toolCalls": [
+        {
+          "name": "ipfs_cat",
+          "status": "error"
+        }
+      ],
+      "messages": [
+        "user: Summarize bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/readme.md",
+        "assistant: I cannot read that file: its content may not be sent to the configured model."
+      ]
+    },
+    {
+      "fixture": "write-interrupt",
+      "provenance": "authored-from-spec",
+      "requests": 2,
+      "matchedFixtures": [
+        "write-interrupt",
+        "write-resume-approved"
+      ],
+      "eventsReplayed": 12,
+      "finalRun": "finished",
+      "interrupts": [
+        {
+          "tool": "pin_add",
+          "class": "write",
+          "requiresNativePrompt": false,
+          "resolution": "approved"
+        }
+      ],
+      "toolCalls": [
+        {
+          "name": "pin_add",
+          "status": "done"
+        }
+      ],
+      "messages": [
+        "user: Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+        "assistant: Pinned."
+      ]
+    },
+    {
+      "fixture": "write-interrupt",
+      "provenance": "authored-from-spec",
+      "requests": 2,
+      "matchedFixtures": [
+        "write-interrupt",
+        "write-resume-denied"
+      ],
+      "eventsReplayed": 12,
+      "finalRun": "finished",
+      "interrupts": [
+        {
+          "tool": "pin_add",
+          "class": "write",
+          "requiresNativePrompt": false,
+          "resolution": "denied"
+        }
+      ],
+      "toolCalls": [
+        {
+          "name": "pin_add",
+          "status": "error"
+        }
+      ],
+      "messages": [
+        "user: Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+        "assistant: Understood, I did not pin it."
+      ],
+      "note": "deny answered by write-resume-denied"
+    },
+    {
+      "fixture": "two-calls-write-interrupt",
+      "provenance": "authored-from-spec",
+      "requests": 3,
+      "matchedFixtures": [
+        "two-calls-write-interrupt",
+        "two-calls-resume-then-native-interrupt",
+        "two-calls-native-wait-approved"
+      ],
+      "eventsReplayed": 19,
+      "finalRun": "finished",
+      "interrupts": [
+        {
+          "tool": "pin_add",
+          "class": "write",
+          "requiresNativePrompt": false,
+          "resolution": "approved"
+        },
+        {
+          "tool": "repo_gc",
+          "class": "destructive",
+          "requiresNativePrompt": true,
+          "resolution": "approved"
+        }
+      ],
+      "toolCalls": [
+        {
+          "name": "pin_add",
+          "status": "done"
+        },
+        {
+          "name": "repo_gc",
+          "status": "done"
+        }
+      ],
+      "messages": [
+        "user: Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku, then free some space.",
+        "assistant: Pinned it, and garbage collection removed 42 blocks."
+      ],
+      "note": "single-entry resumes; the third request ({wait: true}) is answered by two-calls-native-wait-approved"
+    },
+    {
+      "fixture": "run-error-step-limit",
+      "provenance": "authored-from-spec",
+      "requests": 1,
+      "matchedFixtures": [
+        "run-error-step-limit"
+      ],
+      "eventsReplayed": 7,
+      "finalRun": "error",
+      "interrupts": [],
+      "toolCalls": [
+        {
+          "name": "pin_ls",
+          "status": "done"
+        }
+      ],
+      "messages": [
+        "user: Which recursive pins do I have?"
+      ],
+      "note": "RUN_ERROR max_steps"
+    },
+    {
+      "fixture": "run-error-backend-failure",
+      "provenance": "authored-from-spec",
+      "requests": 1,
+      "matchedFixtures": [
+        "run-error-backend-failure"
+      ],
+      "eventsReplayed": 2,
+      "finalRun": "error",
+      "interrupts": [],
+      "toolCalls": [],
+      "messages": [
+        "user: Which recursive pins do I have?"
+      ],
+      "note": "RUN_ERROR backend_error"
+    },
+    {
+      "fixture": "destructive-native-prompt",
+      "provenance": "authored-from-spec",
+      "requests": 2,
+      "matchedFixtures": [
+        "destructive-native-prompt",
+        "destructive-native-prompt-wait-approved"
+      ],
+      "eventsReplayed": 12,
+      "finalRun": "finished",
+      "interrupts": [
+        {
+          "tool": "repo_gc",
+          "class": "destructive",
+          "requiresNativePrompt": true,
+          "resolution": "approved"
+        }
+      ],
+      "toolCalls": [
+        {
+          "name": "repo_gc",
+          "status": "done"
+        }
+      ],
+      "messages": [
+        "user: Free some space.",
+        "assistant: Garbage collection removed 42 blocks."
+      ],
+      "note": "wait-approved: {wait: true} sent by the session; approve from the chat refused, nothing sent"
+    },
+    {
+      "fixture": "destructive-native-prompt",
+      "provenance": "authored-from-spec",
+      "requests": 2,
+      "matchedFixtures": [
+        "destructive-native-prompt",
+        "destructive-native-prompt-wait-denied"
+      ],
+      "eventsReplayed": 12,
+      "finalRun": "finished",
+      "interrupts": [
+        {
+          "tool": "repo_gc",
+          "class": "destructive",
+          "requiresNativePrompt": true,
+          "resolution": "denied"
+        }
+      ],
+      "toolCalls": [
+        {
+          "name": "repo_gc",
+          "status": "error"
+        }
+      ],
+      "messages": [
+        "user: Free some space.",
+        "assistant: Garbage collection was declined, so nothing was removed."
+      ],
+      "note": "destructive-native-prompt-wait-denied: denied"
+    },
+    {
+      "fixture": "destructive-native-prompt",
+      "provenance": "authored-from-spec",
+      "requests": 2,
+      "matchedFixtures": [
+        "destructive-native-prompt",
+        "destructive-native-prompt-wait-expired"
+      ],
+      "eventsReplayed": 12,
+      "finalRun": "finished",
+      "interrupts": [
+        {
+          "tool": "repo_gc",
+          "class": "destructive",
+          "requiresNativePrompt": true,
+          "resolution": "expired"
+        }
+      ],
+      "toolCalls": [
+        {
+          "name": "repo_gc",
+          "status": "error"
+        }
+      ],
+      "messages": [
+        "user: Free some space.",
+        "assistant: The system prompt was not answered in time, so nothing was removed."
+      ],
+      "note": "destructive-native-prompt-wait-expired: expired"
+    }
+  ]
+}

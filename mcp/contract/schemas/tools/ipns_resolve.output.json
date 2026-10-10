@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipns_resolve output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "$ref": "../common.json#/$defs/IpnsName"
+    },
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath"
+    }
+  },
+  "required": [
+    "name",
+    "path"
+  ]
+}

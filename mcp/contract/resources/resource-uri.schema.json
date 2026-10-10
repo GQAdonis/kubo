@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IPFS MCP resource URIs",
+  "description": "URI forms served by ipfs mcp as MCP resources. ipfs:// and ipns:// map to /ipfs/ and /ipns/ content paths read through the connected daemon's RPC API (untrusted content, contentEgress). ui:// names MCP App views embedded in the binary; they never reference a network origin.",
+  "$defs": {
+    "IpfsUri": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^ipfs://[A-Za-z0-9_-]{2,512}(/[^?#\\s]*)?$",
+      "description": "ipfs://<cid>[/<path>], equivalent to the content path /ipfs/<cid>[/<path>]."
+    },
+    "IpnsUri": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^ipns://[A-Za-z0-9._-]{1,512}(/[^?#\\s]*)?$",
+      "description": "ipns://<name>[/<path>], where name is a libp2p-key CID or a DNSLink domain; equivalent to /ipns/<name>[/<path>]."
+    },
+    "UiUri": {
+      "type": "string",
+      "pattern": "^ui://ipfs-mcp/(content|pins|mfs|dag|node-status)$",
+      "description": "ui://ipfs-mcp/<view>: an MCP App view served from content embedded in ipfs mcp."
+    },
+    "ResourceUri": {
+      "anyOf": [
+        { "$ref": "#/$defs/IpfsUri" },
+        { "$ref": "#/$defs/IpnsUri" },
+        { "$ref": "#/$defs/UiUri" }
+      ]
+    }
+  }
+}

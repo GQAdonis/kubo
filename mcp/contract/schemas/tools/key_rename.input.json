@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "key_rename input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "old_name": {
+      "$ref": "../common.json#/$defs/KeyName"
+    },
+    "new_name": {
+      "$ref": "../common.json#/$defs/KeyName"
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "old_name",
+    "new_name"
+  ]
+}

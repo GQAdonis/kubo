@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_write output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    },
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "bytes_written": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    }
+  },
+  "required": [
+    "path",
+    "cid",
+    "bytes_written"
+  ]
+}

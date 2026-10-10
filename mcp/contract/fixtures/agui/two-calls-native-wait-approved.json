@@ -1,0 +1,92 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Third run of the two-calls sequence: after two-calls-resume-then-native-interrupt.json the island resumes the repo_gc interrupt with {wait: true}, and the run stays open until the system prompt decides. The person approved in the system prompt, so repo_gc runs once and is reported on its original toolCallId tc-8 (announced in run-1, so not re-emitted with TOOL_CALL_START); the model then answers. The denied and expired outcomes of the same observation are covered by destructive-native-prompt-wait-denied.json and -expired.json. Replay after two-calls-write-interrupt.json and two-calls-resume-then-native-interrupt.json, approving in the presence resolver once RUN_STARTED has arrived.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-two-1",
+    "runId": "run-3",
+    "messages": [
+      {
+        "id": "msg-u1",
+        "role": "user",
+        "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku, then free some space."
+      },
+      {
+        "id": "msg-a1",
+        "role": "assistant",
+        "toolCalls": [
+          {
+            "id": "tc-7",
+            "type": "function",
+            "function": {
+              "name": "pin_add",
+              "arguments": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}"
+            }
+          },
+          {
+            "id": "tc-8",
+            "type": "function",
+            "function": {
+              "name": "repo_gc",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      {
+        "id": "msg-t7",
+        "role": "tool",
+        "toolCallId": "tc-7",
+        "content": "{\"pins\":[\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\"]}"
+      }
+    ],
+    "tools": [],
+    "context": [],
+    "resume": [
+      {
+        "interruptId": "int-cf_Tw0CallsGcNat1veXy",
+        "status": "resolved",
+        "payload": {
+          "wait": true
+        }
+      }
+    ]
+  },
+  "events": [
+    {
+      "type": "RUN_STARTED",
+      "threadId": "thread-two-1",
+      "runId": "run-3"
+    },
+    {
+      "type": "TOOL_CALL_RESULT",
+      "messageId": "msg-t8",
+      "toolCallId": "tc-8",
+      "role": "tool",
+      "content": "{\"removed_count\":42}"
+    },
+    {
+      "type": "TEXT_MESSAGE_START",
+      "messageId": "msg-a2",
+      "role": "assistant"
+    },
+    {
+      "type": "TEXT_MESSAGE_CONTENT",
+      "messageId": "msg-a2",
+      "delta": "Pinned it, and garbage collection removed 42 blocks."
+    },
+    {
+      "type": "TEXT_MESSAGE_END",
+      "messageId": "msg-a2"
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "thread-two-1",
+      "runId": "run-3",
+      "outcome": {
+        "type": "success"
+      }
+    }
+  ]
+}

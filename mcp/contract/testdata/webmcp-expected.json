@@ -1,0 +1,292 @@
+{
+  "description": "Golden table for the WebMCP derivation test (derivations/webmcp.json). Test data only: consumers derive, they never read this file.",
+  "tools": {
+    "ipfs_node_info": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": true,
+      "exposed": true
+    },
+    "ipfs_node_status": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": true,
+      "exposed": true
+    },
+    "ipfs_add": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_cat": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_get": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_ls": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "pin_ls": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "pin_add": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "pin_verify": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "pin_update": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": false
+    },
+    "pin_rm": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": false
+    },
+    "mfs_ls": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_stat": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_read": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_write": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_mkdir": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_cp": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_mv": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "mfs_rm": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": false
+    },
+    "ipns_publish": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipns_resolve": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "key_list": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "key_gen": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "key_rename": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "key_rm": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": false
+    },
+    "dag_get": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "dag_stat": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "dag_put": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "car_import": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "car_export": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "routing_findprovs": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "routing_findpeer": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "routing_provide": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "swarm_peers": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": true,
+      "exposed": true
+    },
+    "stats_bw": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": true,
+      "exposed": true
+    },
+    "repo_stat": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": true,
+      "exposed": true
+    },
+    "repo_gc": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": true,
+      "exposed": false
+    },
+    "ipfs_index_search": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": true,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_index_cid": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_index_status": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_index_reconcile": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    }
+  }
+}

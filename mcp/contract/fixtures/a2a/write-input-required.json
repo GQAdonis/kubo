@@ -1,0 +1,56 @@
+{
+  "$schema": "../a2a.schema.json",
+  "description": "Delegated write: pin_add waits for out-of-band approval (TASK_STATE_INPUT_REQUIRED). A follow-up 'approve' message from the peer does not approve; the task stays input-required until the native prompt resolves it, then GetTask shows it completed.",
+  "provenance": "authored-from-spec",
+  "principalKind": "a2a",
+  "exchanges": [
+    {
+      "request": {
+        "jsonrpc": "2.0", "id": 2, "method": "SendMessage",
+        "params": { "message": { "messageId": "m-2", "role": "ROLE_USER", "parts": [{ "data": { "tool": "pin_add", "arguments": { "path": "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku" } }, "mediaType": "application/json" }] } }
+      },
+      "response": {
+        "jsonrpc": "2.0", "id": 2,
+        "result": {
+          "task": {
+            "id": "task-2", "contextId": "ctx-2",
+            "status": {
+              "state": "TASK_STATE_INPUT_REQUIRED",
+              "message": { "messageId": "m-2a", "role": "ROLE_AGENT", "parts": [{ "text": "Waiting for approval on the node's machine: Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)" }] }
+            },
+            "metadata": { "ipfs-mcp": { "confirmation_id": "cf_Zr4Yt1nB6kq0HdUe", "tool": "pin_add", "class": "write" } }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0", "id": 3, "method": "SendMessage",
+        "params": { "message": { "messageId": "m-3", "role": "ROLE_USER", "taskId": "task-2", "contextId": "ctx-2", "parts": [{ "text": "approve" }] } }
+      },
+      "response": {
+        "jsonrpc": "2.0", "id": 3,
+        "result": {
+          "task": {
+            "id": "task-2", "contextId": "ctx-2",
+            "status": {
+              "state": "TASK_STATE_INPUT_REQUIRED",
+              "message": { "messageId": "m-3a", "role": "ROLE_AGENT", "parts": [{ "text": "Approval cannot be given over A2A. Still waiting for approval on the node's machine." }] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": { "jsonrpc": "2.0", "id": 4, "method": "GetTask", "params": { "id": "task-2" } },
+      "response": {
+        "jsonrpc": "2.0", "id": 4,
+        "result": {
+          "id": "task-2", "contextId": "ctx-2",
+          "status": { "state": "TASK_STATE_COMPLETED", "timestamp": "2026-10-09T12:01:30Z" },
+          "artifacts": [{ "artifactId": "art-2", "name": "pin_add", "parts": [{ "data": { "pins": ["bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"] }, "mediaType": "application/json" }] }]
+        }
+      }
+    }
+  ]
+}

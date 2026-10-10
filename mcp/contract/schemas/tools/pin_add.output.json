@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pin_add output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "pins": {
+      "type": "array",
+      "items": {
+        "$ref": "../common.json#/$defs/Cid"
+      }
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pins"
+  ]
+}

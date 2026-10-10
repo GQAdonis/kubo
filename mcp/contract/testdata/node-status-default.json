@@ -1,0 +1,17 @@
+{
+  "daemon_reachable": true,
+  "daemon_version": "0.43.1",
+  "min_kubo_version": "0.29.0",
+  "version_supported": true,
+  "contract_version": "0.1.0",
+  "transport": "stdio",
+  "read_only": false,
+  "enabled_groups": ["node", "content", "pin", "mfs", "names", "dag", "routing", "diag", "index"],
+  "unavailable_tools": [
+    { "name": "pin_update", "reason": "destructive_disabled" },
+    { "name": "pin_rm", "reason": "destructive_disabled" },
+    { "name": "mfs_rm", "reason": "destructive_disabled" },
+    { "name": "key_rm", "reason": "destructive_disabled" },
+    { "name": "repo_gc", "reason": "destructive_disabled" }
+  ]
+}

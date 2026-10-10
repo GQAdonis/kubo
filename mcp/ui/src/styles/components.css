@@ -1,0 +1,433 @@
+/* Primitives: panel, buttons, badges, identifiers, tables, key-value, frames, notices.
+   Depth is fills (ground, surface, raised, control). No borders, rules or shadows. */
+
+.iu-panel {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  container-type: inline-size;
+}
+
+.iu-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.iu-title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+
+.iu-subtitle {
+  margin-top: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.iu-tool {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.iu-head__actions {
+  margin-inline-start: auto;
+}
+
+.iu-muted {
+  color: var(--text-muted);
+}
+
+.iu-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+th.iu-num,
+td.iu-num {
+  text-align: end;
+}
+
+.iu-wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.iu-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.iu-empty {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--text-muted);
+}
+
+/* ---- Buttons (brand: primary accent fill, secondary control fill, text) ---- */
+.iu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color var(--iu-duration) var(--iu-ease),
+    filter var(--iu-duration) var(--iu-ease);
+}
+
+.iu-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.iu-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.iu-btn--secondary {
+  background: var(--control);
+  color: var(--text);
+}
+
+.iu-btn--secondary:hover {
+  background: var(--raised);
+}
+
+.iu-btn--text {
+  padding: 0 var(--space-1);
+  background: none;
+  color: var(--accent-text);
+}
+
+.iu-btn--text:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Dense rows: 32px high, still above the WCAG 2.2 AA 24px minimum target size. */
+.iu-btn--compact {
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  font-size: 14px;
+}
+
+.iu-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Badges ---- */
+.iu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.iu-badge--accent {
+  background: var(--accent-tint);
+  color: var(--accent-text);
+}
+.iu-badge--ok {
+  background: var(--ok-tint);
+  color: var(--ok);
+}
+.iu-badge--warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.iu-badge--err {
+  background: var(--err-tint);
+  color: var(--err);
+}
+.iu-badge--info {
+  background: var(--info-tint);
+  color: var(--info);
+}
+
+.iu-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ---- Identifiers ---- */
+.iu-id {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  min-width: 0;
+}
+
+.iu-id__value {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  color: var(--text);
+}
+
+.iu-copy {
+  color: var(--accent-text);
+}
+
+/* ---- Tables: alternating fills, header on control, scroll inside its own frame ---- */
+.iu-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.iu-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--iu-text-small);
+}
+
+.iu-table th {
+  padding: 10px 14px;
+  background: var(--control);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: start;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.iu-table td {
+  padding: 10px 14px;
+  color: var(--text-muted);
+  vertical-align: top;
+}
+
+.iu-table td:first-child {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.iu-table tbody tr:nth-child(even) td {
+  background: var(--raised);
+}
+
+.iu-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* ---- Key-value record ---- */
+.iu-kv {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.iu-kv__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+}
+
+.iu-kv dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.iu-kv dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@container (max-width: 420px) {
+  .iu-kv__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- Frames and notices ---- */
+.iu-frame {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+}
+
+.iu-frame__label {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.iu-frame .iu-table-wrap {
+  background: var(--raised);
+}
+
+.iu-frame .iu-table tbody tr:nth-child(odd) td {
+  background: var(--raised);
+}
+
+.iu-frame .iu-table tbody tr:nth-child(even) td {
+  background: var(--surface);
+}
+
+.iu-notice {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--control);
+  color: var(--text);
+  font-size: var(--iu-text-small);
+}
+
+.iu-notice--ok {
+  background: var(--ok-tint);
+}
+.iu-notice--warn {
+  background: var(--warn-tint);
+}
+.iu-notice--err {
+  background: var(--err-tint);
+}
+.iu-notice--info {
+  background: var(--info-tint);
+}
+
+.iu-notice--ok .iu-notice__label {
+  color: var(--ok);
+}
+.iu-notice--warn .iu-notice__label {
+  color: var(--warn);
+}
+.iu-notice--err .iu-notice__label {
+  color: var(--err);
+}
+.iu-notice--info .iu-notice__label {
+  color: var(--info);
+}
+
+.iu-more {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.iu-pre {
+  max-height: 24rem;
+  margin: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Lists of hits, trails ---- */
+.iu-hits {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.iu-hit {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.iu-hit__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.iu-hit__text {
+  max-width: 66ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.iu-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.iu-trail li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.iu-trail__sep {
+  color: var(--text-muted);
+}
+
+.iu-trail__here {
+  font-weight: 600;
+}
+
+/* ---- Meter: a flat measured fill, drawn in SVG ---- */
+.iu-meter {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.iu-meter__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+
+.iu-meter__track svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.iu-meter__fill {
+  fill: var(--text-muted);
+}
+
+.iu-meter__fill--warn {
+  fill: var(--warn);
+}
+
+.iu-meter__text {
+  color: var(--text-muted);
+  font-size: var(--iu-text-small);
+}

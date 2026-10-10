@@ -1,0 +1,25 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Observation of destructive-native-prompt.json with {wait: true}: nobody answered the system prompt before the confirmation expired (confirmation.ttl). Expiry is denial: nothing is removed, the call ends with a confirmation_expired ToolError on the original toolCallId and the run finishes. The person may then send a new message.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-gc-1",
+    "runId": "run-2",
+    "messages": [
+      { "id": "msg-u1", "role": "user", "content": "Free some space." },
+      { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-3", "type": "function", "function": { "name": "repo_gc", "arguments": "{}" } }] }
+    ],
+    "tools": [],
+    "context": [],
+    "resume": [{ "interruptId": "int-cf_Ui7dEstrUct1veXy", "status": "resolved", "payload": { "wait": true } }]
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-gc-1", "runId": "run-2" },
+    { "type": "TOOL_CALL_RESULT", "messageId": "msg-t3", "toolCallId": "tc-3", "role": "tool", "content": "{\"error\":{\"code\":\"confirmation_expired\",\"message\":\"The confirmation expired before the system prompt was answered; nothing was changed.\",\"retryable\":true,\"tool\":\"repo_gc\"}}" },
+    { "type": "TEXT_MESSAGE_START", "messageId": "msg-a2", "role": "assistant" },
+    { "type": "TEXT_MESSAGE_CONTENT", "messageId": "msg-a2", "delta": "The system prompt was not answered in time, so nothing was removed." },
+    { "type": "TEXT_MESSAGE_END", "messageId": "msg-a2" },
+    { "type": "RUN_FINISHED", "threadId": "thread-gc-1", "runId": "run-2", "outcome": { "type": "success" } }
+  ]
+}

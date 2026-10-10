@@ -1,0 +1,49 @@
+{
+  "measured": "dist/ (JavaScript and CSS only; source maps excluded)",
+  "closed": {
+    "description": "paid when the host page loads the module and never opens the sidebar",
+    "raw": 5376,
+    "gzip": 2399,
+    "brotli": 2033
+  },
+  "firstOpen": {
+    "description": "paid once, on first open: React 19, the A2UI renderer and catalog, the library, zod, the bundled brand fonts",
+    "raw": 1140154,
+    "gzip": 374788,
+    "brotli": 332098
+  },
+  "total": {
+    "raw": 1145530,
+    "gzip": 377187,
+    "brotli": 334131
+  },
+  "files": [
+    {
+      "file": "dist/chunks/mount-9hrP-V2S.js",
+      "raw": 941596,
+      "gzip": 226119,
+      "brotli": 183835
+    },
+    {
+      "file": "dist/chunks/fonts-data-D_fXGTRc-DVfbGgFJ.js",
+      "raw": 198558,
+      "gzip": 148669,
+      "brotli": 148263
+    },
+    {
+      "file": "dist/ipfs-agent-chat.js",
+      "raw": 3902,
+      "gzip": 1668,
+      "brotli": 1413
+    },
+    {
+      "file": "dist/chunks/endpoint-BhoYC3ie.js",
+      "raw": 1474,
+      "gzip": 731,
+      "brotli": 620
+    }
+  ],
+  "budgets": {
+    "note": "web/performance.md: app page JS under 300 kB gzip. The lazy total includes the brand fonts as base64 woff2."
+  }
+}

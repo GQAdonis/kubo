@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "rootDir": "src",
+    "types": ["vite/client"]
+  },
+  "include": ["src/index.ts", "src/element.ts", "src/agui/endpoint.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

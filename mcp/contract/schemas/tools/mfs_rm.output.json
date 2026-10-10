@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_rm output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "removed": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    }
+  },
+  "required": [
+    "removed"
+  ]
+}

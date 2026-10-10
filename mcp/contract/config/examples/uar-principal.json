@@ -1,0 +1,21 @@
+{
+  "http": {
+    "enabled": true
+  },
+  "principals": [
+    {
+      "name": "uar",
+      "kind": "uar",
+      "credential": {
+        "env": "IPFS_MCP_UAR_TOKEN"
+      },
+      "uar": {
+        "card_url": "http://127.0.0.1:8090/.well-known/agent-card.json",
+        "admin_credential": {
+          "env": "UAR_ADMIN_TOKEN"
+        }
+      },
+      "check": "verify"
+    }
+  ]
+}

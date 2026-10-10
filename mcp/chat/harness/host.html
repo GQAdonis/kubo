@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Node status - IPFS</title>
+    <!-- A stand-in for an ipfs-webui page: Tachyons utilities, plus global rules of the kind the Web UI's
+         own stylesheet carries. Both are hostile to a component that is not isolated. -->
+    <link rel="stylesheet" href="/vendor/tachyons.css" />
+    <link rel="stylesheet" href="/host.css" />
+  </head>
+  <body class="sans-serif charcoal bg-snow-muted">
+    <header class="bg-navy pa3 flex items-center justify-between">
+      <a href="#" class="white no-underline f4 b" aria-label="IPFS home">IPFS</a>
+      <nav aria-label="Main" class="flex items-center">
+        <a href="#status" class="aqua no-underline ph3">Status</a>
+        <a href="#files" class="white no-underline ph3">Files</a>
+        <a href="#explore" class="white no-underline ph3">Explore</a>
+        <a href="#peers" class="white no-underline ph3">Peers</a>
+        <a href="#settings" class="white no-underline ph3">Settings</a>
+        <button id="chat-launcher" class="ml3 pa2" aria-controls="agent-chat" aria-expanded="false">Ask the agent</button>
+      </nav>
+    </header>
+
+    <main class="pa4 mw8 center">
+      <h1 class="f3 fw6 mb3">Node status</h1>
+      <section class="flex flex-wrap" aria-label="Summary">
+        <div class="bg-white pa3 mr3 mb3 w-100 w-30-ns"><h2 class="f5">Peers</h2><p class="f2 b">42</p><p class="f6 gray">connected</p></div>
+        <div class="bg-white pa3 mr3 mb3 w-100 w-30-ns"><h2 class="f5">Repo size</h2><p class="f2 b">1.2 GiB</p><p class="f6 gray">of 10 GiB</p></div>
+        <div class="bg-white pa3 mb3 w-100 w-30-ns"><h2 class="f5">Bandwidth</h2><p class="f2 b">3.4 MB/s</p><p class="f6 gray">in, last 10 s</p></div>
+      </section>
+
+      <h2 class="f4 fw6 mt4 mb2" id="files">Files</h2>
+      <table class="w-100 collapse bg-white">
+        <caption class="clip">Files in the node</caption>
+        <thead>
+          <tr class="tl"><th class="pa2">Name</th><th class="pa2">Size</th><th class="pa2">CID</th></tr>
+        </thead>
+        <tbody>
+          <tr class="striped--near-white"><td class="pa2">wiki</td><td class="pa2">48 MiB</td><td class="pa2 monospace f7">bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi</td></tr>
+          <tr><td class="pa2">notes.md</td><td class="pa2">2.1 KiB</td><td class="pa2 monospace f7">bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku</td></tr>
+          <tr class="striped--near-white"><td class="pa2">site</td><td class="pa2">9.8 MiB</td><td class="pa2 monospace f7">bafybeifx7yeb55armcsxwwitkybtvd2xilcmwoyyxcqkjhx5yxrqsifdam</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="f4 fw6 mt4 mb2">Add by path</h2>
+      <p class="mw6">Add a file or folder from a path on this machine. It stays on your node until you share it.</p>
+      <label for="path" class="db mb1">Path</label>
+      <input id="path" class="db mb3 w-100 mw6" value="/home/me/notes" />
+      <button class="pa2 mr2">Add</button>
+      <a href="#more">More options</a>
+    </main>
+
+    <script type="application/json" id="harness-config">{{CONFIG}}</script>
+    <script type="module" src="/host.js"></script>
+  </body>
+</html>

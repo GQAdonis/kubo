@@ -1,0 +1,1 @@
+{"id":1,"result":[{"result":[{"chunk_index":0,"cid":"bafyA","distance":0.0,"mime":"text/plain","model":"m","path":"/a.txt"},{"chunk_index":1,"cid":"bafyB","distance":1.0,"mime":"text/plain","model":"m","path":"/b.txt"}],"status":"OK","time":"1.623708ms","type":null}]}

@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IPFS MCP contract: shared definitions",
+  "description": "Value types shared by every tool schema. Tool schemas reference these by relative $ref; contract.BundleSchema inlines them for MCP clients.",
+  "$defs": {
+    "Cid": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 512,
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "A CID in any multibase Kubo accepts (CIDv0 base58btc or CIDv1, for example bafy...)."
+    },
+    "ContentPath": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 4096,
+      "pattern": "^(/(ipfs|ipns|ipld)/[^/].*|[A-Za-z0-9_-]+(/.*)?)$",
+      "description": "A bare CID, a CID with a sub-path, or an /ipfs/, /ipns/ or /ipld/ content path."
+    },
+    "MfsPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/(?:$|[^i]|i(?:$|[^p])|ip(?:$|[^fnl])|ipf(?:$|[^s])|ipn(?:$|[^s])|ipl(?:$|[^d])|ip(?:fs|ns|ld)(?:$|[^/]))",
+      "description": "An absolute path in the node's Mutable File System (MFS). Paths under /ipfs/, /ipns/ and /ipld/ are rejected: the daemon would resolve them as content paths, letting a closed-world MFS tool read from the network. Copy content into MFS with mfs_cp, whose source is an MfsCopySource."
+    },
+    "MfsCopySource": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/(?:ipfs/[^/]|$|[^i]|i(?:$|[^p])|ip(?:$|[^fnl])|ipf(?:$|[^s])|ipn(?:$|[^s])|ipl(?:$|[^d])|ip(?:fs|ns|ld)(?:$|[^/]))",
+      "description": "An MfsPath, or an /ipfs/<cid>[/path] content path. /ipns/ and /ipld/ sources are rejected."
+    },
+    "KeyName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "The local name of a keystore key, for example self."
+    },
+    "PeerId": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 128,
+      "pattern": "^(12D3KooW[1-9A-HJ-NP-Za-km-z]{44}|Qm[1-9A-HJ-NP-Za-km-z]{44}|[bk][a-z2-7]{20,})$",
+      "description": "A libp2p peer ID (base58btc or CIDv1 libp2p-key)."
+    },
+    "Multiaddr": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 1024,
+      "pattern": "^/",
+      "description": "A multiaddr, for example /ip4/192.0.2.1/tcp/4001."
+    },
+    "IpnsName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(/ipns/)?[A-Za-z0-9._-]+(/.*)?$",
+      "description": "An IPNS name (libp2p-key CID or DNSLink domain), with or without the /ipns/ prefix."
+    },
+    "Duration": {
+      "type": "string",
+      "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$",
+      "description": "A Go duration string, for example 30s or 24h."
+    },
+    "Encoding": {
+      "type": "string",
+      "enum": [
+        "utf8",
+        "base64"
+      ],
+      "description": "How content bytes are carried in a JSON string."
+    },
+    "Cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Opaque pagination cursor returned as next_cursor by a previous call. Clients must not parse it."
+    },
+    "Limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 100,
+      "description": "Maximum number of items in one page."
+    },
+    "PageInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "has_more"
+      ],
+      "properties": {
+        "has_more": {
+          "type": "boolean",
+          "description": "True when another page exists."
+        },
+        "next_cursor": {
+          "$ref": "#/$defs/Cursor",
+          "description": "Pass as cursor to fetch the next page. Present only when has_more is true."
+        }
+      },
+      "description": "Cursor pagination metadata for list tools."
+    },
+    "ResourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "pattern": "^(ipfs|ipns)://[^\\s]+$",
+          "description": "An ipfs:// or ipns:// resource URI readable with resources/read."
+        },
+        "mime_type": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Detected or declared media type, when known."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Size in bytes, when known."
+        }
+      },
+      "description": "A resource the client reads separately instead of receiving it inline (sent as an MCP resource_link content block as well)."
+    },
+    "ByteCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "A size in bytes."
+    },
+    "Warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Non-fatal warnings about work that follows the tool's own effect, which has already succeeded: for example index entries kept because the pin check or the vector store failed. Absent when there is nothing to report. The tool's result is unchanged by them."
+    },
+    "ConfirmToken": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{32,1000}$",
+      "description": "Two-step confirmation token from a confirmation_required result: a binding handle, not consent. Accepted only after its pending confirmation was approved by elicitation or a human-presence resolver; single-use, 120-second TTL, bound to the session, principal, tool and canonical arguments. Never issued to or accepted from principals of kind a2a or uar."
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_argument",
+        "not_found",
+        "already_exists",
+        "unauthenticated",
+        "permission_denied",
+        "egress_not_acknowledged",
+        "confirmation_required",
+        "confirmation_pending",
+        "confirmation_declined",
+        "confirmation_expired",
+        "confirmation_invalid",
+        "confirmation_unavailable",
+        "tool_unavailable",
+        "daemon_unreachable",
+        "daemon_version_unsupported",
+        "size_limit_exceeded",
+        "session_busy",
+        "failed_precondition",
+        "resource_exhausted",
+        "timeout",
+        "cancelled",
+        "index_unavailable",
+        "rpc_error",
+        "internal"
+      ],
+      "description": "Machine-readable error code. Shared by every tool, transport and endpoint. The list grows additively: a client treats an unknown code as an error and uses retryable alone to decide whether to retry. Endpoint codes (ADR-0004, Round 7 amendment): session_busy (another run is in progress on the same thread, session or A2A context; retryable once it ends), failed_precondition (the target is not in a state that accepts the request: an open interrupt, a thread at its message cap, an A2A task in a terminal state; not retryable unchanged), resource_exhausted (a server-wide cap such as the session limit is reached; retryable, with Retry-After on HTTP)."
+    },
+    "ToolError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error"
+      ],
+      "description": "structuredContent of every tool result with isError true.",
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/ErrorCode"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "description": "Human-readable message. Never includes credentials or content bytes."
+            },
+            "retryable": {
+              "type": "boolean",
+              "description": "True when the same call may succeed later without changes."
+            },
+            "tool": {
+              "type": "string",
+              "description": "The tool that failed."
+            },
+            "details": {
+              "type": "object",
+              "description": "Code-specific details, for example the RPC command that failed or the missing egress host."
+            },
+            "confirmation": {
+              "$ref": "../confirmation/confirmation.schema.json#/$defs/ConfirmationRequired",
+              "description": "Present only when code is confirmation_required or confirmation_pending."
+            }
+          }
+        }
+      }
+    }
+  }
+}
