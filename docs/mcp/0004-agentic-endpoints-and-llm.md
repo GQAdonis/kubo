@@ -158,6 +158,26 @@ The operator decided that `swarm_peers`, `routing_*` and `key_list` stay `conten
 
 Consequence, accepted by the operator: a principal with read grants on the swarm, routing or key groups can send the node's peer list, routing answers and key names to the model backend (through `/agui` or the agent loop behind `/a2a`) or to an `a2a` peer, without the backend host being in its `egress_ack`. The definition of content egress in the Round 6 amendment (stored bytes, names taken from stored data, enumerations of what the node stores) is unchanged; peer, routing and key enumerations are about the node, not its stored content. An operator who does not want this withholds those tool groups from `ui` and `a2a` principals. Recorded in `openspec/changes/mcp-tool-contract/design.md`, `mcp-agui-endpoint/design.md` and `mcp-a2a-endpoint/design.md`.
 
+## Amendment (R11, 2026-10-11: per-principal agent quotas, and the gate changes)
+
+Recorded from the R11 phase-boundary review (`.agent-team/kubo-ipfs-agentic/findings/security/r11-findings.md` M4, H1, H4) and the batched fix pass; accepted by the architect.
+
+- **Session quota.** The agent loop holds at most 64 sessions in total, and at most 16 per principal (`maxSessions`, `maxSessionsPerPrincipal`, `mcp/server/agent_sessions.go`).
+  - A principal at its quota evicts its own least recently used idle session.
+  - When the table is full, a principal may evict only its own oldest idle session. If it has none, the new session is refused with `resource_exhausted`: 503 with `Retry-After` on `/agui`, and the retryable `TOO_MANY_CONTEXTS` on `/a2a`.
+  - Another principal's conversation is never evicted to make room.
+- **Run rate.** Each principal has a token bucket of 120 runs, refilled at 120 runs per minute (`defaultRunBurst`, `defaultRunsPerMinute`).
+  - Over the rate, `/agui` answers 429 with `Retry-After`.
+  - Over the rate, `/a2a` answers JSON-RPC `-32603` with reason `RATE_LIMITED` and a retryable ToolError `resource_exhausted`, whose message gives the wait in seconds.
+  - A rate-limited run creates no session.
+  - Pins: `TestPrincipalSessionQuotaEvictsOnlyItsOwn`, `TestFullTableRefusesInsteadOfEvictingAnotherPrincipal`, `TestRunRateIsPerPrincipalWithRetryAfter`, `TestRateLimitedRunDoesNotCreateASession`.
+- **Why.** Before this change, one `a2a` peer could evict the chat's sessions, or spend the operator's model key without limit.
+- **Limit (open).** The quota covers agent-loop sessions. The A2A context and task store (`a2aStore`, `mcp/server/a2a_store.go`) still has one 64-context cap, and when it is full it evicts the oldest idle context of any owner. One A2A peer can therefore still push out another peer's idle context, though not a running one. This remains open until the store is scoped per owner.
+- **Human gate, as amended in ADR-0003 (R11).**
+  - The "Native prompt requirement (Round 4)" bullet under "Human gate" now reads: presence resolvers are `macos-localauth` and `linux-polkit` only. `desktop` does not qualify until a Desktop confirmation window consumes the pairing key.
+  - Elicitation confirms calls only for `human-mcp` principals (and stdio). `ui` and `a2a` principals cannot approve through elicitation, even when they declare it.
+  - At most two out-of-band confirmations may wait per principal and per session.
+
 ## Consequences
 
 ### Positive

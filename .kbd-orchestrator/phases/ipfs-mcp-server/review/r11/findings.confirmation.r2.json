@@ -1,0 +1,36 @@
+{
+  "mode": "diff",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/confirm/pairing.go",
+      "claim": "A same-user process can forge the stored pairing verifier and authenticate as Desktop without knowing the original pairing key.",
+      "evidence": "The pairingFile comment claims that reading the file does not let a same-user process act as Desktop, but writeFileAtomic creates the verifier in a user-owned directory and loadVerifier performs no integrity authentication. channel.authenticate accepts any key matching the verifier freshly loaded from that file. A same-user process can replace the file with version 1 and the SHA-256 hash of its own chosen key, then use that key to list and approve Desktop confirmations; RunPair's terminal and running-server checks are bypassed by writing the file directly.",
+      "suggested_fix": "Anchor pairing integrity in storage that the modeled same-user background attacker cannot modify, or require an independently authenticated native presence factor before accepting pairing changes. Do not treat a mutable user-owned verifier file as proof of Desktop identity."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/confirm/channel.go",
+      "claim": "Creating a second confirmation channel in the same process disconnects the first channel and can subsequently remove the second channel's socket.",
+      "evidence": "newChannel always uses filepath.Join(dir, fmt.Sprintf(\"%d.sock\", os.Getpid())) and unconditionally removes that path before listening. The provider in manager.go supports multiple managers through active []*Manager, and Build is independently callable. A second Build in the same directory unlinks the first listener's pathname; both channels then retain the same sockPath, so closing the first removes the second listener's pathname.",
+      "suggested_fix": "Allocate a unique socket pathname for each channel, or share a single process-level channel with explicit ownership and reference counting. Never unlink a pathname belonging to another live channel."
+    },
+    {
+      "severity": "WARNING",
+      "file": "mcp/server/confirm/cli.go",
+      "claim": "The CLI remains blocked reading terminal input after its context is canceled or the displayed confirmation expires.",
+      "evidence": "decide calls bufio.NewReader(o.In).ReadString('\\n') synchronously without observing ctx.Done() or p.ExpiresAt. The context is only used in c.resolve after input arrives, so canceling the request or expiring the confirmation cannot terminate the waiting command.",
+      "suggested_fix": "Use a cancelable terminal-input mechanism and bound the input wait by both the request context and the pending confirmation's expiry, without closing the caller-owned stdin."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

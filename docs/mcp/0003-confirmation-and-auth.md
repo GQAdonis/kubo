@@ -237,6 +237,58 @@ Raised by `mcp-server-engineer` while implementing `mcp-a2a-endpoint`; accepted 
 - **Falsifier.** A destructive call from an `a2a` principal is approved through `ipfs mcp confirm`, an A2A message, or an AG-UI interrupt: block.
 - **Not decided here.** Kind `uar` (topology B, deferred by ADR-0008) is not covered by this amendment; it is decided when topology B is resumed.
 
+## Amendment (R11, 2026-10-11): presence, elicitation scope, pairing, helper trust, prompt caps, resource reads
+
+Recorded from the R11 phase-boundary review (`.agent-team/kubo-ipfs-agentic/findings/security/r11-findings.md` H1-H4, M1, M3; `.agent-team/kubo-ipfs-agentic/findings/review/r11-findings.md`) and the batched fix pass; accepted by the architect. Where this disagrees with the text above, including the Round 4 and Round 7 amendments, this amendment governs.
+
+### 1. `desktop` is not a presence resolver yet
+
+- **Decision.** Only `macos-localauth` and `linux-polkit` satisfy `requires_native_prompt` (`server.IsPresenceResolver`, `mcp/server/broker.go`). `desktop` is removed from the presence list in Round 4 section 1 and in the Round 7 amendment. It counts again only once an IPFS Desktop confirmation window exists that consumes the pairing key and adds its own presence factor.
+- **Why.** No Desktop window consumes the key today. The key alone would be the whole factor, and any same-user process that ran `ipfs mcp pair` holds it.
+- **Unchanged.** A paired `desktop` channel still resolves write-class confirmations that do not require a native prompt.
+- **Pins.** `TestIsPresenceResolver`, `TestDesktopIsNotAPresenceResolver`, `TestUIDestructiveNeedsAPresenceResolverNotCLI`, `TestA2ADestructiveNeedsThePresenceResolver`.
+- **Falsifier.** A destructive call from a `ui` or `a2a` principal is approved over the paired Desktop channel: block.
+
+### 2. Elicitation is only for `human-mcp` principals and stdio
+
+- **Decision.** The gate confirms through elicitation (mechanism 1) only when the principal's kind is `human-mcp` and the session advertised elicitation (`mayElicit`, `mcp/server/gate.go`). The stdio principal is `human-mcp`. `elicitAnswer` checks the kind again on the retry.
+- **Why.** A `ui`, `a2a` or `uar` principal can declare elicitation and answer its own prompt. Such principals go to an out-of-band resolver, and a destructive `ui` or `a2a` call goes to the native prompt.
+- **Pins.** `TestElicitationIsOnlyForHumanMCPPrincipals`, `TestHumanMCPPrincipalStillConfirmsThroughElicitation`, `TestUIDestructiveWithoutNativePromptIsRefusedEvenWithElicitation`, `TestElicitAnswerRechecksThePrincipalKind`.
+- **Falsifier.** A principal of any kind other than `human-mcp` approves a call through `inputResponses`: block.
+
+### 3. `ipfs mcp pair`
+
+- **Decision.** `ipfs mcp pair` requires a terminal on stdin. It refuses while any server accepts connections on a confirmation socket in the socket directory; a stale socket file that nothing listens on does not block it.
+- **Replacement.** A new pairing replaces the old one, and the old key stops working at once on running servers too. The channel reads the stored verifier again for every request; it is not cached at start.
+- **Pins.** `TestRunPairNeedsATerminal`, `TestRunPairRefusesWhileAServerHoldsTheSocket`, `TestRunPairIgnoresAStaleSocket`, `TestReplacedPairingRevokesTheOldKeyOnARunningChannel`.
+- **Limit.** A TTY is not a presence factor. This narrows the self-pairing path for automated callers; it does not make `desktop` a presence resolver (item 1).
+
+### 4. Presence helpers run from trusted paths with a minimal environment
+
+- **Polkit.** `pkcheck` and `pkaction` run only from `/usr/bin/pkcheck` and `/usr/bin/pkaction`, never from `$PATH`. Each binary and its directory must be root-owned and not writable by group or others. This is checked at probe time and again before every `pkcheck` call; otherwise the resolver is unavailable.
+- **Environment.** Every helper (`/usr/bin/swift` on macOS, `pkcheck`, `pkaction`) is started with an environment built from an allowlist (`mcp/server/confirm/exec_env.go`). `PATH` is fixed to `/usr/bin:/bin:/usr/sbin:/sbin`. Only `HOME`, `TMPDIR`, `USER`, `LOGNAME`, `LANG`, `LC_ALL`, `LC_CTYPE` and `__CF_USER_TEXT_ENCODING` are kept, and `DEVELOPER_DIR`, `TOOLCHAINS`, `SDKROOT`, `DYLD_*` and `LD_*` are always stripped.
+- **macOS probe.** The macOS availability probe is bounded at 30 seconds, independent of the request's context.
+- **Why.** An MCP host's env block is written by whoever wrote the MCP config, not necessarily the person at the keyboard. Before this change, a fake `pkcheck` earlier on `$PATH`, or a `DEVELOPER_DIR` pointing at a fake toolchain, could approve destructive calls.
+- **Pins.** `TestPolkitUsesAbsoluteSystemPathsEvenWithAPoisonedPATH`, `TestPolkitRefusesAnUntrustedHelper`, `TestTrustedBinaryRequiresARootOwnedFile`, `TestTrustedBinaryRefusesAWritableHelper`, `TestSafeEnvKeepsOnlyAllowlistedVariables`, `TestMacProbeIsBoundedAndIndependentOfTheRequest`.
+
+### 5. At most two open out-of-band confirmations
+
+- **Decision.** At most 2 out-of-band confirmations may be pending at once per principal, and 2 per session (`maxOpenExternal`, `mcp/server/broker.go`). A call beyond the cap does not run. It gets `confirmation_pending` (retryable) with `details.reason: "too_many_open_confirmations"`, and no prompt is raised.
+- **Not covered.** Elicitation confirmations are not counted.
+- **Why.** Each confirmation can raise a system prompt. Without a cap, a prompt-injected loop could flood the person with prompts until one is approved by fatigue.
+- **Pins.** `TestBrokerCapsOpenExternalConfirmationsPerPrincipalAndSession`, `TestBrokerCapDoesNotApplyToElicitationOrUnlimitedCreate`, `TestGateRefusesExtraOpenConfirmations`.
+
+### 6. `resources/read` on `ipfs://` and `ipns://` follows the `ipfs_cat` policy
+
+- **Decision.** A content resource returns the same bytes as `ipfs_cat`, so it follows the same policy. An authenticated principal needs a read grant on the `content` group, and the `contentEgress` check (`egress_ack`) applies as it does to `ipfs_cat` (`resourceAccess`, `mcp/server/tools_content.go`).
+- **Why.** Before this change, a principal with only `groups: ["node"]` and no `egress_ack` could read up to 16 MiB of content through `resources/read`.
+- **Pins.** `TestContentResourcesFollowTheIPFSCatPolicy`, `TestContentResourceIsReadableWithTheGrantAndAck`.
+
+### Consequences of the R11 amendment
+
+- On Windows, and on any host without the macOS or polkit factor, destructive calls from `ui` and `a2a` principals are refused with `confirmation_unavailable` until the Desktop window ships, even when Desktop is paired. Destructive tools stay usable from a `human-mcp` session that elicits.
+- The `requires_native_prompt` descriptions in `mcp/contract/confirmation/confirmation.schema.json` still list `desktop`, and the generated `mcp/ui/catalog/ipfs-mcp.catalog.json` copies that text. Both need a coordinated regeneration with the `ui-ux-engineer` role. Until then, this amendment and `IsPresenceResolver` govern.
+
 ## References
 
 - `.kbd-orchestrator/phases/ipfs-mcp-server/operator-answers.md`: answers 4 and 5, consequences, G9-G12 answers (Q4), Round 0 R3

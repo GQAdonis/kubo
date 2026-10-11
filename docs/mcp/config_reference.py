@@ -138,7 +138,7 @@ def render(schema, side):
         w("")
     w("## Command-line options")
     w("")
-    w("Global options such as `--api` and `--api-auth` keep their Kubo meaning (see `ipfs --help`); `ipfs mcp` uses them to reach the daemon. In a build with the `noagent` tag the `--llm-*`, `--agui` and `--a2a` options do not exist.")
+    w("Global options such as `--api` and `--api-auth` keep their Kubo meaning (see `ipfs --help`); `ipfs mcp` uses them to reach the daemon. Give the RPC secret with `--api-auth-env` or `--api-auth-file` instead of `--api-auth`, which puts it in the process list (`ipfs mcp` warns when it is used). In a build with the `noagent` tag the `--llm-*`, `--agui` and `--a2a` options do not exist.")
     w("")
     for cmd in SUBCOMMANDS:
         opts = side["options"][cmd]

@@ -1,0 +1,36 @@
+{
+  "mode": "diff",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/http.go",
+      "claim": "The request-rejection diagnostics log request destinations and browser origins, violating the blocking no-tracking constraint.",
+      "evidence": "protect logs r.URL.Path in all three rejection branches, r.Host for Host rejection, and the Origin header for cross-origin rejection. cmd/ipfs/kubo/mcp.go supplies a warning-level stderr logger, so these records are emitted during normal CLI operation. The no-tracking constraint prohibits code that 'collects, logs or reports ... what it stores or requests' and explicitly applies to mcp/server logging.",
+      "suggested_fix": "Log only fixed rejection categories without Host, Origin, request path, or other caller-controlled identifying details."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "cmd/ipfs/kubo/mcp_http.go",
+      "claim": "An explicit --http=false does not override an enabled HTTP transport in the configuration file.",
+      "evidence": "mcpHTTPFlag.Parse accepts false, but loadMCPSettings enables HTTP with `if httpFlag || cfg.HTTP.Enabled`. Thus a configuration containing http.enabled=true still starts the listener when the operator explicitly passes --http=false, contrary to the stated mcpSettings precedence that 'flags override the config file'.",
+      "suggested_fix": "Track whether --http was explicitly provided, separately from its boolean value, and use that value instead of cfg.HTTP.Enabled when present; test --http=false against an HTTP-enabled configuration."
+    },
+    {
+      "severity": "WARNING",
+      "file": "cmd/ipfs/kubo/mcp_http.go",
+      "claim": "The HTTP address flag leaks its value across command parses in the same process.",
+      "evidence": "mcpHTTPFlag.Parse stores address values in the process-global mcpHTTPAddress.addr, while its boolean parse branch returns without clearing that state. httpSettings unconditionally reads httpAddressFlag(). Consequently, parsing --http=127.0.0.1:5051 followed by a separate invocation with bare --http still selects port 5051 instead of the documented default or that invocation's environment/configuration.",
+      "suggested_fix": "Keep the parsed address in request-local option state rather than a package-global variable, and add a test that parses and loads settings for two successive invocations with different HTTP options."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

@@ -1,0 +1,4 @@
+- [CRITICAL] mcp/server/confirm/cli.go: The CLI prints untrusted confirmation text directly to the terminal, allowing control-sequence injection to disguise the operation being approved.
+- [CRITICAL] mcp/server/confirm/factor_polkit.go: The Linux native confirmation gate trusts PATH-selected executables to attest human authentication.
+- [CRITICAL] mcp/server/confirm/pairing.go: Replacing a pairing does not revoke the old key on running confirmation servers.
+- [WARNING] mcp/server/confirm/factor_macos.go: The macOS availability probe can block indefinitely even after the confirmation request is canceled.

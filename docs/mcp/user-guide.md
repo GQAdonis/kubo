@@ -71,7 +71,7 @@ Plugins for Claude Code, Codex and OpenCode bundle the skills and the MCP server
 
 **IPFS Desktop.** Desktop runs a Kubo daemon and writes its `api` file into the repo it uses. When that repo is `~/.ipfs` (Desktop's default), `ipfs mcp` finds it with no flags. Otherwise set `IPFS_PATH` to that repo, or pass `--api` with the daemon's RPC address (`Addresses.API` in that repo's config).
 
-**A daemon with `API.Authorizations`.** Pass the secret with the global `--api-auth` option, for example `ipfs mcp --api-auth bearer:<secret>`. See [Restrict what `ipfs mcp` can do on the daemon](#restrict-what-ipfs-mcp-can-do-on-the-daemon).
+**A daemon with `API.Authorizations`.** Pass the secret from an environment variable or a file: `ipfs mcp --api-auth-env IPFS_RPC_SECRET` (the variable holds, for example, `bearer:<secret>`) or `ipfs mcp --api-auth-file /absolute/path/to/secret`. The global `--api-auth bearer:<secret>` also works, but it puts the secret in the process list, where other local users can read it, and `ipfs mcp` prints a warning. Use only one of the three. See [Restrict what `ipfs mcp` can do on the daemon](#restrict-what-ipfs-mcp-can-do-on-the-daemon).
 
 ## Configure a client over stdio
 
@@ -100,11 +100,12 @@ Over stdio the client is the operator: it can call every enabled tool, and write
 ```bash
 ipfs mcp --http                       # 127.0.0.1:5050
 ipfs mcp --http=127.0.0.1:5150        # another address (or IPFS_MCP_HTTP_LISTEN)
+ipfs mcp --http=false                 # stdio, even when the config file sets http.enabled: true
 ```
 
 The listener refuses the ports of other local services (4000, 4001, 5001, 8080, 1906-1908, 50051, 8181, 8081, 11434, 23001, 28000). Every request must carry a loopback `Host` header on a loopback listener (DNS rebinding protection) and no foreign `Origin`; browser origins are refused unless listed in `http.allowed_origins` in the config file.
 
-**Without a credential**, a loopback listener serves only the read-only tools, to any local process, and prints a warning saying so. A non-loopback address is refused without a credential.
+**Without a credential**, a loopback listener serves only the read-only tools, to any local process, and prints a warning saying so. It refuses (403) any request that carries a `Forwarded`, `X-Forwarded-For` or `X-Real-IP` header, because such a request was relayed from somewhere else. A non-loopback address is refused without a credential.
 
 **With the operator token.** The token is read from an environment variable or a file, never from the command line:
 
@@ -127,7 +128,7 @@ The Claude Code command stores the header value in Claude Code's configuration; 
 **Exposing it beyond this machine.** Prefer not to. If you must:
 
 - bind to a non-loopback address only with a credential (`ipfs mcp` refuses otherwise) and give each client its own principal (next section), not the operator token;
-- put TLS in front with a reverse proxy; `ipfs mcp` serves plain HTTP only;
+- put TLS in front with a reverse proxy; `ipfs mcp` serves plain HTTP only. Behind a proxy a credential is required: configure the operator token or principals. Without one, every proxied request is refused, since proxies add forwarding headers;
 - if the proxy forwards to a loopback listener, have it send a loopback `Host` header (the listener address), or the request is refused;
 - keep `http.allowed_origins` empty unless a browser page must call `/mcp`.
 
@@ -183,7 +184,7 @@ ipfs mcp --read-only --tools=node,content --print-rpc-allowed-paths
 }
 ```
 
-It honors `--tools`, `--read-only` and `tools.disabled`, and exits without contacting the daemon. Replace the secret, add the entry under a name of your choice in the daemon's [`API.Authorizations`](../config.md#apiauthorizations), restart the daemon, and start `ipfs mcp` with `--api-auth bearer:<the secret>`.
+It honors `--tools`, `--read-only` and `tools.disabled`, and exits without contacting the daemon. Replace the secret, add the entry under a name of your choice in the daemon's [`API.Authorizations`](../config.md#apiauthorizations), restart the daemon, and start `ipfs mcp` with `--api-auth-env NAME` (a variable holding `bearer:<the secret>`) or `--api-auth-file /absolute/path`. Avoid `--api-auth bearer:<the secret>`: the secret then shows in the process list.
 
 Two cautions:
 
@@ -219,7 +220,7 @@ Limits you should know:
 | A tool group | `--tools` with the groups you want, or `tools.groups`; `tools.disabled` lists single tools. |
 | Every write | `--read-only` (or `tools.read_only`). |
 | Destructive tools | Off by default; they need `destructive` in `--tools` or a principal's `destructive_groups`. |
-| The HTTP listener | Off by default; do not pass `--http` or set `http.enabled`. |
+| The HTTP listener | Off by default; do not pass `--http` or set `http.enabled`. `--http=false` overrides `http.enabled: true`. |
 | A principal | Remove its entry or the variable or file its credential names. |
 | MCP App views | `--no-app-views` (or `tools.app_views: false`). |
 | Out-of-band confirmation prompts | `--confirm=none` or `IPFS_MCP_CONFIRM=none`. Per-call confirmation itself cannot be turned off. |
@@ -234,4 +235,5 @@ Each option, its default and the test that runs it in the off state are listed i
 - **A tool is missing from `tools/list`.** Its group is not enabled, it is destructive and `destructive` is not selected, the principal lacks the grant, or the daemon lacks its RPC command. `ipfs_node_status` gives the reason for each tool.
 - **`confirmation_unavailable`.** The client cannot elicit and no out-of-band mechanism is available (no `/usr/bin/swift` on macOS, no polkit action on Linux, no paired Desktop, or `--confirm=none`).
 - **`egress_not_acknowledged`.** The principal has no `egress_ack` covering the host the content would go to. See the [agentic guide](agentic.md#principals-and-egress_ack).
-- **HTTP 403 from `/mcp`.** A non-loopback `Host` header on a loopback listener, or an `Origin` not in `http.allowed_origins`.
+- **HTTP 403 from `/mcp`.** A non-loopback `Host` header on a loopback listener, an `Origin` not in `http.allowed_origins`, or a forwarding header (`Forwarded`, `X-Forwarded-For`, `X-Real-IP`) on a listener with no credential configured.
+- **`confirmation_pending` with reason `too_many_open_confirmations`.** Two out-of-band confirmations are already waiting for this principal or session. Nothing ran; answer them or let them expire, then retry.

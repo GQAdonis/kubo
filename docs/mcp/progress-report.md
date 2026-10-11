@@ -1,12 +1,12 @@
 # Progress report: KBD phase `ipfs-mcp-server`
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 This document records what the `ipfs-mcp-server` phase has delivered in this Kubo fork, why each decision was made, what is verified, and what is still open. It is a summary for readers who were not in the sessions. The detailed, append-only log stays in [`execution.md`](../../.kbd-orchestrator/phases/ipfs-mcp-server/execution.md); the plan is [`plan.md`](../../.kbd-orchestrator/phases/ipfs-mcp-server/plan.md).
 
 How it is maintained: the `ipfs-agent-architect` role updates this file at the end of every execution round and at the phase boundary, and adds one dated line to the change log at the bottom. Status figures come from the canonical KBD runtime (`prometheus kbd --path . status --json`), not from task checkboxes.
 
-Position on 2026-10-10: stage Execute, rounds R0-R10 dispatched, 21 of 35 changes complete in the runtime. Round 11 (phase-boundary review) has not started. All finished work is committed and pushed to branch `feat/ipfs-mcp-server` in GQAdonis/kubo, GQAdonis/ipfs-webui and tribe-health/ipfs-desktop (operator request, 2026-10-10).
+Position on 2026-10-11: stage Execute, rounds R0-R10 dispatched, 21 of 35 changes complete in the runtime. Round 11 (phase-boundary review) is in progress: the reviews and the judge ran, the batched correction pass is applied, and re-verification is pending (section 5.1). All finished work is committed and pushed to branch `feat/ipfs-mcp-server` in GQAdonis/kubo, GQAdonis/ipfs-webui and tribe-health/ipfs-desktop (operator request, 2026-10-10).
 
 ## 1. Goals
 
@@ -16,11 +16,11 @@ The goals are in [`goals.md`](../../.kbd-orchestrator/phases/ipfs-mcp-server/goa
 |---|---|---|
 | G1 | Choose where MCP lives, by assessment with adversarial review; record it as an ADR | Met: [ADR-0001](0001-mcp-server-placement.md), operator-approved |
 | G2 | MCP tools for add/get/cat, pins, IPNS and keys, MFS, DAG, CAR, routing, node status, from one contract | Met: 41 tools in [`mcp/contract/catalog.json`](../../mcp/contract/catalog.json) |
-| G3 | stdio and Streamable HTTP, auth, loopback default, Origin protection, off switch per capability | Met in code and tests; independent review pending |
+| G3 | stdio and Streamable HTTP, auth, loopback default, Origin protection, off switch per capability | Met in code and tests (full CLI suite re-run on the final tree in R11, ok); R11 review findings fixed in one batched pass, see [section 5.1](#51-r11-phase-boundary-review) |
 | G4 | React 19 component library that is an A2UI v0.9 catalog, `ui://` resources, WCAG 2.2 AA | Built; real-host render, visual baselines and real-browser axe pending |
 | G5 | agentskills.io skills, packaged as plugins and marketplaces | 8 skills; plugins for Claude Code, Codex, OpenCode; logged-in harness run pending |
-| G6 | No break to `/api/v0`, gateway, CID recipe, wire; no tracking; no silent CID injection; gated writes | Held by design; the blocking regression suite runs in R11 |
-| G7 | Team execution with independent security and quality review | Team execution done; review is R11, not started |
+| G6 | No break to `/api/v0`, gateway, CID recipe, wire; no tracking; no silent CID injection; gated writes | Held by design; the R11 reviews found no change to `/api/v0`, the gateway, the CID recipe or wire behavior |
+| G7 | Team execution with independent security and quality review | Team execution done; R11 reviews and the cross-family judge ran, one batched correction pass applied and re-verified (race, CLI suite, Playwright, lint) ([section 5.1](#51-r11-phase-boundary-review)) |
 | G8 | WebMCP tools in the IPFS Web UI | Not delivered: blocked on the operator's host probes |
 | G9 | AG-UI and A2A endpoints | Met through `ipfs mcp` (topology A); UAR-hosted topology B deferred |
 | G10 | LLM backend behind the agentic endpoints, no default endpoint | Met for an OpenAI-compatible server (verified with local Ollama); UAR leg not run |
@@ -111,7 +111,7 @@ Evidence below is what was recorded in `execution.md` and the change task files.
 
 - What: `ipfs mcp` with tool groups content, pin, names (IPNS and keys), MFS, DAG and CAR, routing and diagnostics, node status, and index. `ipfs://` and `ipns://` resources. stdio by default; Streamable HTTP with `--http` on `127.0.0.1:5050`, loopback Host check, empty cross-origin allowlist, body limit, and refusal of a non-loopback bind without an auth verifier. An unauthenticated loopback listener serves a read-only `anonymous-loopback` principal. Principals (`human-mcp`, `ui`, `a2a`, `uar`) are read-only by default and get write or destructive groups by name.
 - Where: [`mcp/server/`](../../mcp/server/), [`cmd/ipfs/kubo/mcp*.go`](../../cmd/ipfs/kubo/), tests in `test/cli/mcp_*_test.go`.
-- Verified: `go test ./mcp/...` and `go test ./test/cli -run TestMCP` against real daemons on non-default ports, re-run at several rounds (latest recorded R7: `TestMCP` with Ollama skipped, 53.7 s, ok; `make build` ok; `go vet` including `nomcp` and `noagent`). 8 real-daemon HTTP subtests pass.
+- Verified: `go test ./mcp/...` and `go test ./test/cli -run TestMCP` against real daemons on non-default ports, re-run at several rounds (latest recorded R7: `TestMCP` with Ollama skipped, 53.7 s, ok; `make build` ok; `go vet` including `nomcp` and `noagent`). 8 real-daemon HTTP subtests pass. R11 re-run on the final tree: the `TestMCP` CLI suite (Ollama skipped) ok in 55.5 s, and the race-detector run over `./mcp/...` and `./cmd/ipfs/kubo/` with 0 races.
 - Not verified: elicitation from clients on protocols older than 2026-07-28; the full binary size; behavior against a daemon below the minimum version.
 
 ### 3.3 Confirmation
@@ -153,14 +153,14 @@ Evidence below is what was recorded in `execution.md` and the change task files.
 - What: a React 19 component library that is also an A2UI catalog (catalog id is a URI, `ipfs-mcp` is an alias), with chat primitives and bundled fonts registered as `IPFS UI *`. Five single-file MCP App views served as `ui://ipfs-mcp/<view>` resources with a CSP that names no remote origin; off switch `tools.app_views` / `--no-app-views`.
 - Where: [`mcp/ui/`](../../mcp/ui/), [`mcp/app/`](../../mcp/app/).
 - Verified (agent-reported): `mcp/ui` 247 tests, axe WCAG 2.2 AA in dark and light, no external URLs; `mcp/app` 185 tests, deterministic rebuild check, `go test ./mcp/app` ok.
-- Not verified: rendering in a real host (task 1.4, operator); Playwright visual baselines and real-browser axe (held by the `tier-guard` hook until R11). Each view is about 750 KB (about 305 KB gzip, about 200 KB fonts).
+- Not verified: rendering in a real host (task 1.4, operator); real-browser checks ran in R11 (`mcp/ui` 90/90, `mcp/app` 104/104, axe included; darwin baselines committed). Each view is about 750 KB (about 305 KB gzip, about 200 KB fonts).
 
 ### 3.9 Chat island
 
 - What: `<ipfs-agent-chat>`, a shadow-root React 19 + Tailwind 4 + shadcn sliding sidebar that talks only to `ipfs mcp` `/agui`, renders A2UI results and needs a trusted user gesture to answer an interrupt.
 - Where: [`mcp/chat/`](../../mcp/chat/).
 - Verified (agent-reported): 189 tests, 11 fixtures replay, closed bundle 2.3 kB gzip, first open 364 kB gzip including 145 kB fonts.
-- Not verified: Playwright and Electron e2e specs are written but run in R11. `@a2ui/react` 0.12.0 injects a head style that the build strips; an upstream report is drafted in [`mcp/chat/EVIDENCE.md`](../../mcp/chat/EVIDENCE.md), not filed.
+- Verified in R11: Playwright and Electron e2e 133/133. `@a2ui/react` 0.12.0 injects a head style that the build strips; an upstream report is drafted in [`mcp/chat/EVIDENCE.md`](../../mcp/chat/EVIDENCE.md), not filed.
 
 ### 3.10 Web UI fork (GQAdonis/ipfs-webui, branch `feat/ipfs-mcp-server`)
 
@@ -177,8 +177,8 @@ Evidence below is what was recorded in `execution.md` and the change task files.
 ### 3.12 Skills
 
 - What: 8 skills in [`mcp/skills/`](../../mcp/skills/): publish content, retrieve and verify, pin management, IPNS names, MFS workspace, DAG and CAR, content search, troubleshooting.
-- Verified: `skills-ref validate` clean for all 8; catalog check 41/41 tool names; lexical trigger proxy 20/22.
-- Not verified: the live-model near-miss trigger run (R11).
+- Verified: `skills-ref validate` clean for all 8; catalog check 41/41 tool names; lexical trigger proxy 20/22 (re-run 2026-10-11; the misses route a CID read to `ipfs-content-search` and a `confirmation_unavailable` question to `ipfs-publish-content`).
+- Not verified: the live-model near-miss trigger run. Task 1.4 is unticked in `openspec/changes/ipfs-agent-skills/tasks.md` until it is recorded (R11-Q06); the spec delta now names the 8 skills (R11-Q13).
 
 ### 3.13 Plugins and marketplaces
 
@@ -225,13 +225,13 @@ Source: canonical runtime, revision 832, 2026-10-10. "Done" is the runtime's cou
 | 19 | mcp-llm-proxy-loop | complete | 6/6 | |
 | 20 | uar-integration-spike | pending | 1/5 | Deferred (ADR-0008). 1.1 done and recorded in ADR-0008 |
 | 21 | mcp-app-views | pending | 3/4 | Real-host render check (operator) |
-| 22 | ipfs-agent-skills | complete | 4/4 | |
+| 22 | ipfs-agent-skills | complete | 4/4 | `tasks.md` 1.4 unticked in R11 (live near-miss eval pending, R11-Q06); the runtime cannot reopen a complete task, so a blocker records the pending live eval |
 | 23 | webui-webmcp-integration | pending | 0/4 | Not started; blocked on the WebMCP spike |
 | 24 | mcp-agui-endpoint | complete | 7/7 | |
 | 25 | mcp-a2a-endpoint | complete | 7/7 | |
 | 26 | desktop-agent-chat | pending | 3/6 | Pairing and native confirmation window not built; operator run |
 | 27 | mcp-embeddings-surrealdb | complete | 5/5 | |
-| 28 | agentic-uar-integration | pending | 0/4 | Deferred with topology B (ADR-0008) |
+| 28 | agentic-uar-integration | pending | 0/4 | Deferred with topology B (ADR-0008). `tasks.md` has 5 tasks, all deferred: 1.5 moved in from `mcp-llm-proxy-loop` in R6 and is not registered in the runtime, which counts 4 (0/5 by checkbox) |
 | 29 | mcp-release-binaries | complete | 3/3 | |
 | 30 | webui-cid-delivery | pending | 0/3 | Not started; operator picks D1, D2 or D3 after the spike report |
 | 31 | webui-agent-chat | pending | 3/4 | 1.3 operator live run (1.4 done: token in browser storage) |
@@ -254,21 +254,117 @@ Not delivered:
 
 Known gaps and defects:
 
-- Three confirmation config keys are validated but never read: `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl`. The TTL is fixed at 120 s. They are marked in [config-reference.md](config-reference.md).
+- Three confirmation config keys are not implemented: `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl`. Since R11 a config file that sets one is rejected at validation, with an error pointing to `confirmation.modes` (R11-Q02). Before that they were accepted and ignored. The TTL is fixed at 120 s. Whether to implement or remove them is an open operator decision (section 5.1).
 - `ipfs mcp` exits at start when no daemon is reachable, so a harness shows the server as failed. This matches ADR-0001 (no offline mode) but is a usability cost.
 - Codex starts stdio servers with an allowlisted environment; an exported `IPFS_PATH` did not reach the server in testing. A node at a non-default repo path needs the HTTP alternative.
 - Binaries are unsigned and not notarized. Only darwin-arm64 was executed. Binaries report `-dirty` because the tree was uncommitted at build time; R11 rebuilds on the final tree.
-- `TestMCPDAG` subtest "pin=true pins the node" failed twice and passed on rerun. Not investigated.
+- `TestMCPDAG` subtest "pin=true pins the node" failed twice and passed on rerun. R11-Q01 explains it: `dag_put` returned after the first streamed object, cancelling the request before the daemon committed and pinned. It now reads the stream to EOF. `TestMCPDAG` passes 8/8 in R11 (not reproduced on the old code first).
 - The `pkill` incident: on 2026-10-09 a subagent ran `pkill -f "ipfs daemon"`, copied from the upstream "Cleaning Up Stale Daemons" section of `AGENTS.md`. It killed every daemon by name, including the operator's IPFS Desktop daemon on the default ports. Fix: the rule "never use it here; stop only harness daemons by PID" is recorded in `.prometheus/gotchas.md`; tests stop only the processes they started, and `test/cli/mcp_procgroup_*_test.go` kills only the process group a test started (used for Ollama runner children). The upstream `AGENTS.md` text is unchanged and is still unsafe on a host that runs another node.
-- Independent review has not happened. The security and quality reviewers and the cross-family judge run in R11. Until then every claim here rests on the builders' and the orchestrator's checks.
-- `go test -race` and Playwright runs are held by the `tier-guard` hook until R11.
+- The independent reviews ran in R11, and their findings were fixed in one batched pass (section 5.1). The fixes were re-verified by the integration gate (section 5.1); the reviewers did not re-review.
 - The LLM backend was verified with Ollama only.
 - The binary size delta of the full feature set is unmeasured (an ADR-0001 falsifier).
-- The Web UI token in `localStorage` is readable by any script in the Web UI origin. The chat runs in the admin-privileged Web UI origin (carried warning G11-3/G11-4).
+- The Web UI token in `localStorage` is readable by any script in the Web UI origin. The chat runs in the admin-privileged Web UI origin (carried warning G11-3/G11-4). R11 security M6 asks the operator to re-confirm this (section 5.1).
 - OpenCode has no marketplace format; the plugin is a file URL or a private npm module. The marketplaces sit at the repository root, so installing one clones all of Kubo.
-- The skills spec named 6 skills; 8 were delivered.
+- The skills spec named 6 skills; 8 were delivered. Corrected in R11: the spec delta now lists the 8 skills (R11-Q13).
 - Contract item open since R6: no fixture for the `{wait: true}` outcome after a two-calls resume.
 - Elicitation was exercised only on protocol 2026-07-28.
+
+### 5.1 R11 phase-boundary review
+
+Findings files:
+
+- Security review: [`.agent-team/kubo-ipfs-agentic/findings/security/r11-findings.md`](../../.agent-team/kubo-ipfs-agentic/findings/security/r11-findings.md). PASS-WITH-FINDINGS: 4 HIGH, 6 MEDIUM, 6 LOW, no CRITICAL.
+- Quality, compatibility and UI review: [`.agent-team/kubo-ipfs-agentic/findings/review/r11-findings.md`](../../.agent-team/kubo-ipfs-agentic/findings/review/r11-findings.md). PASS-WITH-FINDINGS: 2 HIGH (R11-Q01, R11-Q02), no CRITICAL.
+- Cross-family judge (`gpt-6.1-sol` over the diff): [`.kbd-orchestrator/phases/ipfs-mcp-server/review/r11/`](../../.kbd-orchestrator/phases/ipfs-mcp-server/review/r11/), `findings.confirmation.json` and `findings.transport-auth.json`. Verdict BLOCK: 5 CRITICAL, 2 WARNING.
+
+All findings were fixed in one batched correction pass by the owning roles, followed by two short judge confirmation rounds. Re-verification on the final tree, 2026-10-11, run by the lead:
+
+- `go test -race -count=1 ./mcp/... ./cmd/ipfs/kubo/`: 0 data races, all 6 packages ok. The first R11 race run had found 14 races in 13 AG-UI and A2A tests: tests changed a package-level recheck interval while server goroutines from earlier tests still read it. The interval is now a per-server option, and `Serve` joins the A2A task goroutines before it returns.
+- `make build`, then `go test ./test/cli/ -run 'TestMCP|TestCommandDocsWidth' -skip Ollama`: ok (55.5 s). Ollama-backed tests were skipped so the operator's Ollama was not touched.
+- `make test_go_lint`: clean for `mcp/`. The one remaining finding is in upstream `fuse/node/mount_darwin.go`.
+- `go vet` with the `nomcp` and `noagent` tags: clean. `python3 docs/mcp/config_reference.py --check`: OK. `pnpm gen:check` in `mcp/ui`: clean.
+- Playwright, first real-browser run: `mcp/ui` 90/90, `mcp/app` 104/104, and `mcp/chat` 133/133 (Chromium and Electron 44). Baselines are committed for darwin. The first runs exposed real UI defects that were fixed: duplicate landmark names, 22 px disclosure targets, a 52 px overflow at 320 px, and a default border on the chat composer. They also exposed test-harness bugs that had kept the MCP App and chat specs from ever exercising the views, also fixed.
+
+Judge rounds after the correction pass (`findings.*.r2.json`, `findings.*.r3.json`) each found new, smaller items rather than repeats. These were fixed:
+
+- `egress_ack: ["local"]` no longer covers a host literally named `local`.
+- UAR startup and preflight output no longer prints the card URL or other endpoints.
+- Two confirmation channels in one process coexist.
+- The CLI answer read returns on cancel or expiry.
+- `--confirm=` with an empty value means no resolvers.
+- The CLI never approves when it cannot print the operation.
+- Request bodies get a 30 s read deadline, and streaming responses are not affected.
+
+Rounds were stopped after round 3. These items were adjudicated by the lead, not fixed:
+
+- Principal ids in UAR diagnostics. These are operator-configured names on the operator's own stderr, which is not tracking.
+- A read goroutine left behind after CLI cancel. The process exits immediately afterwards.
+- A same-user process forging the stored Desktop pairing verifier. This is proposed as accepted residual risk: same-user processes are outside the write-gate threat model, and `desktop` is no longer a presence resolver. It is pending operator acceptance.
+
+Judge findings:
+
+- **CRITICAL.** `ipfs mcp confirm` sanitizes every server-provided field before printing it, so ANSI sequences and carriage returns could not disguise the operation.
+- **CRITICAL.** Polkit helpers run only from root-owned absolute paths (security H3).
+- **CRITICAL.** A replaced pairing revokes the old key on running servers (security H4).
+- **CRITICAL.** HTTP rejection logs carry only a fixed reason; no host, origin or path is logged.
+- **CRITICAL.** `--http=false` overrides `http.enabled: true`.
+- **WARNING.** The macOS probe is bounded at 30 s.
+- **WARNING.** The `--http` address is held per invocation, not in a package-level variable.
+
+Security HIGH findings:
+
+- **H1.** Elicitation is used only for `human-mcp` principals and stdio.
+- **H2.** `resources/read` follows the `ipfs_cat` grant and `egress_ack` policy.
+- **H3.** Polkit helpers run from absolute paths, root-owned and not group- or other-writable, with a minimal environment.
+- **H4.** `desktop` is no longer a presence resolver; `ipfs mcp pair` needs a TTY and refuses while a server holds a socket.
+
+Security MEDIUM and LOW findings:
+
+- **M1.** Helper environments come from an allowlist.
+- **M2.** `--api-auth-env` and `--api-auth-file` were added, and `--api-auth` warns.
+- **M3.** At most 2 open out-of-band confirmations per principal and per session.
+- **M4.** Agent sessions are capped at 16 per principal of 64, and each principal gets a run rate of burst 120, 120 per minute.
+- **M5.** The anonymous listener refuses forwarded requests, and the docs require a credential behind a proxy.
+- **L1.** The agent card is served with `Cache-Control: private` and `Vary: Host`.
+- **L2.** The untrusted-content closing tag is neutralized case-insensitively.
+- **L3.** The LLM and embedder require https for a key unless the host is loopback.
+- **L4.** The owner of the confirmation directory is checked.
+
+Reviewer HIGH findings:
+
+- **R11-Q01.** `dag_put` reads the stream to EOF before it reports `pinned`.
+- **R11-Q02.** The three unread confirmation keys are rejected at validation.
+
+Reviewer MEDIUM and LOW findings (code fixes are listed by the lead):
+
+- **R11-Q03.** The confirmation test now fails on a build failure.
+- **R11-Q04.** `TestMCPNoAgentBuild` was added.
+- **R11-Q05.** The `mcp/app/embed.go` comment was corrected.
+- **R11-Q06.** Skills task 1.4 was unticked.
+- **R11-Q08 and R11-Q09.** The ApprovalPanel role and label were fixed.
+- **R11-Q10 and R11-Q12.** A catalog implementation test and skills contract tests were added.
+- **R11-Q13.** The skills spec now lists 8 skills.
+- **R11-Q15.** The `panic` was removed from `token.go`.
+- **R11-Q16.** `agent.go` was split.
+- **R11-Q20.** The chat changelog item is marked fork-only.
+- **R11-Q21.** The `agentic-uar-integration` task count was reconciled.
+
+ADRs amended for these changes: [ADR-0003](0003-confirmation-and-auth.md) and [ADR-0004](0004-agentic-endpoints-and-llm.md), both dated R11, 2026-10-11.
+
+Still open after the pass:
+
+- Closed later in R11: the A2A context store now has a per-owner quota of 16 within 64. It evicts only the same owner's idle contexts, never one with an open approval, and otherwise refuses with `TOO_MANY_CONTEXTS`. The `desktop` presence text in the confirmation schema, the config schema and the generated UI catalog was corrected.
+- R11-Q19: `zod-v3` stays in the `./a2ui` entry, because `@a2ui/react` 0.12.0 requires zod 3. The MCP App view bundles contain one zod and no v3 code. The views are about 305 KB gzip, about 200 KB of which is fonts.
+- The operator decision on the same-user pairing verifier, listed below.
+
+Open operator decisions:
+
+- **Same-user pairing verifier forgery (judge round 2).** Accept it as residual risk, recorded in ADR-0003, or ask for a mitigation.
+- **Chat token in browser `localStorage` (security M6).** The operator decided on 2026-10-10 to keep the `ui` token in Web UI `localStorage`. The R11 review asks to re-confirm that, or to persist only by opt-in and never on `/ipfs/` or `/ipns/` paths.
+- **`confirmation.resolvers`, `confirmation.cli`, `confirmation.ttl`.** Implement them with tests, or remove them from the contract schema. They are rejected at validation until then.
+- **Signing `SHA256SUMS` (security L5).** The release checksum file is unsigned.
+- **CI under `.github/` (R11-Q05).** No CI job runs the `mcp/` checks (`check:dist`, the skills check, the config reference check). Adding one needs approval to edit `.github/`.
+- **Upstream Desktop `openExternal` allowlist (security L6).** This is upstream IPFS Desktop code. Decide whether to allowlist `http`, `https` and `mailto` in the fork and offer it upstream.
 
 ## 6. Operator actions pending, and next steps
 
@@ -283,6 +379,9 @@ Operator actions:
 7. Run the fork Web UI chat live (`webui-agent-chat` 1.3).
 8. Run a paired Desktop on macOS once pairing is built (`desktop-agent-chat` 1.6).
 9. At the end: approve and commit the phase including `AGENTS.md`, and commit the Web UI and Desktop forks (`phase-boundary-review` 1.8). Tags, pushes and publishing are separate approvals.
+10. Decide the five open R11 items in [section 5.1](#51-r11-phase-boundary-review): the chat token storage, the three unimplemented confirmation keys, `SHA256SUMS` signing, CI under `.github/`, and the Desktop `openExternal` allowlist.
+
+R11 status on 2026-10-11: 1.4, 1.5 and 1.6 (the reviews and the judge) ran, and 1.7 (the batched correction pass) is applied. Re-verification of the fixes and the 1.2 integration gate on the final tree are pending.
 
 Next step: Round 11, `phase-boundary-review`. It covers:
 
@@ -299,3 +398,5 @@ Next step: Round 11, `phase-boundary-review`. It covers:
 
 - 2026-10-10: created after Round 10.
 - 2026-10-10: runtime and checkbox mismatches reconciled (uar-integration-spike 1.1, webui-agent-chat 1.4 closed in the runtime; mcp-tools-routing-diag 1.2 checkbox ticked); lint fixes in `mcp/server`; first commit and push to `feat/ipfs-mcp-server` in all three repositories.
+- 2026-10-11: stuck shells stopped (bash 5.3 here-document write deadlock on a 16 KB macOS pipe; see `.prometheus/gotchas.md`). Nine half-closed KBD boundaries left by interrupted closes were closed with `prometheus kbd guard evaluate --edge after`; the 6 remaining open boundaries belong to changes still in progress. Phase-boundary review R11 started.
+- 2026-10-11: R11 reviews and judge recorded (section 5.1). Docs and specs were brought in line with the correction pass: ADR-0003 and ADR-0004 amended; config reference regenerated; user guide; `MECHANISMS.md`; skills task 1.4 reopened and the spec moved to 8 skills; the changelog chat item marked fork-only. Re-verification on the final tree passed: race detector 0 races, `TestMCP` CLI suite ok, lint clean for `mcp/`, Playwright `mcp/ui` 90/90, `mcp/app` 104/104, `mcp/chat` 133/133. Judge rounds 2 and 3 fixed 7 further items; 3 adjudicated. `tier3.allow` removed.

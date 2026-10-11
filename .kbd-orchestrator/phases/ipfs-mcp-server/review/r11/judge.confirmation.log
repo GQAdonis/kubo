@@ -1,0 +1,3 @@
+[judge] WARN: canonical judge/producer identity is incomplete; independence is degraded
+[MODEL_ROUTING] phase=adv-review-judge class=frontier model=gpt-6.1-sol producer=claude-opus-5-5
+[judge] wrote .kbd-orchestrator/phases/ipfs-mcp-server/review/r11/findings.confirmation.json
