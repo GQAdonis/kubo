@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 852,
-  "derivedRevision": 852,
+  "sourceRevision": 874,
+  "derivedRevision": 874,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 852
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 874
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -21,19 +21,19 @@
   "phase": "ipfs-mcp-server",
   "parentPhase": null,
   "childPointer": null,
-  "change": "mcp-architecture-adrs",
-  "currentTask": "2",
+  "change": "mcp-ci-workflow",
+  "currentTask": "1.3",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": "execute",
   "stageStatus": "IN_PROGRESS",
   "completionMetric": "implementation",
   "implementationCompleted": 21,
-  "implementationTotal": 35,
+  "implementationTotal": 36,
   "planRevision": 1,
-  "revision": 852,
+  "revision": 874,
   "exactNextCommand": "/kbd-assess ipfs-mcp-server",
-  "nextChange": "mcp-architecture-adrs",
-  "nextTask": "2",
-  "updatedAt": "2026-10-11T17:18:54.158633Z"
+  "nextChange": "mcp-ci-workflow",
+  "nextTask": "1.3",
+  "updatedAt": "2026-10-11T22:41:43.425741Z"
 }

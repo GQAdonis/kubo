@@ -2,26 +2,26 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 851,
-  "derivedRevision": 851,
+  "sourceRevision": 874,
+  "derivedRevision": 874,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 851
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 874
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-11T16:19:18.725076Z",
+  "last_updated": "2026-10-11T22:41:43.425741Z",
   "last_updated_by": "kbd-runtime",
-  "changes_total": 35,
+  "changes_total": 36,
   "changes_completed": 21,
-  "implementation_total": 35,
+  "implementation_total": 36,
   "implementation_completed": 21,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 21,
-      "total": 35,
+      "total": 36,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -50,7 +50,7 @@
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 21,
-      "total": 35,
+      "total": 36,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -70,6 +70,17 @@
     }
   },
   "changes": [
+    {
+      "id": "mcp-ci-workflow",
+      "title": "Fork CI workflow for the mcp/ checks",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 2,
+      "last_task_completed": "Validate the workflow locally (actionlint or YAML parse)",
+      "next_task_pending": "First green run on GQAdonis/kubo",
+      "blockers": []
+    },
     {
       "id": "team-ownership-grant",
       "title": "team-ownership-grant",
@@ -196,8 +207,8 @@
       "title": "native-confirmation-prompt",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 5,
-      "tasks_done": 4,
+      "tasks_total": 6,
+      "tasks_done": 5,
       "last_task_completed": "1.4 Add test/cli tests with a test-only resolver build tag: a non-eliciting write waits and runs once on approval, never on deny or expiry; and the automated HG-1 IPC case: a background process under the same user, with no TTY, connects to the confirmation channel without the pairing key, with a forged key and through `ipfs mcp confirm` without `--confirm=cli`, and sends approve.",
       "next_task_pending": "1.5 The operator runs the HG-1 UI case with the committed script `mcp/server/confirm/hg1/attempt.sh` on macOS (and Linux if available): while a real prompt is pending, a background process under the same user (started with `nohup`, no TTY) tries synthetic input (macOS: `osascript` System Events click and keystroke Return; Linux X11: `xdotool key Return` and click; Linux Wayland: recorded as unavailable).",
       "blockers": []

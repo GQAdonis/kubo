@@ -141,6 +141,23 @@ Recorded from the `mcp-agui-endpoint` implementation and its tests; details in t
 - **Failures after the stream begins are `RUN_ERROR`.** A loop limit is `RUN_ERROR` with the reason as `code`; a backend failure is `backend_error` with a message naming at most the HTTP status, never the backend body. Fixtures: `run-error-step-limit.json`, `run-error-backend-failure.json`. Error codes before the stream follow ADR-0004's Round 7 amendment.
 - **The two-calls sequence is complete.** `two-calls-native-wait-approved.json` is the third run: `{wait: true}` on the queued `repo_gc` interrupt, approved in the system prompt and reported on its original `toolCallId`. The island's replay previously had no recorded third request for this sequence.
 
+## Amendment (2026-10-11, operator decisions after R11: chat token storage, Desktop `openExternal`)
+
+Operator decisions of 2026-10-11 on two R11 security findings (`.agent-team/kubo-ipfs-agentic/findings/security/r11-findings.md` M6 and L6; `docs/mcp/progress-report.md` section 5.1; `.prometheus/decisions.md`). No code changes.
+
+### 1. The Web UI chat token stays in `localStorage` (M6, accepted)
+
+- **Decision.** The operator re-confirmed the decision of 2026-10-10: in the browser `/webui`, the `ui` principal's bearer token stays in `localStorage` under `ipfs-webui:agent-chat:token`. M6's alternatives (persist only by opt-in, never persist on `/ipfs/` or `/ipns/` paths) are not adopted. M6 is closed as accepted risk.
+- **Rationale.** The person enters the token once per browser profile instead of on every visit. The token authenticates only the `ui` principal, which is read-only unless the operator grants write groups, and every write it requests still needs a user gesture in the island or, for destructive calls, the native presence prompt (`requires_native_prompt`). The token cannot approve anything by itself.
+- **The accepted risk.** Any script running in the Web UI origin can read the token, including content served from the same origin. M6's scenario: another CID served on the same gateway origin as `/webui` reads it and then calls `/agui` as the `ui` principal. Such a caller can do what the `ui` principal can do, within its grants, and can request writes that still wait for a human gesture or the native prompt. It also learns what the principal's read grants expose.
+- **Bounds.** Desktop is unaffected: there the token stays in `safeStorage` and is never in page storage (falsifier G11-4 unchanged). `/agui` accepts only listed origins (`agent.origin_allowlist`, empty by default). Turning the chat off or "Forget token" removes the stored token.
+- **How to avoid it.** Serve the Web UI from an origin that serves no other content (the RPC port, `http://127.0.0.1:5001/webui`, rather than a shared gateway origin), keep the `ui` principal read-only, keep gateway origins out of `agent.origin_allowlist`, or rotate the token file and use "Forget token" when done.
+
+### 2. No `openExternal` scheme allowlist in the Desktop fork (L6, won't fix)
+
+- **Decision.** The operator decided not to restrict `openExternal` in the Desktop fork. `src/webui/open-external.js` is upstream IPFS Desktop code, and the fork does not diverge from it for this. L6 is closed as won't-fix by operator decision. No upstream report is planned in this phase.
+- **The accepted risk.** A crafted URL with an unusual scheme, opened through the Web UI's external-link path, reaches the operating system's handler for that scheme. This is upstream Desktop behavior and is not introduced or widened by the chat.
+
 ## References
 
 - `.kbd-orchestrator/phases/ipfs-mcp-server/operator-answers.md`: G9-G12 answers Q6 and Q7, Round 0 R4

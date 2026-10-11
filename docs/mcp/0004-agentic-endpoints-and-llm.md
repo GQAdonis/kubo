@@ -177,6 +177,7 @@ Recorded from the R11 phase-boundary review (`.agent-team/kubo-ipfs-agentic/find
   - The "Native prompt requirement (Round 4)" bullet under "Human gate" now reads: presence resolvers are `macos-localauth` and `linux-polkit` only. `desktop` does not qualify until a Desktop confirmation window consumes the pairing key.
   - Elicitation confirms calls only for `human-mcp` principals (and stdio). `ui` and `a2a` principals cannot approve through elicitation, even when they declare it.
   - At most two out-of-band confirmations may wait per principal and per session.
+- **Operator decisions of 2026-10-11.** The Web UI chat token stays in `localStorage` (R11 security M6, accepted risk) and the Desktop `openExternal` path is left as upstream has it (L6, won't fix); both are recorded in ADR-0005's amendment of 2026-10-11. The same-user Desktop pairing verifier risk and the three confirmation keys are recorded in ADR-0003's amendment of 2026-10-11.
 
 ## Consequences
 

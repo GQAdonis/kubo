@@ -287,7 +287,50 @@ Recorded from the R11 phase-boundary review (`.agent-team/kubo-ipfs-agentic/find
 ### Consequences of the R11 amendment
 
 - On Windows, and on any host without the macOS or polkit factor, destructive calls from `ui` and `a2a` principals are refused with `confirmation_unavailable` until the Desktop window ships, even when Desktop is paired. Destructive tools stay usable from a `human-mcp` session that elicits.
-- The `requires_native_prompt` descriptions in `mcp/contract/confirmation/confirmation.schema.json` still list `desktop`, and the generated `mcp/ui/catalog/ipfs-mcp.catalog.json` copies that text. Both need a coordinated regeneration with the `ui-ux-engineer` role. Until then, this amendment and `IsPresenceResolver` govern.
+- The `requires_native_prompt` descriptions in `mcp/contract/confirmation/confirmation.schema.json` still list `desktop`, and the generated `mcp/ui/catalog/ipfs-mcp.catalog.json` copies that text. Both need a coordinated regeneration with the `ui-ux-engineer` role. Until then, this amendment and `IsPresenceResolver` govern. (Done later in R11: the schema, the config schema and the generated catalog were corrected; see `docs/mcp/progress-report.md` section 5.1.)
+
+## Amendment (2026-10-11, operator decisions after R11): accepted residual risk, and three confirmation keys
+
+Operator decisions of 2026-10-11 (`docs/mcp/progress-report.md` section 5.1; `.prometheus/decisions.md`). Where this disagrees with the text above, this amendment governs.
+
+### 1. Accepted residual risk: a same-user process can forge the Desktop pairing verifier
+
+- **Decider and date.** The operator, 2026-10-11. Raised by the cross-family judge in R11 round 2 and adjudicated by the lead as a proposed residual risk.
+- **The risk.** The paired `desktop` channel checks a key against a verifier stored under the operator's account. A process running as the same OS user can overwrite that verifier with one for a key it holds, then approve pending confirmations over the confirmation socket.
+- **Bounds.**
+  - Write-class confirmations only. `desktop` is not a presence resolver (R11 amendment, item 1), so a confirmation with `requires_native_prompt` (destructive calls from `ui` and `a2a` principals) cannot be approved this way. Destructive calls from `human-mcp` sessions that elicit are confirmed by elicitation, not by `desktop`.
+  - Same OS user only. The verifier is a private file (`os.CreateTemp`, mode 0600) in the operator's repo directory (`$IPFS_PATH/mcp-confirm-pairing.json` by default, or `IPFS_MCP_PAIRING_FILE`), and the socket directory's owner is checked (R11 L4). Another user cannot replace the verifier or reach the socket unless the operator's own directory permissions allow it.
+  - Same-user processes are outside the write-gate threat model already: they can call the daemon's RPC API directly with the operator's own credentials. The confirmation gate protects against an agent acting through `ipfs mcp`, not against arbitrary code running as the operator.
+- **How to turn Desktop off.** Leave `desktop` out of the modes (`--confirm=native`, `IPFS_MCP_CONFIRM=native`, or `confirmation.modes: ["native"]`), or leave it out of `confirmation.resolvers` (for example `["macos-localauth", "linux-polkit"]`). Without `desktop`, the verifier file is never read and the risk does not apply.
+- **Revisit when.** The Desktop confirmation window ships with its own presence factor (R11 amendment, item 1). At that point `desktop` may become a presence resolver, and this acceptance no longer covers it: the verifier must then be protected against same-user replacement, or `desktop` must stay a write-only resolver.
+
+### 2. `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl` are implemented
+
+The operator chose to implement the three keys rather than remove them. This replaces R11-Q02's interim rule (a config that sets one is rejected at validation). Implementation: `native-confirmation-prompt` task 1.6, owner `mcp-server-engineer`. The contract text is in `mcp/contract/config/ipfs-mcp-config.schema.json`.
+
+- **`confirmation.resolvers`.** Unique items from `desktop`, `macos-localauth`, `linux-polkit`; absent means all three.
+  - It narrows the resolvers that the effective modes enable. It is applied after mode resolution, whatever the source of the modes (`--confirm`, `IPFS_MCP_CONFIRM`, `confirmation.modes`, or the default), so it can only make the gate stricter. It never adds a resolver.
+  - `[]` runs none of the three. `cli` is not in this list and is not narrowed by it.
+  - When the narrowing removes every resolver the modes asked for, `ipfs mcp` prints a warning at start. If no resolver remains, writes from principals that cannot elicit are refused with `confirmation_unavailable`, as with no resolver at all; if the `cli` resolver remains, the warning says so instead of claiming refusal (R12 SEC-L1).
+- **`confirmation.cli`.** Boolean, default `false`.
+  - `true` enables the `cli` mode (`ipfs mcp confirm`) as if `cli` were listed in `confirmation.modes`. With `confirmation.modes` absent, it adds `cli` to the default modes (`native`, `desktop`). The `principals[].shell_capable` rule and the TTY requirement apply unchanged, and `cli` never satisfies `requires_native_prompt` (Round 4 item 1).
+  - The `cli` mode is enabled by any of: `cli` in `--confirm`, in `IPFS_MCP_CONFIRM` or in `confirmation.modes`, or `confirmation.cli: true`. It resolves only when `ipfs mcp confirm` runs on a TTY.
+  - `--confirm` and `IPFS_MCP_CONFIRM` still win: when either is given, this key adds nothing.
+  - An explicit `cli: false` while `confirmation.modes` lists `cli` is a validation error: the two settings contradict each other, and the config is refused rather than one silently winning.
+- **`confirmation.ttl`.** Duration, default `120s`; it must be at least `1s` and at most `10m`, otherwise a validation error. The minimum is 1 second because token expiry is kept in whole seconds; a shorter TTL would issue tokens that expire on issue and would make a retry see `confirmation_required` instead of `confirmation_expired` (R12 SEC-I2, REV-L2).
+  - It governs pending confirmations, confirmation tokens, and the expiry of the confirm channel and of `ipfs mcp confirm`. Section 4's fixed "120-second TTL" now means "the configured TTL, default 120 seconds".
+  - Expiry is denial, unchanged.
+  - Why a maximum: a long-lived pending confirmation is a standing approval target. Ten minutes covers a person who steps away briefly; longer is not offered.
+- **Disabled state.** With the three keys absent, behavior is exactly as before this amendment: every resolver the effective modes enable and the host offers, no `cli` unless named, 120 seconds.
+- **Falsifiers.** A `confirmation.resolvers` value enables a resolver that the effective modes did not; `confirmation.cli: true` enables `cli` while `--confirm` or `IPFS_MCP_CONFIRM` is set; a confirmation outlives the configured TTL or a TTL outside the bounds is accepted. Any of these: block.
+
+### 3. The `cli` resolver never approves stdio calls (R12 SEC-M1)
+
+- **Finding.** R12 security review M1 (`.agent-team/kubo-ipfs-agentic/findings/security/r12-confirm-keys-ci.md`). The stdio session runs as the local principal (kind `human-mcp`) with no configured identity, so the `principals[].shell_capable` rule never applied to it. With the `cli` mode on, a non-eliciting stdio host with a shell tool could approve its own write or destructive call by posting to the confirmation socket with the cli header; the TTY check is client-side only. The gap predates the three keys; `confirmation.cli` would have added a persistent way to open it.
+- **Decision.** The `cli` resolver does not approve a confirmation opened by the stdio local principal. A stdio host cannot assert that it is not shell-capable, so it is treated as shell-capable for `cli`. A non-eliciting stdio client whose only available resolver is `cli` gets `confirmation_unavailable`, and `ipfs mcp` prints a warning at start when the `cli` mode is on for a stdio server. Stdio clients that elicit are unaffected; `native` and `desktop` still resolve stdio write calls as before.
+- **Why not accept it as residual risk.** Section 3's rule for `cli` is "only for principals the operator asserts are not shell-capable" (rejected alternatives table). Stdio cannot make that assertion, so allowing it would contradict the original decision rather than accept a bounded risk.
+- **Falsifier.** A stdio call is approved through `ipfs mcp confirm` or a POST carrying the cli header: block.
+- **Pins.** Named by the `mcp-server-engineer` in the R12 fix pass; the spec scenario is "Shell-capable stdio host with only the cli resolver" in `openspec/changes/native-confirmation-prompt/specs/mcp-out-of-band-confirmation/spec.md`.
 
 ## References
 

@@ -95,6 +95,8 @@ Binding answers are in [`operator-answers.md`](../../.kbd-orchestrator/phases/ip
 - 2026-10-10: the Web UI chat token is stored in browser storage (`localStorage`) instead of memory only. Trade-off: any script in the Web UI origin can read it. The token authenticates only the `ui` principal, and writes still need confirmation.
 - 2026-10-10: release before gated items. The operator overrode the plan order and ran R9 (release) and R10 (docs, plugins) before the operator-gated items. The release notes and docs state what is not yet delivered. "Release" means local archives only; pushing, tagging and publishing need separate approval.
 - 2026-10-10: the 11 orphaned `llama-server` processes from earlier Ollama test runs were stopped by PID on operator instruction.
+- 2026-10-11: decisions on the six open R11 items (section 5.1): the same-user pairing verifier forgery is accepted as residual risk; the chat token stays in `localStorage`; `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl` are to be implemented; `SHA256SUMS` signing awaits the operator's answer (SSH signing recommended); CI is added under `.github/` as one new workflow; the Desktop `openExternal` path stays as upstream has it.
+- 2026-10-11 (R12): the `cli` resolver never approves confirmations from the stdio local principal (security review SEC-M1); fix directed by the lead, recorded in ADR-0003. `confirmation.ttl` minimum raised to 1 s.
 
 ## 3. What was delivered, by area
 
@@ -254,7 +256,7 @@ Not delivered:
 
 Known gaps and defects:
 
-- Three confirmation config keys are not implemented: `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl`. Since R11 a config file that sets one is rejected at validation, with an error pointing to `confirmation.modes` (R11-Q02). Before that they were accepted and ignored. The TTL is fixed at 120 s. Whether to implement or remove them is an open operator decision (section 5.1).
+- The three confirmation config keys `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl` are implemented (R12, `native-confirmation-prompt` task 1.6): `resolvers` narrows the effective modes, `cli: true` enables the `cli` mode, and `ttl` (default 120 s, at least 1 s, at most 10 minutes) sets the expiry. History: before R11 they were accepted and ignored; in R11 a config that set one was rejected at validation (R11-Q02), with the TTL fixed at 120 s; the operator chose on 2026-10-11 to implement them (section 5.1, decision 3). Since R12 the `cli` resolver never approves stdio calls (section 5.2, SEC-M1).
 - `ipfs mcp` exits at start when no daemon is reachable, so a harness shows the server as failed. This matches ADR-0001 (no offline mode) but is a usability cost.
 - Codex starts stdio servers with an allowlisted environment; an exported `IPFS_PATH` did not reach the server in testing. A node at a non-default repo path needs the HTTP alternative.
 - Binaries are unsigned and not notarized. Only darwin-arm64 was executed. Binaries report `-dirty` because the tree was uncommitted at build time; R11 rebuilds on the final tree.
@@ -263,7 +265,7 @@ Known gaps and defects:
 - The independent reviews ran in R11, and their findings were fixed in one batched pass (section 5.1). The fixes were re-verified by the integration gate (section 5.1); the reviewers did not re-review.
 - The LLM backend was verified with Ollama only.
 - The binary size delta of the full feature set is unmeasured (an ADR-0001 falsifier).
-- The Web UI token in `localStorage` is readable by any script in the Web UI origin. The chat runs in the admin-privileged Web UI origin (carried warning G11-3/G11-4). R11 security M6 asks the operator to re-confirm this (section 5.1).
+- The Web UI token in `localStorage` is readable by any script in the Web UI origin. The chat runs in the admin-privileged Web UI origin (carried warning G11-3/G11-4). The operator re-confirmed this on 2026-10-11 (R11 security M6 accepted; section 5.1, decision 2).
 - OpenCode has no marketplace format; the plugin is a file URL or a private npm module. The marketplaces sit at the repository root, so installing one clones all of Kubo.
 - The skills spec named 6 skills; 8 were delivered. Corrected in R11: the spec delta now lists the 8 skills (R11-Q13).
 - Contract item open since R6: no fixture for the `{wait: true}` outcome after a two-calls resume.
@@ -355,16 +357,36 @@ Still open after the pass:
 
 - Closed later in R11: the A2A context store now has a per-owner quota of 16 within 64. It evicts only the same owner's idle contexts, never one with an open approval, and otherwise refuses with `TOO_MANY_CONTEXTS`. The `desktop` presence text in the confirmation schema, the config schema and the generated UI catalog was corrected.
 - R11-Q19: `zod-v3` stays in the `./a2ui` entry, because `@a2ui/react` 0.12.0 requires zod 3. The MCP App view bundles contain one zod and no v3 code. The views are about 305 KB gzip, about 200 KB of which is fonts.
-- The operator decision on the same-user pairing verifier, listed below.
+- Closed on 2026-10-11 by operator decision: the same-user pairing verifier (decision 1 below).
 
-Open operator decisions:
+Operator decisions on the open R11 items, 2026-10-11:
 
-- **Same-user pairing verifier forgery (judge round 2).** Accept it as residual risk, recorded in ADR-0003, or ask for a mitigation.
-- **Chat token in browser `localStorage` (security M6).** The operator decided on 2026-10-10 to keep the `ui` token in Web UI `localStorage`. The R11 review asks to re-confirm that, or to persist only by opt-in and never on `/ipfs/` or `/ipns/` paths.
-- **`confirmation.resolvers`, `confirmation.cli`, `confirmation.ttl`.** Implement them with tests, or remove them from the contract schema. They are rejected at validation until then.
-- **Signing `SHA256SUMS` (security L5).** The release checksum file is unsigned.
-- **CI under `.github/` (R11-Q05).** No CI job runs the `mcp/` checks (`check:dist`, the skills check, the config reference check). Adding one needs approval to edit `.github/`.
-- **Upstream Desktop `openExternal` allowlist (security L6).** This is upstream IPFS Desktop code. Decide whether to allowlist `http`, `https` and `mailto` in the fork and offer it upstream.
+| # | Item | Decision | Status |
+|---|---|---|---|
+| 1 | Same-user pairing verifier forgery (judge round 2) | Accepted as residual risk. Bounds: write-class calls only (destructive calls need a presence resolver, which `desktop` is not); same OS user only. Off switch: leave `desktop` out of `--confirm` / `IPFS_MCP_CONFIRM` / `confirmation.modes`, or out of `confirmation.resolvers` | Recorded in [ADR-0003](0003-confirmation-and-auth.md), amendment of 2026-10-11, item 1 |
+| 2 | Chat token in browser `localStorage` (security M6) | Keep it in `localStorage`; no opt-in or path restriction. No code change | Recorded in [ADR-0005](0005-agent-chat-ui.md), amendment of 2026-10-11, item 1; M6 closed as accepted risk |
+| 3 | `confirmation.resolvers`, `confirmation.cli`, `confirmation.ttl` | Implement them with the semantics in ADR-0003 (amendment of 2026-10-11, item 2): `resolvers` narrows after mode resolution and can only make the gate stricter; `cli: true` enables the `cli` mode unless `--confirm` or `IPFS_MCP_CONFIRM` is given; `ttl` is at least 1 s and at most 10 minutes, default 120 s (minimum raised from "greater than 0" in R12) | Implemented in R12 (`native-confirmation-prompt` task 1.6, `mcp-server-engineer`) and reviewed (section 5.2); config reference regeneration by the lead pending |
+| 4 | Signing `SHA256SUMS` (security L5) | Recommendation given: SSH signing (`ssh-keygen -Y sign -n file`, verified against an `allowed_signers` file), later GitHub artifact attestations if releases move to CI | Pending: awaiting the operator's answer and public key. No code |
+| 5 | CI under `.github/` (R11-Q05) | Yes, for one new workflow; upstream workflows unchanged | Added: `.github/workflows/mcp.yml`, OpenSpec change `mcp-ci-workflow`; reviewed and corrected in R12 (section 5.2); pending its first run on GitHub |
+| 6 | Desktop `openExternal` allowlist (security L6) | No restriction; it is upstream IPFS Desktop code | Recorded in [ADR-0005](0005-agent-chat-ui.md), amendment of 2026-10-11, item 2; L6 closed as won't-fix by operator decision. No change |
+
+### 5.2 R12 review: the three confirmation keys and the CI workflow
+
+Independent reviews of decision 3 (the keys) and decision 5 (CI), 2026-10-11, each in a separate read-only context. Nothing was executed by the reviewers.
+
+- Security review: [`.agent-team/kubo-ipfs-agentic/findings/security/r12-confirm-keys-ci.md`](../../.agent-team/kubo-ipfs-agentic/findings/security/r12-confirm-keys-ci.md). 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW, 5 INFO.
+- Quality and compatibility review: [`.agent-team/kubo-ipfs-agentic/findings/review/r12-confirm-keys-ci.md`](../../.agent-team/kubo-ipfs-agentic/findings/review/r12-confirm-keys-ci.md). PASS-WITH-FINDINGS: 0 CRITICAL, 0 HIGH, 5 MEDIUM, 8 LOW, 4 NIT. No `/api/v0`, gateway, CID-recipe or wire impact; with the three keys absent, behavior equals the old code.
+
+Fixes, one batched pass by the owning roles:
+
+- **SEC-M1.** Under the `cli` mode, a shell-capable stdio host could approve its own calls through the confirmation socket (the gap predates R12; `confirmation.cli` would have added a persistent way to open it). Now the `cli` resolver never approves a confirmation from the stdio local principal; a non-eliciting stdio client with only `cli` gets `confirmation_unavailable`, with a startup warning. Recorded in ADR-0003 (amendment of 2026-10-11, item 3) and as a spec scenario in `native-confirmation-prompt`.
+- **TTL minimum.** `confirmation.ttl` is now at least 1 s (was "greater than 0"), because token expiry is kept in whole seconds (SEC-I2, REV-L2). The maximum stays 10 minutes.
+- **SEC-L1.** The narrowing warning no longer claims refusal when the `cli` resolver remains.
+- **Docs and spec (architect).** REV-M1: this report no longer says the keys are unimplemented. REV-M5: the spec names every way to enable `cli` (`--confirm`, `IPFS_MCP_CONFIRM`, `confirmation.modes`, `confirmation.cli`) and the TTY rule. REV-L3: with `confirmation.modes` absent, `cli: true` adds `cli` to the default modes (`native`, `desktop`); stated in the schema, ADR-0003 and the spec. REV-N4: `TestMCPConfirmationConfigKeys` is cited for the three keys in the config reference sidecar.
+- **CI (architect).** REV-M2: the baselines are not darwin-suffixed (no `{platform}` in `snapshotPathTemplate`); the workflow comment, the design and task 1.4 are corrected, and CI never regenerates the operator's baselines. REV-M3: the Playwright runner is pinned to `macos-26` (GitHub's arm64 macOS 26 image, matching the operator's macOS 26 arm64 host) instead of `macos-latest`. SEC-L4: `persist-credentials: false` on every checkout. REV-L6: `test/cli/harness/**`, `Makefile` and `mk/**` added to the paths. REV-L7: `push` limited to `master` and `feat/**`. REV-L8 and REV-N3: Node is set up before pnpm, and the pnpm store is cached once per lockfile by `pnpm/action-setup`. `actionlint` exits 0.
+- **Code (mcp-server-engineer).** Other code findings (REV-M4 end-to-end resolvers test, L1/L2 single config parse, L3 message wording, L4 stale comments, L5, N1, N2) are in the engineer's pass and reported there.
+
+Re-verified after the R12 pass: `go test ./mcp/... ./cmd/ipfs/kubo/` ok; `go vet` with `nomcp` and `noagent` clean; `make build && go test ./test/cli/... -run 'TestMCP|TestCommandDocsWidth' -skip Ollama` ok (80.0 s); `make test_go_lint` reports only the known upstream `fuse/node/mount_darwin.go` ST1005; `config_reference.py --check` OK after regeneration; `actionlint` clean; gitleaks clean on `.github`. Not run locally: the race detector and Playwright (held by the tier-guard hook); the new workflow runs both on GitHub. Still open after R12: the first CI run (`mcp-ci-workflow` task 1.3) and the operator's decision on Playwright baselines if it differs only by rendering (task 1.4).
 
 ## 6. Operator actions pending, and next steps
 
@@ -379,7 +401,8 @@ Operator actions:
 7. Run the fork Web UI chat live (`webui-agent-chat` 1.3).
 8. Run a paired Desktop on macOS once pairing is built (`desktop-agent-chat` 1.6).
 9. At the end: approve and commit the phase including `AGENTS.md`, and commit the Web UI and Desktop forks (`phase-boundary-review` 1.8). Tags, pushes and publishing are separate approvals.
-10. Decide the five open R11 items in [section 5.1](#51-r11-phase-boundary-review): the chat token storage, the three unimplemented confirmation keys, `SHA256SUMS` signing, CI under `.github/`, and the Desktop `openExternal` allowlist.
+10. Answer the one R11 item still open in [section 5.1](#51-r11-phase-boundary-review): `SHA256SUMS` signing (decision 4). If SSH signing is chosen, provide the public key for the `allowed_signers` file. The other five items were decided on 2026-10-11.
+11. Approve a push of `feat/ipfs-mcp-server` to GQAdonis/kubo (or a `workflow_dispatch`) so the new `MCP` workflow runs for the first time (`mcp-ci-workflow` 1.2).
 
 R11 status on 2026-10-11: 1.4, 1.5 and 1.6 (the reviews and the judge) ran, and 1.7 (the batched correction pass) is applied. Re-verification of the fixes and the 1.2 integration gate on the final tree are pending.
 
@@ -400,3 +423,5 @@ Next step: Round 11, `phase-boundary-review`. It covers:
 - 2026-10-10: runtime and checkbox mismatches reconciled (uar-integration-spike 1.1, webui-agent-chat 1.4 closed in the runtime; mcp-tools-routing-diag 1.2 checkbox ticked); lint fixes in `mcp/server`; first commit and push to `feat/ipfs-mcp-server` in all three repositories.
 - 2026-10-11: stuck shells stopped (bash 5.3 here-document write deadlock on a 16 KB macOS pipe; see `.prometheus/gotchas.md`). Nine half-closed KBD boundaries left by interrupted closes were closed with `prometheus kbd guard evaluate --edge after`; the 6 remaining open boundaries belong to changes still in progress. Phase-boundary review R11 started.
 - 2026-10-11: R11 reviews and judge recorded (section 5.1). Docs and specs were brought in line with the correction pass: ADR-0003 and ADR-0004 amended; config reference regenerated; user guide; `MECHANISMS.md`; skills task 1.4 reopened and the spec moved to 8 skills; the changelog chat item marked fork-only. Re-verification on the final tree passed: race detector 0 races, `TestMCP` CLI suite ok, lint clean for `mcp/`, Playwright `mcp/ui` 90/90, `mcp/app` 104/104, `mcp/chat` 133/133. Judge rounds 2 and 3 fixed 7 further items; 3 adjudicated. `tier3.allow` removed.
+- 2026-10-11: operator decisions on the six open R11 items recorded (section 5.1): pairing-verifier forgery accepted as residual risk (ADR-0003); chat token kept in `localStorage`, M6 accepted (ADR-0005); the three confirmation keys to be implemented (`native-confirmation-prompt` 1.6, contract descriptions updated, config reference regeneration pending the code); `SHA256SUMS` signing pending the operator's answer (SSH signing recommended); CI added as `.github/workflows/mcp.yml` (OpenSpec `mcp-ci-workflow`, `actionlint` clean, first run pending); Desktop `openExternal` left as upstream, L6 won't-fix (ADR-0005).
+- 2026-10-11: R12 reviews of the three confirmation keys and the CI workflow recorded (section 5.2): security 1 MEDIUM, 4 LOW, 5 INFO; quality 5 MEDIUM, 8 LOW, 4 NIT, no CRITICAL or HIGH. Architect fixes: progress report, ADR-0003 (item 3, SEC-M1; TTL 1 s to 10 m; cli enable paths), spec scenario, schema descriptions, sidecar citations; CI pinned to `macos-26`, `persist-credentials: false`, wider paths, push limited to `master` and `feat/**`, Node before pnpm, baseline premise corrected; `actionlint` exit 0. Engineer code fixes and config reference regeneration pending re-verification by the lead.

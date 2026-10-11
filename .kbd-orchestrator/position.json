@@ -2,18 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 852,
-  "derivedRevision": 852,
+  "sourceRevision": 874,
+  "derivedRevision": 874,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 852
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 874
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-11T17:18:54.158633Z",
+  "updatedAt": "2026-10-11T22:41:43.425741Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
-    "mcp-architecture-adrs",
-    "2"
+    "mcp-ci-workflow",
+    "1.3"
   ],
   "root": {
     "type": "phase",
@@ -21,7 +21,7 @@
     "status": "ready",
     "progress": {
       "done": 21,
-      "total": 35
+      "total": 36
     },
     "children": [
       {
@@ -31,9 +31,18 @@
         "status": "PENDING",
         "progress": {
           "done": 21,
-          "total": 35
+          "total": 36
         },
         "children": [
+          {
+            "type": "change",
+            "id": "mcp-ci-workflow",
+            "status": "PENDING",
+            "progress": {
+              "done": 2,
+              "total": 5
+            }
+          },
           {
             "type": "change",
             "id": "team-ownership-grant",
@@ -138,8 +147,8 @@
             "id": "native-confirmation-prompt",
             "status": "PENDING",
             "progress": {
-              "done": 4,
-              "total": 5
+              "done": 5,
+              "total": 6
             }
           },
           {

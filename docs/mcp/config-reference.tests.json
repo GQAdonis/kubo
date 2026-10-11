@@ -49,16 +49,13 @@
     "confirmation": { "tests": ["TestConfiguredDefaultsToNativeAndDesktop", "TestNoModesBuildsNoResolver"] },
     "confirmation.modes": { "tests": ["TestConfigConfirmationModes", "TestNoModesBuildsNoResolver", "TestNonElicitingClientWithoutResolverIsRefused"] },
     "confirmation.resolvers": {
-      "tests": ["TestUnreadConfirmationKeysAreRejected", "TestConfigExamplesValidate"],
-      "note": "Not supported: a config file that sets this key is rejected at validation with an error that points to `confirmation.modes`. The resolvers are derived from `confirmation.modes` and what the host offers; use `modes` to narrow."
+      "tests": ["TestConfirmationKeyDefaults", "TestResolversNarrowTheModes", "TestConfirmationResolversNarrowEverySource", "TestResolversDoNotAffectCLI", "TestNarrowingToNothingEmitsTheStartupWarning", "TestEmptyResolversRunNoPresenceOrDesktopResolver", "TestConfirmationResolversRejectUnknownNames", "TestConfigExamplesValidate", "TestMCPConfirmationConfigKeys"]
     },
     "confirmation.cli": {
-      "tests": ["TestUnreadConfirmationKeysAreRejected", "TestChannelCLIModeIsRefusedUnlessEnabled"],
-      "note": "Not supported: a config file that sets this key is rejected at validation with an error that points to `confirmation.modes`. `ipfs mcp confirm` is enabled only by naming `cli` in `--confirm`, `IPFS_MCP_CONFIRM` or `confirmation.modes`."
+      "tests": ["TestConfirmationKeyDefaults", "TestConfirmationCLIKeyEnablesCLIMode", "TestConfirmationCLIKeyLosesToFlagAndEnvironment", "TestConfirmationCLIContradiction", "TestChannelCLIModeIsRefusedUnlessEnabled", "TestCLIResolverIsNotOfferedToTheStdioPrincipal", "TestCLIResolverCannotResolveAStdioConfirmationEvenIfAsked", "TestElicitationStillWorksForStdioWhenCLIIsTheOnlyResolver", "TestMCPConfirmationConfigKeys"]
     },
     "confirmation.ttl": {
-      "tests": ["TestUnreadConfirmationKeysAreRejected", "TestExpiredConfirmationIsDenial", "TestBrokerExpiryIsDenial"],
-      "note": "Not supported: a config file that sets this key is rejected at validation with an error that points to `confirmation.modes`. Pending confirmations and tokens always expire after 120 seconds."
+      "tests": ["TestConfirmationKeyDefaults", "TestConfirmationTTLBounds", "TestBrokerConfiguredTTLExpiryIsDenial", "TestConfirmationTTLIsReadFromTheConfigFile", "TestConfirmationTTLDurationReportsInvalidValues", "TestBrokerKeepsExpiredRecordsForTheDefaultGrace", "TestExpiredConfirmationIsDenial", "TestBrokerExpiryIsDenial", "TestMCPConfirmationConfigKeys"]
     },
     "embeddings": { "tests": ["TestEmbeddingsOffByDefault", "TestIndexToolsAreOffUntilEmbeddingsAreConfigured", "TestMCPEmbeddingsStoreDisabled", "TestMCPEmbeddingIndexOffByDefault"] },
     "embeddings.mode": { "tests": ["TestEmbeddingsModeWithoutItsBlockIsRefused"] },
