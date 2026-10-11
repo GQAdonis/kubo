@@ -105,16 +105,17 @@ func (s *mcpSettings) transport() string {
 	return "stdio"
 }
 
-func loadMCPSettings(req *cmds.Request) (*mcpSettings, error) {
-	cfg, err := mcpserver.ParseConfig([]byte("{}"))
-	if err != nil {
-		return nil, err
-	}
+// loadMCPConfig reads and validates the --mcp-config file once, or returns the
+// defaults when none is named. Callers pass the result on instead of reading
+// the file again, so every consumer sees the same version of it.
+func loadMCPConfig(req *cmds.Request) (*mcpserver.Config, error) {
 	if file := mcpConfigFile(req); file != "" {
-		if cfg, err = mcpserver.LoadConfig(file); err != nil {
-			return nil, err
-		}
+		return mcpserver.LoadConfig(file)
 	}
+	return mcpserver.ParseConfig([]byte("{}"))
+}
+
+func loadMCPSettings(req *cmds.Request, cfg *mcpserver.Config) (*mcpSettings, error) {
 	toolsOpt, _ := req.Options[mcpToolsOptionName].(string)
 	readOnlyFlag, _ := req.Options[mcpReadOnlyOptionName].(bool)
 	printPaths, _ := req.Options[mcpPrintPathsOptionName].(bool)
@@ -145,9 +146,11 @@ func loadMCPSettings(req *cmds.Request) (*mcpSettings, error) {
 		httpOn = cfg.HTTP.Enabled
 	}
 	if httpOn {
-		if s.http, err = httpSettings(req, cfg, s, httpAddr); err != nil {
+		httpCfg, err := httpSettings(req, cfg, s, httpAddr)
+		if err != nil {
 			return nil, err
 		}
+		s.http = httpCfg
 	}
 	return s, nil
 }

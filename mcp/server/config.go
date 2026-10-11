@@ -19,12 +19,12 @@ const configSchemaPath = "config/ipfs-mcp-config.schema.json"
 // Config is the part of the `ipfs mcp --config` file that the transport and
 // tool selection read. The file is validated against the contract's config
 // schema before it is decoded, so the sections other changes own (llm, agent,
-// confirmation, embeddings) are checked but not interpreted here.
+// embeddings) are checked here and interpreted by their owners.
 type Config struct {
 	HTTP       HTTPConfig        `json:"http"`
 	Tools      ToolsConfig       `json:"tools"`
 	Principals []PrincipalConfig `json:"principals"`
-	// Confirmation is the confirmation section; only modes is read here.
+	// Confirmation is the confirmation section (modes, resolvers, cli, ttl).
 	Confirmation ConfirmationConfig `json:"confirmation"`
 	// LLM is the model backend of the agent loop (nil: the agent is off) and
 	// also names a host that content would be forwarded to (egress_ack).
@@ -37,8 +37,60 @@ type Config struct {
 
 // ConfirmationConfig is the confirmation section. Modes is nil when the file
 // does not set it, and an empty slice when it turns the gate resolvers off.
+// Resolvers is nil when absent (all resolvers) and narrows the resolvers the
+// modes enable otherwise. CLI is nil when absent; true enables the cli mode.
+// TTL is empty when absent (DefaultConfirmTTL).
 type ConfirmationConfig struct {
-	Modes *[]string `json:"modes"`
+	Modes     *[]string `json:"modes"`
+	Resolvers *[]string `json:"resolvers"`
+	CLI       *bool     `json:"cli"`
+	TTL       string    `json:"ttl"`
+}
+
+// Bounds of confirmation.ttl. The minimum is one second because confirm tokens
+// carry whole-second expiries. DefaultConfirmTTL is how long a confirmation, and
+// a token bound to it, lives when the config does not say.
+const (
+	DefaultConfirmTTL = 120 * time.Second
+	MinConfirmTTL     = time.Second
+	MaxConfirmTTL     = 10 * time.Minute
+)
+
+// TTLDuration is the confirmation lifetime: confirmation.ttl, or
+// DefaultConfirmTTL when it is absent. It returns the validation error for a
+// value ParseConfig would refuse, so an unvalidated config never falls back to
+// the default silently.
+func (c ConfirmationConfig) TTLDuration() (time.Duration, error) {
+	if c.TTL == "" {
+		return DefaultConfirmTTL, nil
+	}
+	return parseConfirmTTL(c.TTL)
+}
+
+// parseConfirmTTL parses and bounds a confirmation.ttl value.
+func parseConfirmTTL(v string) (time.Duration, error) {
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return 0, fmt.Errorf("confirmation.ttl %q is not a valid duration", v)
+	}
+	if d < MinConfirmTTL || d > MaxConfirmTTL {
+		return 0, fmt.Errorf("confirmation.ttl %q is out of range: it must be at least %s and at most %s", v, MinConfirmTTL, MaxConfirmTTL)
+	}
+	return d, nil
+}
+
+// validate checks what the schema cannot: the ttl bounds and a contradiction
+// between confirmation.cli and confirmation.modes.
+func (c ConfirmationConfig) validate() error {
+	if c.TTL != "" {
+		if _, err := parseConfirmTTL(c.TTL); err != nil {
+			return err
+		}
+	}
+	if c.CLI != nil && !*c.CLI && c.Modes != nil && slices.Contains(*c.Modes, "cli") {
+		return errors.New(`confirmation.cli is false but confirmation.modes contains "cli"; remove "cli" from confirmation.modes or set confirmation.cli to true`)
+	}
+	return nil
 }
 
 // HTTPConfig is the http section.
@@ -108,38 +160,18 @@ func ParseConfig(data []byte) (*Config, error) {
 		// reach a log or a terminal.
 		return nil, fmt.Errorf("does not match the ipfs mcp config schema: %s", redactSecrets(err.Error(), doc))
 	}
-	if err := rejectUnreadConfirmationKeys(doc); err != nil {
-		return nil, err
-	}
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("decode: %w", err)
 	}
 	cfg.applyDefaults()
+	if err := cfg.Confirmation.validate(); err != nil {
+		return nil, err
+	}
 	if err := cfg.validatePrincipals(); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
-}
-
-// unreadConfirmationKeys are confirmation keys the schema allows but this build
-// does not read. Accepting them would present an off switch that does nothing,
-// so they are refused until they are implemented; confirmation.modes is the
-// working control for all three.
-var unreadConfirmationKeys = []string{"resolvers", "cli", "ttl"}
-
-// rejectUnreadConfirmationKeys fails a config that sets a confirmation key the
-// server does not read, naming the key and pointing at confirmation.modes.
-func rejectUnreadConfirmationKeys(doc any) error {
-	root, _ := doc.(map[string]any)
-	section, _ := root["confirmation"].(map[string]any)
-	for _, key := range unreadConfirmationKeys {
-		if _, set := section[key]; set {
-			return fmt.Errorf("confirmation.%s is not supported by this build and would change nothing; "+
-				"use confirmation.modes (native, desktop, cli; [] turns the out-of-band resolvers off) or --confirm instead", key)
-		}
-	}
-	return nil
 }
 
 // secretKeys are the config keys whose values are credentials.

@@ -98,14 +98,22 @@ type agentOnlyResolver interface{ agentOnly() }
 // gesture. The real chat resolver is also for the agent loop's own calls only;
 // a call on an MCP session has no chat to answer it. (For a call that needs the
 // native prompt the chat may still deny; the broker refuses its approval.)
-func resolverFits(r Resolver, kind string, agent bool) bool {
-	if r.Name() != ResolverAGUIInterrupt {
-		return true
+//
+// The cli resolver never fits the stdio principal (LocalPrincipal): the CLI
+// prompt has no presence factor, and stdio cannot carry the shell_capable: false
+// assertion that makes it acceptable, so a shell-capable host could approve its
+// own calls. Such a call is confirmation_unavailable unless the client elicits.
+func resolverFits(r Resolver, p Principal, agent bool) bool {
+	switch r.Name() {
+	case ResolverCLI:
+		return p != LocalPrincipal
+	case ResolverAGUIInterrupt:
+		if _, only := r.(agentOnlyResolver); only && !agent {
+			return false
+		}
+		return p.Kind == KindUI
 	}
-	if _, only := r.(agentOnlyResolver); only && !agent {
-		return false
-	}
-	return kind == KindUI
+	return true
 }
 
 // fromAgent reports whether the call comes from the agent loop, which has no
@@ -260,7 +268,7 @@ func (g *gate) repeat(c *call, p Pending, tok string) *ToolError {
 // no resolver the call is refused.
 func (g *gate) openExternal(ctx context.Context, c *call) *ToolError {
 	resolvers := g.list()
-	if !slices.ContainsFunc(resolvers, func(r Resolver) bool { return resolverFits(r, c.principal.Kind, c.fromAgent()) }) {
+	if !slices.ContainsFunc(resolvers, func(r Resolver) bool { return resolverFits(r, c.principal, c.fromAgent()) }) {
 		return &ToolError{
 			Code: CodeConfirmUnavailable,
 			Message: c.tool.Name + " needs confirmation, but this client cannot ask the user (no elicitation) and no " +
@@ -343,7 +351,7 @@ func (g *gate) notify(ctx context.Context, p Pending, agent bool) bool {
 	_ = cancel // released when the deadline passes
 	asked := false
 	for _, r := range g.list() {
-		if !resolverFits(r, p.Principal.Kind, agent) {
+		if !resolverFits(r, p.Principal, agent) {
 			continue
 		}
 		resolve := func(approve bool) error { return g.broker.Resolve(p.ID, r.Name(), approve) }
@@ -364,7 +372,7 @@ func (g *gate) requiredError(c *call, p Pending, tok, code string) *ToolError {
 		if p.NativePrompt && !IsPresenceResolver(r.Name()) {
 			continue
 		}
-		if !resolverFits(r, c.principal.Kind, c.fromAgent()) {
+		if !resolverFits(r, c.principal, c.fromAgent()) {
 			continue
 		}
 		names = append(names, r.Name())

@@ -11,7 +11,9 @@
 // The package is on by default with the native and desktop mechanisms. A
 // mechanism the platform cannot offer is skipped, so a non-eliciting client
 // gets confirmation_unavailable. --confirm=none or IPFS_MCP_CONFIRM=none turns
-// every resolver off; cli is only ever enabled by naming it.
+// every resolver off; cli is only ever enabled by naming it (--confirm=cli,
+// IPFS_MCP_CONFIRM, confirmation.modes or confirmation.cli). The configuration
+// key confirmation.resolvers narrows the native and desktop resolvers.
 package confirm
 
 import (
@@ -53,6 +55,11 @@ const (
 type Config struct {
 	// Modes is a subset of ModeNative, ModeDesktop and ModeCLI.
 	Modes []string
+	// Resolvers narrows the resolvers Modes enable (confirmation.resolvers):
+	// native maps to the platform presence resolver and desktop to desktop.
+	// nil allows all; an empty non-nil slice allows none. cli is not a resolver
+	// name here and is never narrowed.
+	Resolvers []string
 	// SocketDir holds the per-process channel sockets. Empty means the
 	// default private directory.
 	SocketDir string
@@ -80,8 +87,34 @@ func ParseModes(s string) ([]string, error) {
 	return out, nil
 }
 
+// FileModes merges confirmation.modes and confirmation.cli from the config
+// file. cli true enables the cli mode as if it were listed in modes; when modes
+// is absent it is added to the default modes. explicit is false when the file
+// sets neither, so the default applies. confirmation.cli false (or absent) adds
+// nothing.
+func FileModes(modes *[]string, cli *bool) (out []string, explicit bool) {
+	wantCLI := cli != nil && *cli
+	if modes == nil && !wantCLI {
+		return nil, false
+	}
+	if modes != nil {
+		out = append([]string{}, *modes...)
+	} else {
+		out = slices.Clone(DefaultModes)
+	}
+	if wantCLI && !slices.Contains(out, ModeCLI) {
+		out = append(out, ModeCLI)
+	}
+	return out, true
+}
+
 // Has reports whether a mode is enabled.
 func (c Config) Has(mode string) bool { return slices.Contains(c.Modes, mode) }
+
+// allows reports whether confirmation.resolvers lets a resolver run.
+func (c Config) allows(resolver string) bool {
+	return c.Resolvers == nil || slices.Contains(c.Resolvers, resolver)
+}
 
 // socketDir returns the directory for channel sockets.
 func (c Config) socketDir() string {

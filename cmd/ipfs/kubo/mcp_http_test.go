@@ -44,18 +44,18 @@ func TestHTTPFlagFalseOverridesConfigEnabled(t *testing.T) {
 	file := writeMCPConfig(t, `{"http": {"enabled": true}}`)
 
 	// The config file alone turns HTTP on.
-	s, err := loadMCPSettings(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
+	s, err := loadSettingsForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
 	require.NoError(t, err)
 	require.NotNil(t, s.http, "http.enabled in the config file serves HTTP")
 
 	// An explicit --http=false wins over the file.
-	s, err = loadMCPSettings(mcpRequest(cmds.OptMap{mcpConfigOptionName: file, mcpHTTPOptionName: httpFlagValue(t, "false")}))
+	s, err = loadSettingsForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: file, mcpHTTPOptionName: httpFlagValue(t, "false")}))
 	require.NoError(t, err)
 	assert.Nil(t, s.http, "--http=false must keep the server on stdio")
 	assert.Equal(t, "stdio", s.transport())
 
 	// --http=true and --http=<addr> keep it on.
-	s, err = loadMCPSettings(mcpRequest(cmds.OptMap{mcpConfigOptionName: file, mcpHTTPOptionName: httpFlagValue(t, "true")}))
+	s, err = loadSettingsForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: file, mcpHTTPOptionName: httpFlagValue(t, "true")}))
 	require.NoError(t, err)
 	assert.NotNil(t, s.http)
 }
@@ -64,11 +64,11 @@ func TestHTTPFlagOnWithoutConfigAndOffByDefault(t *testing.T) {
 	t.Setenv(mcpserver.HTTPListenEnv, "")
 	t.Setenv(mcpConfigEnv, "")
 
-	s, err := loadMCPSettings(mcpRequest(cmds.OptMap{}))
+	s, err := loadSettingsForTest(mcpRequest(cmds.OptMap{}))
 	require.NoError(t, err)
 	assert.Nil(t, s.http, "HTTP is off unless enabled")
 
-	s, err = loadMCPSettings(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "true")}))
+	s, err = loadSettingsForTest(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "true")}))
 	require.NoError(t, err)
 	require.NotNil(t, s.http)
 	assert.Equal(t, mcpserver.DefaultHTTPListen, s.http.opts.Listen)
@@ -80,17 +80,17 @@ func TestHTTPAddressIsPerInvocation(t *testing.T) {
 	t.Setenv(mcpserver.HTTPListenEnv, "")
 	t.Setenv(mcpConfigEnv, "")
 
-	first, err := loadMCPSettings(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "127.0.0.1:5051")}))
+	first, err := loadSettingsForTest(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "127.0.0.1:5051")}))
 	require.NoError(t, err)
 	require.NotNil(t, first.http)
 	assert.Equal(t, "127.0.0.1:5051", first.http.opts.Listen)
 
-	second, err := loadMCPSettings(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "true")}))
+	second, err := loadSettingsForTest(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "true")}))
 	require.NoError(t, err)
 	require.NotNil(t, second.http)
 	assert.Equal(t, mcpserver.DefaultHTTPListen, second.http.opts.Listen, "a bare --http does not reuse the previous address")
 
-	third, err := loadMCPSettings(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "127.0.0.1:5052")}))
+	third, err := loadSettingsForTest(mcpRequest(cmds.OptMap{mcpHTTPOptionName: httpFlagValue(t, "127.0.0.1:5052")}))
 	require.NoError(t, err)
 	assert.Equal(t, "127.0.0.1:5052", third.http.opts.Listen)
 }
@@ -158,30 +158,30 @@ func TestConfirmFlagGivenEmptyMeansNoResolvers(t *testing.T) {
 	file := writeMCPConfig(t, `{"confirmation": {"modes": ["cli"]}}`)
 
 	// Given but empty: off, over the environment and the config file.
-	modes, explicit, err := confirmModes(mcpRequest(cmds.OptMap{mcpConfirmOptionName: "", mcpConfigOptionName: file}))
+	modes, explicit, err := confirmModesForTest(mcpRequest(cmds.OptMap{mcpConfirmOptionName: "", mcpConfigOptionName: file}))
 	require.NoError(t, err)
 	assert.True(t, explicit)
 	assert.Empty(t, modes, "an explicit empty --confirm turns the resolvers off")
 
 	// Absent: the environment decides, then the file, then the default.
-	modes, explicit, err = confirmModes(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
+	modes, explicit, err = confirmModesForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
 	require.NoError(t, err)
 	assert.True(t, explicit)
 	assert.Equal(t, []string{confirm.ModeNative}, modes)
 
 	t.Setenv(confirm.EnvModes, "")
-	modes, explicit, err = confirmModes(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
+	modes, explicit, err = confirmModesForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
 	require.NoError(t, err)
 	assert.True(t, explicit)
 	assert.Equal(t, []string{confirm.ModeCLI}, modes)
 
-	_, explicit, err = confirmModes(mcpRequest(cmds.OptMap{}))
+	_, explicit, err = confirmModesForTest(mcpRequest(cmds.OptMap{}))
 	require.NoError(t, err)
 	assert.False(t, explicit, "nothing set: the default applies")
 
 	// A named value still wins over the environment.
 	t.Setenv(confirm.EnvModes, "native")
-	modes, _, err = confirmModes(mcpRequest(cmds.OptMap{mcpConfirmOptionName: "none"}))
+	modes, _, err = confirmModesForTest(mcpRequest(cmds.OptMap{mcpConfirmOptionName: "none"}))
 	require.NoError(t, err)
 	assert.Empty(t, modes)
 }

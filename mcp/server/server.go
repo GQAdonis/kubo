@@ -39,6 +39,11 @@ type Options struct {
 	// none, writes and destructive calls from such clients are refused with
 	// confirmation_unavailable.
 	Resolvers []Resolver
+	// ConfirmTTL is the lifetime of a pending confirmation, of the token bound
+	// to it and of the confirm channel and CLI prompt (confirmation.ttl). Zero
+	// means DefaultConfirmTTL; otherwise it must be between MinConfirmTTL and
+	// MaxConfirmTTL. Expiry is denial.
+	ConfirmTTL time.Duration
 	// Version is the server version reported to clients.
 	Version string
 	// Logger receives diagnostics. It must write to stderr or a file, never
@@ -140,6 +145,9 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load tool contract: %w", err)
 	}
+	if opts.ConfirmTTL != 0 && (opts.ConfirmTTL < MinConfirmTTL || opts.ConfirmTTL > MaxConfirmTTL) {
+		return nil, fmt.Errorf("confirmation ttl %s is out of range: it must be 0 (the default) or between %s and %s", opts.ConfirmTTL, MinConfirmTTL, MaxConfirmTTL)
+	}
 	if opts.Transport == "" {
 		opts.Transport = "stdio"
 	}
@@ -160,8 +168,12 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 	if s.gate, err = newGate(log, resolvers, now); err != nil {
 		return nil, err
 	}
-	if ttl > 0 {
+	// A test build's provider override wins over the configured lifetime.
+	switch {
+	case ttl > 0:
 		s.gate.broker.ttl = ttl
+	case opts.ConfirmTTL > 0:
+		s.gate.broker.ttl = opts.ConfirmTTL
 	}
 	if opts.awaitRecheck > 0 {
 		s.gate.broker.recheck = opts.awaitRecheck

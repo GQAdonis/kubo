@@ -51,8 +51,9 @@ func IsPresenceResolver(name string) bool {
 	return false
 }
 
-// confirmTTL is how long a confirmation, and a token bound to it, lives.
-const confirmTTL = 120 * time.Second
+// confirmTTL is how long a confirmation, and a token bound to it, lives when
+// Options.ConfirmTTL (confirmation.ttl) is not set.
+const confirmTTL = DefaultConfirmTTL
 
 // Errors returned by Broker.Resolve.
 var (
@@ -61,6 +62,7 @@ var (
 	ErrConfirmationExpired  = errors.New("confirmation expired")
 	ErrNativePromptRequired = errors.New("this confirmation needs a native prompt; a chat answer alone does not approve it")
 	ErrWrongMechanism       = errors.New("the elicitation resolver may only answer a confirmation opened by elicitation")
+	ErrCLINotForStdio       = errors.New("cli confirmation cannot approve a call on a stdio session")
 	errNotApproved          = errors.New("confirmation is not approved")
 )
 
@@ -207,7 +209,9 @@ func (b *Broker) refresh(r *record) {
 // sweep drops records and nonces that can no longer matter: a grace period
 // after expiry keeps tokens answering "expired" instead of "unknown".
 func (b *Broker) sweep() {
-	cutoff := b.now().Add(-b.ttl)
+	// Keep an expired record for at least DefaultConfirmTTL so that a retry,
+	// or a token, still sees "expired" rather than "unknown" with a short ttl.
+	cutoff := b.now().Add(-max(b.ttl, DefaultConfirmTTL))
 	for id, r := range b.byID {
 		if r.ExpiresAt.Before(cutoff) {
 			delete(b.byID, id)
@@ -367,6 +371,9 @@ func (b *Broker) Resolve(id, resolver string, approve bool) error {
 	}
 	if resolver == ResolverElicitation && r.Mechanism != MechanismElicitation {
 		return ErrWrongMechanism
+	}
+	if resolver == ResolverCLI && r.Principal == LocalPrincipal {
+		return ErrCLINotForStdio
 	}
 	if approve && r.NativePrompt && !IsPresenceResolver(resolver) {
 		return ErrNativePromptRequired

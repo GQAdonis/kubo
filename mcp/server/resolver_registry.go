@@ -11,8 +11,8 @@ import (
 type ResolverSet struct {
 	// Resolvers are added after Options.Resolvers.
 	Resolvers []Resolver
-	// ConfirmTTL, when positive, replaces the default confirmation lifetime.
-	// Only test builds set it.
+	// ConfirmTTL, when positive, replaces the confirmation lifetime, including
+	// Options.ConfirmTTL. Only test builds set it.
 	ConfirmTTL time.Duration
 }
 
@@ -51,7 +51,9 @@ func withProviders(ctx context.Context, log *slog.Logger, base []Resolver) ([]Re
 		}
 		out = append(out, set.Resolvers...)
 		if set.ConfirmTTL > 0 {
-			ttl = set.ConfirmTTL
+			// Clamp to the documented bounds, so even a test provider cannot
+			// outlive MaxConfirmTTL.
+			ttl = min(set.ConfirmTTL, MaxConfirmTTL)
 		}
 	}
 	return out, ttl, nil

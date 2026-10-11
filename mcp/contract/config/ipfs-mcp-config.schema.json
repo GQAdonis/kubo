@@ -408,7 +408,7 @@
             "native",
             "desktop"
           ],
-          "description": "The out-of-band human gate for clients that cannot elicit. native is the OS presence prompt (macos-localauth on macOS, linux-polkit on Linux); desktop is a paired IPFS Desktop window; cli is `ipfs mcp confirm` on a TTY and is enabled only by naming it. A mechanism the host cannot offer is skipped. Precedence: --confirm, then IPFS_MCP_CONFIRM, then this key, then the default.",
+          "description": "The out-of-band human gate for clients that cannot elicit. native is the OS presence prompt (macos-localauth on macOS, linux-polkit on Linux); desktop is a paired IPFS Desktop window; cli is `ipfs mcp confirm` on a TTY, is enabled only by naming it (here, in --confirm or IPFS_MCP_CONFIRM) or by confirmation.cli, and never approves calls from the stdio session. A mechanism the host cannot offer is skipped. Precedence: --confirm, then IPFS_MCP_CONFIRM, then this key, then the default.",
           "offSwitch": "Empty list, --confirm=none or IPFS_MCP_CONFIRM=none: no out-of-band resolver runs. Per-call confirmation still applies: elicitation is used when the client supports it, otherwise write and destructive calls are refused with confirmation_unavailable.",
           "ownerChange": "native-confirmation-prompt",
           "flag": "--confirm",
@@ -429,21 +429,23 @@
             "macos-localauth",
             "linux-polkit"
           ],
-          "description": "Narrows the resolvers that modes enable. Only macos-localauth and linux-polkit are presence resolvers and satisfy requires_native_prompt (destructive calls from the ui and a2a principals); desktop does not until a Desktop confirmation window consumes the pairing key, and cli and agui-interrupt never do.",
-          "offSwitch": "Remove a resolver to stop using it; with none available, writes from non-eliciting principals are refused (confirmation_unavailable). Elicitation is always used when the client supports it.",
+          "description": "Narrows the resolvers that the effective modes enable. It is applied after the modes are resolved, whatever their source (--confirm, IPFS_MCP_CONFIRM, confirmation.modes or the default), so it can only make the gate stricter: a resolver runs only when its mode is enabled, the host offers it and it is listed here. Absent means all three. [] means none of desktop, macos-localauth and linux-polkit runs. cli is not in this list and is not narrowed by it; it is enabled only through modes or confirmation.cli. When the list removes every resolver the modes asked for, ipfs mcp prints a warning at start. Only macos-localauth and linux-polkit are presence resolvers and satisfy requires_native_prompt (destructive calls from the ui and a2a principals); desktop does not until a Desktop confirmation window consumes the pairing key, and cli and agui-interrupt never do.",
+          "offSwitch": "Remove a resolver to stop using it; [] stops desktop, macos-localauth and linux-polkit. With no resolver available, writes from non-eliciting principals are refused (confirmation_unavailable). Elicitation is always used for human-mcp principals whose client supports it.",
           "ownerChange": "native-confirmation-prompt"
         },
         "cli": {
           "type": "boolean",
           "default": false,
-          "offSwitch": "false (default): ipfs mcp confirm is refused. true is for headless servers only and needs a TTY.",
+          "description": "true enables the cli mode (ipfs mcp confirm) as if cli were listed in confirmation.modes; with confirmation.modes absent, it adds cli to the default modes (native, desktop). The principals[].shell_capable rule and the TTY requirement still apply, and cli never satisfies requires_native_prompt. cli never approves a confirmation opened by the stdio session (the local principal), because a stdio host cannot assert that it has no shell: a non-eliciting stdio client whose only resolver is cli gets confirmation_unavailable, and ipfs mcp warns at start. --confirm and IPFS_MCP_CONFIRM still win: when either is given, this key adds nothing. Setting false while confirmation.modes lists cli is a validation error.",
+          "offSwitch": "false (default): ipfs mcp confirm is refused unless cli is named in --confirm, IPFS_MCP_CONFIRM or confirmation.modes. true is for headless servers only and needs a TTY.",
           "ownerChange": "native-confirmation-prompt",
           "flag": "--confirm=cli"
         },
         "ttl": {
           "$ref": "#/$defs/Duration",
           "default": "120s",
-          "offSwitch": "Pending confirmations and tokens expire after this; expiry is denial.",
+          "description": "How long a confirmation stays open. It governs pending confirmations, confirmation tokens, and the expiry of the confirm channel and of ipfs mcp confirm. At least 1s, at most 10m; a value outside these bounds is a validation error (token expiry is kept in whole seconds). Expiry is denial.",
+          "offSwitch": "Cannot be turned off: pending confirmations and tokens always expire, after this duration (default 120s, at least 1s, at most 10m); expiry is denial.",
           "ownerChange": "native-confirmation-prompt"
         }
       },

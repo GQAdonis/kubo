@@ -22,26 +22,15 @@ import (
 // action), Windows needs a paired IPFS Desktop. A mechanism the host cannot
 // offer is skipped and a client that cannot elicit gets
 // confirmation_unavailable. --confirm=none or IPFS_MCP_CONFIRM=none turns the
-// resolvers off; cli is only enabled by naming it.
+// resolvers off; cli is only enabled by naming it (--confirm=cli, IPFS_MCP_CONFIRM,
+// confirmation.modes or confirmation.cli). confirmation.resolvers narrows the
+// native and desktop resolvers after the modes are resolved.
 
 const mcpConfirmOptionName = "confirm"
 
 func init() {
 	mcpCmd.Options = append(mcpCmd.Options, cmds.StringOption(mcpConfirmOptionName,
 		"Out-of-band confirmation for clients that cannot elicit: native, desktop, cli, none (comma separated). Default: native,desktop."))
-
-	serve := mcpCmd.Run
-	mcpCmd.Run = func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) error {
-		modes, explicit, err := confirmModes(req)
-		if err != nil {
-			return fmt.Errorf("ipfs mcp: %w", err)
-		}
-		if explicit {
-			confirm.Configure(confirm.Config{Modes: modes}) // explicit, including "none" and an empty file list
-		}
-		defer confirm.Shutdown()
-		return serve(req, re, env)
-	}
 
 	extra := commands.CreateCmdExtras(commands.SetDoesNotUseRepo(true), commands.SetDoesNotUseConfigAsInput(true))
 	subs := map[string]*cmds.Command{
@@ -50,11 +39,14 @@ func init() {
 			Helptext: cmds.HelpText{
 				Tagline: "Approve or deny a pending MCP confirmation from a terminal.",
 				ShortDescription: `
-Headless opt-in for servers with no desktop session. It needs --confirm=cli
-here and on the server, and a terminal on stdin; it reads the answer from
-that terminal only, never from a pipe. Prefer 'ipfs mcp --confirm=native'
-(Touch ID or password on macOS, polkit on Linux) where there is a screen:
-this command has no presence factor beyond the terminal itself.
+Headless opt-in for servers with no desktop session. cli confirmation must be
+on for the server (--confirm=cli, IPFS_MCP_CONFIRM, confirmation.modes or
+confirmation.cli) and for this command, which needs the same enable path and
+the same --mcp-config as the server, and a terminal on stdin; it reads the
+answer from that terminal only, never from a pipe. Prefer
+'ipfs mcp --confirm=native' (Touch ID or password on macOS, polkit on Linux)
+where there is a screen: this command has no presence factor beyond the
+terminal itself.
 `,
 			},
 			Arguments: []cmds.Argument{
@@ -63,7 +55,11 @@ this command has no presence factor beyond the terminal itself.
 			Extra:    extra,
 			NoRemote: true,
 			Run: func(req *cmds.Request, _ cmds.ResponseEmitter, _ cmds.Environment) error {
-				modes, _, err := confirmModes(req)
+				cfg, err := loadMCPConfig(req)
+				if err != nil {
+					return err
+				}
+				modes, _, err := confirmModes(req, cfg)
 				if err != nil {
 					return err
 				}
@@ -107,10 +103,11 @@ is a secret: anyone who has it can approve for Desktop.
 }
 
 // confirmModes resolves the gate modes with precedence --confirm, then
-// IPFS_MCP_CONFIRM, then confirmation.modes in the --mcp-config file. explicit
-// is false when none of them is set, so the default (native, desktop) applies.
-// An empty list, "none" or `"modes": []` turns the resolvers off.
-func confirmModes(req *cmds.Request) (modes []string, explicit bool, err error) {
+// IPFS_MCP_CONFIRM, then confirmation.modes in the --mcp-config file, which
+// confirmation.cli true extends with cli. explicit is false when none of them
+// is set, so the default (native, desktop) applies. An empty list, "none" or
+// `"modes": []` turns the resolvers off.
+func confirmModes(req *cmds.Request, cfg *mcpserver.Config) (modes []string, explicit bool, err error) {
 	// A flag that was given, even empty, decides: --confirm= means no resolvers.
 	// Only an absent flag falls back to the environment.
 	v, given := req.Options[mcpConfirmOptionName].(string)
@@ -123,14 +120,25 @@ func confirmModes(req *cmds.Request) (modes []string, explicit bool, err error) 
 		modes, err = confirm.ParseModes(v)
 		return modes, true, err
 	}
-	if file := mcpConfigFile(req); file != "" {
-		cfg, err := mcpserver.LoadConfig(file)
-		if err != nil {
-			return nil, false, err
-		}
-		if cfg.Confirmation.Modes != nil {
-			return slices.Clone(*cfg.Confirmation.Modes), true, nil
-		}
+	modes, explicit = confirm.FileModes(cfg.Confirmation.Modes, cfg.Confirmation.CLI)
+	return modes, explicit, nil
+}
+
+// confirmConfig is the full gate configuration: the modes from confirmModes
+// (confirmation.cli only counts when --confirm and IPFS_MCP_CONFIRM are not
+// given) narrowed by confirmation.resolvers, which applies whatever decided
+// the modes and can only remove resolvers.
+func confirmConfig(req *cmds.Request, cfg *mcpserver.Config) (confirm.Config, error) {
+	modes, explicit, err := confirmModes(req, cfg)
+	if err != nil {
+		return confirm.Config{}, err
 	}
-	return nil, false, nil
+	if !explicit {
+		modes = slices.Clone(confirm.DefaultModes)
+	}
+	c := confirm.Config{Modes: modes}
+	if r := cfg.Confirmation.Resolvers; r != nil {
+		c.Resolvers = append([]string{}, *r...)
+	}
+	return c, nil
 }

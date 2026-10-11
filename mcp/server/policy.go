@@ -11,7 +11,7 @@ import (
 
 // Restriction reasons for grants withdrawn by policy.
 const (
-	// ReasonShellCapableUnasserted: --confirm=cli is on and the principal has
+	// ReasonShellCapableUnasserted: cli confirmation is on and the principal has
 	// no shell_capable: false assertion.
 	ReasonShellCapableUnasserted = "shell_capable_unasserted"
 	// ReasonUARCheckFailed: the UAR preflight refused the principal.
@@ -122,15 +122,15 @@ func (s *Server) shellRestriction(id Identity) *Restriction {
 		// and its holder is usually a coding agent with a shell. No exemption.
 		return &Restriction{
 			Reason: ReasonShellCapableUnasserted,
-			Message: "--confirm=cli is on and the --auth-token-* operator identity has no shell_capable: false assertion; the CLI prompt has " +
+			Message: "cli confirmation (--confirm=cli or confirmation.cli) is on and the --auth-token-* operator identity has no shell_capable: false assertion; the CLI prompt has " +
 				"no presence factor and the token is typically given to a coding agent that has a shell, so write groups are refused. " +
-				"To grant writes under --confirm=cli, configure a principal in --mcp-config with kind human-mcp, its own credential, " +
+				"To grant writes under cli confirmation, configure a principal in --mcp-config with kind human-mcp, its own credential, " +
 				"the write_groups it needs and shell_capable: false",
 		}
 	}
 	return &Restriction{
 		Reason: ReasonShellCapableUnasserted,
-		Message: "--confirm=cli is on and principal " + id.ID + " has no shell_capable: false assertion; the CLI prompt has no " +
+		Message: "cli confirmation (--confirm=cli or confirmation.cli) is on and principal " + id.ID + " has no shell_capable: false assertion; the CLI prompt has no " +
 			"presence factor, so a principal that may have a shell cannot be given write groups. Set shell_capable: false " +
 			"only if the principal has no shell-capable tool",
 	}

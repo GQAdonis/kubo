@@ -20,8 +20,8 @@ import (
 
 // Errors of the headless CLI confirmation.
 var (
-	// ErrCLINotEnabled is returned without --confirm=cli.
-	ErrCLINotEnabled = errors.New("ipfs mcp confirm needs --confirm=cli: it is the opt-in for headless servers; a desktop or native prompt is the safer choice")
+	// ErrCLINotEnabled is returned without cli confirmation (--confirm=cli or confirmation.cli).
+	ErrCLINotEnabled = errors.New("ipfs mcp confirm needs cli confirmation (--confirm=cli or confirmation.cli, with the same --mcp-config as the server): it is the opt-in for headless servers; a desktop or native prompt is the safer choice")
 	// ErrNoTTY is returned when stdin is not a terminal.
 	ErrNoTTY = errors.New("ipfs mcp confirm needs a terminal on stdin; it will not read an approval from a pipe or a script")
 	// ErrNoServer is returned when no server has a CLI channel.

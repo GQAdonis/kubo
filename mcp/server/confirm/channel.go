@@ -170,7 +170,7 @@ func (c *channel) authenticate(r *http.Request) (string, int, string) {
 	}
 	if r.Header.Get(cliHeader) == cliValue {
 		if !c.cliOn {
-			return "", http.StatusForbidden, "cli confirmation is not enabled on this server; start it with --confirm=cli"
+			return "", http.StatusForbidden, "cli confirmation is not enabled on this server; enable it with --confirm=cli or confirmation.cli"
 		}
 		return server.ResolverCLI, 0, ""
 	}

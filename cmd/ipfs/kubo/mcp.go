@@ -13,6 +13,7 @@ import (
 	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core/commands"
 	mcpserver "github.com/ipfs/kubo/mcp/server"
+	"github.com/ipfs/kubo/mcp/server/confirm"
 )
 
 const (
@@ -105,12 +106,15 @@ initialize (see "ipfs mcp check-uar --help") and disables the principal, or
 withdraws its write groups, when the check fails. No published UAR release
 documents a settings endpoint yet, so "check": "verify" refuses a uar
 principal until one is pinned; "check": "assert" records that you verified the
-instance yourself. With --confirm=cli, a principal with write groups also
-needs shell_capable: false; the --auth-token-* operator identity is not
-exempt, so give writes under --confirm=cli to a principal of kind human-mcp
-with its own credential, write_groups and shell_capable: false. A client that
-identifies itself as UAR on stdio is refused content tools. Nothing is
-contacted unless the config names it.
+instance yourself. With cli confirmation (--confirm=cli or confirmation.cli),
+a principal with
+write groups also needs shell_capable: false; the --auth-token-* operator
+identity is not exempt, so give writes under cli confirmation to a principal
+of kind human-mcp with its own credential, write_groups and
+shell_capable: false. The stdio session cannot assert shell_capable: false, so
+cli confirmation never approves its calls (it needs elicitation or another
+resolver). A client that identifies itself as UAR on stdio is refused content
+tools. Nothing is contacted unless the config names it.
 
 MCP App views. Tools that have a view carry _meta.ui, and the views are served
 as ui:// resources from bundles embedded in the binary. --no-app-views (or
@@ -157,69 +161,96 @@ Specification: https://modelcontextprotocol.io/specification
 	Extra:    commands.CreateCmdExtras(commands.SetDoesNotUseRepo(true), commands.SetDoesNotUseConfigAsInput(true)),
 	NoRemote: true,
 	Run: func(req *cmds.Request, _ cmds.ResponseEmitter, _ cmds.Environment) error {
-		apiAddr, _ := req.Options[commands.ApiOption].(string)
-		settings, err := loadMCPSettings(req)
+		// The config file is read and validated once; the gate, the settings
+		// and the server all use this parse.
+		cfg, err := loadMCPConfig(req)
 		if err != nil {
 			return fmt.Errorf("ipfs mcp: %w", err)
 		}
-		if settings.printPaths {
-			if err := printRPCAllowedPaths(settings); err != nil {
-				return fmt.Errorf("ipfs mcp: %w", err)
-			}
-			return nil
+		gate, err := confirmConfig(req, cfg)
+		if err != nil {
+			return fmt.Errorf("ipfs mcp: %w", err)
 		}
+		confirm.Configure(gate)
+		defer confirm.Shutdown()
+		return runMCP(req, cfg, gate)
+	},
+}
 
-		// Stdout is the JSON-RPC channel; diagnostics go to stderr only.
-		logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
-
-		apiAuth, onArgv, err := resolveAPIAuth(req)
-		if err != nil {
-			return fmt.Errorf("ipfs mcp: %w", err)
-		}
-		if onArgv {
-			fmt.Fprintln(os.Stderr, "ipfs mcp: warning: --api-auth puts the RPC secret on the command line, where other local users can read it; use --"+mcpAPIAuthEnvOptionName+" or --"+mcpAPIAuthFileOptionName+" instead")
-		}
-
-		daemon, err := mcpserver.Discover(mcpserver.DiscoverOptions{
-			API:           apiAddr,
-			Authorization: config.ConvertAuthSecret(apiAuth),
-		})
-		if err != nil {
-			return fmt.Errorf("ipfs mcp: %w", err)
-		}
-		srv, err := mcpserver.New(req.Context, daemon, mcpserver.Options{
-			Tools:      settings.tools,
-			ReadOnly:   settings.readOnly,
-			Disabled:   settings.disabled,
-			NoAppViews: settings.noAppViews,
-			Transport:  settings.transport(),
-			Version:    ipfs.CurrentVersionNumber,
-			Logger:     logger,
-		})
-		if err != nil {
-			return fmt.Errorf("ipfs mcp: %w", err)
-		}
-		// Embeddings come first: they add the index tools, and the agent loop
-		// reads the tool set when it is enabled.
-		stopEmbeddings, err := enableMCPEmbeddings(req.Context, srv, settings, logger)
-		if err != nil {
-			return fmt.Errorf("ipfs mcp: %w", err)
-		}
-		defer stopEmbeddings()
-		if err := enableMCPAgent(srv, settings); err != nil {
-			return fmt.Errorf("ipfs mcp: %w", err)
-		}
-		if settings.http != nil {
-			if err := settings.http.serveHTTP(req.Context, srv); err != nil {
-				return fmt.Errorf("ipfs mcp: %w", err)
-			}
-			return nil
-		}
-		if err := srv.RunStdio(req.Context); err != nil {
+// runMCP serves the node once the config file is parsed and the confirmation
+// gate is configured.
+func runMCP(req *cmds.Request, cfg *mcpserver.Config, gate confirm.Config) error {
+	apiAddr, _ := req.Options[commands.ApiOption].(string)
+	settings, err := loadMCPSettings(req, cfg)
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	if settings.printPaths {
+		if err := printRPCAllowedPaths(settings); err != nil {
 			return fmt.Errorf("ipfs mcp: %w", err)
 		}
 		return nil
-	},
+	}
+
+	// Stdout is the JSON-RPC channel; diagnostics go to stderr only.
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	// A stdio session cannot assert shell_capable: false, so cli never approves it.
+	if settings.http == nil && gate.Has(confirm.ModeCLI) {
+		logger.Warn(confirm.CLIStdioWarning)
+	}
+
+	apiAuth, onArgv, err := resolveAPIAuth(req)
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	if onArgv {
+		fmt.Fprintln(os.Stderr, "ipfs mcp: warning: --api-auth puts the RPC secret on the command line, where other local users can read it; use --"+mcpAPIAuthEnvOptionName+" or --"+mcpAPIAuthFileOptionName+" instead")
+	}
+
+	daemon, err := mcpserver.Discover(mcpserver.DiscoverOptions{
+		API:           apiAddr,
+		Authorization: config.ConvertAuthSecret(apiAuth),
+	})
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	confirmTTL, err := cfg.Confirmation.TTLDuration()
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	srv, err := mcpserver.New(req.Context, daemon, mcpserver.Options{
+		Tools:      settings.tools,
+		ReadOnly:   settings.readOnly,
+		Disabled:   settings.disabled,
+		NoAppViews: settings.noAppViews,
+		ConfirmTTL: confirmTTL,
+		Transport:  settings.transport(),
+		Version:    ipfs.CurrentVersionNumber,
+		Logger:     logger,
+	})
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	// Embeddings come first: they add the index tools, and the agent loop
+	// reads the tool set when it is enabled.
+	stopEmbeddings, err := enableMCPEmbeddings(req.Context, srv, settings, logger)
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	defer stopEmbeddings()
+	if err := enableMCPAgent(srv, settings); err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	if settings.http != nil {
+		if err := settings.http.serveHTTP(req.Context, srv); err != nil {
+			return fmt.Errorf("ipfs mcp: %w", err)
+		}
+		return nil
+	}
+	if err := srv.RunStdio(req.Context); err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	return nil
 }
 
 // splitList splits a comma-separated option value, dropping empty items.

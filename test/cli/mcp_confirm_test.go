@@ -107,6 +107,13 @@ func shortTempDir(t *testing.T) string {
 // a client that cannot elicit.
 func confirmClient(t *testing.T, bin string, node *harness.Node, extraEnv []string, args ...string) *mcp.ClientSession {
 	t.Helper()
+	cs, _ := confirmClientStderr(t, bin, node, extraEnv, args...)
+	return cs
+}
+
+// confirmClientStderr is confirmClient that also returns the server's stderr.
+func confirmClientStderr(t *testing.T, bin string, node *harness.Node, extraEnv []string, args ...string) (*mcp.ClientSession, *syncBuffer) {
+	t.Helper()
 	cmd := exec.Command(bin, append([]string{"mcp"}, args...)...)
 	cmd.Env = append(mcpEnv(node.Dir), extraEnv...)
 	cmd.Dir = node.Dir
@@ -118,7 +125,7 @@ func confirmClient(t *testing.T, bin string, node *harness.Node, extraEnv []stri
 	cs, err := client.Connect(ctx, &mcp.CommandTransport{Command: cmd}, nil)
 	require.NoError(t, err, "stderr: %s", stderr.String())
 	t.Cleanup(func() { _ = cs.Close() })
-	return cs
+	return cs, stderr
 }
 
 // confirmation returns the error code and confirmation ID of a tool result.
@@ -350,4 +357,140 @@ func TestMCPConfirmHG1(t *testing.T) {
 	require.Equal(t, http.StatusOK, status, body)
 	eventuallyCode(t, cs, cid, "")
 	assert.True(t, isPinned(node, cid))
+}
+
+// writeConfirmConfig writes an `ipfs mcp --mcp-config` file.
+func writeConfirmConfig(t *testing.T, body string) string {
+	t.Helper()
+	p := filepath.Join(shortTempDir(t), "mcp.json")
+	require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
+	return p
+}
+
+// TestMCPConfirmationConfigKeys covers confirmation.ttl, confirmation.cli and
+// confirmation.resolvers from the config file (change native-confirmation-prompt,
+// task 1.6). IPFS_MCP_CONFIRM is cleared so that the file decides the modes;
+// the modes name desktop only, which keeps the real native prompt out of the
+// test. Desktop is unpaired in most cases (so it builds no resolver); the
+// resolvers case pairs it on purpose to show that narrowing, not the missing
+// pairing, removes it.
+func TestMCPConfirmationConfigKeys(t *testing.T) {
+	t.Parallel()
+	bin := mcpTestResolverBin(t)
+
+	t.Run("ttl from the file replaces the 120 s lifetime", func(t *testing.T) {
+		t.Parallel()
+		node := harness.NewT(t).NewNode().Init().StartDaemon()
+		defer node.StopDaemon()
+		dir := shortTempDir(t)
+		cfg := writeConfirmConfig(t, `{"confirmation": {"modes": ["desktop"], "ttl": "3s"}}`)
+		cs := confirmClient(t, bin, node, []string{
+			"IPFS_MCP_CONFIRM=",
+			"IPFS_MCP_TEST_RESOLVER_DIR=" + dir,
+			"IPFS_MCP_PAIRING_FILE=" + filepath.Join(dir, "none.json"),
+			"IPFS_MCP_CONFIRM_DIR=" + filepath.Join(dir, "s"),
+		}, "--mcp-config", cfg)
+		cid := node.IPFSAddStr("config ttl "+t.Name(), "--pin=false", "--cid-version=1")
+
+		code, id := confirmation(t, pinAdd(t, cs, cid))
+		require.Equal(t, "confirmation_required", code)
+		require.NotEmpty(t, id)
+		time.Sleep(4 * time.Second) // past 3 s, far below the default 120 s
+		require.NoError(t, os.WriteFile(filepath.Join(dir, id+".approve"), nil, 0o600))
+		eventuallyCode(t, cs, cid, "confirmation_expired")
+		assert.False(t, isPinned(node, cid), "an approval after the configured deadline does not run the call")
+	})
+
+	t.Run("cli true opens the cli channel but never approves the stdio principal", func(t *testing.T) {
+		t.Parallel()
+		node := harness.NewT(t).NewNode().Init().StartDaemon()
+		defer node.StopDaemon()
+		dir := shortTempDir(t)
+		sockDir := filepath.Join(dir, "s")
+		cfg := writeConfirmConfig(t, `{"confirmation": {"modes": ["desktop"], "cli": true, "ttl": "30s"}}`)
+		cs, stderr := confirmClientStderr(t, bin, node, []string{
+			"IPFS_MCP_CONFIRM=",
+			"IPFS_MCP_PAIRING_FILE=" + filepath.Join(dir, "none.json"),
+			"IPFS_MCP_CONFIRM_DIR=" + sockDir,
+		}, "--mcp-config", cfg)
+		cid := node.IPFSAddStr("config cli "+t.Name(), "--pin=false", "--cid-version=1")
+
+		// The cli resolver exists but never fits the stdio principal, which
+		// cannot assert shell_capable: false: the call is refused, nothing is
+		// listed or opened, and the server said so at startup.
+		code, id := confirmation(t, pinAdd(t, cs, cid))
+		assert.Equal(t, "confirmation_unavailable", code)
+		assert.Empty(t, id)
+		assert.Contains(t, stderr.String(), confirm.CLIStdioWarning)
+		socks, err := filepath.Glob(filepath.Join(sockDir, "*.sock"))
+		require.NoError(t, err)
+		assert.Len(t, socks, 1, "the cli mode opened the confirmation channel")
+		assert.False(t, isPinned(node, cid))
+	})
+
+	t.Run("without cli the same config opens no channel", func(t *testing.T) {
+		t.Parallel()
+		node := harness.NewT(t).NewNode().Init().StartDaemon()
+		defer node.StopDaemon()
+		dir := shortTempDir(t)
+		sockDir := filepath.Join(dir, "s")
+		cfg := writeConfirmConfig(t, `{"confirmation": {"modes": ["desktop"], "cli": false, "ttl": "30s"}}`)
+		cs := confirmClient(t, bin, node, []string{
+			"IPFS_MCP_CONFIRM=",
+			"IPFS_MCP_PAIRING_FILE=" + filepath.Join(dir, "none.json"),
+			"IPFS_MCP_CONFIRM_DIR=" + sockDir,
+		}, "--mcp-config", cfg)
+		cid := node.IPFSAddStr("config no cli "+t.Name(), "--pin=false", "--cid-version=1")
+
+		code, _ := confirmation(t, pinAdd(t, cs, cid))
+		assert.Equal(t, "confirmation_unavailable", code, "no resolver, no eliciting client: refused")
+		socks, _ := filepath.Glob(filepath.Join(sockDir, "*.sock"))
+		assert.Empty(t, socks)
+	})
+
+	t.Run("resolvers [] removes the paired desktop resolver and warns", func(t *testing.T) {
+		t.Parallel()
+		node := harness.NewT(t).NewNode().Init().StartDaemon()
+		defer node.StopDaemon()
+		dir := shortTempDir(t)
+		sockDir := filepath.Join(dir, "s")
+		pairing := filepath.Join(dir, "pairing.json")
+		_, err := confirm.Pair(pairing)
+		require.NoError(t, err)
+		cfg := writeConfirmConfig(t, `{"confirmation": {"modes": ["desktop"], "resolvers": []}}`)
+		cs, stderr := confirmClientStderr(t, bin, node, []string{
+			"IPFS_MCP_CONFIRM=",
+			"IPFS_MCP_PAIRING_FILE=" + pairing,
+			"IPFS_MCP_CONFIRM_DIR=" + sockDir,
+		}, "--mcp-config", cfg)
+		cid := node.IPFSAddStr("config resolvers "+t.Name(), "--pin=false", "--cid-version=1")
+
+		code, _ := confirmation(t, pinAdd(t, cs, cid))
+		assert.Equal(t, "confirmation_unavailable", code)
+		assert.False(t, isPinned(node, cid))
+		assert.Contains(t, stderr.String(), confirm.NarrowedAwayWarning)
+		socks, _ := filepath.Glob(filepath.Join(sockDir, "*.sock"))
+		assert.Empty(t, socks, "narrowed away: the paired desktop channel is not opened")
+	})
+
+	t.Run("invalid values stop the server at startup and name the key", func(t *testing.T) {
+		t.Parallel()
+		node := harness.NewT(t).NewNode().Init().StartDaemon()
+		defer node.StopDaemon()
+		for name, tc := range map[string]struct{ body, want string }{
+			"ttl above the bound":   {`{"confirmation": {"ttl": "11m"}}`, "confirmation.ttl"},
+			"ttl zero":              {`{"confirmation": {"ttl": "0s"}}`, "confirmation.ttl"},
+			"ttl below the minimum": {`{"confirmation": {"ttl": "500ms"}}`, "at least 1s"},
+			"cli false vs modes":    {`{"confirmation": {"cli": false, "modes": ["cli"]}}`, "confirmation.cli"},
+			"unknown resolver name": {`{"confirmation": {"resolvers": ["cli"]}}`, "resolvers"},
+		} {
+			cmd := exec.CommandContext(t.Context(), bin, "mcp", "--mcp-config", writeConfirmConfig(t, tc.body))
+			cmd.Env = append(mcpEnv(node.Dir), "IPFS_MCP_CONFIRM=")
+			cmd.Dir = node.Dir
+			cmd.Stdin = strings.NewReader("")
+			out, err := cmd.CombinedOutput()
+			require.Error(t, err, name)
+			assert.Contains(t, string(out), tc.want, name)
+		}
+	})
 }

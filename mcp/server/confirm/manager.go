@@ -10,6 +10,23 @@ import (
 	"github.com/ipfs/kubo/mcp/server"
 )
 
+// NarrowedAwayWarning is the startup warning when confirmation.resolvers
+// removes every native and desktop resolver that the confirmation modes
+// enabled. The text is fixed and carries no secret.
+const NarrowedAwayWarning = "confirmation.resolvers removes every out-of-band resolver that confirmation.modes enabled; " +
+	"write and destructive calls from clients that cannot elicit are refused with confirmation_unavailable"
+
+// NarrowedAwayCLIWarning is the variant when cli confirmation is on: the cli
+// resolver stays, so calls are not refused outright.
+const NarrowedAwayCLIWarning = "confirmation.resolvers removes every native and desktop resolver that confirmation.modes enabled; " +
+	"only cli confirmation remains"
+
+// CLIStdioWarning is the startup warning when cli confirmation is on and the
+// server runs on stdio. The text is fixed and carries no secret.
+const CLIStdioWarning = "cli confirmation is on with the stdio transport: a stdio session cannot assert shell_capable: false, " +
+	"so cli confirmation never approves its calls; non-eliciting write and destructive calls are refused " +
+	"with confirmation_unavailable unless another resolver is available"
+
 // Manager owns the resolvers built from a Config and the channel they share.
 type Manager struct {
 	resolvers []server.Resolver
@@ -30,12 +47,24 @@ func (m *Manager) Close() {
 // offered here is left out and logged, which leaves a non-eliciting client
 // with confirmation_unavailable; it is never replaced by a weaker one. Only an
 // unusable config (a socket that cannot be made private) is an error.
+// cfg.Resolvers narrows the native and desktop resolvers after the modes were
+// applied; it can only remove a resolver, never add one.
 func Build(cfg Config, log *slog.Logger) (*Manager, error) {
 	m := &Manager{}
-	if cfg.Has(ModeNative) {
-		m.resolvers = append(m.resolvers, newNativeResolver(platformFactor(), log))
+	f := platformFactor()
+	wantNative := cfg.Has(ModeNative) && cfg.allows(f.name())
+	wantDesktop := cfg.Has(ModeDesktop) && cfg.allows(server.ResolverDesktop)
+	if (cfg.Has(ModeNative) || cfg.Has(ModeDesktop)) && !wantNative && !wantDesktop {
+		if cfg.Has(ModeCLI) {
+			log.Warn(NarrowedAwayCLIWarning)
+		} else {
+			log.Warn(NarrowedAwayWarning)
+		}
 	}
-	wantDesktop, wantCLI := cfg.Has(ModeDesktop), cfg.Has(ModeCLI)
+	if wantNative {
+		m.resolvers = append(m.resolvers, newNativeResolver(f, log))
+	}
+	wantCLI := cfg.Has(ModeCLI)
 	if !wantDesktop && !wantCLI {
 		return m, nil
 	}
