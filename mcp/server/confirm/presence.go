@@ -85,15 +85,24 @@ const maxReasonRunes = 240
 // operation; control characters are dropped so a tool argument cannot shape
 // the dialog.
 func reasonFor(p server.Pending) string {
-	text := strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
-			return ' '
-		}
-		return r
-	}, p.Summary.Text)
-	text = strings.Join(strings.Fields(text), " ")
+	text := sanitizeText(p.Summary.Text)
 	if rs := []rune(text); len(rs) > maxReasonRunes {
 		text = string(rs[:maxReasonRunes-3]) + "..."
 	}
 	return "Approve IPFS MCP operation: " + text
+}
+
+// sanitizeText makes text from the server safe to show a person in a dialog or
+// on a terminal: control characters (ESC, CR, backspace, C0 and C1) and Unicode
+// format characters (bidirectional overrides, zero-width marks) become spaces,
+// and runs of white space collapse to one space. A tool argument that reaches
+// the text cannot move the cursor, erase the line or reorder what is shown.
+func sanitizeText(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			return ' '
+		}
+		return r
+	}, s)
+	return strings.Join(strings.Fields(s), " ")
 }

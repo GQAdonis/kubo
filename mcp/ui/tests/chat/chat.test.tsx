@@ -287,7 +287,7 @@ describe('ToolCallCard', () => {
       },
     });
     renderIn(<ToolCallCard call={{ id: 'x', name: 'pin_rm', arguments: '{}', status: 'error', result }} />);
-    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(document.querySelector('.iu-approval')).toHaveAttribute('role', 'group');
     expect(screen.queryByText('Tool error')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Approve/ })).not.toBeInTheDocument();
   });
@@ -318,7 +318,7 @@ describe('ApprovalCard', () => {
     const card = screen.getByRole('group', { name: /Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku \(recursive=true\)/ });
     expect(within(card).getByText('Awaiting a person')).toBeInTheDocument();
     expect(within(card).getByText('Write')).toBeInTheDocument();
-    await userEvent.click(within(card).getByRole('button', { name: 'Approve change' }));
+    await userEvent.click(within(card).getByRole('button', { name: 'Approve pin' }));
     expect(onApprove).toHaveBeenCalledOnce();
     await userEvent.click(within(card).getByRole('button', { name: 'Deny' }));
     expect(onDeny).toHaveBeenCalledOnce();
@@ -375,7 +375,7 @@ describe('ApprovalCard', () => {
     const activation = onDeny.mock.calls[0]?.[0] as { isTrusted: boolean; type: string; currentTarget: HTMLElement };
     expect(activation.type).toBe('click');
     expect(activation.isTrusted).toBe(false); // jsdom: every event is script-made, as a scripted click would be
-    screen.getByRole('button', { name: 'Approve change' }).click();
+    screen.getByRole('button', { name: 'Approve pin' }).click();
     expect(onApprove.mock.calls[0]?.[0]).toMatchObject({ type: 'click', isTrusted: false });
   });
 

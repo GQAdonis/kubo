@@ -137,7 +137,11 @@ func (s *Server) handler(t contract.Tool, sc *schemas, impl toolImpl) mcp.ToolHa
 		if req != nil && req.Params != nil {
 			raw = req.Params.Arguments
 		}
-		if te := s.egressRefusal(ctx, req, t); te != nil {
+		var ss *mcp.ServerSession
+		if req != nil {
+			ss = req.Session
+		}
+		if te := s.egressRefusal(ctx, ss, t); te != nil {
 			te.Tool = t.Name
 			return errorResult(t.Name, te), nil
 		}

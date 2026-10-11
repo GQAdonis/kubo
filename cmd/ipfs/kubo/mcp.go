@@ -18,6 +18,11 @@ import (
 const (
 	mcpToolsOptionName    = "tools"
 	mcpReadOnlyOptionName = "read-only"
+
+	// mcpAPIAuthEnvOptionName and mcpAPIAuthFileOptionName keep the RPC secret
+	// off the command line, where other local users can read it.
+	mcpAPIAuthEnvOptionName  = "api-auth-env"
+	mcpAPIAuthFileOptionName = "api-auth-file"
 )
 
 // mcpCmd is `ipfs mcp`. It is a local command: it runs inside the CLI process,
@@ -45,9 +50,11 @@ Finding the daemon, in order:
   $IPFS_PATH/api             the api file written by 'ipfs daemon'
   ~/.ipfs/api                when IPFS_PATH is not set
 
-Use --api-auth with the secret of an API.Authorizations entry when the
-daemon's RPC API requires one. Prefer a dedicated secret whose AllowedPaths
-list only the commands of the enabled tools.
+When the daemon's RPC API requires an API.Authorizations secret, give it with
+--api-auth-env NAME (an environment variable) or --api-auth-file /abs/path.
+--api-auth <secret> also works but puts the secret in the process list, where
+other local users can read it, and prints a warning. Prefer a dedicated secret
+whose AllowedPaths list only the commands of the enabled tools.
 
 The daemon must be Kubo 0.29.0 or newer. The server refuses to start below
 that. When a daemon lacks the RPC command a tool needs, that tool is left
@@ -56,16 +63,16 @@ out of tools/list and ipfs_node_status reports it as unavailable.
 Tool groups: node, content, pin, mfs, names, dag, routing, diag, index.
 By default every group is enabled, except the destructive tools. Use
 --tools to choose groups (comma separated). Name 'destructive' to also
-enable destructive tools (pin_update, pin_rm, and others that can remove
-data); every such call still
-needs confirmation. --read-only offers only tools that change nothing.
+enable the destructive tools, the ones that can remove or overwrite data;
+every such call still needs confirmation. --read-only offers only tools
+that change nothing.
 
-Confirmation. Every tool that changes something (pin_add, and pin_update and
-pin_rm when enabled) is confirmed before it runs, on every transport. The
-server asks the client's user through MCP elicitation. A client that cannot
-elicit gets a refusal (confirmation_unavailable) and nothing changes, unless
-an out-of-band confirmation prompt is available. A confirm token the server
-returns is a binding handle and never consent.
+Confirmation. Every write tool and every destructive tool is confirmed before
+it runs, on every transport. The server asks the client's user through MCP
+elicitation. A client that cannot elicit gets a refusal
+(confirmation_unavailable) and nothing changes, unless an out-of-band
+confirmation prompt is available. A confirm token the server returns is a
+binding handle and never consent.
 
 Streamable HTTP. --http (off by default) serves MCP on HTTP instead of
 stdin and stdout, at http://127.0.0.1:5050/mcp. Name another address with
@@ -144,12 +151,13 @@ Specification: https://modelcontextprotocol.io/specification
 	Options: []cmds.Option{
 		cmds.StringOption(mcpToolsOptionName, "Comma-separated tool groups to enable; add 'destructive' to enable destructive tools."),
 		cmds.BoolOption(mcpReadOnlyOptionName, "Offer only tools that do not change anything.").WithDefault(false),
+		cmds.StringOption(mcpAPIAuthEnvOptionName, "Name of an environment variable holding the API.Authorizations secret (for example bearer:<secret>) for the daemon's RPC API."),
+		cmds.StringOption(mcpAPIAuthFileOptionName, "Absolute path of a file holding the API.Authorizations secret for the daemon's RPC API."),
 	},
 	Extra:    commands.CreateCmdExtras(commands.SetDoesNotUseRepo(true), commands.SetDoesNotUseConfigAsInput(true)),
 	NoRemote: true,
 	Run: func(req *cmds.Request, _ cmds.ResponseEmitter, _ cmds.Environment) error {
 		apiAddr, _ := req.Options[commands.ApiOption].(string)
-		apiAuth, _ := req.Options[commands.ApiAuthOption].(string)
 		settings, err := loadMCPSettings(req)
 		if err != nil {
 			return fmt.Errorf("ipfs mcp: %w", err)
@@ -163,6 +171,14 @@ Specification: https://modelcontextprotocol.io/specification
 
 		// Stdout is the JSON-RPC channel; diagnostics go to stderr only.
 		logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+		apiAuth, onArgv, err := resolveAPIAuth(req)
+		if err != nil {
+			return fmt.Errorf("ipfs mcp: %w", err)
+		}
+		if onArgv {
+			fmt.Fprintln(os.Stderr, "ipfs mcp: warning: --api-auth puts the RPC secret on the command line, where other local users can read it; use --"+mcpAPIAuthEnvOptionName+" or --"+mcpAPIAuthFileOptionName+" instead")
+		}
 
 		daemon, err := mcpserver.Discover(mcpserver.DiscoverOptions{
 			API:           apiAddr,
@@ -215,4 +231,32 @@ func splitList(s string) []string {
 		}
 	}
 	return out
+}
+
+// resolveAPIAuth returns the RPC API secret from --api-auth-env,
+// --api-auth-file or --api-auth (exactly one). onArgv is true for --api-auth,
+// whose value other local users can read in the process list.
+func resolveAPIAuth(req *cmds.Request) (secret string, onArgv bool, err error) {
+	env, _ := req.Options[mcpAPIAuthEnvOptionName].(string)
+	file, _ := req.Options[mcpAPIAuthFileOptionName].(string)
+	argv, _ := req.Options[commands.ApiAuthOption].(string)
+	set := 0
+	for _, v := range []string{env, file, argv} {
+		if v != "" {
+			set++
+		}
+	}
+	switch {
+	case set > 1:
+		return "", false, fmt.Errorf("use only one of --%s, --%s and --%s", mcpAPIAuthEnvOptionName, mcpAPIAuthFileOptionName, commands.ApiAuthOption)
+	case set == 0:
+		return "", false, nil
+	case argv != "":
+		return argv, true, nil
+	}
+	secret, err = mcpserver.SecretRef{Env: env, File: file}.Read()
+	if err != nil {
+		return "", false, fmt.Errorf("RPC API secret: %w", err)
+	}
+	return secret, false, nil
 }

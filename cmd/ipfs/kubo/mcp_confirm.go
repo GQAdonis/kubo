@@ -82,14 +82,16 @@ this command has no presence factor beyond the terminal itself.
 				Tagline: "Create the pairing key for the IPFS Desktop confirmation window.",
 				ShortDescription: `
 Prints a new key once and stores only its hash. Enter the key in IPFS
-Desktop; start the server with --confirm=desktop. Running it again replaces
-the pairing. The key is a secret: anyone who has it can approve for Desktop.
+Desktop; start the server with --confirm=desktop. It needs a terminal on
+stdin and refuses while an ipfs mcp server is running; stop the server first.
+Running it again replaces the pairing, and the old key stops working. The key
+is a secret: anyone who has it can approve for Desktop.
 `,
 			},
 			Extra:    extra,
 			NoRemote: true,
 			Run: func(*cmds.Request, cmds.ResponseEmitter, cmds.Environment) error {
-				key, err := confirm.Pair(confirm.Config{}.PairingPath())
+				key, err := confirm.RunPair(confirm.PairOptions{In: os.Stdin})
 				if err != nil {
 					return err
 				}
@@ -109,11 +111,15 @@ the pairing. The key is a secret: anyone who has it can approve for Desktop.
 // is false when none of them is set, so the default (native, desktop) applies.
 // An empty list, "none" or `"modes": []` turns the resolvers off.
 func confirmModes(req *cmds.Request) (modes []string, explicit bool, err error) {
-	v, _ := req.Options[mcpConfirmOptionName].(string)
-	if v == "" {
-		v = os.Getenv(confirm.EnvModes)
+	// A flag that was given, even empty, decides: --confirm= means no resolvers.
+	// Only an absent flag falls back to the environment.
+	v, given := req.Options[mcpConfirmOptionName].(string)
+	if !given {
+		if env, set := os.LookupEnv(confirm.EnvModes); set && env != "" {
+			v, given = env, true
+		}
 	}
-	if v != "" {
+	if given {
 		modes, err = confirm.ParseModes(v)
 		return modes, true, err
 	}

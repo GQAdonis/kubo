@@ -41,7 +41,7 @@ func TestBrokerExpiryIsDenial(t *testing.T) {
 		got, _ = b.get(p.ID)
 		assert.Equal(t, StateExpired, got.State)
 		assert.Empty(t, b.Pending())
-		assert.ErrorIs(t, b.Resolve(p.ID, ResolverDesktop, true), ErrConfirmationExpired, "a late approval is rejected")
+		assert.ErrorIs(t, b.Resolve(p.ID, ResolverLinuxPolkit, true), ErrConfirmationExpired, "a late approval is rejected")
 		assert.Error(t, b.claim(p.ID, ""), "an expired confirmation never executes")
 	})
 }
@@ -50,7 +50,7 @@ func TestBrokerApprovedButUnclaimedExpires(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		b := newSynctestBroker()
 		p := openPending(b, "pin_rm")
-		require.NoError(t, b.Resolve(p.ID, ResolverDesktop, true))
+		require.NoError(t, b.Resolve(p.ID, ResolverLinuxPolkit, true))
 		time.Sleep(confirmTTL)
 		assert.Error(t, b.claim(p.ID, ""), "approval does not outlive the deadline")
 	})
@@ -60,13 +60,13 @@ func TestBrokerDoubleApprovalRunsOnce(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		b := newSynctestBroker()
 		p := openPending(b, "pin_rm")
-		require.NoError(t, b.Resolve(p.ID, ResolverDesktop, true))
+		require.NoError(t, b.Resolve(p.ID, ResolverLinuxPolkit, true))
 		assert.ErrorIs(t, b.Resolve(p.ID, ResolverMacOSLocalAuth, true), ErrConfirmationResolved)
 		assert.ErrorIs(t, b.Resolve(p.ID, ResolverCLI, false), ErrConfirmationResolved, "a second resolver cannot flip the decision")
 
 		require.NoError(t, b.claim(p.ID, ""))
 		assert.Error(t, b.claim(p.ID, ""), "the approved call executes once")
-		assert.ErrorIs(t, b.Resolve(p.ID, ResolverDesktop, true), ErrConfirmationResolved)
+		assert.ErrorIs(t, b.Resolve(p.ID, ResolverLinuxPolkit, true), ErrConfirmationResolved)
 	})
 }
 
@@ -74,7 +74,7 @@ func TestBrokerConcurrentResolversOneWins(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		b := newSynctestBroker()
 		p := openPending(b, "pin_rm")
-		names := []string{ResolverDesktop, ResolverMacOSLocalAuth, ResolverLinuxPolkit, ResolverCLI}
+		names := []string{ResolverLinuxPolkit, ResolverMacOSLocalAuth, ResolverLinuxPolkit, ResolverCLI}
 		var wins atomic.Int32
 		var wg sync.WaitGroup
 		for i := range 16 {

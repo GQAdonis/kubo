@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -44,6 +45,8 @@ type a2aEnv struct {
 	presence *fakeResolver
 	cli      *fakeResolver
 	logs     *bytes.Buffer
+	// stopServe stops the listener and waits for Serve; the cleanup calls it too.
+	stopServe func()
 }
 
 type a2aEnvOpts struct {
@@ -78,13 +81,13 @@ func newA2AEnv(t *testing.T, opts a2aEnvOpts, steps ...func(modelRequest) []stri
 		e.cli = newFakeResolver(ResolverCLI)
 		resolvers = append(resolvers, e.cli)
 	} else if !opts.noPresence {
-		e.presence = newFakeResolver(ResolverDesktop)
+		e.presence = newFakeResolver(ResolverLinuxPolkit)
 		resolvers = append(resolvers, e.presence)
 	}
 	log := slog.New(slog.NewTextHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	e.s = mustNew(t, e.d, Options{
 		Tools: []string{"node", "content", "pin", "diag", "destructive"}, Resolvers: resolvers,
-		Transport: "http", Logger: log, now: e.clock.Now, Version: "9.9.9",
+		Transport: "http", Logger: log, now: e.clock.Now, Version: "9.9.9", awaitRecheck: 10 * time.Millisecond,
 	})
 	if !opts.noAgent {
 		require.NoError(t, e.s.EnableAgent(&AgentSettings{
@@ -125,14 +128,12 @@ func newA2AEnv(t *testing.T, opts a2aEnvOpts, steps ...func(modelRequest) []stri
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- e.hs.Serve(ctx) }()
-	t.Cleanup(func() {
+	e.stopServe = sync.OnceFunc(func() {
 		cancel()
 		require.NoError(t, <-done)
 	})
+	t.Cleanup(e.stopServe)
 	e.base = "http://" + addr.String()
-	saved := awaitRecheck
-	awaitRecheck = 10 * time.Millisecond
-	t.Cleanup(func() { awaitRecheck = saved })
 	return e
 }
 

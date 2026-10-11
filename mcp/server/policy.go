@@ -76,7 +76,7 @@ func (g *uarGuard) report(ctx context.Context, id Identity, fresh bool) UARRepor
 	rep := g.checker.Check(cctx, UARCheckInput{UAR: *id.UAR, Check: id.Check, EgressAck: id.EgressAck, KuboListen: listen})
 	if !e.have || e.report.Verdict() != rep.Verdict() || e.report.Revision != rep.Revision {
 		g.log.Warn("uar preflight", "principal", id.ID, "verdict", rep.Verdict(), "version", rep.Version,
-			"revision", rep.Revision, "findings", rep.Summary())
+			"revision", rep.Revision, "findings", rep.Codes())
 	}
 	e.have, e.at, e.report = true, g.now(), rep
 	return rep
@@ -182,12 +182,12 @@ func (s *Server) StartupReport(ctx context.Context, ids []Identity) []string {
 		case VerdictOK:
 			lines = append(lines, fmt.Sprintf("principal %s: check-uar ok (UAR %s)", id.ID, rep.Version))
 		default:
-			lines = append(lines, fmt.Sprintf("principal %s: check-uar %s: %s", id.ID, v, rep.Summary()))
+			lines = append(lines, fmt.Sprintf("principal %s: check-uar %s: %s (run ipfs mcp check-uar for details)", id.ID, v, rep.Codes()))
 		}
 		if id.Check == CheckAssert {
-			lines = append(lines, fmt.Sprintf("principal %s: check: assert is set; the operator asserts that the UAR instance at %s "+
+			lines = append(lines, fmt.Sprintf("principal %s: check: assert is set; the operator asserts that the UAR instance "+
 				"uses only local or acknowledged model and embedder hosts, has governance on, no shell-capable tool and no MCP server besides ipfs mcp, "+
-				"and that it refuses unauthenticated requests; Kubo has not verified this", id.ID, id.UAR.CardURL))
+				"and that it refuses unauthenticated requests; Kubo has not verified this", id.ID))
 		}
 	}
 	return lines

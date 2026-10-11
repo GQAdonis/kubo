@@ -205,7 +205,7 @@ func newAgentEnv(t *testing.T, opts agentEnvOpts, steps ...func(modelRequest) []
 	e.pins = installPins(e.d.fakeDaemon, map[string]fakePin{testCID(t, 1): {Type: "recursive"}})
 	resolvers := opts.resolvers
 	if len(resolvers) == 0 && !opts.noResolve {
-		e.resolver = newFakeResolver(ResolverDesktop)
+		e.resolver = newFakeResolver(ResolverLinuxPolkit)
 		resolvers = []Resolver{e.resolver}
 	}
 	log := slog.New(slog.NewTextHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))

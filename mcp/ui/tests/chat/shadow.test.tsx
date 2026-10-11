@@ -85,7 +85,7 @@ describe('chat primitives inside a shadow root', () => {
       expect(shadow.getElementById(id), attr).not.toBeNull();
       expect(document.getElementById(id), attr).toBeNull();
     }
-    const approve = [...shadow.querySelectorAll('button')].find((b) => b.textContent === 'Approve change') as HTMLButtonElement;
+    const approve = [...shadow.querySelectorAll('button')].find((b) => b.textContent === 'Approve pin') as HTMLButtonElement;
     await userEvent.click(approve);
     expect(onApprove).toHaveBeenCalledOnce();
   });

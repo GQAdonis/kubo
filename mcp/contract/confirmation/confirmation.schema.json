@@ -213,7 +213,7 @@
         "requires_native_prompt": {
           "type": "boolean",
           "default": false,
-          "description": "Same meaning as PendingConfirmation.requires_native_prompt: true for destructive calls from the ui and a2a principals (ADR-0003 Round 7 amendment). Only a presence resolver (desktop, macos-localauth, linux-polkit) decides; cli and agui-interrupt never do, and with no presence resolver available the call is refused with confirmation_unavailable. An in-chat surface must not offer an approve control and may only offer deny. Absent means false."
+          "description": "Same meaning as PendingConfirmation.requires_native_prompt: true for destructive calls from the ui and a2a principals (ADR-0003 Round 7 amendment). Only a presence resolver (macos-localauth or linux-polkit) decides; desktop does not count until a Desktop confirmation window consumes the pairing key (it still resolves write-class confirmations), and cli and agui-interrupt never do, and with no presence resolver available the call is refused with confirmation_unavailable. An in-chat surface must not offer an approve control and may only offer deny. Absent means false."
         },
         "principal_kind": {
           "type": "string",
@@ -398,7 +398,7 @@
         },
         "requires_native_prompt": {
           "type": "boolean",
-          "description": "True for destructive calls from the ui and a2a principals: neither a chat answer nor an A2A message nor cli approves; only a presence resolver does."
+          "description": "True for destructive calls from the ui and a2a principals: neither a chat answer nor an A2A message nor cli approves; only a presence resolver (macos-localauth or linux-polkit) does; desktop does not count yet."
         },
         "created_at": {
           "type": "string",

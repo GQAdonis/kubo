@@ -22,7 +22,7 @@ func TestResolverProvidersAreConsulted(t *testing.T) {
 	})
 
 	base := newFakeResolver(ResolverCLI)
-	got, ttl, err := withProviders(context.Background(), slog.Default(), []Resolver{base})
+	got, ttl, err := withProviders(t.Context(), slog.Default(), []Resolver{base})
 	require.NoError(t, err)
 	assert.Equal(t, []Resolver{base}, got)
 	assert.Zero(t, ttl, "no provider, no change")
@@ -31,7 +31,7 @@ func TestResolverProvidersAreConsulted(t *testing.T) {
 	RegisterResolverProvider(func(context.Context, *slog.Logger) (ResolverSet, error) {
 		return ResolverSet{Resolvers: []Resolver{extra}, ConfirmTTL: 5 * time.Second}, nil
 	})
-	got, ttl, err = withProviders(context.Background(), slog.Default(), []Resolver{base})
+	got, ttl, err = withProviders(t.Context(), slog.Default(), []Resolver{base})
 	require.NoError(t, err)
 	assert.Equal(t, []Resolver{base, extra}, got)
 	assert.Equal(t, 5*time.Second, ttl)

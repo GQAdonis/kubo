@@ -2,7 +2,15 @@
 // module only when asked (island=closed|open), mounts the element, and hands it the endpoint and the
 // bearer as a property. With island=none it does nothing, which gives the baseline page.
 const config = JSON.parse(document.getElementById('harness-config').textContent);
-const launcher = document.getElementById('chat-launcher');
+// The config carries the bearer; a real launcher keeps it in memory only, so drop it from the markup.
+document.getElementById('harness-config').remove();
+// Test clock: the island reads Date.now to decide when a confirmation expires. Fixed, in page script, so it
+// works the same in Chromium and Electron (Playwright's own clock also empties performance entries).
+if (config.now) {
+  const fixed = Date.parse(config.now);
+  Date.now = () => fixed;
+}
+const launcher =document.getElementById('chat-launcher');
 let element;
 
 if (config.island !== 'none') {

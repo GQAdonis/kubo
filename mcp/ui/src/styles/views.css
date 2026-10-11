@@ -99,6 +99,10 @@
 .iu-json__group > summary {
   cursor: pointer;
   list-style: none;
+  /* Block flow, not flex: flex would collapse the space between the key and its type. */
+  min-block-size: 24px; /* WCAG 2.2 2.5.8 */
+  padding-block: 1px;
+  line-height: 22px;
   border-radius: var(--radius-sm);
 }
 

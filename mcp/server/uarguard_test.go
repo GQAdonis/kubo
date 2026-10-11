@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net/url"
 	"testing"
 	"time"
 
@@ -152,6 +153,19 @@ func TestUARStartupReport(t *testing.T) {
 	u.set(func(u *fakeUAR) { u.field("llm")["provider_host"] = "api.remote.test" })
 	lines = e.hs.StartupReport(t.Context())
 	assert.Contains(t, fmt.Sprint(lines), "check-uar refuse")
+	assertNoDestination(t, fmt.Sprint(lines), u)
+}
+
+// assertNoDestination fails when text carries the UAR card URL or its host: the
+// startup report names the principal, never where it connects.
+func assertNoDestination(t *testing.T, text string, u *fakeUAR) {
+	t.Helper()
+	parsed, err := url.Parse(u.cardURL())
+	require.NoError(t, err)
+	assert.NotContains(t, text, u.cardURL())
+	assert.NotContains(t, text, parsed.Host)
+	assert.NotContains(t, text, "api.remote.test", "a finding message can name a discovered host")
+	assert.NotContains(t, text, "http://")
 }
 
 func TestNoUARContactWithoutAUARPrincipal(t *testing.T) {
@@ -171,7 +185,7 @@ func TestUARStartupReportPrintsTheAssertion(t *testing.T) {
 	joined := fmt.Sprint(e.hs.StartupReport(t.Context()))
 	assert.Contains(t, joined, "principal runtime: check: assert is set")
 	assert.Contains(t, joined, "the operator asserts")
-	assert.Contains(t, joined, u.cardURL())
+	assertNoDestination(t, joined, u)
 	assert.NotContains(t, joined, fakeUARAdminToken)
 
 	u2 := newFakeUAR(t, "profile")

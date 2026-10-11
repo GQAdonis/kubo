@@ -28,20 +28,22 @@ for (const width of WIDTHS) {
       expect(after.fontFaces).toBe(before.fontFaces);
       expect(after.computed).toEqual(before.computed);
       expect(after.rects).toEqual(before.rects);
-      expect(after.scrollWidth).toBeLessThanOrEqual(after.clientWidth);
+      // The stand-in Web UI page scrolls sideways at 320px on its own; the island must add nothing to that.
+      expect(after.scrollWidth).toBeLessThanOrEqual(Math.max(before.scrollWidth, after.clientWidth));
       await expect(closed).toHaveScreenshot(`host-${width}-${scheme}.png`, { fullPage: true, maxDiffPixels: 0 });
     });
   }
 }
 
 test('a closed island loads its small entry and nothing else', async ({ harness }) => {
-  const page = await harness.open({ island: 'none' });
-  const requests: string[] = [];
-  page.on('request', (r) => requests.push(r.url()));
+  // The harness server's own log: a page listener sees nothing in Electron, which opens a fresh window per open().
   await harness.open({ island: 'closed' });
-  const island = requests.filter((u) => u.includes('/island/'));
-  expect(island.map((u) => new URL(u).pathname)).toEqual(['/island/ipfs-agent-chat.js']);
-  expect(requests.filter((u) => u.startsWith(harness.env.fixtureOrigin))).toEqual([]);
+  const paths = (await harness.harnessRequests()).filter((p) => p.startsWith('/island/'));
+  // The entry plus the tiny endpoint-validation chunk it imports statically. The mount chunk (React and
+  // the UI) and the embedded fonts load only when the sidebar first opens.
+  expect(paths[0]).toBe('/island/ipfs-agent-chat.js');
+  expect(paths.slice(1)).toEqual([expect.stringMatching(/^\/island\/chunks\/endpoint-[\w-]+\.js$/)]);
+  expect(await harness.fixtureRequests()).toEqual([]); // the agent endpoint is never contacted before the sidebar opens
 });
 
 test('opening and closing the sidebar changes nothing on the host page but the faces the island registers', async ({ harness }) => {
@@ -54,7 +56,9 @@ test('opening and closing the sidebar changes nothing on the host page but the f
   // The sidebar is a fixed overlay inside a shadow root: the host reflows nothing and gains no node, style or rule.
   expect(open.rects).toEqual(before.rects);
   expect(open.computed).toEqual(before.computed);
-  expect(open.body).toBe(before.body);
+  // The host's own launcher toggles aria-expanded; that is the host reacting, not the island writing.
+  const body = (s: string) => s.replace(/aria-expanded="(true|false)"/g, 'aria-expanded=""');
+  expect(body(open.body)).toBe(body(before.body));
   expect(open.head).toBe(before.head);
   expect(open.sheets).toBe(before.sheets);
   expect(open.adopted).toBe(before.adopted);

@@ -25,7 +25,7 @@ describe('answering an interrupt', () => {
   it('shows the approval with Deny and Approve, and holds the run until a person answers', async () => {
     const m = await reachApproval(false);
     expect(screen.getByRole('button', { name: 'Deny' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Approve change' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve pin' })).toBeInTheDocument();
     expect(screen.getByText('Awaiting a person')).toBeInTheDocument();
     expect(m.fake.calls).toHaveLength(1);
     // The composer is locked until the approval is answered.
@@ -39,7 +39,7 @@ describe('answering an interrupt', () => {
 
   it('refuses a scripted click: fireEvent and element.click() produce untrusted events and send nothing', async () => {
     const m = await reachApproval(false);
-    const approve = screen.getByRole('button', { name: 'Approve change' });
+    const approve = screen.getByRole('button', { name: 'Approve pin' });
 
     fireEvent.click(approve);
     await screen.findByText(/An answer needs a click or key press from you/);
@@ -60,7 +60,7 @@ describe('answering an interrupt', () => {
 
   it('resumes with exactly the recorded resume input when a person approves', async () => {
     const m = await reachApproval(true);
-    await m.user.click(screen.getByRole('button', { name: 'Approve change' }));
+    await m.user.click(screen.getByRole('button', { name: 'Approve pin' }));
     await untilIdle();
 
     expect(m.fake.calls).toHaveLength(2);
@@ -68,12 +68,12 @@ describe('answering an interrupt', () => {
     expect(m.fake.calls[1]?.matched).toBe('write-resume-approved');
     await screen.findByText('Pinned.');
     expect(screen.getByText('Approved')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Approve change' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve pin' })).not.toBeInTheDocument();
   });
 
   it('works from the keyboard: Enter on the focused control is a key press the browser reports as a click', async () => {
     const m = await reachApproval(true);
-    screen.getByRole('button', { name: 'Approve change' }).focus();
+    screen.getByRole('button', { name: 'Approve pin' }).focus();
     await m.user.keyboard('{Enter}');
     await untilIdle();
     expect(m.fake.calls).toHaveLength(2);
@@ -192,7 +192,7 @@ describe('answering an interrupt', () => {
     // userEvent and the stream use real timers; only Date is pinned.
     await say(m, userText);
     await screen.findByText('Expired');
-    expect(screen.queryByRole('button', { name: 'Approve change' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve pin' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Deny' })).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Message to the agent' })).toBeEnabled();
   });

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"net/url"
 	"path/filepath"
 	"regexp"
@@ -169,6 +170,8 @@ func (e EmbedderSettings) validate() []error {
 	var errs []error
 	if err := checkEndpoint(e.BaseURL); err != nil {
 		errs = append(errs, fmt.Errorf("embeddings.embedder.base_url: %w", err))
+	} else if e.APIKey != "" && !httpsOrLoopback(e.BaseURL) {
+		errs = append(errs, errors.New("embeddings.embedder.base_url: refusing to send an API key over plain http to a non-loopback host; use https or a loopback embedder"))
 	}
 	if strings.TrimSpace(e.Model) == "" {
 		errs = append(errs, errors.New("embeddings.embedder.model is required"))
@@ -203,6 +206,24 @@ func checkEndpoint(raw string) error {
 		return errors.New("must not carry a query or fragment")
 	}
 	return nil
+}
+
+// httpsOrLoopback reports whether a credential may be sent to the endpoint: it
+// uses https, or its host is a loopback name or address.
+func httpsOrLoopback(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	if strings.EqualFold(u.Scheme, "https") {
+		return true
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return true
+	}
+	addr, err := netip.ParseAddr(host)
+	return err == nil && addr.IsLoopback()
 }
 
 func (p Policy) validate() []error {

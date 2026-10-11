@@ -12,10 +12,14 @@ const WIDTHS = [320, 768, 1024, 1440] as const;
 for (const scheme of ['dark', 'light'] as const) {
   for (const width of WIDTHS) {
     test(`renders styled and in place at ${width}px, ${scheme}`, async ({ harness }) => {
+      // The stand-in host page scrolls sideways on its own at 320px; the island must add nothing to that.
+      const hostOnly = await (await harness.open({ island: 'none', scheme, width, height: 800 })).evaluate(() => document.documentElement.scrollWidth);
       const page = await harness.open({ island: 'open', scheme, width, height: 800 });
       const aside = page.locator('ipfs-agent-chat aside');
       const tokens = RGB[scheme];
 
+      // The panel slides in; measure once the slide has finished.
+      await expect.poll(() => aside.evaluate((el) => getComputedStyle(el).transform)).toMatch(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
       const box = await aside.boundingBox();
       expect(box).not.toBeNull();
       expect(Math.round((box?.x ?? 0) + (box?.width ?? 0))).toBe(width); // flush with the right edge
@@ -36,8 +40,8 @@ for (const scheme of ['dark', 'light'] as const) {
       expect((await field.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
       expect(await page.getByRole('button', { name: 'Send message' }).evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(tokens.accent);
 
-      // The page does not scroll sideways because of the island.
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      // The page does not scroll sideways because of the island (hostOnly: the same page without it, measured first).
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(Math.max(hostOnly, width));
 
       // Brand faces, from embedded bytes.
       await page.evaluate(() => document.fonts.ready);
@@ -68,9 +72,14 @@ test('slides in with a transform and stops moving for people who ask for no moti
 test('a closed sidebar is unreachable: hidden, inert, and out of the tab order', async ({ harness }) => {
   const page = await harness.open({ island: 'closed' });
   const aside = page.locator('ipfs-agent-chat aside');
+  // The panel is lazy: until the sidebar first opens there is no aside at all, so nothing to reach.
+  await expect(aside).toHaveCount(0);
+  await page.getByRole('button', { name: 'Ask the agent' }).click();
+  await expect(aside).toHaveAttribute('data-state', 'open');
+  await page.keyboard.press('Escape');
   await expect(aside).toHaveAttribute('data-state', 'closed');
   await expect(aside).toHaveAttribute('inert', '');
-  expect(await aside.evaluate((el) => getComputedStyle(el).visibility)).toBe('hidden');
+  await expect.poll(() => aside.evaluate((el) => getComputedStyle(el).visibility)).toBe('hidden'); // after the slide-out
   await page.locator('#chat-launcher').focus();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press('Tab');

@@ -58,7 +58,7 @@ func newHTTPEnv(t *testing.T, mod func(*HTTPOptions)) *httpEnv {
 	d := newFakeDaemon(t)
 	target := testCID(t, 1)
 	pins := installPins(d, map[string]fakePin{target: {Type: "recursive"}})
-	res := newFakeResolver(ResolverDesktop)
+	res := newFakeResolver(ResolverLinuxPolkit)
 	s := mustNew(t, d, Options{Tools: []string{"node", "pin", "destructive"}, Resolvers: []Resolver{res}, Transport: "http"})
 	opts := HTTPOptions{Listen: "127.0.0.1:0", Verifier: testVerifier(t)}
 	if mod != nil {

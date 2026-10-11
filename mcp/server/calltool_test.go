@@ -85,7 +85,7 @@ func TestCallToolNonObjectArguments(t *testing.T) {
 }
 
 func TestCallToolWriteNeedsAnApprovalThatNoTokenCanGive(t *testing.T) {
-	r := newFakeResolver(ResolverDesktop)
+	r := newFakeResolver(ResolverLinuxPolkit)
 	s, pins := callEnv(t, r)
 	id := peerID([]string{"pin"}, nil, "local")
 	target := testCID(t, 6)
@@ -119,7 +119,7 @@ func TestCallToolWriteNeedsAnApprovalThatNoTokenCanGive(t *testing.T) {
 	// the same session runs it, once.
 	pend, resolve := r.last(t)
 	_ = pend
-	require.NoError(t, s.ResolveConfirmation(te.Confirmation.ConfirmationID, ResolverDesktop, true))
+	require.NoError(t, s.ResolveConfirmation(te.Confirmation.ConfirmationID, ResolverLinuxPolkit, true))
 	_ = resolve
 	res, _ = s.CallTool(t.Context(), id, "other-session", "pin_add", args(t, map[string]any{"path": "/ipfs/" + target}))
 	assert.True(t, errorOf(res) != nil && errorOf(res).Code == CodeConfirmPending, "an approval is not transferable to another session")
@@ -145,7 +145,7 @@ func TestCallToolDestructiveForA2AIsOnlyForThePresenceResolver(t *testing.T) {
 		assert.Equal(t, CodeConfirmRequired, errorOf(res).Code)
 	})
 	t.Run("the native prompt is required", func(t *testing.T) {
-		r := newFakeResolver(ResolverDesktop)
+		r := newFakeResolver(ResolverLinuxPolkit)
 		s, pins := callEnv(t, r)
 		res, _ := s.CallTool(t.Context(), peerID(nil, []string{"pin"}, "local"), "k", "pin_rm", args(t, map[string]any{"path": "/ipfs/" + testCID(t, 1)}))
 		te := errorOf(res)

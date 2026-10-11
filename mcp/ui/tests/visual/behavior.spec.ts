@@ -7,8 +7,10 @@ test.describe('keyboard', () => {
       await openScene(page, 'confirmation-pending', theme);
       const accent = await page.evaluate(() => getComputedStyle(document.querySelector('[data-ipfs-ui]') as Element).getPropertyValue('--accent').trim());
       const seen: { name: string; style: string; width: string; offset: string; color: string }[] = [];
-      for (let i = 0; i < 6; i++) {
-        await page.keyboard.press('Tab');
+      // The dialog autofocuses Deny, so a plain Tab run starts on Approve and then leaves the page.
+      // Walk forward, back, forward so both controls are visited with keyboard modality.
+      for (const key of ['Tab', 'Shift+Tab', 'Tab']) {
+        await page.keyboard.press(key);
         const info = await page.evaluate(() => {
           const el = document.activeElement as HTMLElement;
           const cs = getComputedStyle(el);
@@ -35,7 +37,7 @@ test.describe('keyboard', () => {
     // autoFocus puts the safe action first
     expect(await focused()).toBe('Deny');
     await page.keyboard.press('Tab');
-    expect(await focused()).toBe('Approve removal');
+    expect(await focused()).toBe('Approve pin removal');
     await page.keyboard.press('Shift+Tab');
     expect(await focused()).toBe('Deny');
   });
@@ -67,7 +69,8 @@ test.describe('keyboard', () => {
     expect(scrolls).toBe(true);
     expect(pageOverflow).toBe(false);
     await page.keyboard.press('ArrowRight');
-    expect(await region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+    // Chromium animates keyboard scrolling, so the offset is not final on the next tick.
+    await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
   });
 });
 

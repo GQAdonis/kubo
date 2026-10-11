@@ -366,7 +366,7 @@ func TestAGUIChatResolverIsListedForTheChatPrincipalOnly(t *testing.T) {
 	res, err := cs.CallTool(t.Context(), &mcp.CallToolParams{Name: "pin_add", Arguments: map[string]any{"path": "/ipfs/" + testCID(t, 78)}})
 	require.NoError(t, err)
 	conf := confirmationOf(t, res, CodeConfirmRequired).Confirmation
-	assert.Equal(t, []string{ResolverDesktop}, conf.Resolvers)
+	assert.Equal(t, []string{ResolverLinuxPolkit}, conf.Resolvers)
 }
 
 func TestAGUIMountDoesNotMakeNonChatWritesWaitForNothing(t *testing.T) {

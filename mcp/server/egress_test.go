@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/ipfs/kubo/mcp/contract"
@@ -32,7 +33,7 @@ func TestAckCoversAndLocal(t *testing.T) {
 	} {
 		assert.Equal(t, tc.want, AckCovers(tc.ack, tc.host), tc.name)
 	}
-	assert.True(t, IsLocalHost("local"))
+	assert.False(t, IsLocalHost("local"), "the ack sentinel is not a loopback host name")
 	assert.False(t, IsLocalHost(""))
 	assert.False(t, IsLocalHost("0.0.0.0"), "the wildcard address is not loopback")
 	assert.Equal(t, []string{"x.test"}, MissingAck([]string{"y.test"}, []string{"x.test", "x.test", "y.test"}))
@@ -184,4 +185,24 @@ func TestStdioClientIdentifyingAsUARIsRefusedContentEgress(t *testing.T) {
 	// Other clients, and tools that return no content, are untouched.
 	require.False(t, call("claude-code", "ipfs_cat", path).IsError)
 	require.False(t, call("uar", "ipfs_node_info", nil).IsError)
+}
+
+// The egress_ack sentinel "local" is not a host name: an endpoint called "local"
+// is not loopback (R11 round 2).
+func TestAckLocalDoesNotCoverAHostNamedLocal(t *testing.T) {
+	ack := []string{EgressLocal}
+	for _, h := range []string{"https://local", "local:443", "local", "https://Local./v1"} {
+		host := h
+		if strings.Contains(h, "://") {
+			host = HostFromURL(h)
+		}
+		assert.False(t, IsLocalHost(host), h)
+		assert.False(t, AckCovers(ack, host), h)
+	}
+	for _, h := range []string{"127.0.0.1", "127.0.0.1:11434", "localhost", "localhost:8080", "[::1]:443", "model.localhost"} {
+		assert.True(t, IsLocalHost(h), h)
+		assert.True(t, AckCovers(ack, h), h)
+	}
+	assert.True(t, IsNoEgressHost("local"), "UAR provider_host label")
+	assert.True(t, IsNoEgressHost("disabled"))
 }

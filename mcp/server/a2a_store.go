@@ -16,6 +16,9 @@ const (
 	// maxA2AContexts matches the agent loop's session cap: a context is one
 	// conversation.
 	maxA2AContexts = maxSessions
+	// maxA2AContextsPerOwner is the share of the table one A2A principal may
+	// hold, the same quota as agent sessions.
+	maxA2AContextsPerOwner = maxSessionsPerPrincipal
 	// maxA2ATasksPerContext bounds the finished tasks a context keeps for
 	// GetTask; the oldest are dropped first.
 	maxA2ATasksPerContext = 32
@@ -74,7 +77,13 @@ type a2aPending struct {
 }
 
 func newA2ATask(owner, contextID string, now func() time.Time) *a2aTask {
-	ctx, cancel := context.WithCancel(context.Background())
+	return newA2ATaskIn(context.Background(), owner, contextID, now)
+}
+
+// newA2ATaskIn makes a task whose context ends with parent, so that stopping the
+// endpoint cancels every task it started.
+func newA2ATaskIn(parent context.Context, owner, contextID string, now func() time.Time) *a2aTask {
+	ctx, cancel := context.WithCancel(parent)
 	t := &a2aTask{
 		id:        "task-" + randomID(12),
 		contextID: contextID,
@@ -255,6 +264,8 @@ type a2aContext struct {
 // lookup takes the caller's principal ID: a task or a context of someone else
 // is indistinguishable from one that does not exist.
 type a2aStore struct {
+	// parent is the context every task derives from; nil means Background.
+	parent   context.Context
 	mu       sync.Mutex
 	now      func() time.Time
 	contexts map[string]*a2aContext
@@ -275,8 +286,8 @@ func (s *a2aStore) newTask(owner, contextID string) (t *a2aTask, fresh bool, err
 	s.sweepLocked()
 	var c *a2aContext
 	if contextID == "" {
-		if len(s.contexts) >= maxA2AContexts && !s.evictOldestIdleLocked() {
-			return nil, false, errTooManyTasks
+		if err := s.makeRoomLocked(owner); err != nil {
+			return nil, false, err
 		}
 		c = &a2aContext{id: "ctx-" + randomID(12), owner: owner}
 		s.contexts[c.id] = c
@@ -292,7 +303,11 @@ func (s *a2aStore) newTask(owner, contextID string) (t *a2aTask, fresh bool, err
 			}
 		}
 	}
-	t = newA2ATask(owner, c.id, s.now)
+	parent := s.parent
+	if parent == nil {
+		parent = context.Background()
+	}
+	t = newA2ATaskIn(parent, owner, c.id, s.now)
 	s.tasks[t.id] = t
 	c.taskIDs = append(c.taskIDs, t.id)
 	c.touched = s.now()
@@ -351,10 +366,32 @@ func (s *a2aStore) sweepLocked() {
 	}
 }
 
-func (s *a2aStore) evictOldestIdleLocked() bool {
+// makeRoomLocked frees a slot for a new context of owner. At its quota, or
+// when the table is full, it evicts only the owner's own oldest idle context;
+// a context with an open task (working, or waiting on an approval) is never
+// evicted, and another owner's context never is. Without a candidate the
+// caller gets errTooManyTasks.
+func (s *a2aStore) makeRoomLocked(owner string) error {
+	own := 0
+	for _, c := range s.contexts {
+		if c.owner == owner {
+			own++
+		}
+	}
+	if own < maxA2AContextsPerOwner && len(s.contexts) < maxA2AContexts {
+		return nil
+	}
+	if !s.evictOldestIdleLocked(owner) {
+		return errTooManyTasks
+	}
+	return nil
+}
+
+// evictOldestIdleLocked drops the owner's least recently touched idle context.
+func (s *a2aStore) evictOldestIdleLocked(owner string) bool {
 	oldest := ""
 	for id, c := range s.contexts {
-		if !s.idleLocked(c) {
+		if c.owner != owner || !s.idleLocked(c) {
 			continue
 		}
 		if oldest == "" || c.touched.Before(s.contexts[oldest].touched) {

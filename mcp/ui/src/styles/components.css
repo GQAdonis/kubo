@@ -198,6 +198,8 @@ td.iu-num {
 
 /* ---- Tables: alternating fills, header on control, scroll inside its own frame ---- */
 .iu-table-wrap {
+  /* Positioned so absolutely placed .iu-sr-only text inside cells is clipped here, not by the page. */
+  position: relative;
   overflow-x: auto;
   border-radius: var(--radius-md);
   background: var(--surface);

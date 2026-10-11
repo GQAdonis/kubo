@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ipfs/kubo/mcp/server"
 )
@@ -29,6 +30,10 @@ const (
 	laUnavailable   = 2
 	laNotAuthentic  = 3
 
+	// probeTimeout bounds the availability probe. It does not follow the request
+	// that triggered it, because its result is kept for the life of the process.
+	probeTimeout = 30 * time.Second
+
 	envLAReason = "IPFS_MCP_LA_REASON"
 	envLAProbe  = "IPFS_MCP_LA_PROBE"
 )
@@ -39,7 +44,7 @@ type runner func(ctx context.Context, name string, args, env []string, stdin str
 
 func execRunner(ctx context.Context, name string, args, env []string, stdin string) (int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = safeEnv(os.Environ(), env)
 	cmd.Stdin = strings.NewReader(stdin)
 	err := cmd.Run()
 	var ee *exec.ExitError
@@ -57,14 +62,15 @@ func execRunner(ctx context.Context, name string, args, env []string, stdin stri
 // granted Accessibility can click the dialog's buttons but cannot supply the
 // presence factor itself (see MECHANISMS.md).
 type macFactor struct {
-	run    runner
-	swift  string
-	probe  sync.Once
-	probed error
+	run          runner
+	swift        string
+	probeTimeout time.Duration
+	probe        sync.Once
+	probed       error
 }
 
 func newMacFactor(run runner) *macFactor {
-	return &macFactor{run: run, swift: swiftPath}
+	return &macFactor{run: run, swift: swiftPath, probeTimeout: probeTimeout}
 }
 
 func (m *macFactor) name() string { return server.ResolverMacOSLocalAuth }
@@ -77,8 +83,12 @@ func (m *macFactor) check(ctx context.Context) error {
 			m.probed = fmt.Errorf("%w: %s not found (install the Xcode command line tools: xcode-select --install)", ErrUnavailable, m.swift)
 			return
 		}
-		code, err := m.run(context.WithoutCancel(ctx), m.swift, []string{"-"}, []string{envLAProbe + "=1"}, laScript)
+		pctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), m.probeTimeout)
+		defer cancel()
+		code, err := m.run(pctx, m.swift, []string{"-"}, []string{envLAProbe + "=1"}, laScript)
 		switch {
+		case pctx.Err() != nil:
+			m.probed = fmt.Errorf("%w: the availability probe did not finish within %s", ErrUnavailable, m.probeTimeout)
 		case err != nil:
 			m.probed = fmt.Errorf("%w: %v", ErrUnavailable, err)
 		case code != laAuthenticated:

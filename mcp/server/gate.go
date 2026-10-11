@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -166,6 +167,16 @@ func canElicit(ss *mcp.ServerSession) bool {
 	return c.Form != nil || c.URL == nil
 }
 
+// mayElicit reports whether a confirmation for this principal may be asked
+// through MCP elicitation: only a human-mcp principal (an MCP host a person
+// drives, and stdio) has a person on the other end of the elicitation. A ui,
+// a2a or uar principal can declare elicitation and answer its own prompt, so
+// its calls go to an out-of-band resolver, and a destructive ui call to the
+// native prompt.
+func mayElicit(p Principal, ss *mcp.ServerSession) bool {
+	return p.Kind == KindHumanMCP && canElicit(ss)
+}
+
 // agentSessionPrefix marks the gate session IDs of the agent loop.
 const agentSessionPrefix = "agent-"
 
@@ -221,7 +232,7 @@ func (g *gate) authorize(ctx context.Context, req *mcp.CallToolRequest, t contra
 	if p, tok, ok := g.broker.activeFor(dedupeKey(c.sid, c.principal.ID, t.Name, hash)); ok {
 		return nil, g.repeat(c, p, tok)
 	}
-	if canElicit(ss) {
+	if mayElicit(c.principal, ss) {
 		return g.elicitRequest(c)
 	}
 	return nil, g.openExternal(ctx, c)
@@ -266,7 +277,18 @@ func (g *gate) openExternal(ctx context.Context, c *call) *ToolError {
 				"alone cannot approve it), so it did not run",
 		}
 	}
-	p := g.open(c, native, MechanismExternal)
+	p, err := g.open(c, native, MechanismExternal)
+	if errors.Is(err, ErrTooManyOpen) {
+		return &ToolError{
+			Code:      CodeConfirmPending,
+			Message:   "Other confirmations are still waiting for a person (" + err.Error() + "). Nothing has changed; answer or let them expire, then ask again.",
+			Retryable: true,
+			Details:   map[string]any{"reason": "too_many_open_confirmations"},
+		}
+	}
+	if err != nil {
+		return &ToolError{Code: CodeInternal, Message: err.Error()}
+	}
 	tok := ""
 	if c.principal.AcceptsToken() {
 		var err error
@@ -289,8 +311,8 @@ func (g *gate) openExternal(ctx context.Context, c *call) *ToolError {
 }
 
 // open creates the pending confirmation for a call.
-func (g *gate) open(c *call, nativePrompt bool, mechanism string) Pending {
-	return g.broker.create(newConfirmation{
+func (g *gate) open(c *call, nativePrompt bool, mechanism string) (Pending, error) {
+	return g.broker.reserve(newConfirmation{
 		principal: c.principal,
 		sid:       c.sid,
 		tool:      c.tool.Name,
@@ -298,7 +320,7 @@ func (g *gate) open(c *call, nativePrompt bool, mechanism string) Pending {
 		summary:   buildSummary(c.tool, c.sc.rawIn, c.args),
 		nativeReq: nativePrompt,
 		mechanism: mechanism,
-	})
+	}, maxOpenExternal)
 }
 
 // mintFor signs the handle of the given use for a call and its confirmation.

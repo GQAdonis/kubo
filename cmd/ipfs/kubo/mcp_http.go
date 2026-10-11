@@ -9,7 +9,6 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"sync"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	mcpserver "github.com/ipfs/kubo/mcp/server"
@@ -30,8 +29,10 @@ const (
 
 func init() {
 	mcpCmd.Options = append(mcpCmd.Options,
+		// No default: an absent key means the flag was not given, so an explicit
+		// --http=false can override http.enabled in the config file.
 		mcpHTTPFlag{cmds.BoolOption(mcpHTTPOptionName,
-			"Serve Streamable HTTP instead of stdio. Optionally name the address: --http=127.0.0.1:5050 (default; also "+mcpserver.HTTPListenEnv+"). Loopback only unless a bearer token is configured.").WithDefault(false)},
+			"Serve Streamable HTTP instead of stdio. Optionally name the address: --http=127.0.0.1:5050 (default; also "+mcpserver.HTTPListenEnv+"). Loopback only unless a bearer token is configured.")},
 		cmds.StringOption(mcpConfigOptionName, "Path of the ipfs mcp JSON config file (also "+mcpConfigEnv+"; the flag wins). Not the Kubo repo config."),
 		cmds.StringOption(mcpAuthTokenEnvOptionName, "Name of an environment variable holding a bearer token that grants the operator full access over HTTP."),
 		cmds.StringOption(mcpAuthTokenFileOptionName, "Absolute path of a file holding a bearer token that grants the operator full access over HTTP."),
@@ -51,14 +52,12 @@ func mcpConfigFile(req *cmds.Request) string {
 }
 
 // mcpHTTPFlag is --http: a bool flag that also takes an address. A bare --http
-// (or --http=true) selects the default address; --http=<addr> names one. The
-// address is recorded by Parse, because a cmds option value is only a bool.
+// (or --http=true) selects the default address, --http=false turns HTTP off and
+// --http=<addr> names an address. Parse returns a bool for the first two and the
+// address string for the third, so the value lives in the request that carries
+// it and no state is shared between invocations. (go-ipfs-cmds runs a string
+// value of a bool option through Parse again, which returns it unchanged.)
 type mcpHTTPFlag struct{ cmds.Option }
-
-var mcpHTTPAddress struct {
-	mu   sync.Mutex
-	addr string
-}
 
 // Parse implements cmds.Option.
 func (f mcpHTTPFlag) Parse(v string) (any, error) {
@@ -68,20 +67,11 @@ func (f mcpHTTPFlag) Parse(v string) (any, error) {
 	if _, err := mcpserver.ParseListen(v); err != nil {
 		return nil, err
 	}
-	mcpHTTPAddress.mu.Lock()
-	mcpHTTPAddress.addr = v
-	mcpHTTPAddress.mu.Unlock()
-	return true, nil
+	return v, nil
 }
 
 // WithDefault implements cmds.Option.
 func (f mcpHTTPFlag) WithDefault(v any) cmds.Option { return mcpHTTPFlag{f.Option.WithDefault(v)} }
-
-func httpAddressFlag() string {
-	mcpHTTPAddress.mu.Lock()
-	defer mcpHTTPAddress.mu.Unlock()
-	return mcpHTTPAddress.addr
-}
 
 // mcpSettings is the effective configuration of one `ipfs mcp` run: flags
 // override the config file, which overrides the contract defaults.
@@ -127,7 +117,6 @@ func loadMCPSettings(req *cmds.Request) (*mcpSettings, error) {
 	}
 	toolsOpt, _ := req.Options[mcpToolsOptionName].(string)
 	readOnlyFlag, _ := req.Options[mcpReadOnlyOptionName].(bool)
-	httpFlag, _ := req.Options[mcpHTTPOptionName].(bool)
 	printPaths, _ := req.Options[mcpPrintPathsOptionName].(bool)
 	noAppViewsFlag, _ := req.Options[mcpNoAppViewsOptionName].(bool)
 
@@ -149,18 +138,36 @@ func loadMCPSettings(req *cmds.Request) (*mcpSettings, error) {
 	if len(s.tools) == 0 {
 		s.tools = slices.Clone(cfg.Tools.Groups)
 	}
-	if httpFlag || cfg.HTTP.Enabled {
-		if s.http, err = httpSettings(req, cfg, s); err != nil {
+	// --http overrides http.enabled in either direction; the config file decides
+	// only when the flag was not given.
+	httpOn, httpAddr, httpGiven := httpFlagOf(req)
+	if !httpGiven {
+		httpOn = cfg.HTTP.Enabled
+	}
+	if httpOn {
+		if s.http, err = httpSettings(req, cfg, s, httpAddr); err != nil {
 			return nil, err
 		}
 	}
 	return s, nil
 }
 
+// httpFlagOf reads --http from the request: whether it was given, whether it
+// turns HTTP on, and the address it names (empty for a bare flag).
+func httpFlagOf(req *cmds.Request) (on bool, addr string, given bool) {
+	switch v := req.Options[mcpHTTPOptionName].(type) {
+	case bool:
+		return v, "", true
+	case string:
+		return true, v, true
+	}
+	return false, "", false
+}
+
 // httpSettings builds the HTTP options. It may add the destructive selector to
 // s.tools, because a principal's destructive grant needs the tools to exist.
-func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings) (*mcpHTTPSettings, error) {
-	listen := httpAddressFlag()
+func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flagAddr string) (*mcpHTTPSettings, error) {
+	listen := flagAddr
 	if listen == "" {
 		listen = os.Getenv(mcpserver.HTTPListenEnv)
 	}

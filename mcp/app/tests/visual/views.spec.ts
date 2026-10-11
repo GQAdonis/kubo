@@ -3,8 +3,7 @@ import { expect, test } from '@playwright/test';
 import { hostLog, openView, type HostScript } from './host';
 import { SCENES, THEMES, VIEWPORTS } from './scenes';
 
-// Not run in this environment (Playwright is blocked by the tier guard); written to run with
-// `pnpm build && pnpm test:visual`.
+// Run with `pnpm build && pnpm test:visual` (the specs load dist/<view>.html, so build first).
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
 for (const scene of SCENES) {

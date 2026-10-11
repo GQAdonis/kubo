@@ -99,18 +99,68 @@ func choose(pending []PendingView, id string) (*PendingView, error) {
 	}
 	ids := make([]string, 0, len(pending))
 	for _, p := range pending {
-		ids = append(ids, p.ID)
+		ids = append(ids, sanitizeText(p.ID))
 	}
 	return nil, fmt.Errorf("several confirmations are waiting; name one: %s", strings.Join(ids, ", "))
 }
 
+// renderPending is what the terminal shows for a waiting confirmation. Every
+// field came from the server, and the summary can carry text shaped by a tool
+// argument, so each is sanitized: an escape sequence or a carriage return must
+// not overwrite the operation the person is about to approve.
+func renderPending(p PendingView) string {
+	return fmt.Sprintf("Confirmation %s (%s, %s)\n  %s\n  expires %s\n",
+		sanitizeText(p.ID), sanitizeText(p.Tool), sanitizeText(p.Class), sanitizeText(p.Summary),
+		p.ExpiresAt.Local().Format(time.TimeOnly))
+}
+
+// ErrAnswerExpired is returned when the confirmation expired before an answer.
+var ErrAnswerExpired = errors.New("the confirmation expired before you answered; nothing was approved")
+
+// readAnswer reads one line from in, and gives up when ctx ends or the
+// confirmation expires. The read itself cannot be interrupted on a terminal, so
+// it runs in a goroutine that is left behind; the command exits right after.
+func readAnswer(ctx context.Context, in io.Reader, expires time.Time) (string, error) {
+	type result struct {
+		line string
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		line, err := bufio.NewReader(in).ReadString('\n')
+		done <- result{line, err}
+	}()
+	var expiry <-chan time.Time
+	if !expires.IsZero() {
+		timer := time.NewTimer(time.Until(expires))
+		defer timer.Stop()
+		expiry = timer.C
+	}
+	select {
+	case r := <-done:
+		if r.err != nil && r.line == "" {
+			return "", fmt.Errorf("read answer: %w", r.err)
+		}
+		return r.line, nil
+	case <-expiry:
+		return "", ErrAnswerExpired
+	case <-ctx.Done():
+		return "", fmt.Errorf("no answer was read (%w); nothing was approved", ctx.Err())
+	}
+}
+
 func decide(ctx context.Context, c *cliClient, p PendingView, o CLIOptions) error {
 	out := o.Out
-	fmt.Fprintf(out, "Confirmation %s (%s, %s)\n  %s\n  expires %s\n", p.ID, p.Tool, p.Class, p.Summary, p.ExpiresAt.Local().Format(time.TimeOnly))
-	fmt.Fprint(out, "Type 'yes' to approve, anything else to deny: ")
-	line, err := bufio.NewReader(o.In).ReadString('\n')
-	if err != nil && line == "" {
-		return fmt.Errorf("read answer: %w", err)
+	// If the person cannot be shown the operation, nothing is approved.
+	if _, err := fmt.Fprint(out, renderPending(p)); err != nil {
+		return fmt.Errorf("could not show the operation (%w); nothing was approved", err)
+	}
+	if _, err := fmt.Fprint(out, "Type 'yes' to approve, anything else to deny: "); err != nil {
+		return fmt.Errorf("could not show the prompt (%w); nothing was approved", err)
+	}
+	line, err := readAnswer(ctx, o.In, p.ExpiresAt)
+	if err != nil {
+		return err
 	}
 	approve := strings.EqualFold(strings.TrimSpace(line), "yes")
 	if err := c.resolve(ctx, p.ID, approve); err != nil {

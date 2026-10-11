@@ -21,7 +21,7 @@ describe('keyboard operation', () => {
     const onDeny = vi.fn();
     renderIn(<ConfirmationDialog confirmation={human as never} onApprove={onApprove} onDeny={onDeny} />);
     const deny = screen.getByRole('button', { name: 'Deny' });
-    const approve = screen.getByRole('button', { name: 'Approve removal' });
+    const approve = screen.getByRole('button', { name: 'Approve pin removal' });
     expect(deny).toHaveFocus();
     await userEvent.tab();
     expect(approve).toHaveFocus();
@@ -38,7 +38,7 @@ describe('keyboard operation', () => {
   it('the safe action is first in the tab order, so Enter on arrival cannot approve', () => {
     renderIn(<ConfirmationDialog confirmation={human as never} onApprove={vi.fn()} onDeny={vi.fn()} />);
     const order = [...screen.getByRole('alertdialog').querySelectorAll('button')].map((b) => b.textContent);
-    expect(order).toEqual(['Deny', 'Approve removal']);
+    expect(order).toEqual(['Deny', 'Approve pin removal']);
   });
 
   it('chat approval card does not steal focus on mount', () => {

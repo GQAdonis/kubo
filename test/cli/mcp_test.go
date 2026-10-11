@@ -615,3 +615,43 @@ func TestMCPNoMCPBuild(t *testing.T) {
 	assert.Empty(t, stdout)
 	assert.Contains(t, stderr, "MCP support is not included in this build")
 }
+
+// TestMCPNoAgentBuild builds the binary with the noagent tag and checks the
+// disabled state: the --llm-*, --agui and --a2a flags do not exist, and a
+// config file with an llm section is refused instead of silently ignored.
+func TestMCPNoAgentBuild(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the ipfs binary")
+	}
+	t.Parallel()
+
+	root := filepath.Dir(harness.NewT(t).IPFSBin)
+	root = filepath.Dir(filepath.Dir(root)) // cmd/ipfs -> repo root
+	bin := filepath.Join(t.TempDir(), "ipfs-noagent")
+
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Minute)
+	defer cancel()
+	build := exec.CommandContext(ctx, "go", "build", "-tags=noagent", "-o", bin, "./cmd/ipfs")
+	build.Dir = root
+	out, err := build.CombinedOutput()
+	require.NoError(t, err, "go build -tags=noagent: %s", out)
+
+	repo := t.TempDir()
+	help, _, code := runMCP(t, bin, repo, "--help")
+	assert.Zero(t, code)
+	assert.Contains(t, help, "--http", "the MCP server itself is still built")
+	for _, flag := range []string{"--llm-base-url", "--llm-model", "--llm-api-key-env", "--llm-api-key-file", "--agui", "--a2a"} {
+		assert.NotContains(t, help, flag, "a noagent build does not document %s", flag)
+	}
+
+	_, stderr, code := runMCP(t, bin, repo, "--llm-base-url", "http://127.0.0.1:9/v1", "--llm-model", "m")
+	assert.NotZero(t, code, "the --llm-* flags do not exist in this build")
+	assert.NotEmpty(t, stderr)
+
+	cfg := filepath.Join(t.TempDir(), "mcp.json")
+	require.NoError(t, os.WriteFile(cfg, []byte(`{"llm":{"base_url":"http://127.0.0.1:9/v1","model":"m"}}`), 0o600))
+	stdout, stderr, code := runMCP(t, bin, repo, "--mcp-config", cfg)
+	assert.NotZero(t, code)
+	assert.Empty(t, stdout)
+	assert.Contains(t, stderr, "no agent support")
+}

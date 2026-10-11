@@ -574,12 +574,38 @@ func resourcePath(uri string) (string, error) {
 	return prefix + rest, nil
 }
 
+// resourceAccess applies to resources/read the policy of ipfs_cat, which
+// returns the same bytes: the caller's read grant for the content group and the
+// contentEgress check (egress_ack). Without it a resource read would bypass
+// both.
+func (s *Server) resourceAccess(ctx context.Context, ss *mcp.ServerSession) error {
+	t, ok := s.cat.Tool("ipfs_cat")
+	if !ok {
+		return &ToolError{Code: CodeInternal, Message: "ipfs_cat is missing from the contract, so content resources are refused"}
+	}
+	if id, authed := IdentityFromContext(ctx); authed && !id.Allows(t) {
+		return &ToolError{
+			Code: CodePermissionDenied,
+			Message: "content resources need the same grant as ipfs_cat, and principal " + id.ID +
+				" has none for group " + t.Group + "; ask the operator to grant the group in the ipfs mcp config",
+			Details: map[string]any{"reason": ReasonPrincipalNotGranted},
+		}
+	}
+	if te := s.egressRefusal(ctx, ss, t); te != nil {
+		return te
+	}
+	return nil
+}
+
 func (s *Server) readContentResource(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, callTimeout)
 	defer cancel()
 	uri := req.Params.URI
 	p, err := resourcePath(uri)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.resourceAccess(ctx, req.Session); err != nil {
 		return nil, err
 	}
 	st, err := s.stat(ctx, p)

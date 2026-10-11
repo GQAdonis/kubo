@@ -200,7 +200,10 @@ func (h *cardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	etag := `"` + hex.EncodeToString(sum[:8]) + `"`
 	hd := w.Header()
 	hd.Set("Content-Type", "application/json")
-	hd.Set("Cache-Control", fmt.Sprintf("public, max-age=%d", a2aCardMaxAge))
+	// The interface URL comes from the Host header, so a shared cache must not
+	// serve one host's card to a request for another.
+	hd.Set("Cache-Control", fmt.Sprintf("private, max-age=%d", a2aCardMaxAge))
+	hd.Add("Vary", "Host")
 	hd.Set("ETag", etag)
 	if strings.Contains(r.Header.Get("If-None-Match"), etag) {
 		w.WriteHeader(http.StatusNotModified)

@@ -27,6 +27,8 @@ var knownAxes = map[string]int{"cats": 0, "dogs": 1, "fish": 2, "they": 3}
 
 // memStore is an in-memory embeddings.Store.
 type memStore struct {
+	// ctx is the owning test's context, for helpers that have no t.
+	ctx  context.Context
 	mu   sync.Mutex
 	rows []embeddings.Row
 	// failCount makes CountCID fail, as an unreachable store would.
@@ -127,7 +129,7 @@ func (m *memStore) CountCIDs(ctx context.Context) (int, error) {
 
 // cids lists the CIDs that have rows.
 func (m *memStore) cids() []string {
-	cids, _ := m.ListCIDs(context.Background(), "", math.MaxInt32)
+	cids, _ := m.ListCIDs(m.ctx, "", math.MaxInt32)
 	return cids
 }
 
@@ -214,7 +216,7 @@ type indexEnvOptions struct {
 
 func newIndexEnv(t *testing.T, o indexEnvOptions) *indexEnv {
 	t.Helper()
-	e := &indexEnv{t: t, store: &memStore{}, embed: newEmbedServer(t), files: map[string][]byte{}, covered: map[string]bool{}, pinLsErr: map[string]bool{}, ids: map[mcp.Session]Identity{}}
+	e := &indexEnv{t: t, store: &memStore{ctx: t.Context()}, embed: newEmbedServer(t), files: map[string][]byte{}, covered: map[string]bool{}, pinLsErr: map[string]bool{}, ids: map[mcp.Session]Identity{}}
 	e.d = newContentFake(t)
 	e.pins = installPins(e.d.fakeDaemon, nil)
 	basePinLs := e.d.handle["pin/ls"]
@@ -295,7 +297,7 @@ func newIndexEnv(t *testing.T, o indexEnvOptions) *indexEnv {
 // identity is a configured principal whose egress_ack is ack, granted every
 // group and write on every group.
 func indexIdentity(ack ...string) Identity {
-	id := NewIdentity(Principal{ID: "indexer", Kind: KindUI}, []string{AllGroups}, []string{AllGroups}, []string{AllGroups})
+	id := NewIdentity(Principal{ID: "indexer", Kind: KindHumanMCP}, []string{AllGroups}, []string{AllGroups}, []string{AllGroups})
 	id.Configured = true
 	id.EgressAck = ack
 	return id
@@ -347,7 +349,7 @@ func (e *indexEnv) seed(cid string, chunks int) {
 		v[i%indexTestDims] = 1
 		rows = append(rows, embeddings.Row{CID: cid, Path: "/ipfs/" + cid, MIME: "text/plain", ChunkIndex: i, Model: "fake-embed", Vector: v})
 	}
-	require.NoError(e.t, e.store.Replace(context.Background(), cid, rows))
+	require.NoError(e.t, e.store.Replace(e.t.Context(), cid, rows))
 }
 
 func structured(t *testing.T, res *mcp.CallToolResult) map[string]any {

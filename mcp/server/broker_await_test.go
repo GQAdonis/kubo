@@ -32,7 +32,7 @@ func TestAwaitReturnsWhenADecisionIsRecorded(t *testing.T) {
 				t.Fatalf("Await returned %q while the confirmation was pending", s)
 			default:
 			}
-			require.NoError(t, b.Resolve(p.ID, ResolverDesktop, approve))
+			require.NoError(t, b.Resolve(p.ID, ResolverLinuxPolkit, approve))
 			synctest.Wait()
 			want := StateDenied
 			if approve {
@@ -56,7 +56,7 @@ func TestAwaitReturnsAtExpiry(t *testing.T) {
 
 func TestAwaitReportsAnExecutedCall(t *testing.T) {
 	b, p := awaitBroker(time.Now)
-	require.NoError(t, b.Resolve(p.ID, ResolverDesktop, true))
+	require.NoError(t, b.Resolve(p.ID, ResolverLinuxPolkit, true))
 	state, err := b.Await(t.Context(), p.ID)
 	require.NoError(t, err)
 	assert.Equal(t, StateApproved, state, "already decided: returns at once")
@@ -91,11 +91,9 @@ func TestAwaitUnknownConfirmation(t *testing.T) {
 }
 
 func TestAwaitNoticesAFakeClockThatMoved(t *testing.T) {
-	saved := awaitRecheck
-	awaitRecheck = 5 * time.Millisecond
-	t.Cleanup(func() { awaitRecheck = saved })
 	clock := newFakeClock()
 	b, p := awaitBroker(clock.Now)
+	b.recheck = 5 * time.Millisecond
 	done := make(chan string, 1)
 	go func() {
 		state, _ := b.Await(t.Context(), p.ID)

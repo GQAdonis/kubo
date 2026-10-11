@@ -248,6 +248,13 @@ func rpcErrorOf(err error) *rpcError {
 		return a2aErr(rpcInternalError, "INTERRUPT_OPEN", CodeFailedPrecondition, false, "A confirmation is still open in this context")
 	case errors.Is(err, ErrSessionFull):
 		return a2aErr(rpcInternalError, "CONTEXT_FULL", CodeFailedPrecondition, false, "The context is full; start a new one")
+	case errors.Is(err, ErrRateLimited):
+		msg := "Too many runs; retry later"
+		var rl *RateLimitedError
+		if errors.As(err, &rl) {
+			msg = fmt.Sprintf("Too many runs; retry in %d seconds", rl.RetryAfterSeconds())
+		}
+		return a2aErr(rpcInternalError, "RATE_LIMITED", CodeResourceExhausted, true, msg)
 	case errors.Is(err, ErrTooManySessions), errors.Is(err, errTooManyTasks):
 		return a2aErr(rpcInternalError, "TOO_MANY_CONTEXTS", CodeResourceExhausted, true, "Too many open contexts; retry later")
 	}

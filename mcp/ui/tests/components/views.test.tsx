@@ -226,7 +226,7 @@ describe('IpnsRecordCard', () => {
   it('renders publish, create, rename and remove results', () => {
     for (const tool of ['ipns_publish', 'key_gen', 'key_rename', 'key_rm'] as const) {
       const { unmount } = renderIn(<IpnsRecordCard tool={tool} output={out(tool) as never} />);
-      expect(screen.getAllByRole('region').length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('group').length).toBeGreaterThan(0);
       unmount();
     }
   });

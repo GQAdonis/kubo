@@ -113,6 +113,7 @@
     min-block-size: 44px;
     max-block-size: 152px;
     resize: none;
+    border: 0; /* surfaces are separated by fill, never by borders (DESIGN.md); drops the UA 1px textarea border */
   }
 
   .ac-field::placeholder {

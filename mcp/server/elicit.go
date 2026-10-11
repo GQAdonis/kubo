@@ -20,7 +20,10 @@ const elicitKey = "confirm"
 // request state it returns is a binding handle, not consent: it only lets the
 // answer in inputResponses resolve the confirmation it names.
 func (g *gate) elicitRequest(c *call) (*mcp.CallToolResult, *ToolError) {
-	p := g.open(c, false, MechanismElicitation)
+	p, err := g.open(c, false, MechanismElicitation)
+	if err != nil {
+		return nil, &ToolError{Code: CodeInternal, Message: err.Error()}
+	}
 	// An elicitation is answered in the same logical call; it needs no
 	// repeat-call path.
 	g.broker.forget(p.ID)
@@ -67,8 +70,8 @@ func (g *gate) elicitAnswer(c *call, state string, responses mcp.InputResponseMa
 	switch {
 	case claims.SID != c.sid, claims.PID != c.principal.ID, claims.Tool != c.tool.Name, claims.ArgsSHA256 != c.argsHash:
 		return invalid("The request state belongs to another call.")
-	case !canElicit(c.ss):
-		return invalid("This session did not advertise elicitation, so it cannot answer a confirmation.")
+	case !mayElicit(c.principal, c.ss):
+		return invalid("This session or caller cannot answer a confirmation through elicitation.")
 	}
 	p, ok := g.broker.get(claims.CID)
 	switch {

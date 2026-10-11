@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -14,8 +15,9 @@ import (
 )
 
 // Test-only build (go build -tags mcptestresolver). When IPFS_MCP_TEST_RESOLVER_DIR
-// is set, a resolver named "desktop" is added whose decisions come from files
-// that the test writes: <dir>/<id>.approve or <dir>/<id>.deny. Each pending
+// is set, a presence resolver is added whose decisions come from files that the
+// test writes (it is named for the native prompt this platform does not have,
+// because the paired Desktop channel is not a presence resolver): <dir>/<id>.approve or <dir>/<id>.deny. Each pending
 // confirmation also gets <dir>/<id>.pending so the test learns the ID.
 // IPFS_MCP_TEST_CONFIRM_TTL shortens the confirmation lifetime (a Go duration).
 // None of this exists in a production build, and the test resolver is not
@@ -36,13 +38,21 @@ func testResolvers(_ Config, log *slog.Logger) server.ResolverSet {
 	return set
 }
 
-// fileResolver stands in for the Desktop window in test/cli.
+// fileResolver stands in for the system prompt in test/cli.
 type fileResolver struct {
 	dir string
 	log *slog.Logger
 }
 
-func (r *fileResolver) Name() string { return server.ResolverDesktop }
+// Name is the native resolver name the platform does not use, so the stand-in
+// never collides with the real native resolver and still counts as a presence
+// resolver.
+func (r *fileResolver) Name() string {
+	if runtime.GOOS == "linux" {
+		return server.ResolverMacOSLocalAuth
+	}
+	return server.ResolverLinuxPolkit
+}
 
 func (r *fileResolver) Request(ctx context.Context, p server.Pending, resolve server.ResolveFunc) error {
 	if err := os.WriteFile(filepath.Join(r.dir, p.ID+".pending"), []byte(p.Summary.Text), 0o600); err != nil {

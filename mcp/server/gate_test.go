@@ -93,7 +93,7 @@ func newGateEnv(t *testing.T, resolvers ...Resolver) *gateEnv {
 	clock := newFakeClock()
 	var res *fakeResolver
 	if len(resolvers) == 0 {
-		res = newFakeResolver(ResolverDesktop)
+		res = newFakeResolver(ResolverLinuxPolkit)
 		resolvers = []Resolver{res}
 	}
 	s := mustNew(t, d, Options{Tools: []string{"pin", "destructive"}, Resolvers: resolvers, now: clock.Now})
@@ -240,7 +240,7 @@ func TestTokenFlowRequiresApproval(t *testing.T) {
 	conf := first.Confirmation
 	validateConfirmationDef(t, "ConfirmationRequired", conf)
 	assert.Equal(t, StatePending, conf.State)
-	assert.Equal(t, []string{ResolverDesktop}, conf.Resolvers)
+	assert.Equal(t, []string{ResolverLinuxPolkit}, conf.Resolvers)
 	assert.Equal(t, KindHumanMCP, conf.PrincipalKind)
 	assert.NotEmpty(t, conf.ConfirmToken)
 	assert.Equal(t, "pin_rm", conf.Summary.Tool)
@@ -530,7 +530,7 @@ func TestApprovedButExpiredDoesNotRun(t *testing.T) {
 }
 
 func TestResolverFailureFailsClosed(t *testing.T) {
-	r := newFakeResolver(ResolverDesktop)
+	r := newFakeResolver(ResolverLinuxPolkit)
 	r.err = errors.New("no prompt available")
 	e := newGateEnv(t, r)
 	cs := e.h.connect(t, nil, nil)
@@ -557,8 +557,8 @@ func TestResolveConfirmationOnServer(t *testing.T) {
 	pending := e.s.PendingConfirmations()
 	require.Len(t, pending, 1)
 	assert.Equal(t, id, pending[0].ID)
-	assert.ErrorIs(t, e.s.ResolveConfirmation("cf_unknown0000000000", ResolverDesktop, true), ErrUnknownConfirmation)
-	require.NoError(t, e.s.ResolveConfirmation(id, ResolverDesktop, true))
+	assert.ErrorIs(t, e.s.ResolveConfirmation("cf_unknown0000000000", ResolverLinuxPolkit, true), ErrUnknownConfirmation)
+	require.NoError(t, e.s.ResolveConfirmation(id, ResolverLinuxPolkit, true))
 	assert.Empty(t, e.s.PendingConfirmations())
 	require.False(t, e.rm(t, cs, nil).IsError)
 }

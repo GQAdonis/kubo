@@ -429,7 +429,7 @@
             "macos-localauth",
             "linux-polkit"
           ],
-          "description": "Narrows the resolvers that modes enable. All three are presence resolvers, and only presence resolvers satisfy requires_native_prompt (destructive calls from the ui and a2a principals); cli and agui-interrupt never do.",
+          "description": "Narrows the resolvers that modes enable. Only macos-localauth and linux-polkit are presence resolvers and satisfy requires_native_prompt (destructive calls from the ui and a2a principals); desktop does not until a Desktop confirmation window consumes the pairing key, and cli and agui-interrupt never do.",
           "offSwitch": "Remove a resolver to stop using it; with none available, writes from non-eliciting principals are refused (confirmation_unavailable). Elicitation is always used when the client supports it.",
           "ownerChange": "native-confirmation-prompt"
         },

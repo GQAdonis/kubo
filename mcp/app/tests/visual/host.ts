@@ -79,7 +79,9 @@ const HOST_PAGE = `<!doctype html><meta charset="utf-8"><body style="margin:0">
 
 /** Open a view in the scripted host and return the view's frame once it has drawn something. */
 export async function openView(page: Page, script: HostScript): Promise<Frame> {
-  await page.addInitScript((cfg) => {
+  // page.setContent rewrites the current document, so an init script (which runs on navigation) would
+  // never fire; set the config on the live window instead.
+  await page.evaluate((cfg) => {
     (window as unknown as { __HOST__: unknown }).__HOST__ = cfg;
   }, {
     ...script,

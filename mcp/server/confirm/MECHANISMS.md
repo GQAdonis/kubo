@@ -18,7 +18,7 @@ call never approve. If a mechanism is missing, the call is refused with
 | macOS LocalAuthentication | `macos-localauth` | no | done (below) | pending, operator runs `hg1/attempt.sh` | on by default (`native`) |
 | Linux polkit | `linux-polkit` | no | not run: no Linux machine in this environment | pending, operator | on by default (`native`) once the action is installed; refuses without it |
 | Windows | none | no | n/a | n/a | refuses unless paired with IPFS Desktop (pairing is a later change) |
-| Paired Desktop channel | `desktop` | no | automated IPC cases (test/cli `TestMCPConfirmHG1`) | needs Desktop (later) | on by default (`desktop`) once paired |
+| Paired Desktop channel | `desktop` | no | automated IPC cases (test/cli `TestMCPConfirmHG1`) | needs Desktop (later) | on by default (`desktop`) once paired; resolves write-class confirmations only, not a presence resolver (see below) |
 | `ipfs mcp confirm` | `cli` | no | automated IPC cases | n/a (explicit weak opt-in) | enabled with `--confirm=cli` only |
 
 Defaults. With no `--confirm` and no `IPFS_MCP_CONFIRM`, the gate is on:
@@ -32,11 +32,32 @@ gets `confirmation_unavailable`. `cli` is never a default; name it with
 (the flag wins over the variable). Automated tests set
 `IPFS_MCP_CONFIRM=none` so no test shows a dialog.
 
-`requires_native_prompt` (a destructive call from the `ui` principal) is
-satisfied only by a presence-factor resolver: `macos-localauth`,
-`linux-polkit` or `desktop`. `cli` and `agui-interrupt` never satisfy it; with
-only those available the call is `confirmation_unavailable`. The broker
-enforces this on `Resolve` as well as the gate when choosing resolvers.
+`requires_native_prompt` (a destructive call from a `ui` or `a2a` principal)
+is satisfied only by a presence-factor resolver: `macos-localauth` or
+`linux-polkit` (`server.IsPresenceResolver`). `desktop` does not count until a
+Desktop confirmation window consumes the pairing key (ADR-0003, R11
+amendment). `cli` and `agui-interrupt` never satisfy it. With only those
+available, the call is `confirmation_unavailable`. The broker enforces this on
+`Resolve`, and the gate enforces it when choosing resolvers.
+
+Elicitation is used only for `human-mcp` principals, which include stdio. A
+`ui`, `a2a` or `uar` principal goes to these out-of-band resolvers even if it
+declares elicitation.
+
+At most 2 out-of-band confirmations may be pending per principal, and 2 per
+session. A call beyond that gets `confirmation_pending` with reason
+`too_many_open_confirmations`, and no prompt is shown.
+
+Every helper process (`/usr/bin/swift`, `pkcheck`, `pkaction`) is started with
+an environment built from an allowlist (`exec_env.go`):
+
+- `PATH` is fixed to `/usr/bin:/bin:/usr/sbin:/sbin`.
+- Only `HOME`, `TMPDIR`, `USER`, `LOGNAME`, `LANG`, `LC_ALL`, `LC_CTYPE` and
+  `__CF_USER_TEXT_ENCODING` are kept.
+- `DEVELOPER_DIR`, `TOOLCHAINS`, `SDKROOT`, `DYLD_*` and `LD_*` are always
+  dropped.
+
+An MCP config's `env` block therefore cannot redirect a helper.
 
 ## macOS: LocalAuthentication without cgo
 
@@ -49,12 +70,18 @@ unavailable. Choices and why:
 
 - No cgo, and no helper binary on disk. The script lives in the Go binary and
   is piped on every use, so a same-user process has no file to replace.
-  (A same-user process can still replace the `ipfs` binary or the PATH, which
-  is outside this threat model: it already owns the account.)
+  (A same-user process can still replace the `ipfs` binary, which is outside
+  this threat model: it already owns the account. `/usr/bin/swift` is run by
+  absolute path, so `PATH` does not choose it.)
 - Needs the Xcode command line tools (`xcode-select --install`) for
   `/usr/bin/swift`. Without them the probe fails and the server refuses.
+- The interpreter runs with the allowlisted environment above. `DEVELOPER_DIR`,
+  `TOOLCHAINS` and `SDKROOT` would otherwise let `xcrun` pick a different
+  toolchain.
 - Cost: the interpreter takes about 6 s to start (measured). A first probe
-  runs once per server; each prompt starts the interpreter again. This is the
+  runs once per server and is bounded at 30 s, independent of the request
+  that triggered it; a probe that does not finish makes the resolver
+  unavailable. Each prompt starts the interpreter again. This is the
   price of avoiding cgo and a bundled helper. An opt-in cgo or signed helper
   can replace it later behind the same `factor` interface.
 - JXA (`osascript -l JavaScript`) was rejected: it cannot pass the ObjC block
@@ -84,10 +111,21 @@ prompt and fails closed.
 `pkcheck --action-id org.ipfs.kubo.mcp.confirm --process <server pid>
 --allow-user-interaction --detail summary <text>`. The action is installed by
 the operator (`polkit/org.ipfs.kubo.mcp.confirm.policy`, `polkit/INSTALL.md`):
-`auth_self`, no caching, `allow_any` and `allow_inactive` are `no`. The server
-checks `pkaction --action-id ...` first; a missing action, missing
-`pkcheck`, no authentication agent in the session (pkcheck exit 3) or any
-execution error is `confirmation_unavailable`, never an approval.
+`auth_self`, no caching, `allow_any` and `allow_inactive` are `no`.
+
+The tools run only from `/usr/bin/pkaction` and `/usr/bin/pkcheck`, never from
+a `$PATH` lookup. Each file and its directory, after resolving symlinks, must
+be owned by root and not writable by group or others. This is checked when the
+resolver is probed and again before every `pkcheck` call. The tools run with
+the allowlisted environment above.
+
+The server checks `pkaction --action-id ...` first. Any of the following is
+`confirmation_unavailable`, never an approval:
+
+- a missing action;
+- a missing or untrusted helper;
+- no authentication agent in the session (`pkcheck` exit 3);
+- any execution error.
 
 HG-1 expectation (pending operator run on a Linux desktop): the dialog is shown
 by the session's authentication agent, which checks the user's password through
@@ -111,11 +149,21 @@ process. A client authenticates with `Authorization: Bearer <pairing key>`. The
 server stores only a SHA-256 of the key (`ipfs mcp pair` prints the key once;
 Desktop keeps it in `safeStorage`). An unpaired client can neither list nor
 resolve; a wrong key gets 403; the cli marker is 403 unless `--confirm=cli`.
-The presence factor is the user gesture in the Desktop window, which the server
-trusts because only Desktop holds the key. A same-user process can reach the
-socket but cannot approve without the key. Automated cases:
-`TestMCPConfirmHG1` (no key, forged key, `ipfs mcp confirm` without
-`--confirm=cli`).
+A same-user process can reach the socket but cannot approve without the key.
+Automated cases: `TestMCPConfirmHG1` (no key, forged key, `ipfs mcp confirm`
+without `--confirm=cli`).
+
+No Desktop confirmation window consumes the key yet, so the key alone is the
+whole factor. For that reason `desktop` is not a presence resolver. It resolves
+write-class confirmations but never a destructive call that requires the
+native prompt. It becomes a presence resolver only when the Desktop window
+ships and adds a user gesture of its own.
+
+`ipfs mcp pair` needs a terminal on stdin. It refuses while any server accepts
+connections on a socket in the confirmation directory; a stale socket file
+does not block it. A new pairing replaces the old one. The channel re-reads
+the stored verifier on every request, so the old key stops working on running
+servers at once.
 
 ## `ipfs mcp confirm` (`--confirm=cli`)
 

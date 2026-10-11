@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ipfs/kubo/mcp/server/confirm"
 	"github.com/ipfs/kubo/test/cli/harness"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
@@ -35,15 +36,30 @@ import (
 
 var (
 	testResolverBinOnce sync.Once
+	testResolverDir     string
 	testResolverBin     string
-	testResolverBinErr  error
+	// testResolverNoGo is set when `go` is not on PATH, the only reason a test
+	// that needs the binary may skip. Any other failure fails the test.
+	testResolverNoGo   bool
+	testResolverBinErr error
 )
+
+// TestMain removes the test-resolver binary directory after the whole package
+// has run: the binary is shared by several tests, so no single test owns it.
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if testResolverDir != "" {
+		_ = os.RemoveAll(testResolverDir)
+	}
+	os.Exit(code)
+}
 
 func mcpTestResolverBin(t *testing.T) string {
 	t.Helper()
 	testResolverBinOnce.Do(func() {
 		goBin, err := exec.LookPath("go")
 		if err != nil {
+			testResolverNoGo = true
 			testResolverBinErr = err
 			return
 		}
@@ -52,6 +68,7 @@ func mcpTestResolverBin(t *testing.T) string {
 			testResolverBinErr = err
 			return
 		}
+		testResolverDir = dir
 		testResolverBin = filepath.Join(dir, "ipfs")
 		root, _ := filepath.Abs("../..")
 		cmd := exec.Command(goBin, "build", "-tags", "mcptestresolver", "-o", testResolverBin, "./cmd/ipfs")
@@ -60,8 +77,11 @@ func mcpTestResolverBin(t *testing.T) string {
 			testResolverBinErr = &buildError{err: err, out: string(out)}
 		}
 	})
+	if testResolverNoGo {
+		t.Skipf("go is not on PATH, cannot build the test-resolver binary: %v", testResolverBinErr)
+	}
 	if testResolverBinErr != nil {
-		t.Skipf("cannot build the test-resolver binary: %v", testResolverBinErr)
+		t.Fatalf("cannot build the test-resolver binary: %v", testResolverBinErr)
 	}
 	return testResolverBin
 }
@@ -245,12 +265,22 @@ func TestMCPConfirmHG1(t *testing.T) {
 		"IPFS_MCP_TEST_CONFIRM_TTL=12s",
 	}
 
-	// Pair: the key is printed once and only its hash is stored.
+	// `ipfs mcp pair` refuses to run without a terminal on stdin, so an agent
+	// or a script cannot obtain a key: no key is printed and nothing is stored.
 	pair := exec.Command(bin, "mcp", "pair")
 	pair.Env = append(mcpEnv(node.Dir), env...)
+	pair.Stdin = nil
 	keyOut, err := pair.Output()
+	require.Error(t, err, "pair without a terminal must fail")
+	assert.Empty(t, strings.TrimSpace(string(keyOut)))
+	_, statErr := os.Stat(pairing)
+	require.ErrorIs(t, statErr, os.ErrNotExist, "a refused pair stores nothing")
+
+	// A person at a terminal pairs; confirm.Pair is what `ipfs mcp pair` runs
+	// after its terminal and running-server checks. The key is returned once
+	// and only its hash is stored.
+	key, err := confirm.Pair(pairing)
 	require.NoError(t, err)
-	key := strings.TrimSpace(string(keyOut))
 	require.NotEmpty(t, key)
 	stored, err := os.ReadFile(pairing)
 	require.NoError(t, err)

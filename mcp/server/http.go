@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -33,8 +34,10 @@ const (
 	DefaultSessionTimeout       = 30 * time.Minute
 
 	readHeaderTimeout = 10 * time.Second
-	idleTimeout       = 2 * time.Minute
-	shutdownTimeout   = 5 * time.Second
+	// DefaultBodyReadTimeout is how long a request body may take to arrive.
+	DefaultBodyReadTimeout = 30 * time.Second
+	idleTimeout            = 2 * time.Minute
+	shutdownTimeout        = 5 * time.Second
 )
 
 // MountOptions says how a mounted route is protected.
@@ -107,6 +110,11 @@ type HTTPOptions struct {
 	// SessionTimeout ends idle MCP sessions. Zero selects
 	// DefaultSessionTimeout.
 	SessionTimeout time.Duration
+	// BodyReadTimeout bounds how long one request body may take to arrive, so a
+	// slow upload cannot hold a connection forever. It is a read deadline only,
+	// cleared once the body is read: responses, including long-lived event
+	// streams, have no write deadline. Zero selects DefaultBodyReadTimeout.
+	BodyReadTimeout time.Duration
 	// Logger receives diagnostics; nil discards them.
 	Logger *slog.Logger
 }
@@ -142,6 +150,9 @@ func NewHTTPServer(s *Server, opts HTTPOptions) (*HTTPServer, error) {
 	}
 	if opts.MaxBodyBytes < 0 {
 		return nil, errors.New("max body bytes must be positive")
+	}
+	if opts.BodyReadTimeout == 0 {
+		opts.BodyReadTimeout = DefaultBodyReadTimeout
 	}
 	if opts.SessionTimeout == 0 {
 		opts.SessionTimeout = DefaultSessionTimeout
@@ -281,19 +292,19 @@ func (h *HTTPServer) protect(next http.Handler, public bool, kinds, extraOrigins
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !h.checkHost(r) {
-			h.log.Warn("rejected request with unexpected Host header", "host", r.Host, "path", r.URL.Path)
+			h.log.Warn("rejected request", "reason", "host")
 			http.Error(w, fmt.Sprintf("Forbidden: invalid Host header %q", r.Host), http.StatusForbidden)
 			return
 		}
 		origin := r.Header.Get("Origin")
 		if origin != "" && !h.originOK(r, origin, origins, cors != nil) {
-			h.log.Warn("rejected cross-origin request", "origin", origin, "path", r.URL.Path)
+			h.log.Warn("rejected request", "reason", "origin")
 			http.Error(w, fmt.Sprintf("Forbidden: origin %q is not allowed", origin), http.StatusForbidden)
 			return
 		}
 		listed := origin != "" && slices.Contains(origins, strings.ToLower(origin))
 		if !fetchSiteAllowed(r, listed) {
-			h.log.Warn("rejected cross-site request", "sec-fetch-site", r.Header.Get("Sec-Fetch-Site"), "path", r.URL.Path)
+			h.log.Warn("rejected request", "reason", "cross-site")
 			http.Error(w, "Forbidden: cross-site request", http.StatusForbidden)
 			return
 		}
@@ -310,6 +321,7 @@ func (h *HTTPServer) protect(next http.Handler, public bool, kinds, extraOrigins
 		}
 		if r.Body != nil {
 			r.Body = http.MaxBytesReader(w, r.Body, h.opts.MaxBodyBytes)
+			r.Body = h.withBodyDeadline(w, r.Body)
 		}
 		guarded.ServeHTTP(w, r)
 	})
@@ -402,6 +414,14 @@ func (h *HTTPServer) authenticate(next http.Handler, kinds []string) http.Handle
 		return guarded
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Anonymous access is for a client on this machine. A request that a
+		// reverse proxy forwarded came from somewhere else, so it needs a
+		// credential like any other remote caller.
+		if isForwarded(r) {
+			h.log.Warn("rejected request", "reason", "anonymous-forwarded")
+			http.Error(w, "Forbidden: anonymous access does not accept proxied requests; configure a bearer token", http.StatusForbidden)
+			return
+		}
 		// No verifier: the request carries no credential, so supply the
 		// placeholder the anonymous verifier accepts.
 		r.Header.Set("Authorization", "Bearer anonymous")
@@ -446,6 +466,9 @@ func (h *HTTPServer) Serve(ctx context.Context) error {
 	if _, err := h.Listen(); err != nil {
 		return err
 	}
+	// Cancel and join the goroutines the endpoints started once the listener
+	// stopped, so none outlives Serve.
+	defer h.mcp.runShutdownHooks()
 	srv := &http.Server{
 		Handler:           h.mux,
 		ReadHeaderTimeout: readHeaderTimeout,
@@ -482,4 +505,48 @@ func (h *HTTPServer) StartupReport(ctx context.Context) []string {
 		return nil
 	}
 	return h.mcp.StartupReport(ctx, v.Identities())
+}
+
+// forwardingHeaders are the headers a reverse proxy adds to say where a
+// request really came from.
+var forwardingHeaders = []string{"Forwarded", "X-Forwarded-For", "X-Real-IP"}
+
+// isForwarded reports whether the request carries a forwarding header.
+func isForwarded(r *http.Request) bool {
+	return slices.ContainsFunc(forwardingHeaders, func(name string) bool {
+		return len(r.Header.Values(name)) > 0
+	})
+}
+
+// deadlineBody bounds the total time a request body may take to arrive. The read
+// deadline is set only while a Read is in progress and lifted right after a
+// successful one, so a
+// response that follows (an event stream) never runs under it.
+type deadlineBody struct {
+	io.ReadCloser
+	rc  *http.ResponseController
+	end time.Time
+}
+
+func (b deadlineBody) Read(p []byte) (int, error) {
+	if err := b.rc.SetReadDeadline(b.end); err != nil {
+		return b.ReadCloser.Read(p) // the connection does not support deadlines
+	}
+	n, err := b.ReadCloser.Read(p)
+	if err == nil || err == io.EOF {
+		_ = b.rc.SetReadDeadline(time.Time{})
+	}
+	// After an error the deadline stays: when the body timed out, the server
+	// must not wait for the rest while it discards the unread body, or the
+	// error response would never be sent.
+	return n, err
+}
+
+// withBodyDeadline bounds the time a request body may take to arrive. A request
+// without a body (an SSE GET) gets no deadline.
+func (h *HTTPServer) withBodyDeadline(w http.ResponseWriter, body io.ReadCloser) io.ReadCloser {
+	if body == http.NoBody {
+		return body
+	}
+	return deadlineBody{ReadCloser: body, rc: http.NewResponseController(w), end: time.Now().Add(h.opts.BodyReadTimeout)}
 }

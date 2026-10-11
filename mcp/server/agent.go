@@ -8,10 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/ipfs/kubo/mcp/contract"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -27,10 +25,6 @@ const (
 	maxToolResultBytes = 64 << 10
 	// maxUserMessageBytes caps one user message.
 	maxUserMessageBytes = 64 << 10
-	maxSessions         = 64
-	sessionIdleTTL      = 30 * time.Minute
-	maxSessionMessages  = 256
-	maxSessionIDLen     = 128
 )
 
 // Interrupt and resume statuses (transport neutral; AG-UI and A2A adapters map
@@ -200,27 +194,11 @@ type Agent struct {
 
 	mu       sync.Mutex
 	sessions map[string]*agentSession
-}
-
-// agentSession is the in-memory state of one conversation. It is never
-// persisted.
-type agentSession struct {
-	id        string
-	principal string
-	touched   time.Time
-	busy      bool
-
-	messages []ChatMessage
-	// queue holds the tool calls of the last model reply that have no answer
-	// yet, in order. The first one may be waiting on interrupt.
-	queue     []queuedCall
-	interrupt *Interrupt
-}
-
-type queuedCall struct {
-	call ChatToolCall
-	// skip, when set, answers the call with this error instead of running it.
-	skip string
+	// buckets is the per-principal run rate state; runBurst and runsPerMinute
+	// override the defaults when set.
+	buckets       map[string]*runBucket
+	runBurst      int
+	runsPerMinute int
 }
 
 // EnableAgent attaches the agent loop to the server. nil settings leave the
@@ -258,6 +236,7 @@ func newAgent(s *Server, set AgentSettings) (*Agent, error) {
 		now:         time.Now,
 		params:      make(map[string]json.RawMessage, len(s.registry)),
 		sessions:    map[string]*agentSession{},
+		buckets:     map[string]*runBucket{},
 	}
 	for name, rt := range s.registry {
 		p, err := withoutConfirmToken(rt.sc.rawIn)
@@ -373,92 +352,6 @@ func (a *Agent) offer(id Identity) (map[string]registeredTool, []ChatTool) {
 		}})
 	}
 	return offered, defs
-}
-
-// acquire finds or creates the session and marks it busy.
-func (a *Agent) acquire(sessionID, principal string, create bool) (*agentSession, func(), error) {
-	if len(sessionID) > maxSessionIDLen {
-		return nil, nil, ErrSessionNotFound
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	now := a.now()
-	for id, s := range a.sessions {
-		if !s.busy && now.Sub(s.touched) > sessionIdleTTL {
-			delete(a.sessions, id)
-		}
-	}
-	s, ok := a.sessions[sessionID]
-	switch {
-	case ok && s.principal != principal:
-		// Do not reveal that the ID exists for someone else.
-		return nil, nil, ErrSessionNotFound
-	case ok && s.busy:
-		return nil, nil, ErrSessionBusy
-	case !ok && !create:
-		return nil, nil, ErrSessionNotFound
-	case !ok:
-		if len(a.sessions) >= maxSessions && !a.evictOldestIdle() {
-			return nil, nil, ErrTooManySessions
-		}
-		if sessionID == "" {
-			sessionID = randomID(12)
-		}
-		s = &agentSession{id: sessionID, principal: principal}
-		a.sessions[sessionID] = s
-	}
-	s.busy, s.touched = true, now
-	return s, func() {
-		a.mu.Lock()
-		defer a.mu.Unlock()
-		s.busy, s.touched = false, a.now()
-	}, nil
-}
-
-// OpenInterrupt returns the interrupt the session is waiting on, for the
-// session's owner only. A transport must call it, and match the interrupt ID the
-// client names against the result, before it records any decision for the
-// confirmation: it is what keeps a caller from answering another principal's
-// or another thread's pending confirmation. A session that does not exist, has
-// expired or belongs to someone else is ErrSessionNotFound, without saying which.
-func (a *Agent) OpenInterrupt(id Identity, sessionID string) (*Interrupt, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	s, ok := a.sessions[sessionID]
-	if !ok || s.principal != id.ID {
-		return nil, ErrSessionNotFound
-	}
-	if s.busy {
-		return nil, ErrSessionBusy
-	}
-	if a.now().Sub(s.touched) > sessionIdleTTL {
-		return nil, ErrSessionNotFound
-	}
-	if s.interrupt == nil {
-		return nil, ErrNoOpenInterrupt
-	}
-	cp := *s.interrupt
-	cp.Resolvers = append([]string(nil), cp.Resolvers...)
-	return &cp, nil
-}
-
-// evictOldestIdle drops the least recently used idle session. Callers hold
-// a.mu.
-func (a *Agent) evictOldestIdle() bool {
-	oldest := ""
-	for id, s := range a.sessions {
-		if s.busy {
-			continue
-		}
-		if oldest == "" || s.touched.Before(a.sessions[oldest].touched) {
-			oldest = id
-		}
-	}
-	if oldest == "" {
-		return false
-	}
-	delete(a.sessions, oldest)
-	return true
 }
 
 // acceptMessage appends a user message. A confirmation that is still open
@@ -581,25 +474,6 @@ func (a *Agent) announce(run *runCtx, calls []ChatToolCall) {
 
 func (a *Agent) limited(run *runCtx, reason string) *RunResult {
 	return &RunResult{Outcome: OutcomeLimit, Reason: reason, Steps: run.steps, Tokens: run.tokens}
-}
-
-// tokensOf counts what a model call cost: the backend's report, or an estimate
-// of four bytes per token over the request and the reply.
-func tokensOf(req []ChatMessage, res *ChatResult) int {
-	if res.UsageReported && res.Usage.TotalTokens > 0 {
-		return res.Usage.TotalTokens
-	}
-	n := len(res.Content)
-	for _, tc := range res.ToolCalls {
-		n += len(tc.Function.Name) + len(tc.Function.Arguments)
-	}
-	for _, m := range req {
-		n += len(m.Content)
-		for _, tc := range m.ToolCalls {
-			n += len(tc.Function.Name) + len(tc.Function.Arguments)
-		}
-	}
-	return n/4 + 1
 }
 
 // drain runs the queued tool calls in order. It returns a result when the run
@@ -762,65 +636,4 @@ func (a *Agent) fromResult(run *runCtx, tc ChatToolCall, t contract.Tool, res *m
 		untrusted = true
 	}
 	return outcome{content: frame(t.Name, text, untrusted)}
-}
-
-func interruptOf(tc ChatToolCall, t contract.Tool, c *ConfirmationRequired) *Interrupt {
-	return &Interrupt{
-		ID:                   "int-" + c.ConfirmationID,
-		ConfirmationID:       c.ConfirmationID,
-		ToolCallID:           tc.ID,
-		Tool:                 t.Name,
-		Message:              c.Summary.Text,
-		Class:                t.Confirmation,
-		ExpiresAt:            c.ExpiresAt,
-		RequiresNativePrompt: c.RequiresNativePrompt,
-		Resolvers:            append([]string(nil), c.Resolvers...),
-	}
-}
-
-// errorOf extracts the ToolError of an isError result produced by this
-// package.
-func errorOf(res *mcp.CallToolResult) *ToolError {
-	if r, ok := res.StructuredContent.(toolErrorResult); ok {
-		return r.Error
-	}
-	return nil
-}
-
-// resultText renders a success result for the model: the JSON text of the
-// structured result and a line per resource_link, never inlined blob bytes.
-func resultText(res *mcp.CallToolResult) string {
-	var parts []string
-	for _, c := range res.Content {
-		switch v := c.(type) {
-		case *mcp.TextContent:
-			parts = append(parts, v.Text)
-		case *mcp.ResourceLink:
-			parts = append(parts, "[resource_link] "+v.URI)
-		}
-	}
-	return strings.Join(parts, "\n")
-}
-
-const (
-	untrustedTag    = "untrusted-content"
-	truncatedMarker = "\n[truncated: the rest of this result was not sent]"
-)
-
-// frame bounds a result and, when it can carry text written by someone else,
-// wraps it in delimiters the system prompt names as data. A closing tag inside
-// the text is neutralised so content cannot end the frame early.
-func frame(tool, text string, untrusted bool) string {
-	if len(text) > maxToolResultBytes {
-		cut := maxToolResultBytes
-		for cut > 0 && !utf8.RuneStart(text[cut]) {
-			cut--
-		}
-		text = text[:cut] + truncatedMarker
-	}
-	if !untrusted {
-		return text
-	}
-	text = strings.ReplaceAll(text, "</"+untrustedTag, "<\\/"+untrustedTag)
-	return "<" + untrustedTag + " tool=\"" + tool + "\">\n" + text + "\n</" + untrustedTag + ">"
 }

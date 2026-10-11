@@ -19,7 +19,12 @@ app.whenReady().then(async () => {
 
   protocol.handle('webui', (request) => {
     const url = new URL(request.url);
-    return net.fetch(origin + url.pathname + url.search, { method: request.method, headers: request.headers });
+    // Forward only what the harness server needs. The page's Origin and Referer name webui://localhost, and
+    // net.fetch fails a module-script request that carries them (net::ERR_FAILED on /host.js).
+    const headers = new Headers();
+    const accept = request.headers.get('accept');
+    if (accept) headers.set('accept', accept);
+    return net.fetch(origin + url.pathname + url.search, { method: request.method, headers });
   });
 
   const width = Number(process.env.WINDOW_WIDTH || 1024);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { formatBytes, formatBytesExact, middleEllipsis } from '../lib/format';
 import { displayText } from '../lib/safe-text';
 import { useAnnounce, useHostActions } from '../scope/UiScope';
@@ -157,10 +157,13 @@ export interface PanelProps {
 /** A panel on the `surface` fill. The title carries itself; there is no eyebrow above it. */
 export function Panel({ title, tool, headingLevel = 3, actions, children, className }: PanelProps) {
   const Heading = `h${headingLevel}` as const;
+  const titleId = useId();
+  // A named group, not a landmark: a transcript holds many panels, and repeated tool results with the
+  // same title must not collide as duplicate region landmarks.
   return (
-    <section className={['iu-panel', className ?? ''].filter(Boolean).join(' ')} aria-label={title}>
+    <section role="group" className={['iu-panel', className ?? ''].filter(Boolean).join(' ')} aria-labelledby={titleId}>
       <header className="iu-head">
-        <Heading className="iu-title">{title}</Heading>
+        <Heading id={titleId} className="iu-title">{title}</Heading>
         {tool ? <code className="iu-tool">{tool}</code> : null}
         {actions ? <div className="iu-head__actions">{actions}</div> : null}
       </header>

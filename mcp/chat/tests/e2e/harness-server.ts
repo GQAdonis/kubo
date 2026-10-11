@@ -49,6 +49,12 @@ export async function startHarnessServer(config: HarnessConfig): Promise<Harness
   const requests: string[] = [];
   const server: Server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://harness.invalid');
+    if (url.pathname === '/__test/requests') {
+      // The harness's own request log, for specs that cannot observe requests from the page (Electron).
+      if (req.method === 'DELETE') requests.length = 0;
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(requests));
+      return;
+    }
     requests.push(url.pathname);
     try {
       let file: string | undefined;
@@ -57,7 +63,10 @@ export async function startHarnessServer(config: HarnessConfig): Promise<Harness
         const theme = url.searchParams.get('theme') ?? 'auto';
         const html = (await readFile(resolve(ROOT, 'harness/host.html'), 'utf8')).replace(
           '{{CONFIG}}',
-          JSON.stringify({ island, theme, endpoint: config.endpoint, token: config.token }),
+          // `now`: the contract fixtures carry fixed confirmation expiries (2026-10-09T12:02:00Z). Against the real
+          // clock every approval card renders as Expired once that date passes, so the page's Date.now is fixed
+          // just after the fixtures' creation time (see harness/host.js).
+          JSON.stringify({ island, theme, endpoint: config.endpoint, token: config.token, now: '2026-10-09T12:00:30Z' }),
         );
         const headers: Record<string, string> = { 'content-type': TYPES['.html'] as string, 'cache-control': 'no-store' };
         if (url.searchParams.get('csp') === 'strict') headers['content-security-policy'] = strictCsp(config.connectOrigins);

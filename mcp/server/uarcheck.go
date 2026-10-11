@@ -119,6 +119,19 @@ func (r UARReport) Restrictions() []Restriction {
 }
 
 // Summary is a one-line account of the findings that matter.
+// Codes lists the codes of the findings that are not informational, without
+// their messages. A message can name a configured or discovered endpoint, so
+// startup output and logs carry the codes only.
+func (r UARReport) Codes() string {
+	var codes []string
+	for _, f := range r.Findings {
+		if f.Severity != SeverityInfo {
+			codes = append(codes, f.Code)
+		}
+	}
+	return strings.Join(codes, ", ")
+}
+
 func (r UARReport) Summary() string {
 	var parts []string
 	for _, f := range r.Findings {

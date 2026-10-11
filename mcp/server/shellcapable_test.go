@@ -51,7 +51,7 @@ func TestCLIConfirmationRequiresShellCapableFalse(t *testing.T) {
 }
 
 func TestShellCapableNotRequiredWithoutCLIConfirmation(t *testing.T) {
-	e := newPrincipalEnv(t, shellConfig, shellTokens(), Options{Resolvers: []Resolver{newFakeResolver(ResolverDesktop)}}, nil)
+	e := newPrincipalEnv(t, shellConfig, shellTokens(), Options{Resolvers: []Resolver{newFakeResolver(ResolverLinuxPolkit)}}, nil)
 	for _, token := range []string{pTokWriter, pTokAdmin, pTokChat} {
 		assert.Contains(t, listedNames(t, e.client(t, token, nil)), "pin_add")
 	}

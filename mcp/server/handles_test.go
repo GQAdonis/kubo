@@ -220,19 +220,19 @@ func TestRequestStateBelongsToOneCall(t *testing.T) {
 
 func TestNativePromptConfirmationOmitsTheChatResolver(t *testing.T) {
 	agui := newFakeResolver(ResolverAGUIInterrupt)
-	desktop := newFakeResolver(ResolverDesktop)
+	desktop := newFakeResolver(ResolverLinuxPolkit)
 	e := newGateEnv(t, agui, desktop)
 	cs := e.h.connect(t, nil, &Principal{ID: "chat-island", Kind: KindUI})
 
 	conf := confirmationOf(t, e.rm(t, cs, nil), CodeConfirmRequired).Confirmation
 	assert.True(t, conf.RequiresNativePrompt)
-	assert.Equal(t, []string{ResolverDesktop}, conf.Resolvers)
+	assert.Equal(t, []string{ResolverLinuxPolkit}, conf.Resolvers)
 	validateConfirmationDef(t, "ConfirmationRequired", conf)
 
 	// A write does not need the native prompt and keeps the chat resolver.
 	w := confirmationOf(t, toolCall(t, cs, "pin_add", map[string]any{"path": "/ipfs/" + testCID(t, 60)}), CodeConfirmRequired).Confirmation
 	assert.False(t, w.RequiresNativePrompt)
-	assert.Equal(t, []string{ResolverAGUIInterrupt, ResolverDesktop}, w.Resolvers)
+	assert.Equal(t, []string{ResolverAGUIInterrupt, ResolverLinuxPolkit}, w.Resolvers)
 	validateConfirmationDef(t, "ConfirmationRequired", w)
 }
 

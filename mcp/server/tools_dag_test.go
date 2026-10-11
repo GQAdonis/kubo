@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -223,6 +224,50 @@ func TestDagPut(t *testing.T) {
 	require.NoError(t, json.Unmarshal(raw, &out))
 	assert.False(t, out.Pinned)
 	assert.Equal(t, "dag-json", d.log[len(d.log)-1].Opts["store-codec"])
+}
+
+// failAfterReader emits its data, then fails the way the RPC client does when
+// the daemon reports a stream error in the trailer.
+type failAfterReader struct {
+	data []byte
+	err  error
+}
+
+func (r *failAfterReader) Read(p []byte) (int, error) {
+	if len(r.data) == 0 {
+		return 0, r.err
+	}
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	return n, nil
+}
+
+type streamFailDaemon struct {
+	*rawFakeDaemon
+	body io.Reader
+}
+
+func (d *streamFailDaemon) CallRaw(_ context.Context, command string, _ []string, _ map[string]any, _ []byte, fn func(io.Reader) error) error {
+	d.mu.Lock()
+	d.calls = append(d.calls, command)
+	d.mu.Unlock()
+	return fn(d.body)
+}
+
+func TestDagPutSurfacesErrorAfterCID(t *testing.T) {
+	c := testCID(t, 26)
+	d := &streamFailDaemon{
+		rawFakeDaemon: newRawFake(t),
+		body: &failAfterReader{
+			data: []byte(`{"Cid":{"/":"` + c + `"}}` + "\n"),
+			err:  errors.New("pin failed: commit aborted"),
+		},
+	}
+	cs := dagServer(t, d, Options{})
+
+	res := toolCall(t, cs, "dag_put", map[string]any{"data": `{"a":1}`, "pin": true})
+	require.True(t, res.IsError, "a failure after the CID must not report success")
+	assert.Contains(t, textOf(t, res), "commit aborted")
 }
 
 func TestDagPutRequiresExplicitPinAndValidJSON(t *testing.T) {

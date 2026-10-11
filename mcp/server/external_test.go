@@ -103,7 +103,7 @@ func TestConfirmationIsBoundToThePrincipalAndSession(t *testing.T) {
 
 func TestUIPrincipalDestructiveCallNeedsANativePrompt(t *testing.T) {
 	agui := newFakeResolver(ResolverAGUIInterrupt)
-	e := newGateEnv(t, agui, newFakeResolver(ResolverDesktop))
+	e := newGateEnv(t, agui, newFakeResolver(ResolverLinuxPolkit))
 	cs := e.h.connect(t, nil, &Principal{ID: "chat-island", Kind: KindUI})
 
 	conf := confirmationOf(t, e.rm(t, cs, nil), CodeConfirmRequired).Confirmation
@@ -122,7 +122,7 @@ func TestUIPrincipalDestructiveCallNeedsANativePrompt(t *testing.T) {
 
 	// A native prompt resolver may approve a fresh confirmation.
 	again := confirmationOf(t, e.rm(t, cs, nil), CodeConfirmRequired).Confirmation
-	require.NoError(t, e.s.ResolveConfirmation(again.ConfirmationID, ResolverDesktop, true))
+	require.NoError(t, e.s.ResolveConfirmation(again.ConfirmationID, ResolverLinuxPolkit, true))
 	require.False(t, e.rm(t, cs, nil).IsError)
 	assert.Equal(t, 1, e.d.count("pin/rm"))
 }

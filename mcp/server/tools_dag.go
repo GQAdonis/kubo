@@ -332,6 +332,13 @@ func (s *Server) dagPut(ctx context.Context, raw json.RawMessage) (any, error) {
 			return fmt.Errorf("decode dag/put response: %w", err)
 		}
 		out.CID = cidString(resp.Cid)
+		// The daemon emits the CID before it commits the batch (and pins).
+		// Read to EOF so a failure after the CID, which the daemon reports
+		// in the stream trailer, is surfaced here and not lost to the
+		// cancel that follows this function.
+		if _, err := io.Copy(io.Discard, io.LimitReader(r, maxSmallResponseBytes)); err != nil {
+			return fmt.Errorf("dag/put failed after emitting %s: %w", out.CID, err)
+		}
 		return nil
 	})
 	if err != nil {
@@ -340,6 +347,8 @@ func (s *Server) dagPut(ctx context.Context, raw json.RawMessage) (any, error) {
 	if out.CID == "" {
 		return nil, errors.New("dag/put returned no CID")
 	}
+	// Reached only after the whole stream succeeded, so the node is
+	// committed and, when requested, pinned.
 	out.Pinned = in.Pin
 	return out, nil
 }

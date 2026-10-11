@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"io/fs"
+	"strings"
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -45,49 +46,93 @@ func validateOutput(t *testing.T, tool string, v any) {
 	validateJSON(t, raw, v)
 }
 
-// validateAgainstCommon checks v against one definition of common.json.
+// confirmationDefsPrefix namespaces the confirmation schema's definitions when
+// they are bundled next to common.json's, so the two sets cannot collide.
+const confirmationDefsPrefix = "confirmation."
+
+// validateAgainstCommon checks v against one definition of common.json. The
+// definitions it references in the confirmation schema are bundled in too, so
+// the confirmation payload of a ToolError is checked and not waved through.
 func validateAgainstCommon(t *testing.T, def string, v any) {
 	t.Helper()
-	raw, err := fs.ReadFile(contract.FS(), "schemas/common.json")
-	require.NoError(t, err)
-	var doc map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(raw, &doc))
-	// Wrap the definition so common.json's local references still resolve.
+	common := readSchemaDefs(t, "schemas/common.json")
+	confirmation := readSchemaDefs(t, "confirmation/confirmation.schema.json")
+
+	defs := make(map[string]any, len(common)+len(confirmation))
+	for name, d := range common {
+		defs[name] = rewriteRefs(d, func(ref string) string {
+			if rest, ok := strings.CutPrefix(ref, "../confirmation/confirmation.schema.json#/$defs/"); ok {
+				return "#/$defs/" + confirmationDefsPrefix + rest
+			}
+			return ref
+		})
+	}
+	for name, d := range confirmation {
+		defs[confirmationDefsPrefix+name] = rewriteRefs(d, func(ref string) string {
+			if rest, ok := strings.CutPrefix(ref, "#/$defs/"); ok {
+				return "#/$defs/" + confirmationDefsPrefix + rest
+			}
+			return ref
+		})
+	}
 	wrapper := map[string]any{
 		"$schema": "https://json-schema.org/draft/2020-12/schema",
 		"$ref":    "#/$defs/" + def,
-		"$defs":   doc["$defs"],
+		"$defs":   defs,
 	}
 	rawWrapper, err := json.Marshal(wrapper)
 	require.NoError(t, err)
-	// ToolError references the confirmation schema, which is not needed for
-	// these results; replace that reference by an open schema.
-	rawWrapper = replaceConfirmationRef(rawWrapper)
+	assertNoExternalRefs(t, rawWrapper)
 	validateJSON(t, rawWrapper, v)
 }
 
-func replaceConfirmationRef(raw []byte) []byte {
-	var doc any
-	_ = json.Unmarshal(raw, &doc)
-	var walk func(n any) any
-	walk = func(n any) any {
-		switch x := n.(type) {
-		case map[string]any:
-			if ref, ok := x["$ref"].(string); ok && len(ref) > 0 && ref[0] != '#' {
-				return map[string]any{}
-			}
-			for k, v := range x {
-				x[k] = walk(v)
-			}
-		case []any:
-			for i := range x {
-				x[i] = walk(x[i])
-			}
-		}
-		return n
+// readSchemaDefs returns the $defs of an embedded contract schema file.
+func readSchemaDefs(t *testing.T, path string) map[string]any {
+	t.Helper()
+	raw, err := fs.ReadFile(contract.FS(), path)
+	require.NoError(t, err)
+	var doc struct {
+		Defs map[string]any `json:"$defs"`
 	}
-	out, _ := json.Marshal(walk(doc))
-	return out
+	require.NoError(t, json.Unmarshal(raw, &doc))
+	require.NotEmpty(t, doc.Defs, path)
+	return doc.Defs
+}
+
+// rewriteRefs returns a copy of a decoded JSON schema with every $ref passed
+// through fn.
+func rewriteRefs(n any, fn func(string) string) any {
+	switch x := n.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, v := range x {
+			if ref, ok := v.(string); ok && k == "$ref" {
+				out[k] = fn(ref)
+				continue
+			}
+			out[k] = rewriteRefs(v, fn)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i := range x {
+			out[i] = rewriteRefs(x[i], fn)
+		}
+		return out
+	}
+	return n
+}
+
+// assertNoExternalRefs fails when a bundled schema still points outside
+// itself, which would mean a reference was resolved to nothing.
+func assertNoExternalRefs(t *testing.T, raw []byte) {
+	t.Helper()
+	var doc any
+	require.NoError(t, json.Unmarshal(raw, &doc))
+	rewriteRefs(doc, func(ref string) string {
+		require.True(t, strings.HasPrefix(ref, "#/"), "unbundled reference %q", ref)
+		return ref
+	})
 }
 
 func validateJSON(t *testing.T, schema []byte, v any) {

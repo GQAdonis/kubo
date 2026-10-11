@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/auth"
@@ -42,7 +43,11 @@ func mountA2A(s *Server, m RouteMounter) error {
 	if _, on := s.a2aExt.(*a2aConfig); !on || s.Agent() == nil {
 		return nil
 	}
-	h := &a2aHandler{srv: s, agent: s.Agent(), store: newA2AStore(time.Now), log: s.log}
+	ctx, stop := context.WithCancel(context.Background())
+	store := newA2AStore(time.Now)
+	store.parent = ctx
+	h := &a2aHandler{srv: s, agent: s.Agent(), store: store, log: s.log, stopTasks: stop}
+	s.onShutdown(h.shutdown)
 	// The route's default principal kind is a2a: a token of any other kind is
 	// refused before the handler runs.
 	if err := m.Mount(RouteA2A, h, MountOptions{}); err != nil {
@@ -77,6 +82,39 @@ type a2aHandler struct {
 	agent *Agent
 	store *a2aStore
 	log   *slog.Logger
+
+	// stopTasks cancels the context every task derives from; mu guards
+	// stopped, and work counts the drive goroutines still running.
+	stopTasks context.CancelFunc
+	mu        sync.Mutex
+	stopped   bool
+	work      sync.WaitGroup
+}
+
+// start runs fn on a goroutine that shutdown waits for. It reports false, and
+// runs nothing, once the endpoint is stopping.
+func (h *a2aHandler) start(fn func()) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.stopped {
+		return false
+	}
+	h.work.Add(1)
+	go func() {
+		defer h.work.Done()
+		fn()
+	}()
+	return true
+}
+
+// shutdown cancels every task and waits for its goroutine, so none outlives the
+// listener that served it.
+func (h *a2aHandler) shutdown() {
+	h.mu.Lock()
+	h.stopped = true
+	h.mu.Unlock()
+	h.stopTasks()
+	h.work.Wait()
 }
 
 // approvalNotice answers a message sent to a task that waits for approval. The
@@ -293,7 +331,10 @@ func (h *a2aHandler) begin(ctx context.Context, id Identity, m *a2aMessage) (*a2
 	if err != nil {
 		return nil, "", rpcErrorOf(err)
 	}
-	go h.drive(t, id, work)
+	if !h.start(func() { h.drive(t, id, work) }) {
+		h.store.drop(t, fresh)
+		return nil, "", rpcErrorOf(errServerStopping)
+	}
 	select {
 	case <-t.started:
 	case <-ctx.Done():

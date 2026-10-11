@@ -3,7 +3,7 @@ import { formatUtc } from '../lib/format';
 import { displayText } from '../lib/safe-text';
 import { IconAlert, IconClock, IconDenied, IconOk } from '../ui/icons';
 import { Badge, Button } from '../ui/primitives';
-import { PHASE_WORD, phaseSentence, type ApprovalModel } from './model';
+import { PHASE_WORD, approveLabel, phaseSentence, type ApprovalModel } from './model';
 
 /**
  * The activation behind a decision: the click on the Approve or Deny button. A pointer press or a key
@@ -56,12 +56,14 @@ export function ApprovalPanel({
   const canDeny = (model.phase === 'pending' || model.phase === 'waiting_system_prompt') && onDeny !== undefined;
   const destructive = model.class === 'destructive';
   const sentence = phaseSentence(model, canApprove);
+  // An alertdialog must hold something to act on. With no decision control (a resolved or externally
+  // answered confirmation) it is a plain labelled group, so assistive technology is not told to expect one.
+  const role = variant === 'alertdialog' && (canApprove || canDeny) ? 'alertdialog' : 'group';
 
   return (
     <section
       className={`iu-approval iu-approval--${model.phase}`}
-      role={variant === 'alertdialog' ? 'alertdialog' : 'group'}
-      aria-modal={variant === 'alertdialog' ? 'false' : undefined}
+      role={role}
       aria-labelledby={titleId}
       aria-describedby={statusId}
       data-phase={model.phase}
@@ -109,7 +111,7 @@ export function ApprovalPanel({
           ) : null}
           {canApprove ? (
             <Button variant="primary" onClick={onApprove}>
-              {destructive ? 'Approve removal' : 'Approve change'}
+              {approveLabel(model.tool, model.class)}
             </Button>
           ) : null}
         </div>

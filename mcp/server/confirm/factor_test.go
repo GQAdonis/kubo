@@ -94,24 +94,24 @@ func TestMacFactorUnavailableWhenProbeFailsOrSwiftIsMissing(t *testing.T) {
 }
 
 func TestPolkitFactorRequiresTheInstalledAction(t *testing.T) {
-	lookup := func(string) (string, error) { return "/usr/bin/x", nil }
+	trusted := func(string) error { return nil }
 	run, ran := scripted(1) // pkaction: action unknown
-	f := newPolkitFactor(run, lookup)
+	f := newPolkitFactor(run, trusted)
 	err := f.check(t.Context())
 	require.ErrorIs(t, err, ErrUnavailable)
 	assert.Contains(t, err.Error(), PolkitActionID)
 	assert.Contains(t, err.Error(), "INSTALL.md")
 	assert.Equal(t, []string{"--action-id", PolkitActionID}, (*ran)[0].args)
 
-	noPolkit := newPolkitFactor(run, func(string) (string, error) { return "", exec.ErrNotFound })
+	noPolkit := newPolkitFactor(run, func(string) error { return exec.ErrNotFound })
 	require.ErrorIs(t, noPolkit.check(t.Context()), ErrUnavailable)
 
 	run, _ = scripted(0)
-	require.NoError(t, newPolkitFactor(run, lookup).check(t.Context()))
+	require.NoError(t, newPolkitFactor(run, trusted).check(t.Context()))
 }
 
 func TestPolkitFactorOutcomes(t *testing.T) {
-	lookup := func(string) (string, error) { return "", nil }
+	trusted := func(string) error { return nil }
 	for _, tc := range []struct {
 		code    int
 		wantOK  bool
@@ -123,7 +123,7 @@ func TestPolkitFactorOutcomes(t *testing.T) {
 		{pkNoInteractor, false, true},
 	} {
 		run, ran := scripted(tc.code)
-		f := newPolkitFactor(run, lookup)
+		f := newPolkitFactor(run, trusted)
 		ok, err := f.authenticate(t.Context(), "Approve IPFS MCP operation: Remove a pin")
 		assert.Equal(t, tc.wantOK, ok, tc.code)
 		assert.Equal(t, tc.wantErr, err != nil, tc.code)
@@ -132,7 +132,7 @@ func TestPolkitFactorOutcomes(t *testing.T) {
 		assert.True(t, slices.Contains(args, PolkitActionID))
 		assert.True(t, strings.Contains(strings.Join(args, " "), "summary Approve IPFS MCP operation"))
 	}
-	f := newPolkitFactor(failing(errors.New("exec failed")), lookup)
+	f := newPolkitFactor(failing(errors.New("exec failed")), trusted)
 	ok, err := f.authenticate(t.Context(), "x")
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, ErrUnavailable)

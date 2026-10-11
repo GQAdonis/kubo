@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/ipfs/kubo/mcp/contract"
@@ -46,6 +47,11 @@ type Options struct {
 
 	// now is the clock of the confirmation gate; tests replace it.
 	now func() time.Time
+
+	// awaitRecheck is how often AwaitConfirmation looks at the clock; zero
+	// keeps the default. Tests shorten it per server instead of changing a
+	// package variable.
+	awaitRecheck time.Duration
 
 	// uarOpts customize the UAR checker; tests inject a settings path.
 	uarOpts []UARCheckerOption
@@ -87,6 +93,34 @@ type Server struct {
 	// the index tools that wait for an embeddings section (index.go).
 	selected   map[string]struct{}
 	indexImpls []toolImpl
+
+	// hooks run when the HTTP listener stops serving (onShutdown).
+	hookMu sync.Mutex
+	hooks  []func()
+}
+
+// errServerStopping is returned for work that arrives while the listener shuts
+// down.
+var errServerStopping = errors.New("the server is shutting down")
+
+// onShutdown registers f to run, once, after the HTTP listener stopped taking
+// requests. Endpoints that start goroutines of their own use it to cancel and
+// join them, so none outlives Serve.
+func (s *Server) onShutdown(f func()) {
+	s.hookMu.Lock()
+	defer s.hookMu.Unlock()
+	s.hooks = append(s.hooks, f)
+}
+
+// runShutdownHooks runs and clears the registered hooks.
+func (s *Server) runShutdownHooks() {
+	s.hookMu.Lock()
+	hooks := s.hooks
+	s.hooks = nil
+	s.hookMu.Unlock()
+	for _, f := range hooks {
+		f()
+	}
 }
 
 // registeredTool is a tool offered by this server, as in-process callers (the
@@ -128,6 +162,9 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 	}
 	if ttl > 0 {
 		s.gate.broker.ttl = ttl
+	}
+	if opts.awaitRecheck > 0 {
+		s.gate.broker.recheck = opts.awaitRecheck
 	}
 
 	selectors, err := s.resolveSelectors(opts.Tools)

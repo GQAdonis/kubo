@@ -39,12 +39,13 @@ func Build(cfg Config, log *slog.Logger) (*Manager, error) {
 	if !wantDesktop && !wantCLI {
 		return m, nil
 	}
-	var verifier []byte
+	pairingPath := ""
 	if wantDesktop {
-		v, err := loadVerifier(cfg.pairingFile())
+		// The pairing must be valid now; the channel reads it again per request.
+		_, err := loadVerifier(cfg.pairingFile())
 		switch {
 		case err == nil:
-			verifier = v
+			pairingPath = cfg.pairingFile()
 		case errors.Is(err, ErrNotPaired):
 			log.Warn("desktop confirmation requested but not paired; it will refuse", "pairing_file", cfg.pairingFile())
 			wantDesktop = false
@@ -55,7 +56,7 @@ func Build(cfg Config, log *slog.Logger) (*Manager, error) {
 	if !wantDesktop && !wantCLI {
 		return m, nil
 	}
-	ch, err := newChannel(log, cfg.socketDir(), verifier, wantCLI)
+	ch, err := newChannel(log, cfg.socketDir(), pairingPath, wantCLI)
 	if err != nil {
 		return nil, err
 	}

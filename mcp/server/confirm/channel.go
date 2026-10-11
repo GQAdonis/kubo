@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ipfs/kubo/mcp/server"
@@ -57,12 +58,18 @@ type PendingView struct {
 	PrincipalKind string    `json:"principal_kind,omitempty"`
 }
 
+// channelSeq numbers the channels of this process.
+var channelSeq atomic.Uint64
+
 // channel serves the desktop and cli resolvers.
 type channel struct {
-	log      *slog.Logger
-	verifier []byte // nil when not paired
-	cliOn    bool
-	sockPath string
+	log *slog.Logger
+	// pairingPath is the file that holds the key hash. It is read again for
+	// every request, so a replaced pairing revokes the old key at once and a
+	// removed one revokes it entirely. Empty means desktop is not offered.
+	pairingPath string
+	cliOn       bool
+	sockPath    string
 
 	ln  net.Listener
 	srv *http.Server
@@ -71,13 +78,15 @@ type channel struct {
 	items map[string]map[string]item // resolver name -> id -> item
 }
 
-// newChannel listens on a private socket. verifier may be nil (desktop
+// newChannel listens on a private socket. pairingPath may be empty (desktop
 // requests are then all rejected).
-func newChannel(log *slog.Logger, dir string, verifier []byte, cliOn bool) (*channel, error) {
+func newChannel(log *slog.Logger, dir, pairingPath string, cliOn bool) (*channel, error) {
 	if err := ensurePrivateDir(dir); err != nil {
 		return nil, err
 	}
-	path := filepath.Join(dir, fmt.Sprintf("%d.sock", os.Getpid()))
+	// One socket per channel instance: a second channel in this process must not
+	// replace the first one's socket, and closing either removes only its own.
+	path := filepath.Join(dir, fmt.Sprintf("%d-%d.sock", os.Getpid(), channelSeq.Add(1)))
 	_ = os.Remove(path)
 	ln, err := net.Listen("unix", path)
 	if err != nil {
@@ -88,7 +97,7 @@ func newChannel(log *slog.Logger, dir string, verifier []byte, cliOn bool) (*cha
 		return nil, fmt.Errorf("restrict confirmation socket: %w", err)
 	}
 	c := &channel{
-		log: log, verifier: verifier, cliOn: cliOn, sockPath: path, ln: ln,
+		log: log, pairingPath: pairingPath, cliOn: cliOn, sockPath: path, ln: ln,
 		items: map[string]map[string]item{server.ResolverDesktop: {}, server.ResolverCLI: {}},
 	}
 	mux := http.NewServeMux()
@@ -114,6 +123,17 @@ func ensurePrivateDir(dir string) error {
 	}
 	if fi.Mode().Perm()&0o077 != 0 {
 		return fmt.Errorf("confirmation directory %s is accessible to other users (mode %v); refusing to use it", dir, fi.Mode().Perm())
+	}
+	return dirOwnedBy(fi, dir, currentUID())
+}
+
+// dirOwnedBy refuses a directory that another user owns: a shared location
+// such as /tmp lets someone pre-create it with a mode that looks private and
+// then block, or watch, the server. Where the platform reports no owner the
+// mode check above stands alone.
+func dirOwnedBy(fi os.FileInfo, dir string, uid uint32) error {
+	if owner, known := fileOwner(fi); known && owner != uid {
+		return fmt.Errorf("confirmation directory %s is owned by uid %d, not by this user (uid %d); refusing to use it", dir, owner, uid)
 	}
 	return nil
 }
@@ -143,7 +163,7 @@ func (c *channel) add(ctx context.Context, name string, p server.Pending, resolv
 func (c *channel) authenticate(r *http.Request) (string, int, string) {
 	if h := r.Header.Get("Authorization"); h != "" {
 		key, ok := strings.CutPrefix(h, "Bearer ")
-		if !ok || !keyMatches(c.verifier, key) {
+		if !ok || !keyMatches(c.verifier(), key) {
 			return "", http.StatusForbidden, "the pairing key is not valid"
 		}
 		return server.ResolverDesktop, 0, ""
@@ -241,4 +261,16 @@ func (r *channelResolver) Request(ctx context.Context, p server.Pending, resolve
 	}
 	r.ch.add(ctx, r.resolverName, p, resolve)
 	return nil
+}
+
+// verifier returns the stored key hash, or nil when there is no valid pairing.
+func (c *channel) verifier() []byte {
+	if c.pairingPath == "" {
+		return nil
+	}
+	v, err := loadVerifier(c.pairingPath)
+	if err != nil {
+		return nil
+	}
+	return v
 }

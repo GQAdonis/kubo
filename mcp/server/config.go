@@ -108,6 +108,9 @@ func ParseConfig(data []byte) (*Config, error) {
 		// reach a log or a terminal.
 		return nil, fmt.Errorf("does not match the ipfs mcp config schema: %s", redactSecrets(err.Error(), doc))
 	}
+	if err := rejectUnreadConfirmationKeys(doc); err != nil {
+		return nil, err
+	}
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("decode: %w", err)
@@ -117,6 +120,26 @@ func ParseConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// unreadConfirmationKeys are confirmation keys the schema allows but this build
+// does not read. Accepting them would present an off switch that does nothing,
+// so they are refused until they are implemented; confirmation.modes is the
+// working control for all three.
+var unreadConfirmationKeys = []string{"resolvers", "cli", "ttl"}
+
+// rejectUnreadConfirmationKeys fails a config that sets a confirmation key the
+// server does not read, naming the key and pointing at confirmation.modes.
+func rejectUnreadConfirmationKeys(doc any) error {
+	root, _ := doc.(map[string]any)
+	section, _ := root["confirmation"].(map[string]any)
+	for _, key := range unreadConfirmationKeys {
+		if _, set := section[key]; set {
+			return fmt.Errorf("confirmation.%s is not supported by this build and would change nothing; "+
+				"use confirmation.modes (native, desktop, cli; [] turns the out-of-band resolvers off) or --confirm instead", key)
+		}
+	}
+	return nil
 }
 
 // secretKeys are the config keys whose values are credentials.

@@ -53,7 +53,7 @@ func TestA2AStoreBounds(t *testing.T) {
 	clock := newFakeClock()
 	s := newA2AStore(clock.Now)
 	var open []*a2aTask
-	for i := 0; i < maxA2AContexts; i++ {
+	for i := 0; i < maxA2AContextsPerOwner; i++ {
 		tk, _, err := s.newTask("alice", "")
 		require.NoError(t, err)
 		open = append(open, tk)
@@ -176,4 +176,64 @@ func TestA2ASkillsComeFromTheContract(t *testing.T) {
 	raw, err := fs.ReadFile(contract.FS(), "agentic/a2a-skills.json")
 	require.NoError(t, err)
 	assert.True(t, strings.Contains(string(raw), "ipfs-pinning"))
+}
+
+func TestA2AContextQuotaEvictsOnlyTheOwnersIdle(t *testing.T) {
+	clock := newFakeClock()
+	s := newA2AStore(clock.Now)
+	bystander, _, err := s.newTask("bystander", "")
+	require.NoError(t, err)
+	bystander.setStatus(a2aCompleted, "", nil, nil) // idle: the easiest victim
+
+	var noisy []*a2aTask
+	for i := 0; i < maxA2AContextsPerOwner; i++ {
+		clock.Advance(time.Millisecond)
+		tk, _, err := s.newTask("noisy", "")
+		require.NoError(t, err)
+		tk.setStatus(a2aCompleted, "", nil, nil)
+		noisy = append(noisy, tk)
+	}
+	clock.Advance(time.Millisecond)
+	_, _, err = s.newTask("noisy", "")
+	require.NoError(t, err, "a peer at its quota evicts its own oldest idle context")
+	assert.Nil(t, s.task("noisy", noisy[0].id), "the owner's oldest idle context went")
+	assert.NotNil(t, s.task("bystander", bystander.id), "another peer's idle context stays")
+}
+
+func TestA2AContextQuotaNeverEvictsAnOpenApproval(t *testing.T) {
+	s := newA2AStore(newFakeClock().Now)
+	var held []*a2aTask
+	for i := 0; i < maxA2AContextsPerOwner; i++ {
+		tk, _, err := s.newTask("noisy", "")
+		require.NoError(t, err)
+		tk.setStatus(a2aInputRequired, "", nil, nil)
+		held = append(held, tk)
+	}
+	_, _, err := s.newTask("noisy", "")
+	require.ErrorIs(t, err, errTooManyTasks)
+	for _, tk := range held {
+		assert.NotNil(t, s.task("noisy", tk.id), "a context waiting for approval is never evicted")
+	}
+}
+
+func TestA2AFullTableRefusesInsteadOfEvictingAnotherOwner(t *testing.T) {
+	clock := newFakeClock()
+	s := newA2AStore(clock.Now)
+	owners := maxA2AContexts / maxA2AContextsPerOwner
+	var all []*a2aTask
+	for o := 0; o < owners; o++ {
+		for i := 0; i < maxA2AContextsPerOwner; i++ {
+			clock.Advance(time.Millisecond)
+			tk, _, err := s.newTask("peer"+string(rune('a'+o)), "")
+			require.NoError(t, err)
+			tk.setStatus(a2aCompleted, "", nil, nil)
+			all = append(all, tk)
+		}
+	}
+	_, _, err := s.newTask("latecomer", "")
+	require.ErrorIs(t, err, errTooManyTasks)
+	assert.Contains(t, rpcErrorOf(err).Message, "Too many open contexts")
+	for _, tk := range all {
+		assert.NotNil(t, s.task(tk.owner, tk.id), "no context of another peer is evicted")
+	}
 }

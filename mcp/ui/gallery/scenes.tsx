@@ -20,6 +20,18 @@ import confirmationHuman from '../../contract/confirmation/examples/Confirmation
 // The scenes the visual-regression, axe and keyboard specs drive. Each is a real component fed real
 // contract fixtures. The gallery is a test harness; it is not shipped.
 
+const SR_ONLY = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+} as const;
+
 const noop = () => undefined;
 const handlers: ViewHandlers = { onOpenPath: noop, onLoadMore: noop, onRequestUnpin: noop, onApprove: noop, onDeny: noop };
 
@@ -39,6 +51,9 @@ const fold = (fixture: { events: unknown[]; input: unknown }, prior: ChatState =
 function transcript(state: ChatState, opts: { approve: boolean }): ReactNode {
   return (
     <Stack>
+      {/* The chat island puts an h3 conversation title above its h4 call and approval cards; the gallery
+          scene stands in for that host heading so the heading order is the shipped one. */}
+      <h3 style={SR_ONLY}>Conversation</h3>
       <MessageStream messages={state.messages} />
       {state.toolCalls.map((c) => (
         <ToolCallCard key={c.id} call={toWire(c)} acknowledgedHosts={['model.example.net']} handlers={handlers} />

@@ -15,14 +15,14 @@ test('script cannot approve: element.click(), dispatchEvent and Playwright dispa
   await reachApproval(page, 'write-interrupt');
   await harness.resetFixtureRequests();
 
-  const approve = page.getByRole('button', { name: 'Approve change' });
+  const approve = page.getByRole('button', { name: 'Approve pin' });
   await approve.evaluate((el) => (el as HTMLButtonElement).click());
   await approve.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true })));
   await approve.evaluate((el) => el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true })));
   await approve.dispatchEvent('click'); // Playwright's own synthetic dispatch: also untrusted
 
   await expect(page.getByText(/An answer needs a click or key press from you/)).toBeVisible();
-  await expect(page.getByText('Awaiting a person')).toBeVisible();
+  await expect(page.getByText('Awaiting a person', { exact: true })).toBeVisible();
   expect(await harness.fixtureRequests()).toEqual([]); // nothing was sent: the approval was never answered
 });
 
@@ -50,14 +50,14 @@ test('script cannot reach into the card and replay a click it has seen', async (
   // A real click on Deny's neighbour area (the card heading) triggers that listener's synthetic approve.
   await page.getByRole('heading', { name: /Pin bafkrei/ }).click();
   expect(await harness.fixtureRequests()).toEqual([]);
-  await expect(page.getByText('Awaiting a person')).toBeVisible();
+  await expect(page.getByText('Awaiting a person', { exact: true })).toBeVisible();
 });
 
 test('a real click on Approve resumes the run with exactly one resolved answer', async ({ harness }) => {
   const page = await harness.open({ island: 'open' });
   await reachApproval(page, 'write-interrupt');
   await harness.resetFixtureRequests();
-  await page.getByRole('button', { name: 'Approve change' }).click();
+  await page.getByRole('button', { name: 'Approve pin' }).click();
   await expect(page.getByText('Pinned.')).toBeVisible();
   await expect(page.getByText('Approved', { exact: true })).toBeVisible();
 
@@ -72,7 +72,7 @@ test('the keyboard works: Enter on the focused Approve button answers', async ({
   const page = await harness.open({ island: 'open' });
   await reachApproval(page, 'write-interrupt');
   await harness.resetFixtureRequests();
-  await page.getByRole('button', { name: 'Approve change' }).focus();
+  await page.getByRole('button', { name: 'Approve pin' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('Pinned.')).toBeVisible();
   expect(await harness.fixtureRequests()).toHaveLength(1);

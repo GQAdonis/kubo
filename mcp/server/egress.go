@@ -39,14 +39,15 @@ func normalizeHost(h string) (host, port string) {
 	return h, port
 }
 
-// IsLocalHost reports whether a host names this machine: the literal "local",
-// localhost, a *.localhost name or a loopback address.
+// IsLocalHost reports whether an endpoint host names this machine: localhost, a
+// *.localhost name or a loopback address. The egress_ack sentinel "local" is not
+// a host name (a machine called "local" is not loopback); AckCovers handles it.
 func IsLocalHost(h string) bool {
 	host, _ := normalizeHost(h)
 	if host == "" {
 		return false
 	}
-	if host == EgressLocal || host == "localhost" || strings.HasSuffix(host, ".localhost") {
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
 		return true
 	}
 	addr, err := netip.ParseAddr(host)
@@ -60,7 +61,10 @@ const EgressDisabled = "disabled"
 // IsNoEgressHost reports whether a provider host sends content nowhere off
 // this machine: a local host, or the literal "disabled".
 func IsNoEgressHost(h string) bool {
-	return strings.EqualFold(strings.TrimSpace(h), EgressDisabled) || IsLocalHost(h)
+	h = strings.TrimSpace(h)
+	// A provider_host that UAR reports is a label, and "local" is its word for an
+	// in-process provider; unlike an endpoint host it is not resolved by name.
+	return strings.EqualFold(h, EgressDisabled) || strings.EqualFold(h, EgressLocal) || IsLocalHost(h)
 }
 
 // HostFromURL returns the host:port of an endpoint URL, or "" when it has
@@ -123,12 +127,12 @@ func MissingAck(ack, hosts []string) []string {
 // is a configured uar principal: stdio-spawned UAR cannot be checked, and
 // clientInfo is self-reported, so this is a misconfiguration guard and not a
 // security boundary.
-func (s *Server) egressRefusal(ctx context.Context, req *mcp.CallToolRequest, t contract.Tool) *ToolError {
+func (s *Server) egressRefusal(ctx context.Context, ss *mcp.ServerSession, t contract.Tool) *ToolError {
 	if !t.ContentEgress {
 		return nil
 	}
 	id, authed := IdentityFromContext(ctx)
-	if clientIsUAR(req) && !(authed && id.Kind == KindUAR) {
+	if clientIsUAR(ss) && !(authed && id.Kind == KindUAR) {
 		return &ToolError{
 			Code: CodeEgressNotAcknowledged,
 			Message: t.Name + " returns node content and the MCP client identifies as the Universal Agent Runtime, " +
@@ -162,11 +166,11 @@ func (s *Server) egressRefusal(ctx context.Context, req *mcp.CallToolRequest, t 
 // clientIsUAR reports whether the MCP clientInfo names the Universal Agent
 // Runtime: a "uar" word, or the words "universal agent runtime" in a row, in
 // the name or title.
-func clientIsUAR(req *mcp.CallToolRequest) bool {
-	if req == nil || req.Session == nil {
+func clientIsUAR(ss *mcp.ServerSession) bool {
+	if ss == nil {
 		return false
 	}
-	p := req.Session.InitializeParams()
+	p := ss.InitializeParams()
 	if p == nil || p.ClientInfo == nil {
 		return false
 	}

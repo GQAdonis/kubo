@@ -103,7 +103,7 @@ describe('A2UI surface rendering with the IPFS catalog', () => {
       ],
       onAction,
     );
-    const approve = await screen.findByRole('button', { name: 'Approve change' });
+    const approve = await screen.findByRole('button', { name: 'Approve pin' });
     await userEvent.click(approve);
     expect(onAction).toHaveBeenCalledTimes(1);
   });
@@ -123,7 +123,7 @@ describe('A2UI surface rendering with the IPFS catalog', () => {
         '/c',
       ),
     ]);
-    await screen.findByRole('alertdialog');
+    await screen.findByRole('group', { name: /garbage collection/i });
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 

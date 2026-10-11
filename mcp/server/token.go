@@ -113,10 +113,8 @@ func (s *tokenSigner) verify(use, tok string) (tokenClaims, error) {
 // randomID returns n random bytes as unpadded base64url.
 func randomID(n int) string {
 	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		// crypto/rand does not fail on supported platforms; a server that
-		// cannot get randomness must not hand out guessable IDs.
-		panic(fmt.Sprintf("crypto/rand: %v", err))
-	}
+	// Since Go 1.24 crypto/rand.Read never returns an error: it fills b
+	// entirely or ends the program, so no guessable ID can be handed out.
+	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }

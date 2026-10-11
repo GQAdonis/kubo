@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/auth"
@@ -165,7 +166,12 @@ func (h *aguiHandler) reject(w http.ResponseWriter, err error) {
 		h.log.Warn("agui request failed before the stream began", "error_type", fmt.Sprintf("%T", err))
 	}
 	if retry {
-		w.Header().Set("Retry-After", "5")
+		after := 5
+		var rl *RateLimitedError
+		if errors.As(err, &rl) {
+			after = rl.RetryAfterSeconds()
+		}
+		w.Header().Set("Retry-After", strconv.Itoa(after))
 	}
 	var te *ToolError
 	if errors.As(err, &te) {

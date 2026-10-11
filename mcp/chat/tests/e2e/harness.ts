@@ -31,6 +31,8 @@ export interface Harness {
   /** Requests the fixture server (standing in for ipfs mcp /agui) has received since the last reset. */
   fixtureRequests(): Promise<FixtureRequest[]>;
   resetFixtureRequests(): Promise<void>;
+  /** Paths the harness page server has served since open() last reset its log (works in Electron, where the page cannot list requests). */
+  harnessRequests(): Promise<string[]>;
   /** The runtime's own version string, to assert which engine ran. */
   engineVersion(): Promise<string>;
 }
@@ -93,6 +95,7 @@ export const test = base.extend<{ runtime: Runtime; harness: Harness }>({
         const width = o.width ?? SIZE.width;
         const height = o.height ?? SIZE.height;
         const scheme = o.scheme ?? 'dark';
+        await fetch(`${env.harnessOrigin}/__test/requests`, { method: 'DELETE' });
         let target: Page;
         if (runtime === 'chromium') {
           await page.setViewportSize({ width, height });
@@ -112,11 +115,10 @@ export const test = base.extend<{ runtime: Runtime; harness: Harness }>({
               WINDOW_HEIGHT: String(height),
             },
           });
-          await app.evaluate(({ nativeTheme }, s) => {
-            nativeTheme.themeSource = s;
-          }, scheme);
           target = await app.firstWindow();
           await target.waitForLoadState('domcontentloaded');
+          // Electron's prefers-color-scheme ignores nativeTheme here; emulate it the way the Chromium branch does.
+          await target.emulateMedia({ colorScheme: scheme, reducedMotion: 'no-preference' });
         }
         await target.waitForFunction(() => (window as unknown as { __harnessReady?: boolean }).__harnessReady === true);
         if (o.island === 'open') await expect(target.locator('ipfs-agent-chat aside[data-state="open"]')).toBeVisible();
@@ -128,6 +130,10 @@ export const test = base.extend<{ runtime: Runtime; harness: Harness }>({
       },
       async resetFixtureRequests() {
         await fetch(`${env.fixtureOrigin}/__test/requests`, { method: 'DELETE' });
+      },
+      async harnessRequests() {
+        const res = await fetch(`${env.harnessOrigin}/__test/requests`);
+        return (await res.json()) as string[];
       },
       async engineVersion() {
         if (runtime === 'electron' && app) return app.evaluate(() => `electron ${process.versions.electron} chrome ${process.versions.chrome}`);

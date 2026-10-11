@@ -24,8 +24,8 @@ test('works under a strict CSP and makes only the requests it should', async ({ 
   await ask(page, userTextOf('read-pin-ls'));
   await expect(page.getByRole('table', { name: 'Pins' })).toBeVisible();
   await ask(page, userTextOf('write-interrupt'));
-  await expect(page.getByText('Awaiting a person')).toBeVisible();
-  await page.getByRole('button', { name: 'Approve change' }).click();
+  await expect(page.getByText('Awaiting a person', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Approve pin' }).click();
   await expect(page.getByText('Pinned.')).toBeVisible();
 
   expect(violations).toEqual([]);

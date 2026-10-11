@@ -47,7 +47,7 @@ for (const scheme of ['dark', 'light'] as const) {
 test('target size: every control is at least 24 CSS px, and the primary controls 44', async ({ harness }) => {
   const page = await harness.open({ island: 'open', width: 1024, height: 900 });
   await ask(page, userTextOf('write-interrupt'));
-  await expect(page.getByText('Awaiting a person')).toBeVisible();
+  await expect(page.getByText('Awaiting a person', { exact: true })).toBeVisible();
   const sizes = await page.evaluate(() =>
     [...(document.querySelector('ipfs-agent-chat')?.shadowRoot?.querySelectorAll('button, textarea, summary, [tabindex="0"]') ?? [])].map((el) => {
       const r = el.getBoundingClientRect();

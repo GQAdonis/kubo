@@ -63,6 +63,8 @@
 
 .iu-call__args > summary {
   width: fit-content;
+  min-block-size: 24px; /* WCAG 2.2 2.5.8 */
+  box-sizing: border-box;
   padding: var(--space-1) 0;
   color: var(--accent-text);
   font-weight: 600;

@@ -41,10 +41,12 @@ func TestUIDestructiveWaitsForTheNativePromptNotTheCLI(t *testing.T) {
 }
 
 func TestIsPresenceResolver(t *testing.T) {
-	for _, n := range []string{ResolverMacOSLocalAuth, ResolverLinuxPolkit, ResolverDesktop} {
+	for _, n := range []string{ResolverMacOSLocalAuth, ResolverLinuxPolkit} {
 		assert.True(t, IsPresenceResolver(n), n)
 	}
-	for _, n := range []string{ResolverCLI, ResolverAGUIInterrupt, ResolverElicitation, ""} {
+	// Desktop is not a presence resolver until a Desktop confirmation window
+	// consumes the pairing key (R11-H4).
+	for _, n := range []string{ResolverDesktop, ResolverCLI, ResolverAGUIInterrupt, ResolverElicitation, ""} {
 		assert.False(t, IsPresenceResolver(n), n)
 	}
 }

@@ -1,7 +1,6 @@
 package embeddings
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -88,7 +87,7 @@ func TestReplaceSearchDelete(t *testing.T) {
 		reply{match: "DELETE", body: `{"id":1,"result":[{"result":[{"cid":"bafyA"},{"cid":"bafyA"}],"status":"OK"}]}`},
 	)
 	s := testStore(t, rs, 2, "")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	rows := []Row{
 		{CID: "bafyA", Path: "/a", MIME: "text/plain", ChunkIndex: 0, Model: "m", Vector: []float32{1, 0}},
@@ -140,7 +139,7 @@ func TestListAndCountStatements(t *testing.T) {
 		reply{match: "vector::similarity::cosine", body: `{"id":1,"result":[{"result":[{"cid":"bafyA","path":"/a","mime":"text/plain","chunk_index":1,"model":"m","distance":0.25}],"status":"OK"}]}`},
 	)
 	s := testStore(t, rs, 2, "")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cids, err := s.ListCIDs(ctx, "bafy0", 2)
 	require.NoError(t, err)

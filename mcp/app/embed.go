@@ -1,7 +1,8 @@
 // Package app embeds the built MCP App views (mcp/app/dist) so the Go server can serve them as
 // ui://ipfs-mcp/<view> resources without a JavaScript toolchain in `make build`.
 //
-// dist/ is committed; scripts/check-dist.mjs (run in CI) proves it matches the TypeScript sources.
+// dist/ is committed; `pnpm check:dist` (scripts/check-dist.mjs) proves it matches the TypeScript
+// sources. No CI workflow runs it yet, so run it by hand (or in `pnpm check`) before committing dist/.
 // This package registers nothing: resource registration and the tool _meta.ui links live in
 // mcp/server and are described in INTEGRATION.md.
 package app

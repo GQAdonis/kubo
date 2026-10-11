@@ -76,13 +76,15 @@ func newAGUIEnv(t *testing.T, opts aguiEnvOpts, steps ...func(modelRequest) []st
 	}
 	var resolvers []Resolver
 	if !opts.noPresence {
-		e.presence = newFakeResolver(ResolverDesktop)
+		e.presence = newFakeResolver(ResolverLinuxPolkit)
 		resolvers = append(resolvers, e.presence)
 	}
 	log := slog.New(slog.NewTextHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	e.s = mustNew(t, e.d, Options{
 		Tools: []string{"node", "content", "pin", "diag", "destructive"}, Resolvers: resolvers,
 		Transport: "http", Logger: log, now: e.clock.Now,
+		// Notice a clock that moved within milliseconds, not a second.
+		awaitRecheck: 10 * time.Millisecond,
 	})
 	require.NoError(t, e.s.EnableAgent(&AgentSettings{
 		BaseURL: e.model.baseURL(), Model: "test-model", Timeout: 5 * time.Second, Limits: opts.limits,
@@ -113,11 +115,6 @@ func newAGUIEnv(t *testing.T, opts aguiEnvOpts, steps ...func(modelRequest) []st
 		require.NoError(t, <-done)
 	})
 	e.base = "http://" + addr.String()
-
-	// Notice a clock that moved within milliseconds, not a second.
-	saved := awaitRecheck
-	awaitRecheck = 10 * time.Millisecond
-	t.Cleanup(func() { awaitRecheck = saved })
 	return e
 }
 

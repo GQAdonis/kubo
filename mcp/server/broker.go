@@ -37,13 +37,15 @@ const (
 )
 
 // IsPresenceResolver reports whether a resolver carries a presence factor: the
-// native system prompt or the paired Desktop window. Only these may approve a
-// confirmation that requires a native prompt. The cli resolver has no secret
-// (a same-user pty can drive it) and agui-interrupt is a chat answer, so
-// neither counts.
+// native system prompt. Only these may approve a confirmation that requires a
+// native prompt. The paired Desktop channel does not count yet: no Desktop
+// confirmation window consumes the pairing key, so the key alone (which any
+// process that ran `ipfs mcp pair` holds) would be the whole factor. The cli
+// resolver has no secret (a same-user pty can drive it) and agui-interrupt is a
+// chat answer, so neither counts.
 func IsPresenceResolver(name string) bool {
 	switch name {
-	case ResolverMacOSLocalAuth, ResolverLinuxPolkit, ResolverDesktop:
+	case ResolverMacOSLocalAuth, ResolverLinuxPolkit:
 		return true
 	}
 	return false
@@ -112,12 +114,14 @@ type record struct {
 // else does: a repeated call, a token or an agent's own message never does.
 // An in-memory broker forgets everything on restart, which counts as denial.
 type Broker struct {
-	mu     sync.Mutex
-	now    func() time.Time
-	ttl    time.Duration
-	byID   map[string]*record
-	active map[string]string
-	spent  map[string]time.Time
+	mu  sync.Mutex
+	now func() time.Time
+	ttl time.Duration
+	// recheck is the longest Await sleeps between looks at the clock.
+	recheck time.Duration
+	byID    map[string]*record
+	active  map[string]string
+	spent   map[string]time.Time
 	// changed is closed, and replaced, whenever a confirmation leaves pending
 	// by a decision or is claimed; Await sleeps on it.
 	changed chan struct{}
@@ -125,11 +129,12 @@ type Broker struct {
 
 func newBroker(now func() time.Time, ttl time.Duration) *Broker {
 	return &Broker{
-		now:    now,
-		ttl:    ttl,
-		byID:   make(map[string]*record),
-		active: make(map[string]string),
-		spent:  make(map[string]time.Time),
+		now:     now,
+		ttl:     ttl,
+		recheck: defaultAwaitRecheck,
+		byID:    make(map[string]*record),
+		active:  make(map[string]string),
+		spent:   make(map[string]time.Time),
 
 		changed: make(chan struct{}),
 	}
@@ -141,10 +146,11 @@ func (b *Broker) signal() {
 	b.changed = make(chan struct{})
 }
 
-// awaitRecheck bounds how long Await sleeps between looks at the clock, so an
-// expiry that nobody triggers is still noticed and a clock that jumped does not
-// strand a waiter.
-var awaitRecheck = time.Second
+// defaultAwaitRecheck bounds how long Await sleeps between looks at the clock,
+// so an expiry that nobody triggers is still noticed and a clock that jumped
+// does not strand a waiter. A Broker carries its own value (recheck), set
+// before it is shared.
+const defaultAwaitRecheck = time.Second
 
 // Await returns the state of a confirmation once it is no longer pending
 // (approved, denied, expired or executed), or ctx's error if ctx ends first.
@@ -164,7 +170,7 @@ func (b *Broker) Await(ctx context.Context, id string) (string, error) {
 			return state, nil
 		}
 		wake := b.changed
-		wait := min(r.ExpiresAt.Sub(b.now()), awaitRecheck)
+		wait := min(r.ExpiresAt.Sub(b.now()), b.recheck)
 		b.mu.Unlock()
 
 		timer := time.NewTimer(max(wait, time.Millisecond))
@@ -221,11 +227,53 @@ func dedupeKey(sid, principalID, tool, argsHash string) string {
 	return sid + "\x00" + principalID + "\x00" + tool + "\x00" + argsHash
 }
 
-// create opens a pending confirmation for exactly one call.
+// maxOpenExternal caps the out-of-band confirmations that may wait at once for
+// one principal, and for one session. Each one can raise a system prompt, so an
+// unbounded loop of calls would flood the person with prompts.
+const maxOpenExternal = 2
+
+// ErrTooManyOpen is returned by create when a principal or a session already has
+// the most out-of-band confirmations waiting.
+var ErrTooManyOpen = errors.New("too many confirmations are already waiting for this principal or session")
+
+// openExternalLocked counts the pending out-of-band confirmations of a
+// principal and of a session. Callers hold b.mu.
+func (b *Broker) openExternalLocked(principalID, sid string) (byPrincipal, bySession int) {
+	for _, r := range b.byID {
+		b.refresh(r)
+		if r.State != StatePending || r.Mechanism != MechanismExternal {
+			continue
+		}
+		if r.Principal.ID == principalID {
+			byPrincipal++
+		}
+		if r.sid == sid {
+			bySession++
+		}
+	}
+	return byPrincipal, bySession
+}
+
+// create opens a pending confirmation for exactly one call, with no cap on how
+// many are open.
 func (b *Broker) create(n newConfirmation) Pending {
+	p, _ := b.reserve(n, 0)
+	return p
+}
+
+// reserve is create with a cap: with limit above zero, an out-of-band
+// confirmation is refused with ErrTooManyOpen when its principal or its session
+// already has limit of them waiting. The count and the insert are one step.
+func (b *Broker) reserve(n newConfirmation, limit int) (Pending, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.sweep()
+	if limit > 0 && n.mechanism == MechanismExternal {
+		bp, bs := b.openExternalLocked(n.principal.ID, n.sid)
+		if bp >= limit || bs >= limit {
+			return Pending{}, ErrTooManyOpen
+		}
+	}
 	now := b.now()
 	r := &record{
 		Pending: Pending{
@@ -245,7 +293,7 @@ func (b *Broker) create(n newConfirmation) Pending {
 	}
 	b.byID[r.ID] = r
 	b.active[r.dedupe] = r.ID
-	return r.Pending
+	return r.Pending, nil
 }
 
 // setToken records the token handed out for a confirmation so that a repeated

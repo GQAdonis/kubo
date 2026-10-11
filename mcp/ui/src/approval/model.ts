@@ -27,6 +27,37 @@ export type ApprovalModel = z.infer<typeof ApprovalModelSchema>;
 
 export type { ConfirmationClass, Resolver, Target };
 
+/**
+ * The Approve button names the action it approves, so a person who tabs to it hears what will run
+ * ("Approve pin move"), not a generic "Approve change". Keyed by the catalog tools that need a
+ * confirmation; a tool not listed falls back to the class wording.
+ */
+export const APPROVE_LABEL: Readonly<Record<string, string>> = {
+  ipfs_add: 'Approve add',
+  pin_add: 'Approve pin',
+  pin_update: 'Approve pin move',
+  pin_rm: 'Approve pin removal',
+  mfs_write: 'Approve file write',
+  mfs_mkdir: 'Approve new folder',
+  mfs_cp: 'Approve copy',
+  mfs_mv: 'Approve move',
+  mfs_rm: 'Approve MFS removal',
+  ipns_publish: 'Approve IPNS publish',
+  key_gen: 'Approve new key',
+  key_rename: 'Approve key rename',
+  key_rm: 'Approve key removal',
+  dag_put: 'Approve DAG store',
+  car_import: 'Approve CAR import',
+  routing_provide: 'Approve announce',
+  repo_gc: 'Approve garbage collection',
+  ipfs_index_cid: 'Approve indexing',
+  ipfs_index_reconcile: 'Approve index cleanup',
+};
+
+export function approveLabel(tool: string, cls: ConfirmationClass): string {
+  return APPROVE_LABEL[tool] ?? (cls === 'destructive' ? 'Approve removal' : 'Approve change');
+}
+
 /** Where a person approves, in words. Resolver ids are from the contract's Resolver enum. */
 export const RESOLVER_PLACE: Record<Resolver, string> = {
   elicitation: "your agent host's confirmation prompt",

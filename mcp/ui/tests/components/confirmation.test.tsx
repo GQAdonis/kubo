@@ -10,7 +10,8 @@ const human = readContractJson<unknown>('confirmation/examples/ConfirmationRequi
 const nativeCf = readContractJson<unknown>('confirmation/examples/ConfirmationRequired/ui-native-prompt.json');
 const a2a = readContractJson<unknown>('confirmation/examples/ConfirmationRequired/a2a-no-token.json');
 
-const statusOf = () => within(screen.getByRole('alertdialog')).getByRole('status');
+const approvalOf = () => document.querySelector('.iu-approval') as HTMLElement;
+const statusOf = () => within(approvalOf()).getByRole('status');
 
 const withState = (base: unknown, state: 'pending' | 'denied' | 'expired') => ({ ...(base as object), state });
 
@@ -29,11 +30,11 @@ describe('ConfirmationDialog bound to the contract confirmation schema', () => {
     const onDeny = vi.fn();
     renderIn(<ConfirmationDialog confirmation={human as never} onApprove={onApprove} onDeny={onDeny} />);
     const dialog = screen.getByRole('alertdialog', { name: /Remove the pin on bafybeigdyrzt5/ });
-    expect(dialog).toHaveAttribute('aria-modal', 'false');
+    expect(dialog).not.toHaveAttribute('aria-modal');
     expect(screen.getByText('Awaiting a person')).toBeInTheDocument();
     expect(screen.getByText('Destructive')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deny' })).toHaveFocus();
-    await userEvent.click(screen.getByRole('button', { name: 'Approve removal' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Approve pin removal' }));
     expect(onApprove).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByRole('button', { name: 'Deny' }));
     expect(onDeny).toHaveBeenCalledOnce();
@@ -45,6 +46,13 @@ describe('ConfirmationDialog bound to the contract confirmation schema', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(statusOf()).toHaveTextContent(/This panel cannot approve/);
     expect(statusOf()).toHaveTextContent(/IPFS Desktop confirmation window or the macOS system prompt/);
+  });
+
+  it('without a decision control it is a labelled group, not an alertdialog', () => {
+    renderIn(<ConfirmationDialog confirmation={a2a as never} />);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(approvalOf()).toHaveAttribute('role', 'group');
+    expect(approvalOf()).toHaveAccessibleName();
   });
 
   it('waiting for the system prompt: no approve control even if a handler is passed', () => {
@@ -86,7 +94,7 @@ describe('ConfirmationDialog bound to the contract confirmation schema', () => {
     c.summary.text = 'Remove <img src=x onerror=alert(1)> now ‮';
     renderIn(<ConfirmationDialog confirmation={c as never} />);
     expect(document.querySelector('img')).toBeNull();
-    expect(screen.getByRole('alertdialog')).toHaveAccessibleName(expect.stringContaining('\\u{202E}'));
+    expect(approvalOf()).toHaveAccessibleName(expect.stringContaining('\\u{202E}'));
   });
 
   it('the data schema is strict', () => {
