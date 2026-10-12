@@ -6,5 +6,5 @@ Change-level prerequisites (plan revision 2): every task in this change also req
 ## 1. Web UI delivery
 
 - [x] 1.1 The operator selects D1, D2 or D3 after the spike report. Verify: the choice is recorded in `operator-answers.md` with the date
-- [ ] 1.2 If D2: bump `WebUIPath`/`WebUIPaths` with test/cli checks of the `/webui` redirect and `Gateway.NoFetch`. Otherwise, write the D1/D3 docs in `docs/mcp/`. Verify: D2 `make build && go test ./test/cli/... -run TestWebUI -v` passes; for D1/D3, the docs are reviewed by the operator
-- [ ] 1.3 If D2: add a changelog Highlights entry (TOC and Highlights only). Verify: no auto-generated changelog section is modified
+- [x] 1.2 If D2: bump `WebUIPath`/`WebUIPaths` with test/cli checks of the `/webui` redirect and `Gateway.NoFetch`. Otherwise, write the D1/D3 docs in `docs/mcp/`. Verify: D2 `make build && go test ./test/cli/... -run TestWebUI -v` passes; for D1/D3, the docs are reviewed by the operator
+- [x] 1.3 If D2: add a changelog Highlights entry (TOC and Highlights only). Verify: no auto-generated changelog section is modified
