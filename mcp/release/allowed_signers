@@ -16,6 +16,6 @@
 # signed only by that key stop verifying. The first key line's identity is the
 # default signer; override it with KUBO_MCP_SIGNER.
 #
-# PLACEHOLDER: the operator's public key line goes below. Until a non-comment
-# key line exists, verify.sh refuses to verify signatures.
-# <identity> namespaces="kubo-mcp-release" ssh-ed25519 AAAA...
+# Release key created 2026-10-11, fingerprint
+# SHA256:R3LaYr91QVNgSdTfwWESKqbkjZrhwW7aZM07wkGQkL4
+kubo-mcp-release namespaces="kubo-mcp-release" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEzVtJ8BQPQa37dQ01twkku+w7wYXttF8Jk7GCZfA4TI
