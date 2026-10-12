@@ -1,6 +1,6 @@
 ---
 name: ipfs-content-search
-description: Search content you added to IPFS by meaning with the optional index tools ipfs_index_search, ipfs_index_status, ipfs_index_cid and ipfs_index_reconcile - check whether embeddings search is configured, run a semantic query, index a CID on request, and clean the index after unpinning. Use this skill whenever the user wants to find, look up or ask questions about content they previously published or pinned through the node by topic rather than by CID, or asks about embeddings, semantic search or the search index. The tools may be unavailable; this skill says how to tell.
+description: Use when the user wants to find content they previously added or pinned on IPFS by topic or meaning instead of by CID, ask what their stored notes say about something, check whether semantic or embeddings search is set up, or index a CID so it can be searched. Load this before searching - it covers ipfs_index_search, ipfs_index_status, ipfs_index_cid and ipfs_index_reconcile, and how to tell when the optional tools are unavailable.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server connected to a running Kubo daemon, with embeddings configured by the operator in the --mcp-config file. Without that configuration the index tools are unavailable (reason not_configured). Tool names follow mcp/contract/catalog.json.
 metadata:

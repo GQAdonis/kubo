@@ -1,6 +1,6 @@
 ---
 name: ipfs-troubleshooting
-description: Diagnose IPFS MCP and content problems with ipfs_node_status, ipfs_node_info, routing_findprovs, routing_findpeer, swarm_peers, stats_bw and repo_stat - tools missing from the list (unavailable_tools reasons such as destructive_disabled, group_disabled, read_only), daemon unreachable, content that will not load or is unavailable, announcements that do nothing, slow or failing resolution, and tool error codes like confirmation_unavailable or egress_not_acknowledged. Use this skill whenever an IPFS tool is missing, errors, times out, returns not_found, a CID cannot be fetched, a peer or provider cannot be found, or the user asks why IPFS is not working.
+description: Use when something about IPFS is not working - an IPFS tool is missing from the tool list, a tool returns an error code such as confirmation_unavailable or egress_not_acknowledged, the daemon is unreachable, a CID hangs, times out or has no providers, or announcements do nothing. Invoke this skill first, before guessing - it gives the diagnosis order starting with ipfs_node_status, the meaning of each error code, and the content, storage and stale-name checks.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server (stdio, or Streamable HTTP on 127.0.0.1:5050 by default) and a Kubo daemon. Tool names follow mcp/contract/catalog.json. Server flags and config belong to the operator.
 metadata:

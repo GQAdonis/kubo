@@ -1,6 +1,6 @@
 ---
 name: ipfs-publish-content
-description: Publish text or small files to IPFS with the ipfs_add MCP tool - add content, choose whether to pin and provide, hand back the CID and an ipfs:// link, and handle the human confirmation every write needs. Use this skill whenever the user wants to add, upload, publish, share or "put on IPFS" some text, notes, JSON or small base64 file, get a CID or ipfs:// or gateway link for it, or make content available to other peers, even if they never mention ipfs_add.
+description: Use when the user wants to publish, share, upload or put text, notes, JSON or a small file on IPFS, get a CID or ipfs:// or gateway link for it, or make content available to other peers. Invoke this skill first, before calling ipfs_add - the tool schema alone does not say whether to pin or announce, how to hand back the CID and link, how to verify the result, or how the required human confirmation works.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server (stdio or Streamable HTTP, default 127.0.0.1:5050) connected to a running Kubo daemon. Tool names follow mcp/contract/catalog.json. The ipfs CLI is an optional fallback when the MCP tools are not available.
 metadata:

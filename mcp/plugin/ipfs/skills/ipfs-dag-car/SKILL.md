@@ -1,6 +1,6 @@
 ---
 name: ipfs-dag-car
-description: Inspect IPLD DAGs and move content as CAR files with the MCP tools dag_get, dag_stat, dag_put, car_export and car_import - read a node as dag-json, count blocks and bytes and measure deduplication, store a structured dag-cbor or dag-json node, export a DAG to a portable CAR archive, and import a CAR with explicit pinning. Use this skill whenever the user mentions DAGs, IPLD, dag-cbor, dag-json, links between blocks, CAR files, archiving or backing up a CID, moving content between nodes offline, or why a CID is large or shared.
+description: Use when the user wants to look inside an IPFS DAG or IPLD structure, count blocks and shared data between CIDs, store a dag-cbor or dag-json node with links, export a CID to a CAR file to back it up or move it offline, or import a CAR file. Invoke this skill first, before calling dag_get, dag_stat, dag_put, car_export or car_import - it explains how to measure, store, export and import with explicit pinning and how to check a round trip.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server connected to a running Kubo daemon. Tool names follow mcp/contract/catalog.json. The ipfs CLI is an optional fallback when the MCP tools are not available.
 metadata:

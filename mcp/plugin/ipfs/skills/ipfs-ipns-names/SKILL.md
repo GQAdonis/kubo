@@ -1,6 +1,6 @@
 ---
 name: ipfs-ipns-names
-description: Create and use mutable IPFS names with the MCP tools key_gen, key_list, key_rename, key_rm, ipns_publish and ipns_resolve - make a keystore key, publish a CID under its IPNS name, choose record lifetime and TTL, resolve IPNS names and DNSLink, and update a name to point at new content. Use this skill whenever the user wants a stable address that can change, an IPNS or ipns:// name, a "latest version" pointer, to publish or update a website or dataset under a name, rotate or rename keys, or resolve a /ipns/ or DNSLink name.
+description: Use when the user wants a stable IPFS address that can point at new content later, an IPNS or ipns:// name, a latest-version pointer, a DNSLink or /ipns/ name resolved, a key created or renamed, or a site or dataset published and updated under a name. Invoke this skill first, before calling key_gen, ipns_publish or ipns_resolve - it covers key handling, record lifetime and TTL, the end-to-end update flow and the confirmation prompts.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server connected to a running Kubo daemon. key_rm is destructive and offered only when the operator enabled it with "ipfs mcp --tools destructive" or the --mcp-config file. Tool names follow mcp/contract/catalog.json.
 metadata:

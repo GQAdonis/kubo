@@ -1,6 +1,6 @@
 ---
 name: ipfs-mfs-workspace
-description: Use the node's Mutable File System (MFS) as a working directory with the MCP tools mfs_ls, mfs_stat, mfs_read, mfs_write, mfs_mkdir, mfs_cp, mfs_mv and mfs_rm - organize files in named folders, edit them in place, copy content from a CID into a folder, and read the folder's current CID to pin or publish. Use this skill whenever the user wants a folder or file-tree on IPFS that changes over time, wants to edit or rename files that live on the node, copy a CID into a directory, or build up a site or dataset step by step before publishing it.
+description: Use when the user wants a working folder or file tree on their IPFS node that they can edit over time - create folders, write or edit files, copy a CID into a directory, rename or remove files, and read the folder's CID to pin or publish it. Invoke this skill first, before calling mfs_write, mfs_cp, mfs_mv or mfs_rm - it gives the path rules, the working pattern, how to turn the tree into a durable CID, and the confirmation prompts.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server connected to a running Kubo daemon. mfs_rm is destructive and offered only when the operator enabled it with "ipfs mcp --tools destructive" or the --mcp-config file. Tool names follow mcp/contract/catalog.json.
 metadata:

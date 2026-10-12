@@ -1,6 +1,6 @@
 ---
 name: ipfs-pin-management
-description: Manage pins on the connected IPFS node with the MCP tools pin_ls, pin_add, pin_verify, pin_update, pin_rm and repo_gc - keep content from being garbage collected, audit what is pinned, verify pinned DAGs are complete, move a pin to a new version, remove pins, and run garbage collection safely. Use this skill whenever the user talks about pinning, unpinning, keeping or preserving content, "will this get deleted", garbage collection, freeing disk space, repo size, or checking that pinned data is intact.
+description: Use when the user wants to keep content on their IPFS node, stop it being garbage collected, audit what is pinned, check pinned data is intact, replace a pin with a newer version, unpin, or free disk space with garbage collection. Invoke this skill first, before calling pin_add, pin_rm, pin_update or repo_gc - it sets the safe order of steps, explains which tools are destructive and may be absent, and how the human confirmation works.
 license: Apache-2.0 OR MIT
 compatibility: Requires the Kubo "ipfs mcp" server connected to a running Kubo daemon. pin_update, pin_rm and repo_gc are destructive and are offered only when the operator started the server with "ipfs mcp --tools destructive" or enabled them in the --mcp-config file. Tool names follow mcp/contract/catalog.json.
 metadata:
