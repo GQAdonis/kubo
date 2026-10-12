@@ -46,7 +46,7 @@ From the Promethity content fundamentals: name the mechanism, never claim a virt
 
 - **Kubo user-agency rules (AGENTS.md) outrank the brand.** No tracking or telemetry; no data about users, content, requests or peers sent anywhere. "Every decision leaves a record" is satisfied only by records shown to or stored for the operator on their own machine, with an off switch — never by reporting out.
 - **No network fetches from the UI.** MCP App views run under a deny-by-default CSP and call server tools rather than gateways or the RPC API directly. Brand fonts ship as the bundled woff2 files from the branding directory; no Google Fonts, CDNs or remote assets.
-- **Confirmation is a product requirement, not decoration.** Writes and destructive actions require confirmation on every transport (operator decision, 2026-10-09).
+- **Confirmation is a product requirement, not decoration.** Writes and destructive actions require confirmation on every transport (operator decision, 2026-10-09). In the Web UI fork, the in-page WebMCP approval is an intent and accident check that a page-driving host agent can answer, not a security boundary; approval with an OS presence factor through `ipfs mcp` is a later opt-in (operator decision, 2026-10-12).
 - **Accessibility:** WCAG 2.2 AA (the phase goal) in both light and dark themes; the brand's own standard is WCAG AA with a focus ring that holds at least 3.7:1.
 - **One component set, two adapters.** The same React 19 components serve MCP App views and the A2UI v0.9 catalog, built from the shared tool contract in `mcp/contract`.
 - **The ipfs-webui fork is a separate repository (React 16).** WebMCP work there follows this product context, and its visual changes stay limited to what the WebMCP feature needs.

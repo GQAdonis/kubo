@@ -223,12 +223,12 @@ Source: canonical runtime, revision 832, 2026-10-10. "Done" is the runtime's cou
 | 15 | mcp-tools-ipns-keys | complete | 2/2 | |
 | 16 | mcp-tools-dag-car | complete | 2/2 | |
 | 17 | mcp-tools-routing-diag | complete | 2/2 | Done |
-| 18 | webmcp-tool-package | pending | 0/3 | Not started; unblocked 2026-10-12 (ADR-0002 Accepted) |
+| 18 | webmcp-tool-package | pending | 0/3 | Unblocked 2026-10-12 (ADR-0002 Accepted); built and reviewed in R13, fixes pending (section 5.3) |
 | 19 | mcp-llm-proxy-loop | complete | 6/6 | |
 | 20 | uar-integration-spike | pending | 1/5 | Deferred (ADR-0008). 1.1 done and recorded in ADR-0008 |
 | 21 | mcp-app-views | pending | 3/4 | Real-host render check (operator) |
 | 22 | ipfs-agent-skills | complete | 4/4 | `tasks.md` 1.4 unticked in R11 (live near-miss eval pending, R11-Q06); the runtime cannot reopen a complete task, so a blocker records the pending live eval |
-| 23 | webui-webmcp-integration | pending | 0/4 | Not started; unblocked 2026-10-12 (ADR-0002 Accepted) |
+| 23 | webui-webmcp-integration | pending | 0/4 | Runtime count as of revision 832. Unblocked 2026-10-12; built and reviewed in R13 (1.1-1.3 ticked); task 1.5 (hardening) added, not yet registered in the runtime; 1.4 operator run pending (section 5.3) |
 | 24 | mcp-agui-endpoint | complete | 7/7 | |
 | 25 | mcp-a2a-endpoint | complete | 7/7 | |
 | 26 | desktop-agent-chat | pending | 3/6 | Pairing and native confirmation window not built; operator run |
@@ -388,6 +388,25 @@ Fixes, one batched pass by the owning roles:
 
 Re-verified after the R12 pass: `go test ./mcp/... ./cmd/ipfs/kubo/` ok; `go vet` with `nomcp` and `noagent` clean; `make build && go test ./test/cli/... -run 'TestMCP|TestCommandDocsWidth' -skip Ollama` ok (80.0 s); `make test_go_lint` reports only the known upstream `fuse/node/mount_darwin.go` ST1005; `config_reference.py --check` OK after regeneration; `actionlint` clean; gitleaks clean on `.github`. Not run locally: the race detector and Playwright (held by the tier-guard hook); the new workflow runs both on GitHub. Still open after R12: the first CI run (`mcp-ci-workflow` task 1.3) and the operator's decision on Playwright baselines if it differs only by rendering (task 1.4). Update 2026-10-11: the first run (38182586841) is done and recorded in section 5.1, decision 5; only the chat Electron screenshots failed, from a runner scroll-bar setting fixed without a baseline change, and re-run 38200585039 is pending.
 
+### 5.3 R13 review: the WebMCP tool package and the Web UI integration
+
+Independent reviews, 2026-10-12, each in a separate read-only context; nothing was executed by the reviewers.
+
+- Security review: [`.agent-team/kubo-ipfs-agentic/findings/security/r13-webmcp.md`](../../.agent-team/kubo-ipfs-agentic/findings/security/r13-webmcp.md). 0 CRITICAL, 2 HIGH, 6 MEDIUM, 9 LOW, 3 INFO.
+- Quality review: [`.agent-team/kubo-ipfs-agentic/findings/review/r13-webmcp.md`](../../.agent-team/kubo-ipfs-agentic/findings/review/r13-webmcp.md). Request changes: 0 CRITICAL, 3 HIGH, 6 MEDIUM, 8 LOW. No `/api/v0`, gateway, `webui.go`, CID-recipe or wire impact.
+
+Operator decisions, 2026-10-12, recorded in [ADR-0002](0002-webmcp-web-ui.md) (R13 amendment):
+
+- **A.** The in-page write approval stays, hardened (trusted click, 1 s arming, inert background, title cue, queue cap of 3, "Deny all and turn off agent writes", live off-switch check in every `execute`) and labelled honestly: it is an intent and accident check that a page-driving host agent can answer (security H1), not a security boundary. OS-presence approval through the `ipfs mcp` broker is a later opt-in strict mode. `requestUserInteraction()` (WebMCP issue #165) is the future host-native path, by feature detection.
+- **B.** DNSLink resolution from WebMCP read tools sits behind a separate, off-by-default Settings toggle (security H2); libp2p-key IPNS names resolve freely.
+
+Architect changes in this round:
+
+- Contract: every path type (`MfsPath`, `MfsCopySource`, `ContentPath`, `IpnsName`, the `ipfs://` and `ipns://` resource URIs, the `ipfs_add` filename) rejects `.` and `..` segments, and MFS paths reject an empty first segment (security L2). The WebMCP `exposed` rule is the allow-list `in:confirmation:none,write`, and an unknown class is an error (security L7). Network multiaddrs (security L5) are not marked untrusted: the only marker is the tool-level `returnsUntrustedContent`, which the contract ties to `contentEgress`, and the operator kept these tools `contentEgress: false` on 2026-10-10.
+- OpenSpec: `webui-webmcp-integration` spec delta adds the hardening, live off switch, honest toggle text and DNSLink toggle; new task 1.5 (ui-ux-engineer); operator task 1.4 adds the self-approval, off-then-call and DNSLink checks.
+- Routed to the `mcp-server-engineer`: `ipfs_add` with `provide: false` still announces the root because Kubo `add` defaults `fast-provide-root` on (review M2), so `tools_content.go` must send `fast-provide-root=false`; the Go server must also reject `.` and `..` segments.
+- Generated outputs that must be regenerated by their owners: `mcp/ui` `pnpm gen:contract` (`src/contract/generated/common.ts` drifts), and `mcp/webmcp` `scripts/lib/generate.mjs` must learn the `in:` rule form before `pnpm gen` (it now fails closed with "unsupported rule").
+
 ## 6. Operator actions pending, and next steps
 
 Operator actions:
@@ -428,3 +447,5 @@ The 34 stale "bottleneck" blockers in the KBD runtime (records of failed boundar
 - 2026-10-12: skills 1.4 round 2 (operator bar: at least 70% of should-trigger prompts, 100% clean near-misses): descriptions rewritten to lead with user intent, prompts given concrete payloads; 13/24 positives (54%), 8/8 near-misses clean, 61 runs, about $34; bar not met, 1.4 open (`mcp/skills/evals/results-2026-10-12-r2.md`). Misses go straight to the MCP tools whose own descriptions cover one-call requests.
 - 2026-10-12: skills 1.4 round 3 passed the operator bar: 22 entry-tool descriptions in `mcp/contract/catalog.json` name the matching skill, and the server `instructions` name all 8 skills (`TestInstructionsNameSkills`); 19/24 positives (79%), 8/8 near-misses clean (`mcp/skills/evals/results-2026-10-12-r3.md`), about $34.5 (28 runs discarded after a needs-auth cache fault under parallel sessions, rerun sequentially). 1.4 ticked; blocker `ipfs-agent-skills-1.4-live-eval` cleared. Margin is two prompts on one run each.
 - 2026-10-12: WebMCP host probe run by the lead on the operator's request (`mcp/webmcp/spike/evidence/`): Codex desktop GO on all four criteria; `Kimi.app` 3.2.15 (not Kimi Code Desktop) GO with a caveat (nonce first masked as `<untrusted>`, quoted after one follow-up). `webmcp-host-spike` 1.2 and 1.3 ticked; `REPORT.md` text supplied for 1.5. ADR-0002 moved from Deferred to Accepted per host. Operator chose D2 for Web UI delivery; `webui-cid-delivery` spec delta `kubo-webui-serving` added; the bump waits for the fork's WebMCP-enabled Web UI build CID.
+- 2026-10-12: R13 reviews of the WebMCP tool package and the Web UI integration recorded (section 5.3): security 2 HIGH, 6 MEDIUM, 9 LOW, 3 INFO; quality 3 HIGH, 6 MEDIUM, 8 LOW. Operator decisions A (keep the in-page approval, hardened, labelled as an intent check, not a boundary) and B (DNSLink behind its own off-by-default toggle) recorded in ADR-0002. Contract: dot segments rejected in every path type; WebMCP `exposed` is now an allow-list. `webui-webmcp-integration` spec and tasks updated (new task 1.5). Routed to the server engineer: `fast-provide-root=false` for `ipfs_add` with `provide: false`, and server-side dot-segment rejection.
+- 2026-10-12: R13 fixes committed: kubo `e9afdb417` (WebMCP package, contract dot-segment and allow-list changes, Go server dot-segment rejection and no root announce on `provide:false`), Web UI fork `a204c4ce` (opt-in WebMCP host, hardened approval dialog, DNSLink toggle, vendored package with provenance). Re-verified by the lead: contract and server Go tests, `pnpm check` (77 unit, 16 real-daemon integration), `mcp/ui` gen:check, fork Jest (webmcp 51), eslint, typecheck, vendor check. `webmcp-tool-package` complete; `webui-webmcp-integration` waits on operator task 1.4.
