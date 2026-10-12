@@ -2,7 +2,14 @@
 
 ## Status
 
-Deferred, 2026-10-12, by operator decision. The spike report `mcp/webmcp/spike/REPORT.md` (`webmcp-host-spike` task 1.5) does not exist, because the host probe has not run. The operator has not run the probe in Codex desktop or Kimi desktop: `webmcp-host-spike` tasks 1.2 and 1.3 are open, and `mcp/webmcp/spike/evidence/codex/` and `mcp/webmcp/spike/evidence/kimi/` hold only `.gitkeep`. The probe page and the operator runbook (`mcp/webmcp/spike/RUNBOOK.md`) are built (task 1.1). Fallback evidence about MCP and MCP App support is recorded in `mcp/webmcp/spike/evidence/FALLBACK.md` (task 1.4), and by the runbook's rule it is not WebMCP GO.
+Accepted per host, 2026-10-12, by the rule in "What moves this to Accepted" below, applied to the spike report `mcp/webmcp/spike/REPORT.md` (`webmcp-host-spike` task 1.5) and its evidence in `mcp/webmcp/spike/evidence/codex/` and `mcp/webmcp/spike/evidence/kimi/`:
+
+- **Codex** (ChatGPT desktop app in Codex mode, `com.openai.codex` 26.1007.30912, GPT-6 Sol, built-in browser): GO on all four criteria. Accepted.
+- **Kimi** (`Kimi.app`, `com.moonshot.kimichat` 3.2.15, Work mode, Kimi K3): GO with a caveat. Accepted for this product and version. The agent first printed the nonce as `<untrusted>` and quoted it only after one follow-up, so criterion 4 rests partly on the agent's statement that it took the value from the tool result. This is not Kimi Code Desktop, the product the runbook names; that product is untested.
+
+Unparked by this status: `webmcp-tool-package`, `webui-webmcp-integration` and `webui-cid-delivery`, and with them `webui-agent-chat`'s prerequisite on `webui-webmcp-integration`. Web UI delivery: the operator chose D2 on 2026-10-12 (`operator-answers.md`, "Q3 Web UI delivery"), so `webui-cid-delivery` 1.1 is done. The design below is now the decision, with the spike's implications added (section "Amendment (2026-10-12): spike results").
+
+History. First recorded as Deferred, 2026-10-12, by operator decision, because the probe had not run. The text of that status follows, kept for the record. The spike report `mcp/webmcp/spike/REPORT.md` (`webmcp-host-spike` task 1.5) does not exist, because the host probe has not run. The operator has not run the probe in Codex desktop or Kimi desktop: `webmcp-host-spike` tasks 1.2 and 1.3 are open, and `mcp/webmcp/spike/evidence/codex/` and `mcp/webmcp/spike/evidence/kimi/` hold only `.gitkeep`. The probe page and the operator runbook (`mcp/webmcp/spike/RUNBOOK.md`) are built (task 1.1). Fallback evidence about MCP and MCP App support is recorded in `mcp/webmcp/spike/evidence/FALLBACK.md` (task 1.4), and by the runbook's rule it is not WebMCP GO.
 
 This is a decision not to decide yet. The draft below (from `.kbd-orchestrator/phases/ipfs-mcp-server/assessment.md`, "ADR-0002 draft") is the intended design. Nothing in it is built.
 
@@ -62,6 +69,21 @@ This ADR becomes Accepted for each GO host, scoped to that host. If both hosts a
 | Build the WebMCP package and Web UI integration now, unverified | Code against a draft API with no proven host; it may never be invoked. The operator answers gate G8 on the spike |
 | Treat MCP or MCP App support in Codex or Kimi (`FALLBACK.md`) as GO | The runbook's GO criteria require a WebMCP tool call with the nonce in the transcript; MCP support says nothing about WebMCP |
 | Treat Codex's documented "site tools" as GO | A vendor doc is not the four-criteria probe result on our page |
+
+## Amendment (2026-10-12): spike results
+
+The probe ran in both hosts on 2026-10-12 (`mcp/webmcp/spike/REPORT.md`). Where this disagrees with the text above, this amendment governs.
+
+- **Status.** Accepted for Codex (GO) and for `Kimi.app` 3.2.15 (GO with the caveat in Status). Deferred is superseded. The "Consequences" bullet "No in-browser agent tools ... until a host is proven" no longer holds: hosts are proven, and the tools wait only on the parked changes being built.
+- **Design constraints for `webmcp-tool-package`**, from the observed differences:
+  - Register through `document.modelContext.registerTool` only. Codex has no `navigator.modelContext`, and Kimi exposes it as deprecated.
+  - Treat the `execute` options and their `AbortSignal` as optional. Codex passed one; Kimi did not.
+  - Return plain JSON objects.
+  - Kimi treats tool output as untrusted and masked a secret-looking value until the person asked for it. Return what the person needs (CIDs, names, counts) as plain, clearly named fields plus a short `summary` string the agent can relay. Whether Kimi masks CIDs is unverified; the first real tool must test it.
+  - The Web UI must not send a `Permissions-Policy` that disables `tools`.
+- **Delivery: D2, superseding the draft.** The operator chose D2 on 2026-10-12: the fork bumps `WebUIPath`/`WebUIPaths` in `core/corehttp/webui.go` to the CID of its WebMCP-enabled Web UI build, so every fork user's `/webui` changes. This replaces the draft's "no `WebUIPath` change in this phase" and moves D2 out of the rejected alternatives. The behavior is specified in `openspec/changes/webui-cid-delivery/specs/kubo-webui-serving/spec.md`. The bump (`webui-cid-delivery` 1.2, with `TestWebUI` coverage of the `/webui` redirect and the `Gateway.NoFetch` 503 path) and its changelog Highlights entry (1.3) wait for that build, which `webmcp-tool-package` and `webui-webmcp-integration` produce. Making the build CID retrievable on the network is an operator action.
+- **Unchanged.** Off by default; writes need a second toggle and an in-page confirmation per call; no destructive tools.
+- **Limits.** One run per host. Kimi Code Desktop is untested. In both hosts the agent could also see the nonce on the page; criterion 3 does not depend on that, because the page counts a call only when the host invokes `execute`.
 
 ## References
 

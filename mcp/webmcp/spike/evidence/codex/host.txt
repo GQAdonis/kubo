@@ -1,0 +1,8 @@
+Host: ChatGPT desktop app (Codex mode), bundle com.openai.codex, version 26.1007.30912
+Model: GPT-6 Sol, reasoning High (selected by the operator for this run)
+Surface: built-in browser panel (right side), page loaded top-level at http://127.0.0.1:53638/
+OS: macOS 26.7.1 (arm64)
+Date: 2026-10-12 (page loaded 13:28:03Z, echo called 13:29:22Z)
+Account plan type: not recorded (not visible in the app UI during the run)
+Driven by: Claude Code via the KimiCU desktop-control MCP (screenshots unedited); the model selection was done by the operator by hand
+Result: GO, all four criteria met (document.modelContext present; echo registered; agent called echo once; nonce WMCP-CPR4-1BFY-38XM in transcript)

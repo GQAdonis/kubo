@@ -20,6 +20,12 @@ A WebMCP-enabled Web UI build has to reach the hosts. Kubo serves only pinned We
 
 None at emission time (`skip_specs: true`). If the operator selects D2, a spec delta for `/webui` serving is added to this change before apply, because D2 changes observable Kubo behavior.
 
+Update 2026-10-12: the operator chose D2 (`operator-answers.md`, "Q3 Web UI delivery"), which is also the explicit approval the bump needs. `skip_specs` is removed and the delta is added:
+
+- `kubo-webui-serving`: `/webui` on the RPC listener redirects to the fork's WebMCP-enabled Web UI build; earlier builds stay reachable through `WebUIPaths`; the `Gateway.NoFetch` and `Gateway.DeserializedResponses` 503 paths are unchanged; nothing outside `/webui` changes.
+
+Sequencing: 1.2 (the bump with `TestWebUI` coverage) and 1.3 (changelog Highlights) wait for the build CID, which comes from `webmcp-tool-package` and `webui-webmcp-integration`. Making that CID retrievable on the network is an operator action.
+
 ### Modified Capabilities
 
 None.

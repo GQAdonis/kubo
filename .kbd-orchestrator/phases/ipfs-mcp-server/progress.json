@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 968,
-  "derivedRevision": 968,
+  "sourceRevision": 985,
+  "derivedRevision": 985,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 968
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 985
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T10:46:18.314005Z",
+  "last_updated": "2026-10-12T13:42:05.463963Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
   "changes_completed": 24,
@@ -120,9 +120,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 5,
-      "tasks_done": 2,
+      "tasks_done": 4,
       "last_task_completed": "1.4 Record fallback evidence: whether each host supports MCP stdio/HTTP and renders MCP Apps.",
-      "next_task_pending": "1.2 The operator runs the probe in Codex desktop and records screenshots and the agent transcript.",
+      "next_task_pending": "1.5 Write `mcp/webmcp/spike/REPORT.md` with GO/NO-GO per host against the four criteria (`document.modelContext` present, `echo` registers, the host agent invokes it, the transcript contains the nonce",
       "blockers": []
     },
     {
@@ -406,9 +406,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 3,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "1.1 The operator selects D1, D2 or D3 after the spike report.",
+      "tasks_done": 1,
+      "last_task_completed": "1.1 The operator selects D1, D2 or D3 after the spike report.",
+      "next_task_pending": "1.2 If D2: bump `WebUIPath`/`WebUIPaths` with test/cli checks of the `/webui` redirect and `Gateway.NoFetch`. Otherwise, write the D1/D3 docs in `docs/mcp/`.",
       "blockers": []
     },
     {

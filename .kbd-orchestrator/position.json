@@ -2,18 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 969,
-  "derivedRevision": 969,
+  "sourceRevision": 985,
+  "derivedRevision": 985,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 969
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 985
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T12:24:55.179206Z",
+  "updatedAt": "2026-10-12T13:42:05.463963Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
     "webmcp-host-spike",
-    "2"
+    "5"
   ],
   "root": {
     "type": "phase",
@@ -75,7 +75,7 @@
             "id": "webmcp-host-spike",
             "status": "PENDING",
             "progress": {
-              "done": 2,
+              "done": 4,
               "total": 5
             }
           },
@@ -309,7 +309,7 @@
             "id": "webui-cid-delivery",
             "status": "PENDING",
             "progress": {
-              "done": 0,
+              "done": 1,
               "total": 3
             }
           },

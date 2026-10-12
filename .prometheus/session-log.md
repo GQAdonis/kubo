@@ -2027,3 +2027,45 @@ Append-only. Dated entries. Mark superseded entries; do not delete them.
 - Exact next work: /kbd-assess ipfs-mcp-server
 - Verification:
   - none recorded
+
+<!-- karpathy-progress-event:kpm-5a01b2c893c0341153a25a322a9925c6 -->
+## Progress boundary — 2026-10-12T13:38:08.793676Z
+
+- Event: `kpm-5a01b2c893c0341153a25a322a9925c6`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `webui-cid-delivery` / `1`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `5adf8b42112b2174ec548e854afd66404bf2fa2e`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/operator-answers.md`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `mcp/webmcp/spike/evidence/codex/00-page-loaded.jpg`, `mcp/webmcp/spike/evidence/codex/01-site-tools-list.txt`, `mcp/webmcp/spike/evidence/codex/02-agent-transcript.jpg`, `mcp/webmcp/spike/evidence/codex/02-agent-transcript.txt`, `mcp/webmcp/spike/evidence/codex/03-page-after-call.jpg`, `mcp/webmcp/spike/evidence/codex/04-server-log.txt`, `mcp/webmcp/spike/evidence/codex/evidence.json`, `mcp/webmcp/spike/evidence/codex/host.txt`, `mcp/webmcp/spike/evidence/kimi/00-page-loaded.jpg`, `mcp/webmcp/spike/evidence/kimi/01-site-tools-list.txt`, `mcp/webmcp/spike/evidence/kimi/02-agent-transcript.jpg`, `mcp/webmcp/spike/evidence/kimi/02-agent-transcript.txt`, `mcp/webmcp/spike/evidence/kimi/02a-agent-transcript-first-answer.jpg`, `mcp/webmcp/spike/evidence/kimi/03-page-after-call.jpg`, `mcp/webmcp/spike/evidence/kimi/04-server-log.txt`, `mcp/webmcp/spike/evidence/kimi/evidence.json`, `mcp/webmcp/spike/evidence/kimi/host.txt`, `openspec/changes/webui-cid-delivery/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-c4f555111716b8fe05978c5cd92a92cb -->
+## Progress boundary — 2026-10-12T13:41:40.842979Z
+
+- Event: `kpm-c4f555111716b8fe05978c5cd92a92cb`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `webmcp-host-spike` / `2`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `5adf8b42112b2174ec548e854afd66404bf2fa2e`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/operator-answers.md`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/decisions.md`, `docs/mcp/0002-webmcp-web-ui.md`, `docs/mcp/progress-report.md`, `mcp/webmcp/spike/evidence/codex/00-page-loaded.jpg`, `mcp/webmcp/spike/evidence/codex/01-site-tools-list.txt`, `mcp/webmcp/spike/evidence/codex/02-agent-transcript.jpg`, `mcp/webmcp/spike/evidence/codex/02-agent-transcript.txt`, `mcp/webmcp/spike/evidence/codex/03-page-after-call.jpg`, `mcp/webmcp/spike/evidence/codex/04-server-log.txt`, `mcp/webmcp/spike/evidence/codex/evidence.json`, `mcp/webmcp/spike/evidence/codex/host.txt`, `mcp/webmcp/spike/evidence/kimi/00-page-loaded.jpg`, `mcp/webmcp/spike/evidence/kimi/01-site-tools-list.txt`, `mcp/webmcp/spike/evidence/kimi/02-agent-transcript.jpg`, `mcp/webmcp/spike/evidence/kimi/02-agent-transcript.txt`, `mcp/webmcp/spike/evidence/kimi/02a-agent-transcript-first-answer.jpg`, `mcp/webmcp/spike/evidence/kimi/03-page-after-call.jpg`, `mcp/webmcp/spike/evidence/kimi/04-server-log.txt`, `mcp/webmcp/spike/evidence/kimi/evidence.json`, `mcp/webmcp/spike/evidence/kimi/host.txt`, `openspec/changes/webmcp-host-spike/tasks.md`, `openspec/changes/webui-cid-delivery/.openspec.yaml`, `openspec/changes/webui-cid-delivery/design.md`, `openspec/changes/webui-cid-delivery/proposal.md`, `openspec/changes/webui-cid-delivery/specs/kubo-webui-serving/spec.md`, `openspec/changes/webui-cid-delivery/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-53682363d8a70de19cf2d4580e25b8ab -->
+## Progress boundary — 2026-10-12T13:42:07.383584Z
+
+- Event: `kpm-53682363d8a70de19cf2d4580e25b8ab`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `webmcp-host-spike` / `3`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `5adf8b42112b2174ec548e854afd66404bf2fa2e`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/operator-answers.md`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/decisions.md`, `docs/mcp/0002-webmcp-web-ui.md`, `docs/mcp/progress-report.md`, `mcp/webmcp/spike/evidence/codex/00-page-loaded.jpg`, `mcp/webmcp/spike/evidence/codex/01-site-tools-list.txt`, `mcp/webmcp/spike/evidence/codex/02-agent-transcript.jpg`, `mcp/webmcp/spike/evidence/codex/02-agent-transcript.txt`, `mcp/webmcp/spike/evidence/codex/03-page-after-call.jpg`, `mcp/webmcp/spike/evidence/codex/04-server-log.txt`, `mcp/webmcp/spike/evidence/codex/evidence.json`, `mcp/webmcp/spike/evidence/codex/host.txt`, `mcp/webmcp/spike/evidence/kimi/00-page-loaded.jpg`, `mcp/webmcp/spike/evidence/kimi/01-site-tools-list.txt`, `mcp/webmcp/spike/evidence/kimi/02-agent-transcript.jpg`, `mcp/webmcp/spike/evidence/kimi/02-agent-transcript.txt`, `mcp/webmcp/spike/evidence/kimi/02a-agent-transcript-first-answer.jpg`, `mcp/webmcp/spike/evidence/kimi/03-page-after-call.jpg`, `mcp/webmcp/spike/evidence/kimi/04-server-log.txt`, `mcp/webmcp/spike/evidence/kimi/evidence.json`, `mcp/webmcp/spike/evidence/kimi/host.txt`, `openspec/changes/webmcp-host-spike/tasks.md`, `openspec/changes/webui-cid-delivery/.openspec.yaml`, `openspec/changes/webui-cid-delivery/design.md`, `openspec/changes/webui-cid-delivery/proposal.md`, `openspec/changes/webui-cid-delivery/specs/kubo-webui-serving/spec.md`, `openspec/changes/webui-cid-delivery/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded

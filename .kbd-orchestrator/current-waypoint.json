@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 969,
-  "derivedRevision": 969,
+  "sourceRevision": 985,
+  "derivedRevision": 985,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 969
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 985
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -22,7 +22,7 @@
   "parentPhase": null,
   "childPointer": null,
   "change": "webmcp-host-spike",
-  "currentTask": "2",
+  "currentTask": "5",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": "execute",
@@ -31,9 +31,9 @@
   "implementationCompleted": 24,
   "implementationTotal": 36,
   "planRevision": 1,
-  "revision": 969,
+  "revision": 985,
   "exactNextCommand": "/kbd-assess ipfs-mcp-server",
   "nextChange": "webmcp-host-spike",
-  "nextTask": "2",
-  "updatedAt": "2026-10-12T12:24:55.179206Z"
+  "nextTask": "5",
+  "updatedAt": "2026-10-12T13:42:05.463963Z"
 }

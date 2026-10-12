@@ -53,3 +53,7 @@ Binding operator answers:
 - **Q2:** already answered earlier (confirmation required on every transport). **Q3 (Web UI delivery):** decided after the WebMCP host spike.
 
 - **Destructive tool default (2026-10-09, during Execute R1): off by default, enabled explicitly.** `pin_rm`, `mfs_rm`, `key_rm` and `repo_gc` (and any later `destructive`-class tool) are available on every transport but excluded from the default tool set; the operator enables them by naming the destructive group (stdio `--tools` or the `ipfs mcp` config file; per principal for HTTP, AG-UI and A2A). Once enabled, every destructive call still requires confirmation. This confirms ADR-0003 section 2 and refines answer 5 (capabilities wanted, confirmation required) with a default.
+
+## Q3 Web UI delivery (webui-cid-delivery 1.1, 2026-10-12)
+
+- **Q3: D2 chosen by the operator on 2026-10-12, after the WebMCP host probe (Codex GO, Kimi GO with a caveat; `mcp/webmcp/spike/evidence/`).** The fork bumps `WebUIPath`/`WebUIPaths` in `core/corehttp/webui.go` to the CID of its WebMCP-enabled Web UI build, so every fork user's `/webui` changes. The choice is also the approval the proposal requires for the bump. Sequencing: the bump (1.2) and the changelog entry (1.3) wait for that build, which comes from `webmcp-tool-package` and `webui-webmcp-integration`; making the build CID retrievable on the network (pinning or providing it) is an operator action.

@@ -21,7 +21,7 @@ The goals are in [`goals.md`](../../.kbd-orchestrator/phases/ipfs-mcp-server/goa
 | G5 | agentskills.io skills, packaged as plugins and marketplaces | 8 skills; plugins for Claude Code, Codex, OpenCode; logged-in harness run pending |
 | G6 | No break to `/api/v0`, gateway, CID recipe, wire; no tracking; no silent CID injection; gated writes | Held by design; the R11 reviews found no change to `/api/v0`, the gateway, the CID recipe or wire behavior |
 | G7 | Team execution with independent security and quality review | Team execution done; R11 reviews and the cross-family judge ran, one batched correction pass applied and re-verified (race, CLI suite, Playwright, lint) ([section 5.1](#51-r11-phase-boundary-review)) |
-| G8 | WebMCP tools in the IPFS Web UI | Not delivered: blocked on the operator's host probes |
+| G8 | WebMCP tools in the IPFS Web UI | Not delivered yet. Unblocked 2026-10-12: host probe GO for Codex and GO with a caveat for `Kimi.app` 3.2.15; [ADR-0002](0002-webmcp-web-ui.md) Accepted per host; delivery D2 chosen. The tool package and Web UI integration are not built |
 | G9 | AG-UI and A2A endpoints | Met through `ipfs mcp` (topology A); UAR-hosted topology B deferred |
 | G10 | LLM backend behind the agentic endpoints, no default endpoint | Met for an OpenAI-compatible server (verified with local Ollama); UAR leg not run |
 | G11 | Chat sidebar in IPFS Desktop and the Web UI | Island and Web UI integration built; Desktop pairing not built; no live operator run |
@@ -70,7 +70,7 @@ Both builds compile (R9 evidence). The modules stay listed in `go.mod` either wa
 ### 2.4 ADRs
 
 - [ADR-0001](0001-mcp-server-placement.md): `ipfs mcp` is a daemon RPC client in the root module (F4).
-- [ADR-0002](0002-webmcp-web-ui.md): WebMCP tools in the Web UI. Status Deferred (2026-10-12, operator decision) until the WebMCP host probe yields a spike report with GO for a host.
+- [ADR-0002](0002-webmcp-web-ui.md): WebMCP tools in the Web UI. Accepted per host on 2026-10-12 after the host probe (Codex GO; `Kimi.app` 3.2.15 GO with a caveat); first recorded as Deferred the same day. Delivery D2 (`WebUIPath` bump) chosen by the operator.
 - [ADR-0003](0003-confirmation-and-auth.md): confirmation of writes and destructive calls; replaceable auth verifier (static bearer now, OAuth2 later).
 - [ADR-0004](0004-agentic-endpoints-and-llm.md): AG-UI and A2A served by `ipfs mcp`; model calls proxied to an operator-configured endpoint; human-presence prompt for non-eliciting writes.
 - [ADR-0005](0005-agent-chat-ui.md): the chat is a React 19 shadow-root island in the Web UI fork that talks only to `ipfs mcp`; the Desktop fork is hardened.
@@ -209,7 +209,7 @@ Source: canonical runtime, revision 832, 2026-10-10. "Done" is the runtime's cou
 | 1 | team-ownership-grant | complete | 6/6 | |
 | 2 | mcp-tool-contract | complete | 9/9 | |
 | 3 | mcp-architecture-adrs | pending | 5/6 | ADR-0002 waits for the WebMCP spike report. 2026-10-12: ADR-0002 written as Deferred, task 1.2 ticked; runtime close pending |
-| 4 | webmcp-host-spike | pending | 2/5 | Operator probes in Codex desktop and Kimi desktop; then the report |
+| 4 | webmcp-host-spike | pending | 2/5 | 2026-10-12: probes run (1.2, 1.3 ticked); `REPORT.md` (1.5) written by the lead from the architect's text; runtime close pending |
 | 5 | mcp-server-core-stdio | complete | 7/7 | |
 | 6 | mcp-ui-component-library | complete | 8/8 | |
 | 7 | mcp-pinning-with-confirmation | complete | 5/5 | |
@@ -223,19 +223,19 @@ Source: canonical runtime, revision 832, 2026-10-10. "Done" is the runtime's cou
 | 15 | mcp-tools-ipns-keys | complete | 2/2 | |
 | 16 | mcp-tools-dag-car | complete | 2/2 | |
 | 17 | mcp-tools-routing-diag | complete | 2/2 | Done |
-| 18 | webmcp-tool-package | pending | 0/3 | Not started; blocked on the WebMCP spike |
+| 18 | webmcp-tool-package | pending | 0/3 | Not started; unblocked 2026-10-12 (ADR-0002 Accepted) |
 | 19 | mcp-llm-proxy-loop | complete | 6/6 | |
 | 20 | uar-integration-spike | pending | 1/5 | Deferred (ADR-0008). 1.1 done and recorded in ADR-0008 |
 | 21 | mcp-app-views | pending | 3/4 | Real-host render check (operator) |
 | 22 | ipfs-agent-skills | complete | 4/4 | `tasks.md` 1.4 unticked in R11 (live near-miss eval pending, R11-Q06); the runtime cannot reopen a complete task, so a blocker records the pending live eval |
-| 23 | webui-webmcp-integration | pending | 0/4 | Not started; blocked on the WebMCP spike |
+| 23 | webui-webmcp-integration | pending | 0/4 | Not started; unblocked 2026-10-12 (ADR-0002 Accepted) |
 | 24 | mcp-agui-endpoint | complete | 7/7 | |
 | 25 | mcp-a2a-endpoint | complete | 7/7 | |
 | 26 | desktop-agent-chat | pending | 3/6 | Pairing and native confirmation window not built; operator run |
 | 27 | mcp-embeddings-surrealdb | complete | 5/5 | |
 | 28 | agentic-uar-integration | pending | 0/4 | Deferred with topology B (ADR-0008). `tasks.md` has 5 tasks, all deferred: 1.5 moved in from `mcp-llm-proxy-loop` in R6 and is not registered in the runtime, which counts 4 (0/5 by checkbox) |
 | 29 | mcp-release-binaries | complete | 3/3 | |
-| 30 | webui-cid-delivery | pending | 0/3 | Not started; operator picks D1, D2 or D3 after the spike report |
+| 30 | webui-cid-delivery | pending | 1/3 | 1.1 done: D2 chosen 2026-10-12; spec delta added; 1.2 and 1.3 wait for the fork's WebMCP-enabled Web UI build CID |
 | 31 | webui-agent-chat | pending | 3/4 | 1.3 operator live run (1.4 done: token in browser storage) |
 | 32 | mcp-embedding-index-lifecycle | complete | 5/5 | |
 | 33 | mcp-plugin-marketplaces | pending | 4/5 | Logged-in harness session (operator) |
@@ -248,7 +248,7 @@ Summary: 21 complete and 14 open. Of the open ones, 6 wait on an operator action
 
 Not delivered:
 
-- G8 WebMCP: no tool package, no Web UI integration. ADR-0002 records the decision as Deferred (2026-10-12). The host probes have not been run.
+- G8 WebMCP: no tool package and no Web UI integration yet. The host probes ran on 2026-10-12 (Codex GO; `Kimi.app` 3.2.15 GO with a caveat; Kimi Code Desktop untested) and ADR-0002 is Accepted per host.
 - Web UI CID delivery: Kubo does not pin or serve a new Web UI CID. `core/corehttp/webui.go` is unchanged.
 - Topology B (UAR hosts AG-UI and A2A): deferred. No published UAR release contains the conformance items, and the conformance request has not been filed.
 - Desktop pairing and the native confirmation window.
@@ -392,7 +392,7 @@ Re-verified after the R12 pass: `go test ./mcp/... ./cmd/ipfs/kubo/` ok; `go vet
 
 Operator actions:
 
-1. Run the WebMCP probe in Codex desktop and Kimi desktop (`webmcp-host-spike` 1.2, 1.3; runbook in [`mcp/webmcp/spike/RUNBOOK.md`](../../mcp/webmcp/spike/RUNBOOK.md)). [ADR-0002](0002-webmcp-web-ui.md) is Deferred until then (2026-10-12); a GO result per host moves it to Accepted for that host and unparks `webmcp-tool-package`, `webui-webmcp-integration` and `webui-cid-delivery`.
+1. Done 2026-10-12: the WebMCP probe ran in Codex desktop (GO) and in `Kimi.app` 3.2.15 (GO with a caveat), evidence in `mcp/webmcp/spike/evidence/`. [ADR-0002](0002-webmcp-web-ui.md) is Accepted per host, and `webmcp-tool-package`, `webui-webmcp-integration` and `webui-cid-delivery` are unparked. Still open: Kimi Code Desktop, the product the runbook names, is untested. Next operator action for G8: once `webui-webmcp-integration` produces the WebMCP-enabled Web UI build, make its CID retrievable (pin and provide it) so the D2 bump (`webui-cid-delivery` 1.2) can land.
 2. After the spike report, choose D1, D2 or D3 for Web UI delivery (`webui-cid-delivery` 1.1). D2 also needs approval for the Web UI CID bump in `core/corehttp/webui.go`.
 3. File the UAR conformance request ([`mcp/uar/requests/CONFORMANCE.md`](../../mcp/uar/requests/CONFORMANCE.md); `uar-conformance-request` 1.2), or confirm topology B stays deferred.
 4. Run the real native prompt (`native-confirmation-prompt` 1.5, `mcp/server/confirm/hg1/attempt.sh`).
@@ -427,3 +427,4 @@ The 34 stale "bottleneck" blockers in the KBD runtime (records of failed boundar
 - 2026-10-12: `mcp-architecture-adrs` and `mcp-plugin-marketplaces` closed in the runtime. Plugin 1.5 verified live in Claude Code (isolated offline daemon on 5181; install, `claude mcp list` connected, a model session called `ipfs_node_info` and returned the daemon's peer ID; uninstalled, plugin and marketplace lists identical before and after); Codex and OpenCode config load re-verified in scratch homes (`mcp/plugin/evidence/`). Skills 1.4: `skills-ref` valid for all 8 skills, catalog check 41/41, live trigger evals 5/22 positives and 6/6 near-misses clean (`mcp/skills/evals/results-2026-10-12.md`); not ticked, the pass bar is an operator decision.
 - 2026-10-12: skills 1.4 round 2 (operator bar: at least 70% of should-trigger prompts, 100% clean near-misses): descriptions rewritten to lead with user intent, prompts given concrete payloads; 13/24 positives (54%), 8/8 near-misses clean, 61 runs, about $34; bar not met, 1.4 open (`mcp/skills/evals/results-2026-10-12-r2.md`). Misses go straight to the MCP tools whose own descriptions cover one-call requests.
 - 2026-10-12: skills 1.4 round 3 passed the operator bar: 22 entry-tool descriptions in `mcp/contract/catalog.json` name the matching skill, and the server `instructions` name all 8 skills (`TestInstructionsNameSkills`); 19/24 positives (79%), 8/8 near-misses clean (`mcp/skills/evals/results-2026-10-12-r3.md`), about $34.5 (28 runs discarded after a needs-auth cache fault under parallel sessions, rerun sequentially). 1.4 ticked; blocker `ipfs-agent-skills-1.4-live-eval` cleared. Margin is two prompts on one run each.
+- 2026-10-12: WebMCP host probe run by the lead on the operator's request (`mcp/webmcp/spike/evidence/`): Codex desktop GO on all four criteria; `Kimi.app` 3.2.15 (not Kimi Code Desktop) GO with a caveat (nonce first masked as `<untrusted>`, quoted after one follow-up). `webmcp-host-spike` 1.2 and 1.3 ticked; `REPORT.md` text supplied for 1.5. ADR-0002 moved from Deferred to Accepted per host. Operator chose D2 for Web UI delivery; `webui-cid-delivery` spec delta `kubo-webui-serving` added; the bump waits for the fork's WebMCP-enabled Web UI build CID.
