@@ -6,7 +6,8 @@ interface PeerInfoLike {
   multiaddrs?: unknown[];
 }
 
-const peer = (p: PeerInfoLike) => ({ id: str(p.id), addrs: (p.multiaddrs ?? []).map(str) });
+// The browser has no trusted-peers list, so every peer-supplied entry is marked untrusted.
+const peer = (p: PeerInfoLike) => ({ id: str(p.id), addrs: (p.multiaddrs ?? []).map(str), untrusted: true });
 
 export const routing_findprovs: Executor = async (input, ctx) => {
   const wanted: number = input.num_providers ?? 20;
@@ -58,6 +59,7 @@ export const swarm_peers: Executor = async (input, ctx) => {
         id: str(p.peer),
         addr: str(p.addr),
         direction: p.direction ?? 'unknown',
+        untrusted: true,
       };
       if (p.latency) out.latency = p.latency;
       return out;

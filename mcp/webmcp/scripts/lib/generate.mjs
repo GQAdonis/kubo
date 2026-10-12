@@ -46,6 +46,8 @@ function field(tool, group, ref) {
       return tool.contentEgress;
     case 'group.diagnostic':
       return group.diagnostic;
+    case 'peerSupplied':
+      return Array.isArray(tool.peerSuppliedFields) && tool.peerSuppliedFields.length > 0;
     default:
       throw new Error(`webmcp.json: unknown field ${ref}`);
   }
@@ -56,13 +58,17 @@ const KNOWN_CLASSES = ['none', 'write', 'destructive'];
 
 /**
  * Interpret one rule of the closed grammar:
- * copy:<field> | not-equal:<field>:<value> | in:<field>:<value>,<value>...
+ * copy:<field> | not-equal:<field>:<value> | in:<field>:<value>,<value>... | any:<field>,<field>...
  * An `in:` rule on `confirmation` is an allow-list: an unknown class on either side throws.
  */
 export function evalRule(rule, tool, group) {
   const parts = rule.split(':');
   if (parts[0] === 'copy' && parts.length === 2) return Boolean(field(tool, group, parts[1]));
   if (parts[0] === 'not-equal' && parts.length === 3) return field(tool, group, parts[1]) !== parts[2];
+  // any:<field>,<field>... is true when any listed boolean field is true.
+  if (parts[0] === 'any' && parts.length === 2) {
+    return parts[1].split(',').some((f) => Boolean(field(tool, group, f)));
+  }
   if (parts[0] === 'in' && parts.length === 3) {
     const allowed = parts[2].split(',');
     const actual = field(tool, group, parts[1]);

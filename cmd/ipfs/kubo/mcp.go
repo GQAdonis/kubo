@@ -219,14 +219,15 @@ func runMCP(req *cmds.Request, cfg *mcpserver.Config, gate confirm.Config) error
 		return fmt.Errorf("ipfs mcp: %w", err)
 	}
 	srv, err := mcpserver.New(req.Context, daemon, mcpserver.Options{
-		Tools:      settings.tools,
-		ReadOnly:   settings.readOnly,
-		Disabled:   settings.disabled,
-		NoAppViews: settings.noAppViews,
-		ConfirmTTL: confirmTTL,
-		Transport:  settings.transport(),
-		Version:    ipfs.CurrentVersionNumber,
-		Logger:     logger,
+		Tools:        settings.tools,
+		ReadOnly:     settings.readOnly,
+		Disabled:     settings.disabled,
+		NoAppViews:   settings.noAppViews,
+		TrustedPeers: cfg.TrustedPeers,
+		ConfirmTTL:   confirmTTL,
+		Transport:    settings.transport(),
+		Version:      ipfs.CurrentVersionNumber,
+		Logger:       logger,
 	})
 	if err != nil {
 		return fmt.Errorf("ipfs mcp: %w", err)

@@ -16,6 +16,7 @@
     "tools.read_only": { "tests": ["TestReadOnlyModeHidesRoutingWritesAndGc", "TestRPCAllowedPathsReadOnlyListsOnlyReadCommands"] },
     "tools.disabled": { "tests": ["TestSelectionDisabledGroupAndReadOnly", "TestHTTPDisabledToolIsNotOffered"] },
     "tools.app_views": { "tests": ["TestAppViewsOffSwitch", "TestAppViewsConfigKey", "TestMCPAppViewsOff"] },
+    "trusted_peers": {"tests": ["TestConfigExamplesValidate", "TestConfigInvalidExamplesFail", "TestPeerSuppliedFieldsAreMarked", "TestTrustedPeersMarkEntries", "TestTrustedPeersValidation", "TestNodeInfoIsNotPeerSupplied", "TestMCPTrustedPeers"]},
     "principals": {
       "tests": ["TestHTTPAnonymousLoopbackIsReadOnly", "TestMCPPrincipalUnconfiguredGetsNothing", "TestAnonymousListenerRefusesForwardedRequests"],
       "note": "The anonymous listener refuses (403) any request that carries `Forwarded`, `X-Forwarded-For` or `X-Real-IP`: a proxied request did not come from this machine, so behind a reverse proxy a credential (an operator bearer token or configured principals) is required."

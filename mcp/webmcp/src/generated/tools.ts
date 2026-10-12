@@ -919,7 +919,7 @@ export const TOOL_DEFINITIONS: readonly GeneratedTool[] = [
     "confirmation": "none",
     "annotations": {
       "readOnlyHint": true,
-      "untrustedContentHint": false,
+      "untrustedContentHint": true,
       "consequentialHint": false,
       "debugging": false
     },
@@ -955,7 +955,7 @@ export const TOOL_DEFINITIONS: readonly GeneratedTool[] = [
     "confirmation": "none",
     "annotations": {
       "readOnlyHint": true,
-      "untrustedContentHint": false,
+      "untrustedContentHint": true,
       "consequentialHint": false,
       "debugging": false
     },
@@ -1019,7 +1019,7 @@ export const TOOL_DEFINITIONS: readonly GeneratedTool[] = [
     "confirmation": "none",
     "annotations": {
       "readOnlyHint": true,
-      "untrustedContentHint": false,
+      "untrustedContentHint": true,
       "consequentialHint": false,
       "debugging": true
     },

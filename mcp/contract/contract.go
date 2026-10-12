@@ -83,14 +83,17 @@ type Tool struct {
 	Confirmation            string      `json:"confirmation"`
 	ReturnsUntrustedContent bool        `json:"returnsUntrustedContent"`
 	ContentEgress           bool        `json:"contentEgress"`
-	RPC                     []string    `json:"rpc"`
-	RPCOptional             []string    `json:"rpcOptional,omitempty"`
-	MinKuboVersion          string      `json:"minKuboVersion"`
-	Paginated               bool        `json:"paginated"`
-	InputSchema             string      `json:"inputSchema"`
-	OutputSchema            string      `json:"outputSchema"`
-	ConfirmationSummary     string      `json:"confirmationSummary,omitempty"`
-	UI                      struct {
+	// PeerSuppliedFields lists output fields supplied by remote peers; the
+	// object holding each carries an untrusted boolean (trusted_peers).
+	PeerSuppliedFields  []string `json:"peerSuppliedFields,omitempty"`
+	RPC                 []string `json:"rpc"`
+	RPCOptional         []string `json:"rpcOptional,omitempty"`
+	MinKuboVersion      string   `json:"minKuboVersion"`
+	Paginated           bool     `json:"paginated"`
+	InputSchema         string   `json:"inputSchema"`
+	OutputSchema        string   `json:"outputSchema"`
+	ConfirmationSummary string   `json:"confirmationSummary,omitempty"`
+	UI                  struct {
 		A2UIComponent *string `json:"a2uiComponent"`
 		AppView       *string `json:"appView"`
 	} `json:"ui"`

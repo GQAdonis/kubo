@@ -45,6 +45,12 @@ Precedence: a command-line option wins over its environment variable, which wins
 | `tools.disabled` | array of ToolName | `[]` | - | List a tool name to disable that tool. | `TestSelectionDisabledGroupAndReadOnly`, `TestHTTPDisabledToolIsNotOffered` |
 | `tools.app_views` | boolean | `true` | `--no-app-views` | false: no ui:// resource is registered and no tool carries _meta.ui; every tool is still offered and returns the same result. With true, a view is served only while at least one of its linked tools is registered (ADR-0007 section 5). | `TestAppViewsOffSwitch`, `TestAppViewsConfigKey`, `TestMCPAppViewsOff` |
 
+### `trusted_peers`
+
+| Key | Type | Default | Flag or variable | Off switch | Tests (off or default state) |
+|---|---|---|---|---|---|
+| `trusted_peers` | array of PeerId | `[]` | - | Empty list (the default): every peer-supplied address is marked untrusted. | `TestConfigExamplesValidate`, `TestConfigInvalidExamplesFail`, `TestPeerSuppliedFieldsAreMarked`, `TestTrustedPeersMarkEntries`, `TestTrustedPeersValidation`, `TestNodeInfoIsNotPeerSupplied`, `TestMCPTrustedPeers` |
+
 ### `principals`
 
 | Key | Type | Default | Flag or variable | Off switch | Tests (off or default state) |
@@ -196,6 +202,7 @@ Credential references in the config file name further variables of your choosing
 | `Group` | One of `node`, `content`, `pin`, `mfs`, `names`, `dag`, `routing`, `diag`, `index`. |
 | `GroupOrAll` | One of `node`, `content`, `pin`, `mfs`, `names`, `dag`, `routing`, `diag`, `index`, `*`. |
 | `GroupOrSelector` | One of `node`, `content`, `pin`, `mfs`, `names`, `dag`, `routing`, `diag`, `index`, `destructive`. |
+| `PeerId` | A libp2p peer ID (base58btc 12D3KooW... or Qm..., or a CIDv1 libp2p-key), the same form as the tool contract's PeerId. |
 | `ToolName` | String matching `^(ipfs\|pin\|ipns\|key\|mfs\|dag\|car\|routing\|swarm\|stats\|repo)_[a-z0-9_]+$`. |
 | `Host` | A model or embedder host name (optionally with port) the principal's content may be sent to. |
 | `Origin` | String matching `^(https?\|webui)://[^/\s]+$`. |

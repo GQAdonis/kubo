@@ -50,6 +50,8 @@ DEPS["mcp-plugin-marketplaces"] = ["ipfs-agent-skills", "mcp-release-binaries", 
 # Added 2026-10-11 (R11 follow-up, operator decision 5): CI runs the whole mcp tree, so it follows every
 # binary-changing change, the UI library and chat island it tests, and the skills it checks.
 DEPS["mcp-ci-workflow"] = sorted(set(BINARY + ["mcp-ui-component-library", "agent-chat-island", "ipfs-agent-skills"]))
+# Added 2026-10-12 (R13 security L5, operator decision): peer-supplied data marker and trusted_peers.
+DEPS["mcp-trusted-peers"] = ["mcp-tool-contract", "mcp-tools-routing-diag", "mcp-ui-component-library", "webmcp-tool-package"]
 ALL = list(DEPS.keys())
 DEPS["phase-boundary-review"] = [c for c in ALL]
 
@@ -59,7 +61,7 @@ ROUND = {
     "mcp-server-core-stdio": 2, "mcp-ui-component-library": 2,
     "mcp-pinning-with-confirmation": 3, "agent-chat-island": 3,
     "mcp-http-transport-auth": 4, "native-confirmation-prompt": 4, **{t: 4 for t in TOOLS}, "webmcp-tool-package": 4,
-    "mcp-agent-principal-enforcement": 5, "mcp-app-views": 5, "ipfs-agent-skills": 5, "webui-webmcp-integration": 5, "desktop-agent-chat": 5,
+    "mcp-agent-principal-enforcement": 5, "mcp-trusted-peers": 5, "mcp-app-views": 5, "ipfs-agent-skills": 5, "webui-webmcp-integration": 5, "desktop-agent-chat": 5,
     "mcp-llm-proxy-loop": 6, "uar-integration-spike": 6, "webui-cid-delivery": 6,
     "mcp-agui-endpoint": 7, "mcp-a2a-endpoint": 7, "mcp-embeddings-surrealdb": 7, "agentic-uar-integration": 7,
     "webui-agent-chat": 8, "mcp-embedding-index-lifecycle": 8,

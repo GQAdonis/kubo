@@ -120,6 +120,7 @@ Security H1: the approval dialog is page DOM. A host agent that can operate the 
 
 - **A host that drives the page or has a shell can write.** With agent writes on, such a host can approve its own writes through the page, and a shell-capable host can call the RPC API directly. Recommendation in the docs: keep agent writes off while the host runs in browser-control or fully automatic modes.
 - **DHT lookups remain a channel.** Fetching an agent-chosen CID asks the network who provides it. A CID can be any well-formed string, so injected content can have the agent encode data in the CID it asks for; DHT peers that handle the lookup see it. Blocks fetched this way may also be announced under the default `Provide.Strategy` (security I3). The DNSLink toggle does not close this.
+- **Peer-supplied addresses are untrusted in the browser** (security L5, operator decision 2026-10-12; ADR-0004 amendment of the same date). There is no `trusted_peers` list in WebMCP this phase, so `mcp/webmcp` marks every entry of `swarm_peers`, `routing_findpeer` and `routing_findprovs` `untrusted: true`, and these tools carry `untrustedContentHint`.
 - **Tool results go to the agent's model provider** (security M6). The contract's `contentEgress` and `egress_ack` controls are server-side and are not carried into WebMCP. File contents, listen addresses and peer IPs read through WebMCP leave the machine for the host's AI provider after one Settings toggle. The toggle text says so.
 
 ## References

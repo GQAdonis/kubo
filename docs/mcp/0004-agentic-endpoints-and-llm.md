@@ -179,6 +179,20 @@ Recorded from the R11 phase-boundary review (`.agent-team/kubo-ipfs-agentic/find
   - At most two out-of-band confirmations may wait per principal and per session.
 - **Operator decisions of 2026-10-11.** The Web UI chat token stays in `localStorage` (R11 security M6, accepted risk) and the Desktop `openExternal` path is left as upstream has it (L6, won't fix); both are recorded in ADR-0005's amendment of 2026-10-11. The same-user Desktop pairing verifier risk and the three confirmation keys are recorded in ADR-0003's amendment of 2026-10-11.
 
+## Amendment (2026-10-12: peer-supplied data is untrusted unless the peer ID is trusted)
+
+Operator decision of 2026-10-12 on R13 security finding L5 (`.agent-team/kubo-ipfs-agentic/findings/security/r13-webmcp.md`). Change: `openspec/changes/mcp-trusted-peers/`. This does not reopen the 2026-10-10 OQ-EGRESS-ENUM amendment above: `swarm_peers`, `routing_findpeer` and `routing_findprovs` stay `contentEgress: false`.
+
+- **Decision.** Addresses that remote peers supply are marked untrusted, per entry, unless the entry's peer ID is in the new `ipfs mcp` config key `trusted_peers` (default `[]`). Trust is by peer ID because libp2p authenticates peer IDs. Agent versions are self-reported and spoofable, and are never a trust signal.
+- **Contract marker.**
+  - Catalog field `peerSuppliedFields`: `swarm_peers` `/peers/*/addr`, `routing_findpeer` `/addrs`, `routing_findprovs` `/providers/*/addrs`.
+  - Each object holding such a field has an optional boolean `untrusted` (`common.json` `PeerSuppliedUntrusted`): `false` only for a listed peer, otherwise `true`; absent is read as `true`.
+  - A result with any untrusted entry also carries `_meta["ai.ipfs/untrusted-content"] = true`, so the agent loop frames it as data.
+  - `ipfs_node_info` returns this node's own addresses and is not marked.
+- **WebMCP.** The browser has no `ipfs mcp` config, so `mcp/webmcp` marks every peer-supplied entry untrusted, and the three tools carry `untrustedContentHint` (derivation `any:returnsUntrustedContent,peerSupplied`).
+- **Off switch.** None is needed: the default marks everything untrusted, and listing a peer is the only way to trust its addresses.
+- **Where this is weak.** For `routing_findpeer` and `routing_findprovs`, the addresses of a listed peer come from the routing system, possibly relayed by other DHT nodes. "Trusted" therefore means "a peer ID the operator trusts", not "addresses proven to come from that peer". Kubo's RPC does not report whether addresses came from a signed peer record.
+
 ## Consequences
 
 ### Positive

@@ -171,7 +171,18 @@ func (s *Server) handler(t contract.Tool, sc *schemas, impl toolImpl) mcp.ToolHa
 			s.log.Debug("tool call failed", "tool", t.Name, "error", err)
 			return errorResult(t.Name, err), nil
 		}
+		peerFlag := false
+		if len(t.PeerSuppliedFields) > 0 {
+			var merr error
+			out, peerFlag, merr = markPeerSupplied(out, t.PeerSuppliedFields, s.trusted)
+			if merr != nil {
+				return errorResult(t.Name, merr), nil
+			}
+		}
 		res := successResult(t.Name, out)
+		if peerFlag {
+			markUntrusted(res)
+		}
 		if t.ReturnsUntrustedContent {
 			markUntrusted(res)
 		}

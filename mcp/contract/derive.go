@@ -32,7 +32,7 @@ func LoadRules(path string) (*RuleFile, error) {
 
 // Derive evaluates every rule of r for tool t and returns the values by
 // rule name. Rule forms: always, copy:<field>, not-equal:<field>:<value>,
-// in:<field>:<v>,<v>... and map:<field>:<k>=<v>,... (see derivations/derivation-rules.schema.json).
+// in:<field>:<v>,<v>..., any:<field>,<field>... and map:<field>:<k>=<v>,... (see derivations/derivation-rules.schema.json).
 func (c *Catalog) Derive(r *RuleFile, t Tool) (map[string]any, error) {
 	out := make(map[string]any, len(r.Rules))
 	for name, rule := range r.Rules {
@@ -84,6 +84,25 @@ func (c *Catalog) EvalRule(rule string, t Tool) (any, error) {
 			return nil, fmt.Errorf("rule %q: unknown confirmation class %q", rule, s)
 		}
 		return slices.Contains(strings.Split(list, ","), s), nil
+	case "any":
+		// true when any listed boolean field is true.
+		if rest == "" {
+			return nil, fmt.Errorf("malformed rule %q", rule)
+		}
+		for f := range strings.SplitSeq(rest, ",") {
+			v, err := c.field(f, t)
+			if err != nil {
+				return nil, err
+			}
+			b, ok := v.(bool)
+			if !ok {
+				return nil, fmt.Errorf("rule %q: field %s is not boolean", rule, f)
+			}
+			if b {
+				return true, nil
+			}
+		}
+		return false, nil
 	case "map":
 		f, pairs, ok := strings.Cut(rest, ":")
 		if !ok {
@@ -114,6 +133,8 @@ func (c *Catalog) field(name string, t Tool) (any, error) {
 		return t.ReturnsUntrustedContent, nil
 	case "contentEgress":
 		return t.ContentEgress, nil
+	case "peerSupplied":
+		return len(t.PeerSuppliedFields) > 0, nil
 	case "group.diagnostic":
 		g, ok := c.Group(t.Group)
 		if !ok {

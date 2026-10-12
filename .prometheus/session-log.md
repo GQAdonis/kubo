@@ -2181,3 +2181,17 @@ Append-only. Dated entries. Mark superseded entries; do not delete them.
 - Exact next work: /kbd-assess ipfs-mcp-server
 - Verification:
   - none recorded
+
+<!-- karpathy-progress-event:kpm-f689afea5cd135a3ee73815e9f78082d -->
+## Progress boundary — 2026-10-12T15:43:32.506350Z
+
+- Event: `kpm-f689afea5cd135a3ee73815e9f78082d`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `mcp-trusted-peers` / `1`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `2333d6234b82348d0a68998426af6b67fb1bbc8a`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/plan.md`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/decisions.md`, `docs/mcp/0002-webmcp-web-ui.md`, `docs/mcp/0004-agentic-endpoints-and-llm.md`, `docs/mcp/config-reference.tests.json`, `docs/mcp/progress-report.md`, `mcp/contract/catalog.json`, `mcp/contract/catalog.schema.json`, `mcp/contract/config/examples/trusted-peers.json`, `mcp/contract/config/invalid/expectations.json`, `mcp/contract/config/invalid/trusted-peers-agent-version.json`, `mcp/contract/config/ipfs-mcp-config.schema.json`, `mcp/contract/contract.go`, `mcp/contract/derivations/derivation-rules.schema.json`, `mcp/contract/derivations/webmcp.json`, `mcp/contract/derive.go`, `mcp/contract/peer_supplied_test.go`, `mcp/contract/schemas/common.json`, `mcp/contract/schemas/tools/routing_findpeer.output.json`, `mcp/contract/schemas/tools/routing_findprovs.output.json`, `mcp/contract/schemas/tools/swarm_peers.output.json`, `mcp/contract/testdata/webmcp-expected.json`, `openspec/changes/mcp-trusted-peers/.openspec.yaml`, `openspec/changes/mcp-trusted-peers/design.md`, `openspec/changes/mcp-trusted-peers/proposal.md`, `openspec/changes/mcp-trusted-peers/specs/mcp-peer-supplied-data/spec.md`, `openspec/changes/mcp-trusted-peers/tasks.md`, `openspec/tools/check_plan_deps.py`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded

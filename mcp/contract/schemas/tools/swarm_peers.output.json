@@ -18,7 +18,11 @@
             "$ref": "../common.json#/$defs/PeerId"
           },
           "addr": {
-            "$ref": "../common.json#/$defs/Multiaddr"
+            "$ref": "../common.json#/$defs/Multiaddr",
+            "description": "Supplied by the peer (or by the routing system on its behalf); trusted only when this entry's untrusted is false."
+          },
+          "untrusted": {
+            "$ref": "../common.json#/$defs/PeerSuppliedUntrusted"
           },
           "direction": {
             "type": "string",

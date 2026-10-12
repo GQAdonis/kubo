@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"io"
 	"log/slog"
 	"slices"
@@ -32,6 +33,9 @@ type Options struct {
 	// --no-app-views): no ui:// resource is registered and no tool carries
 	// _meta.ui. Every tool is still offered and returns the same result.
 	NoAppViews bool
+	// TrustedPeers are the libp2p peer IDs whose peer-supplied entries are
+	// returned with untrusted=false (config trusted_peers). Empty trusts none.
+	TrustedPeers []string
 	// Transport is reported by ipfs_node_status. Empty means stdio.
 	Transport string
 	// Resolvers are the out-of-band human-presence mechanisms that can
@@ -75,6 +79,8 @@ type Server struct {
 	log       *slog.Logger
 	opts      Options
 	selectors []string
+	// trusted is Options.TrustedPeers decoded.
+	trusted map[peer.ID]struct{}
 
 	gate        *gate
 	uar         *uarGuard
@@ -156,6 +162,9 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 		log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	s := &Server{cat: cat, daemon: d, log: log, opts: opts, registry: map[string]registeredTool{}}
+	if s.trusted, err = parseTrustedPeers(opts.TrustedPeers); err != nil {
+		return nil, err
+	}
 	now := opts.now
 	if now == nil {
 		now = time.Now

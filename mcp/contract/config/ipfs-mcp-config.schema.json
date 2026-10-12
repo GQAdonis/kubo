@@ -115,6 +115,17 @@
       "offSwitch": "Omit for the default tool set (all groups, no destructive tools).",
       "ownerChange": "mcp-server-core-stdio"
     },
+    "trusted_peers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/PeerId"
+      },
+      "default": [],
+      "description": "Peer IDs whose peer-supplied data (addresses, and any other peer-reported string a tool returns) is returned as trusted: the untrusted marker on their entries in swarm_peers, routing_findpeer and routing_findprovs results is false. Trust is by peer ID because libp2p authenticates peer IDs; agent versions are self-reported and are never a trust signal. Entries for every other peer are marked untrusted, and the result carries the untrusted-content meta flag. The node's own data (ipfs_node_info) is not peer-supplied. A listed peer's addresses returned by routing (routing_findpeer, routing_findprovs) may still have been relayed by other DHT nodes. Not used by WebMCP, where every peer-supplied entry is untrusted.",
+      "offSwitch": "Empty list (the default): every peer-supplied address is marked untrusted.",
+      "ownerChange": "mcp-trusted-peers"
+    },
     "principals": {
       "type": "array",
       "items": {
@@ -864,6 +875,13 @@
         "index",
         "destructive"
       ]
+    },
+    "PeerId": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 128,
+      "pattern": "^(12D3KooW[1-9A-HJ-NP-Za-km-z]{44}|Qm[1-9A-HJ-NP-Za-km-z]{44}|[bk][a-z2-7]{20,})$",
+      "description": "A libp2p peer ID (base58btc 12D3KooW... or Qm..., or a CIDv1 libp2p-key), the same form as the tool contract's PeerId."
     },
     "ToolName": {
       "type": "string",

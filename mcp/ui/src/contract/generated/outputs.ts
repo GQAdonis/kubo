@@ -94,16 +94,16 @@ export type CarImportOutput = z.infer<typeof CarImportOutputSchema>;
 export const CarExportOutputSchema = z.strictObject({ "root": C.CidSchema, "size": C.ByteCountSchema.optional(), "car_base64": z.string().optional(), "resource": C.ResourceRefSchema.optional(), "inline": z.boolean() });
 export type CarExportOutput = z.infer<typeof CarExportOutputSchema>;
 
-export const RoutingFindprovsOutputSchema = z.strictObject({ "cid": C.CidSchema, "providers": z.array(z.strictObject({ "id": C.PeerIdSchema, "addrs": z.array(C.MultiaddrSchema) })) });
+export const RoutingFindprovsOutputSchema = z.strictObject({ "cid": C.CidSchema, "providers": z.array(z.strictObject({ "id": C.PeerIdSchema, "addrs": z.array(C.MultiaddrSchema), "untrusted": C.PeerSuppliedUntrustedSchema.optional() })) });
 export type RoutingFindprovsOutput = z.infer<typeof RoutingFindprovsOutputSchema>;
 
-export const RoutingFindpeerOutputSchema = z.strictObject({ "id": C.PeerIdSchema, "addrs": z.array(C.MultiaddrSchema) });
+export const RoutingFindpeerOutputSchema = z.strictObject({ "id": C.PeerIdSchema, "addrs": z.array(C.MultiaddrSchema), "untrusted": C.PeerSuppliedUntrustedSchema.optional() });
 export type RoutingFindpeerOutput = z.infer<typeof RoutingFindpeerOutputSchema>;
 
 export const RoutingProvideOutputSchema = z.strictObject({ "cid": C.CidSchema, "announced": z.boolean(), "providing_disabled": z.boolean() });
 export type RoutingProvideOutput = z.infer<typeof RoutingProvideOutputSchema>;
 
-export const SwarmPeersOutputSchema = z.strictObject({ "peers": z.array(z.strictObject({ "id": C.PeerIdSchema, "addr": C.MultiaddrSchema, "direction": z.enum(["inbound", "outbound", "unknown"]).optional(), "latency": z.string().optional() })), "page": C.PageInfoSchema });
+export const SwarmPeersOutputSchema = z.strictObject({ "peers": z.array(z.strictObject({ "id": C.PeerIdSchema, "addr": C.MultiaddrSchema, "untrusted": C.PeerSuppliedUntrustedSchema.optional(), "direction": z.enum(["inbound", "outbound", "unknown"]).optional(), "latency": z.string().optional() })), "page": C.PageInfoSchema });
 export type SwarmPeersOutput = z.infer<typeof SwarmPeersOutputSchema>;
 
 export const StatsBwOutputSchema = z.strictObject({ "total_in": C.ByteCountSchema, "total_out": C.ByteCountSchema, "rate_in": z.number().min(0), "rate_out": z.number().min(0) });

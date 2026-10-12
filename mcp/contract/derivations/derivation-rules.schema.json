@@ -18,11 +18,11 @@
   "$defs": {
     "Field": {
       "type": "string",
-      "enum": ["annotations.readOnlyHint", "confirmation", "returnsUntrustedContent", "contentEgress", "group.diagnostic"]
+      "enum": ["annotations.readOnlyHint", "confirmation", "returnsUntrustedContent", "contentEgress", "peerSupplied", "group.diagnostic"]
     },
     "Rule": {
       "type": "string",
-      "pattern": "^(always|copy:(annotations\\.readOnlyHint|returnsUntrustedContent|contentEgress|group\\.diagnostic)|not-equal:confirmation:(none|write|destructive)|in:confirmation:(none|write|destructive)(,(none|write|destructive))*|map:confirmation:none=[a-z:]+,write=[a-z:]+,destructive=[a-z:]+)$"
+      "pattern": "^(always|copy:(annotations\\.readOnlyHint|returnsUntrustedContent|contentEgress|peerSupplied|group\\.diagnostic)|any:(returnsUntrustedContent|contentEgress|peerSupplied)(,(returnsUntrustedContent|contentEgress|peerSupplied))+|not-equal:confirmation:(none|write|destructive)|in:confirmation:(none|write|destructive)(,(none|write|destructive))*|map:confirmation:none=[a-z:]+,write=[a-z:]+,destructive=[a-z:]+)$"
     }
   }
 }

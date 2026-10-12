@@ -214,14 +214,14 @@
     "routing_findprovs": {
       "readOnlyHint": true,
       "consequentialHint": false,
-      "untrustedContentHint": false,
+      "untrustedContentHint": true,
       "debugging": false,
       "exposed": true
     },
     "routing_findpeer": {
       "readOnlyHint": true,
       "consequentialHint": false,
-      "untrustedContentHint": false,
+      "untrustedContentHint": true,
       "debugging": false,
       "exposed": true
     },
@@ -235,7 +235,7 @@
     "swarm_peers": {
       "readOnlyHint": true,
       "consequentialHint": false,
-      "untrustedContentHint": false,
+      "untrustedContentHint": true,
       "debugging": true,
       "exposed": true
     },

@@ -1030,6 +1030,7 @@
       },
       "confirmation": "none",
       "returnsUntrustedContent": false,
+      "peerSuppliedFields": ["/providers/*/addrs"],
       "contentEgress": false,
       "rpc": [
         "routing/findprovs"
@@ -1060,6 +1061,7 @@
       },
       "confirmation": "none",
       "returnsUntrustedContent": false,
+      "peerSuppliedFields": ["/addrs"],
       "contentEgress": false,
       "rpc": [
         "routing/findpeer"
@@ -1121,6 +1123,7 @@
       },
       "confirmation": "none",
       "returnsUntrustedContent": false,
+      "peerSuppliedFields": ["/peers/*/addr"],
       "contentEgress": false,
       "rpc": [
         "swarm/peers"

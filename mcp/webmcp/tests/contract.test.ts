@@ -55,7 +55,7 @@ describe('generated from mcp/contract', () => {
       expect(Object.keys(def.annotations).sort()).toEqual(['consequentialHint', 'debugging', 'readOnlyHint', 'untrustedContentHint']);
       expect(def.annotations.readOnlyHint).toBe(evalRule(rules.readOnlyHint, src, g));
       expect(def.annotations.consequentialHint).toBe(src.confirmation !== 'none');
-      expect(def.annotations.untrustedContentHint).toBe(src.returnsUntrustedContent);
+      expect(def.annotations.untrustedContentHint).toBe(evalRule(rules.untrustedContentHint, src, g));
       expect(def.annotations.debugging).toBe(g.diagnostic);
     }
   });

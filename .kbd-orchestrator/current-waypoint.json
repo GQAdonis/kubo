@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1030,
-  "derivedRevision": 1030,
+  "sourceRevision": 1040,
+  "derivedRevision": 1040,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1030
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1040
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -21,7 +21,7 @@
   "phase": "ipfs-mcp-server",
   "parentPhase": null,
   "childPointer": null,
-  "change": "uar-conformance-request",
+  "change": "mcp-trusted-peers",
   "currentTask": "2",
   "status": "ready",
   "lifecycle": "ready",
@@ -29,11 +29,11 @@
   "stageStatus": "IN_PROGRESS",
   "completionMetric": "implementation",
   "implementationCompleted": 26,
-  "implementationTotal": 36,
+  "implementationTotal": 37,
   "planRevision": 1,
-  "revision": 1030,
+  "revision": 1040,
   "exactNextCommand": "/kbd-assess ipfs-mcp-server",
-  "nextChange": "uar-conformance-request",
+  "nextChange": "mcp-trusted-peers",
   "nextTask": "2",
-  "updatedAt": "2026-10-12T14:50:02.200131Z"
+  "updatedAt": "2026-10-12T15:43:30.635467Z"
 }

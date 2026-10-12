@@ -21,6 +21,9 @@ export type KeyName = z.infer<typeof KeyNameSchema>;
 export const PeerIdSchema = z.string().min(20).max(128).regex(new RegExp("^(12D3KooW[1-9A-HJ-NP-Za-km-z]{44}|Qm[1-9A-HJ-NP-Za-km-z]{44}|[bk][a-z2-7]{20,})$"));
 export type PeerId = z.infer<typeof PeerIdSchema>;
 
+export const PeerSuppliedUntrustedSchema = z.boolean();
+export type PeerSuppliedUntrusted = z.infer<typeof PeerSuppliedUntrustedSchema>;
+
 export const MultiaddrSchema = z.string().min(2).max(1024).regex(new RegExp("^/"));
 export type Multiaddr = z.infer<typeof MultiaddrSchema>;
 

@@ -328,3 +328,42 @@ describe('executor details', () => {
     expect(opts.signal).toBeInstanceOf(AbortSignal);
   });
 });
+
+describe('peer-supplied data', () => {
+  const PEER2 = '12D3KooWQYhTNQdmr3ArTeUHRYzFg94BKyTkoWBDWez9kSCVe2Xo';
+  const peerInfo = { id: PEER2, multiaddrs: ['/ip4/192.0.2.1/tcp/4001'] };
+
+  it('derives untrustedContentHint for the three peer tools, and any: rule is exact', () => {
+    for (const name of ['swarm_peers', 'routing_findpeer', 'routing_findprovs']) {
+      expect(def(name).annotations.untrustedContentHint, name).toBe(true);
+    }
+    const g = { diagnostic: false };
+    const rule = 'any:returnsUntrustedContent,peerSupplied';
+    expect(evalRule(rule, { name: 't', returnsUntrustedContent: false, peerSuppliedFields: ['/a'] }, g)).toBe(true);
+    expect(evalRule(rule, { name: 't', returnsUntrustedContent: true }, g)).toBe(true);
+    expect(evalRule(rule, { name: 't', returnsUntrustedContent: false, peerSuppliedFields: [] }, g)).toBe(false);
+    expect(() => evalRule('any:nope', { name: 't' }, g)).toThrow();
+  });
+
+  it('marks every entry untrusted and returns the result under data', async () => {
+    const { client } = recorder({
+      'swarm.peers': async () => [
+        { peer: PEER2, addr: '/ip4/192.0.2.1/tcp/4001', direction: 'outbound' },
+        { peer: PEER2, addr: '/ip4/192.0.2.2/tcp/4001' },
+      ],
+      'routing.findPeer': () => gen({ name: 'FINAL_PEER', peer: peerInfo }),
+      'routing.findProvs': () => gen({ name: 'PROVIDER', providers: [peerInfo] }),
+    });
+    const tools = createWebMcpTools({ client });
+    const peers: any = await get(tools, 'swarm_peers').execute({});
+    expect(peers).toMatchObject({ ok: true, untrusted_content: true });
+    expect(peers.result).toBeUndefined();
+    expect(peers.data.peers).toHaveLength(2);
+    expect(peers.data.peers.every((p: any) => p.untrusted === true)).toBe(true);
+    const one: any = await get(tools, 'routing_findpeer').execute({ peer_id: PEER2 });
+    expect(one).toMatchObject({ untrusted_content: true, data: { id: PEER2, untrusted: true } });
+    const provs: any = await get(tools, 'routing_findprovs').execute({ cid: CID });
+    expect(provs).toMatchObject({ untrusted_content: true });
+    expect(provs.data.providers.every((p: any) => p.untrusted === true)).toBe(true);
+  });
+});

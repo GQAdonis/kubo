@@ -43,6 +43,10 @@
       "pattern": "^(12D3KooW[1-9A-HJ-NP-Za-km-z]{44}|Qm[1-9A-HJ-NP-Za-km-z]{44}|[bk][a-z2-7]{20,})$",
       "description": "A libp2p peer ID (base58btc or CIDv1 libp2p-key)."
     },
+    "PeerSuppliedUntrusted": {
+      "type": "boolean",
+      "description": "Peer-supplied data marker (contract field marker, see catalog peerSuppliedFields). true: the addresses in this entry were supplied by a peer that is not in the ipfs mcp config key trusted_peers, so they are untrusted data. false: the peer ID is listed in trusted_peers. Absent: treat as true. WebMCP always sets true (no trusted list in the browser)."
+    },
     "Multiaddr": {
       "type": "string",
       "minLength": 2,

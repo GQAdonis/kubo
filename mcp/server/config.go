@@ -33,6 +33,9 @@ type Config struct {
 	Embeddings *EmbeddingsConfig `json:"embeddings"`
 	// Agent holds the loop limits (agent.loop).
 	Agent AgentConfig `json:"agent"`
+	// TrustedPeers is trusted_peers: peer IDs whose peer-supplied data is
+	// marked trusted. Default empty.
+	TrustedPeers []string `json:"trusted_peers"`
 }
 
 // ConfirmationConfig is the confirmation section. Modes is nil when the file
@@ -166,6 +169,9 @@ func ParseConfig(data []byte) (*Config, error) {
 	}
 	cfg.applyDefaults()
 	if err := cfg.Confirmation.validate(); err != nil {
+		return nil, err
+	}
+	if _, err := parseTrustedPeers(cfg.TrustedPeers); err != nil {
 		return nil, err
 	}
 	if err := cfg.validatePrincipals(); err != nil {

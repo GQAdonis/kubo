@@ -14,8 +14,8 @@
       "name": "IPFS content",
       "description": "File bytes, directory listings, search hits and add receipts for content on your node.",
       "file": "content.html",
-      "bytes": 751948,
-      "sha256": "f753abb0246a4b014736df6e060a2f5eeaa7c1fe2074585e7f58a2f7e6ffdd00",
+      "bytes": 752026,
+      "sha256": "b612ea21c434b61c46b0c997faf55e3fb035279ffaa24b9fb5e5077f59f6a4c9",
       "tools": [
         {
           "name": "ipfs_add",
@@ -55,8 +55,8 @@
       "name": "IPFS pins",
       "description": "What your node keeps: the pin list, verification results and pin changes.",
       "file": "pins.html",
-      "bytes": 751942,
-      "sha256": "9c250056e561d239c805c31db1b27680accfe1abd71726be79c9813d29519c0c",
+      "bytes": 752020,
+      "sha256": "532f52f69fa3cbec1c7385723e9b503e9faa5d54db85c7728f3cca3351101a77",
       "tools": [
         {
           "name": "pin_ls",
@@ -91,8 +91,8 @@
       "name": "IPFS files",
       "description": "The mutable file system on your node: listings, file details and change receipts.",
       "file": "mfs.html",
-      "bytes": 751942,
-      "sha256": "fe95e91367ec5a1eff97106216ab1a66da188b9a89db2649cae092bed5112e55",
+      "bytes": 752020,
+      "sha256": "f94f3a4bb3b02e6ad3b3b03f4e918dcfc8ee1e3f0055e7766864fa90ed46cc52",
       "tools": [
         {
           "name": "mfs_ls",
@@ -142,8 +142,8 @@
       "name": "IPFS DAG",
       "description": "DAG nodes, sizes and CAR transfers as a tree you can follow.",
       "file": "dag.html",
-      "bytes": 751940,
-      "sha256": "7d0c7aec86e9c758660e57223e70028e1d7576b96318d48f720e00684f83afe4",
+      "bytes": 752018,
+      "sha256": "158b3130289052a8da8bd8cb8b09a6147cb74bd7e38ff743cff6fc674a0985e2",
       "tools": [
         {
           "name": "dag_get",
@@ -178,8 +178,8 @@
       "name": "IPFS node status",
       "description": "Node identity, server status, peers, bandwidth, repo usage, providers and index status.",
       "file": "node-status.html",
-      "bytes": 751956,
-      "sha256": "266f7a527c0c79e0f8c085028d389bed8114e6466e95f29e62a0b2f91bedc344",
+      "bytes": 752034,
+      "sha256": "57984fc808f5c3247874c4df159b41dc82467b87df719a23228a000200321ab9",
       "tools": [
         {
           "name": "ipfs_node_info",

@@ -2,26 +2,26 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1030,
-  "derivedRevision": 1030,
+  "sourceRevision": 1040,
+  "derivedRevision": 1040,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1030
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1040
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T14:50:02.200131Z",
+  "last_updated": "2026-10-12T15:43:30.635467Z",
   "last_updated_by": "kbd-runtime",
-  "changes_total": 36,
+  "changes_total": 37,
   "changes_completed": 26,
-  "implementation_total": 36,
+  "implementation_total": 37,
   "implementation_completed": 26,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 26,
-      "total": 36,
+      "total": 37,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -50,7 +50,7 @@
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 26,
-      "total": 36,
+      "total": 37,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -79,6 +79,17 @@
       "tasks_done": 5,
       "last_task_completed": "Correct the mcp/app/embed.go check-dist comment",
       "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-trusted-peers",
+      "title": "Peer-supplied addresses marked untrusted unless the peer ID is in trusted_peers",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 1,
+      "last_task_completed": "(architect) Contract: `peerSuppliedFields` in the catalog schema and on `swarm_peers`, `ro",
+      "next_task_pending": "(mcp-server-engineer) Read `trusted_peers`; set `untrusted` on each entry of the three too",
       "blockers": []
     },
     {
