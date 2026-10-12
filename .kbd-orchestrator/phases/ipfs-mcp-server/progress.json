@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1040,
-  "derivedRevision": 1040,
+  "sourceRevision": 1053,
+  "derivedRevision": 1053,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1040
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1053
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T15:43:30.635467Z",
+  "last_updated": "2026-10-12T15:50:49.857417Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
-  "changes_completed": 26,
+  "changes_completed": 27,
   "implementation_total": 37,
-  "implementation_completed": 26,
+  "implementation_completed": 27,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 26,
+      "completed": 27,
       "total": 37,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 26,
+      "completed": 27,
       "total": 37,
       "status": "IN_PROGRESS"
     },
@@ -84,12 +84,12 @@
     {
       "id": "mcp-trusted-peers",
       "title": "Peer-supplied addresses marked untrusted unless the peer ID is in trusted_peers",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 4,
-      "tasks_done": 1,
-      "last_task_completed": "(architect) Contract: `peerSuppliedFields` in the catalog schema and on `swarm_peers`, `ro",
-      "next_task_pending": "(mcp-server-engineer) Read `trusted_peers`; set `untrusted` on each entry of the three too",
+      "tasks_done": 4,
+      "last_task_completed": "(ui-ux-engineer) Regenerate `mcp/ui` from the contract. Verify: `pnpm gen:check` passes",
+      "next_task_pending": null,
       "blockers": []
     },
     {
