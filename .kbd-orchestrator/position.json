@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 887,
-  "derivedRevision": 887,
+  "sourceRevision": 923,
+  "derivedRevision": 923,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 887
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 923
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T09:36:49.014266Z",
+  "updatedAt": "2026-10-12T10:02:05.660370Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
@@ -354,7 +354,7 @@
             "id": "phase-boundary-review",
             "status": "PENDING",
             "progress": {
-              "done": 0,
+              "done": 6,
               "total": 8
             }
           }

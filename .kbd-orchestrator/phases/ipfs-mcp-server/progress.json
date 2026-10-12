@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 887,
-  "derivedRevision": 887,
+  "sourceRevision": 923,
+  "derivedRevision": 923,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 887
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 923
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T09:36:49.014266Z",
+  "last_updated": "2026-10-12T10:02:05.660370Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
   "changes_completed": 22,
@@ -461,9 +461,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 8,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "1.1 Verify the judge route: `/Users/gqadonis/.prometheus/plugins/prometheus-skill-pack/generations/6d017e41ae80e34101146cd060e8a14e34361b066e7263d3074466e7c414820d/skills/adversarial-review/scripts/dispatch-judge.sh` (outside the repo, in the installed skill pack) exists and is executable, and the liter-llm gateway at `localhost:4000` answers an authenticated request.",
+      "tasks_done": 6,
+      "last_task_completed": "1.7 One batched correction cycle by the owning roles.",
+      "next_task_pending": "1.3 Run the G9-G12 acceptance set: unconfigured principal gets nothing; `egress_ack` refusals on every `contentEgress` tool; out-of-band gate (no self-confirm, deny and expiry final); check-uar refusals; both SurrealDB modes; embedding off by default; pin-aware deletion; chat island isolation; the `uar-integration-spike` report and the topology-2 gate result.",
       "blockers": []
     }
   ],

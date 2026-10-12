@@ -1915,3 +1915,87 @@ Append-only. Dated entries. Mark superseded entries; do not delete them.
 - Exact next work: /kbd-assess ipfs-mcp-server
 - Verification:
   - none recorded
+
+<!-- karpathy-progress-event:kpm-56c3bd1de0da3adc5ff3435ea1111b28 -->
+## Progress boundary — 2026-10-12T09:51:26.660529Z
+
+- Event: `kpm-56c3bd1de0da3adc5ff3435ea1111b28`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `phase-boundary-review` / `1`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `adfe96022705e495fbd56559fe508d1df30c7526`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `openspec/changes/phase-boundary-review/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-7f50cdb7d93acc974bdf85047d860301 -->
+## Progress boundary — 2026-10-12T09:52:00.352546Z
+
+- Event: `kpm-7f50cdb7d93acc974bdf85047d860301`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `phase-boundary-review` / `4`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `adfe96022705e495fbd56559fe508d1df30c7526`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/events.jsonl`, `.prometheus/knowledge/.prompt-snapshots/project/current`, `.prometheus/knowledge/.prompt-snapshots/project/generations/d4393caf42968352ef318afa1e0786b0978f69be983c00dee6827c0191668a58.json`, `.prometheus/knowledge/wiki/index.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-completion.md`, `.prometheus/knowledge/wiki/log.md`, `openspec/changes/phase-boundary-review/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-d31ca4dd57924d8973fc143e0ad52ab2 -->
+## Progress boundary — 2026-10-12T09:53:10.269994Z
+
+- Event: `kpm-d31ca4dd57924d8973fc143e0ad52ab2`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `phase-boundary-review` / `5`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `adfe96022705e495fbd56559fe508d1df30c7526`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/events.jsonl`, `.prometheus/knowledge/.prompt-snapshots/project/current`, `.prometheus/knowledge/.prompt-snapshots/project/generations/d4393caf42968352ef318afa1e0786b0978f69be983c00dee6827c0191668a58.json`, `.prometheus/knowledge/wiki/index.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-completion.md`, `.prometheus/knowledge/wiki/log.md`, `openspec/changes/phase-boundary-review/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-79d4e66096c6531e635bf4b987cee56a -->
+## Progress boundary — 2026-10-12T09:53:51.777637Z
+
+- Event: `kpm-79d4e66096c6531e635bf4b987cee56a`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `phase-boundary-review` / `6`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `adfe96022705e495fbd56559fe508d1df30c7526`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/events.jsonl`, `.prometheus/knowledge/.prompt-snapshots/project/current`, `.prometheus/knowledge/.prompt-snapshots/project/generations/d4393caf42968352ef318afa1e0786b0978f69be983c00dee6827c0191668a58.json`, `.prometheus/knowledge/wiki/index.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-completion.md`, `.prometheus/knowledge/wiki/log.md`, `openspec/changes/phase-boundary-review/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-e13d8f86f7cf12334d3ba7baef53991d -->
+## Progress boundary — 2026-10-12T09:54:13.073220Z
+
+- Event: `kpm-e13d8f86f7cf12334d3ba7baef53991d`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `phase-boundary-review` / `7`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `adfe96022705e495fbd56559fe508d1df30c7526`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/events.jsonl`, `.prometheus/knowledge/.prompt-snapshots/project/current`, `.prometheus/knowledge/.prompt-snapshots/project/generations/b3d808c0f4677e17a580a225a4811754e6c57c431979598ad528751ae15b7f55.json`, `.prometheus/knowledge/.prompt-snapshots/project/generations/d4393caf42968352ef318afa1e0786b0978f69be983c00dee6827c0191668a58.json`, `.prometheus/knowledge/wiki/index.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-6-completion.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-completion.md`, `.prometheus/knowledge/wiki/log.md`, `openspec/changes/phase-boundary-review/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded
+
+<!-- karpathy-progress-event:kpm-62573947edc6e1713a0ecb717bbca9e4 -->
+## Progress boundary — 2026-10-12T10:02:09.725574Z
+
+- Event: `kpm-62573947edc6e1713a0ecb717bbca9e4`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `phase-boundary-review` / `2`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `adfe96022705e495fbd56559fe508d1df30c7526`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/plan.md`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/events.jsonl`, `.prometheus/knowledge/.prompt-snapshots/project/current`, `.prometheus/knowledge/.prompt-snapshots/project/generations/b3d808c0f4677e17a580a225a4811754e6c57c431979598ad528751ae15b7f55.json`, `.prometheus/knowledge/.prompt-snapshots/project/generations/d4393caf42968352ef318afa1e0786b0978f69be983c00dee6827c0191668a58.json`, `.prometheus/knowledge/wiki/index.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-6-completion.md`, `.prometheus/knowledge/wiki/ipfs-mcp-server-phase-boundary-review-task-completion.md`, `.prometheus/knowledge/wiki/log.md`, `openspec/changes/phase-boundary-review/tasks.md`, `openspec/tools/check_plan_deps.py`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded

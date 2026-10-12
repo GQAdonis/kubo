@@ -47,6 +47,9 @@ BINARY = ["mcp-server-core-stdio", "mcp-pinning-with-confirmation", "mcp-http-tr
 DEPS["mcp-release-binaries"] = BINARY
 DEPS["mcp-user-docs"] = sorted(set(BINARY + ["mcp-release-binaries", "agent-chat-island", "webui-agent-chat", "desktop-agent-chat"]))
 DEPS["mcp-plugin-marketplaces"] = ["ipfs-agent-skills", "mcp-release-binaries", "mcp-http-transport-auth"]
+# Added 2026-10-11 (R11 follow-up, operator decision 5): CI runs the whole mcp tree, so it follows every
+# binary-changing change, the UI library and chat island it tests, and the skills it checks.
+DEPS["mcp-ci-workflow"] = sorted(set(BINARY + ["mcp-ui-component-library", "agent-chat-island", "ipfs-agent-skills"]))
 ALL = list(DEPS.keys())
 DEPS["phase-boundary-review"] = [c for c in ALL]
 
@@ -61,7 +64,7 @@ ROUND = {
     "mcp-agui-endpoint": 7, "mcp-a2a-endpoint": 7, "mcp-embeddings-surrealdb": 7, "agentic-uar-integration": 7,
     "webui-agent-chat": 8, "mcp-embedding-index-lifecycle": 8,
     "mcp-release-binaries": 9,
-    "mcp-user-docs": 10, "mcp-plugin-marketplaces": 10,
+    "mcp-user-docs": 10, "mcp-plugin-marketplaces": 10, "mcp-ci-workflow": 10,
     "phase-boundary-review": 11,
 }
 
@@ -84,7 +87,8 @@ def augment():
 
 
 def tasks_of(cid):
-    return re.findall(r"^- \[ \] (\d+\.\d+) ", open(os.path.join(CH, cid, "tasks.md")).read(), flags=re.M)
+    # Both open and completed tasks need a row; matching only "- [ ]" made every ticked task a stale row.
+    return re.findall(r"^- \[[ xX]\] (\d+\.\d+) ", open(os.path.join(CH, cid, "tasks.md")).read(), flags=re.M)
 
 
 def check():
