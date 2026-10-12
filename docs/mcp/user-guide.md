@@ -39,15 +39,30 @@ The release archives are built locally from this repository; nothing is publishe
 
 ```bash
 mcp/release/build.sh     # builds through `make build` for each target
-mcp/release/verify.sh    # checks the archives against SHA256SUMS
+mcp/release/verify.sh    # checks the signature and the archives against SHA256SUMS
 ```
 
-`build.sh` writes `mcp/release/dist/kubo-mcp_<version>_<goos>-<goarch>.tar.gz` (`.zip` on Windows) for darwin-arm64, darwin-amd64, linux-amd64, linux-arm64 and windows-amd64, plus `SHA256SUMS`. If you received an archive and its `SHA256SUMS` from someone else, check it before you run anything:
+`build.sh` writes `mcp/release/dist/kubo-mcp_<version>_<goos>-<goarch>.tar.gz` (`.zip` on Windows) for darwin-arm64, darwin-amd64, linux-amd64, linux-arm64 and windows-amd64, plus `SHA256SUMS` and its SSH signature `SHA256SUMS.sig`. If you received an archive from someone else, verify it as described in [Verifying a release](#verifying-a-release) before you run anything, then unpack it:
 
 ```bash
-shasum -a 256 -c SHA256SUMS --ignore-missing
 tar -xzf kubo-mcp_<version>_darwin-arm64.tar.gz
 ```
+
+#### Verifying a release
+
+Release archives come with `SHA256SUMS` and `SHA256SUMS.sig`, an SSH signature over the checksum file made with a dedicated release key (OpenSSH 8.1 or later, namespace `kubo-mcp-release`). The signature proves the checksums came from the key holder; the checksums prove the archives match them.
+
+1. Get the release public key independently of the download, for example from [`mcp/release/allowed_signers`](../../mcp/release/allowed_signers) in a checkout you trust, not from the same place as the archives. Save it as `allowed_signers`. Each line has the form `<identity> namespaces="kubo-mcp-release" <keytype> <base64>`.
+2. Check the signature, then the checksums, in the directory that holds the archives. Both must succeed; if either fails, do not run the binary.
+
+```bash
+ssh-keygen -Y verify -f allowed_signers -I <identity> -n kubo-mcp-release -s SHA256SUMS.sig < SHA256SUMS
+shasum -a 256 -c SHA256SUMS --ignore-missing
+```
+
+From a source checkout, `mcp/release/verify.sh [--allowed-signers FILE] [DIST_DIR]` does both steps; `DIST_DIR` defaults to `mcp/release/dist`.
+
+A release built with `KUBO_MCP_UNSIGNED=1` has no `SHA256SUMS.sig` and is unsigned. Only its checksums can be checked (`verify.sh --allow-unsigned`), which proves nothing about who built it.
 
 Each archive holds one directory with the `ipfs` binary, the licenses and a short README. You do not need to replace the `ipfs` that runs your daemon: keep this binary in its own directory and give your MCP client its absolute path. In the examples below, `ipfs` means that binary.
 

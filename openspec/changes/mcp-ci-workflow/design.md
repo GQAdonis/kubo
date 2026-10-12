@@ -40,7 +40,8 @@
 ## Risks / Trade-offs
 
 - [Hosted-runner rendering differs from the operator's Mac (fonts, display scaling, GPU path), so screenshot comparisons fail without a UI change; likely on the first run given `maxDiffPixelRatio: 0.005` and `retries: 0`] → The operator decides after the first run and the decision is recorded here (decision 8). CI never regenerates the baselines. Not loosened now.
-- [`check:dist` is not byte-identical between macOS and Linux builds] → Make the build deterministic across platforms; do not skip the check.
+- [Observed in the first run (38182586841): hosted macOS runners have no trackpad, so macOS shows classic scroll bars, which take 15 px of the Electron window; all 32 `electron44` screenshot failures captured 753 px against 768 px baselines, while Chromium had 0 failures] → The chat job sets the host setting the baselines were captured with, `defaults write -g AppleShowScrollBars -string WhenScrolling` (overlay scroll bars), before Playwright (`a36a99219`). This changes the runner's environment, not the baselines or thresholds, so decision 8 is unaffected. Pending confirmation by run 38200585039.
+- [`check:dist` is not byte-identical between macOS and Linux builds] (not observed: `ui-unit`, which runs `check:dist` on Linux, passed in the first run) → Make the build deterministic across platforms; do not skip the check.
 - [The race detector and the CLI suite are slow on a 2-core runner] → 45-minute job timeout; split the job if it is exceeded.
 - [The CLI suite starts real daemons] → Each test uses its own harness repo and OS-chosen ports, and `IPFS_PATH` points into `runner.temp`; no other node runs on a hosted runner.
 - [Pinned SHAs age] → Bump them deliberately with a resolved SHA and version comment; never switch to a floating tag.
