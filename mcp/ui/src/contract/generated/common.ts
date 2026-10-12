@@ -6,13 +6,13 @@ import * as K from './confirmation';
 export const CidSchema = z.string().min(2).max(512).regex(new RegExp("^[A-Za-z0-9_-]+$"));
 export type Cid = z.infer<typeof CidSchema>;
 
-export const ContentPathSchema = z.string().min(2).max(4096).regex(new RegExp("^(/(ipfs|ipns|ipld)/[^/].*|[A-Za-z0-9_-]+(/.*)?)$"));
+export const ContentPathSchema = z.string().min(2).max(4096).regex(new RegExp("^(?:/(?:ipfs|ipns|ipld)/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*|[A-Za-z0-9_-]+(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*)$"));
 export type ContentPath = z.infer<typeof ContentPathSchema>;
 
-export const MfsPathSchema = z.string().min(1).max(4096).regex(new RegExp("^/(?:$|[^i]|i(?:$|[^p])|ip(?:$|[^fnl])|ipf(?:$|[^s])|ipn(?:$|[^s])|ipl(?:$|[^d])|ip(?:fs|ns|ld)(?:$|[^/]))"));
+export const MfsPathSchema = z.string().min(1).max(4096).regex(new RegExp("^/(?:(?:[^/.i][^/]*|i(?:[^/p][^/]*)?|ip(?:[^/fnl][^/]*)?|ipf(?:[^/s][^/]*)?|ipn(?:[^/s][^/]*)?|ipl(?:[^/d][^/]*)?|ip(?:fs|ns|ld)[^/]+|\\.[^/.][^/]*|\\.\\.[^/]+)(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*|ip(?:fs|ns|ld))?$"));
 export type MfsPath = z.infer<typeof MfsPathSchema>;
 
-export const MfsCopySourceSchema = z.string().min(1).max(4096).regex(new RegExp("^/(?:ipfs/[^/]|$|[^i]|i(?:$|[^p])|ip(?:$|[^fnl])|ipf(?:$|[^s])|ipn(?:$|[^s])|ipl(?:$|[^d])|ip(?:fs|ns|ld)(?:$|[^/]))"));
+export const MfsCopySourceSchema = z.string().min(1).max(4096).regex(new RegExp("^/(?:(?:[^/.i][^/]*|i(?:[^/p][^/]*)?|ip(?:[^/fnl][^/]*)?|ipf(?:[^/s][^/]*)?|ipn(?:[^/s][^/]*)?|ipl(?:[^/d][^/]*)?|ip(?:fs|ns|ld)[^/]+|\\.[^/.][^/]*|\\.\\.[^/]+)(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*|ip(?:fs|ns|ld)|ipfs/[A-Za-z0-9_-]+(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*)?$"));
 export type MfsCopySource = z.infer<typeof MfsCopySourceSchema>;
 
 export const KeyNameSchema = z.string().regex(new RegExp("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"));
@@ -24,7 +24,7 @@ export type PeerId = z.infer<typeof PeerIdSchema>;
 export const MultiaddrSchema = z.string().min(2).max(1024).regex(new RegExp("^/"));
 export type Multiaddr = z.infer<typeof MultiaddrSchema>;
 
-export const IpnsNameSchema = z.string().min(1).max(512).regex(new RegExp("^(/ipns/)?[A-Za-z0-9._-]+(/.*)?$"));
+export const IpnsNameSchema = z.string().min(1).max(512).regex(new RegExp("^(?:/ipns/)?[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*$"));
 export type IpnsName = z.infer<typeof IpnsNameSchema>;
 
 export const DurationSchema = z.string().regex(new RegExp("^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"));

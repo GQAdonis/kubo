@@ -1,16 +1,16 @@
 {
   "$schema": "./derivation-rules.schema.json",
   "source": "WebMCP Draft Community Group Report, 8 October 2026 (https://webmachinelearning.github.io/webmcp/): ToolAnnotations has exactly readOnlyHint, untrustedContentHint, consequentialHint and debugging.",
-  "description": "WebMCP annotations are derived from catalog fields, never authored. Rule forms: copy:<field> and not-equal:<field>:<value>, where field is annotations.readOnlyHint, confirmation, returnsUntrustedContent, contentEgress or group.diagnostic. The Go validator and the mcp/webmcp generator interpret the same rules.",
+  "description": "WebMCP annotations are derived from catalog fields, never authored. Rule forms: copy:<field>, not-equal:<field>:<value> and in:<field>:<value>,<value>..., where field is annotations.readOnlyHint, confirmation, returnsUntrustedContent, contentEgress or group.diagnostic. The Go validator and the mcp/webmcp generator interpret the same rules.",
   "rules": {
     "readOnlyHint": "copy:annotations.readOnlyHint",
     "consequentialHint": "not-equal:confirmation:none",
     "untrustedContentHint": "copy:returnsUntrustedContent",
     "debugging": "copy:group.diagnostic",
-    "exposed": "not-equal:confirmation:destructive"
+    "exposed": "in:confirmation:none,write"
   },
   "notes": {
-    "exposed": "Not a WebMCP annotation: whether the tool is registered in the browser at all. Destructive tools are never registered through WebMCP (webmcp-tool-package).",
+    "exposed": "Not a WebMCP annotation: whether the tool is registered in the browser at all. An allow-list (R13 security L7): only none and write tools are registered; destructive tools, and any confirmation class added later, are never registered through WebMCP unless this rule names them (webmcp-tool-package). An unknown class is an error, not a default.",
     "dropped": "destructiveHint, idempotentHint and openWorldHint are not defined by the WebMCP draft and are not emitted."
   }
 }

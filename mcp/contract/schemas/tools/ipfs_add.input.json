@@ -17,8 +17,8 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 255,
-      "pattern": "^[^/]+$",
-      "description": "Optional name; when set the file is wrapped in a directory."
+      "pattern": "^(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)$",
+      "description": "Optional name; when set the file is wrapped in a directory. It may not contain /, and it may not be . or .. alone."
     },
     "pin": {
       "type": "boolean",

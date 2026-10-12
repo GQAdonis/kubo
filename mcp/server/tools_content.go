@@ -225,7 +225,8 @@ func (s *Server) ipfsAdd(ctx context.Context, raw json.RawMessage) (any, error) 
 		return nil, err
 	}
 
-	opts := map[string]any{"pin": in.Pin}
+	// Kubo's add announces the root by default; announce only on request.
+	opts := map[string]any{"pin": in.Pin, "fast-provide-root": false, "fast-provide-dag": false}
 	if in.CidVersion != nil {
 		opts["cid-version"] = *in.CidVersion
 	}

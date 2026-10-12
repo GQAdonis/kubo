@@ -7,7 +7,7 @@
 
 [meta]
 created = "2026-10-09"
-updated = "2026-10-09"
+updated = "2026-10-12"
 
 [pins]
 # Verified against the Go module proxy and the npm registry on 2026-10-09.
@@ -25,6 +25,13 @@ updated = "2026-10-09"
 "zod" = "4.6.5"
 "typescript" = "7.0.2"
 "vite" = "8.3.4"
+# mcp/webmcp, added 2026-10-12 by operator direction; verified on the npm registry 2026-10-12.
+"kubo-rpc-client" = "6.1.0"                           # dev dependency; peer range ^6.1.0 (Web UI fork major)
+"multiformats" = "13.4.0"                             # runtime dependency; matches the Web UI fork
+"ajv" = "8.20.0"                                      # contract output-schema checks in tests
+"ajv-formats" = "3.0.1"
+"vitest" = "5.0.3"                                    # same as mcp/ui
+"@types/node" = "26.6.4"                              # same as mcp/ui
 
 [decisions]
 pins-go = "Kubo Go dependency pins live in go.mod and change only via go get + make mod_tidy; this file records MCP-related pins and decisions only"

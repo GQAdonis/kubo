@@ -6,14 +6,14 @@
     "IpfsUri": {
       "type": "string",
       "maxLength": 4096,
-      "pattern": "^ipfs://[A-Za-z0-9_-]{2,512}(/[^?#\\s]*)?$",
-      "description": "ipfs://<cid>[/<path>], equivalent to the content path /ipfs/<cid>[/<path>]."
+      "pattern": "^ipfs://[A-Za-z0-9_-]{2,512}(?:/(?:[^/.?#\\s][^/?#\\s]*|\\.[^/.?#\\s][^/?#\\s]*|\\.\\.[^/?#\\s]+)?)*$",
+      "description": "ipfs://<cid>[/<path>], equivalent to the content path /ipfs/<cid>[/<path>]. No path segment may be . or .. (R13 security L2)."
     },
     "IpnsUri": {
       "type": "string",
       "maxLength": 4096,
-      "pattern": "^ipns://[A-Za-z0-9._-]{1,512}(/[^?#\\s]*)?$",
-      "description": "ipns://<name>[/<path>], where name is a libp2p-key CID or a DNSLink domain; equivalent to /ipns/<name>[/<path>]."
+      "pattern": "^ipns://[A-Za-z0-9_-][A-Za-z0-9._-]{0,511}(?:/(?:[^/.?#\\s][^/?#\\s]*|\\.[^/.?#\\s][^/?#\\s]*|\\.\\.[^/?#\\s]+)?)*$",
+      "description": "ipns://<name>[/<path>], where name is a libp2p-key CID or a DNSLink domain; equivalent to /ipns/<name>[/<path>]. The name may not start with a dot, and no path segment may be . or .. (R13 security L2)."
     },
     "UiUri": {
       "type": "string",

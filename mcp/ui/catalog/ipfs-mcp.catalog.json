@@ -3160,8 +3160,8 @@
       "type": "string",
       "minLength": 2,
       "maxLength": 4096,
-      "pattern": "^(/(ipfs|ipns|ipld)/[^/].*|[A-Za-z0-9_-]+(/.*)?)$",
-      "description": "A bare CID, a CID with a sub-path, or an /ipfs/, /ipns/ or /ipld/ content path."
+      "pattern": "^(?:/(?:ipfs|ipns|ipld)/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*|[A-Za-z0-9_-]+(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*)$",
+      "description": "A bare CID, a CID with a sub-path, or an /ipfs/, /ipns/ or /ipld/ content path. No segment may be . or .., so path cleaning cannot change the namespace or the root a caller checked (R13 security L2)."
     },
     "ipfs_Cursor": {
       "type": "string",
@@ -3181,8 +3181,8 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 512,
-      "pattern": "^(/ipns/)?[A-Za-z0-9._-]+(/.*)?$",
-      "description": "An IPNS name (libp2p-key CID or DNSLink domain), with or without the /ipns/ prefix."
+      "pattern": "^(?:/ipns/)?[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*$",
+      "description": "An IPNS name (libp2p-key CID or DNSLink domain), with or without the /ipns/ prefix. The name may not start with a dot, and no sub-path segment may be . or .. (R13 security L2)."
     },
     "ipfs_KeyName": {
       "type": "string",
@@ -3193,15 +3193,15 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 4096,
-      "pattern": "^/(?:ipfs/[^/]|$|[^i]|i(?:$|[^p])|ip(?:$|[^fnl])|ipf(?:$|[^s])|ipn(?:$|[^s])|ipl(?:$|[^d])|ip(?:fs|ns|ld)(?:$|[^/]))",
-      "description": "An MfsPath, or an /ipfs/<cid>[/path] content path. /ipns/ and /ipld/ sources are rejected."
+      "pattern": "^/(?:(?:[^/.i][^/]*|i(?:[^/p][^/]*)?|ip(?:[^/fnl][^/]*)?|ipf(?:[^/s][^/]*)?|ipn(?:[^/s][^/]*)?|ipl(?:[^/d][^/]*)?|ip(?:fs|ns|ld)[^/]+|\\.[^/.][^/]*|\\.\\.[^/]+)(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*|ip(?:fs|ns|ld)|ipfs/[A-Za-z0-9_-]+(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*)?$",
+      "description": "An MfsPath, or an /ipfs/<cid>[/path] content path. /ipns/ and /ipld/ sources are rejected, and no segment may be . or .. (R13 security L2)."
     },
     "ipfs_MfsPath": {
       "type": "string",
       "minLength": 1,
       "maxLength": 4096,
-      "pattern": "^/(?:$|[^i]|i(?:$|[^p])|ip(?:$|[^fnl])|ipf(?:$|[^s])|ipn(?:$|[^s])|ipl(?:$|[^d])|ip(?:fs|ns|ld)(?:$|[^/]))",
-      "description": "An absolute path in the node's Mutable File System (MFS). Paths under /ipfs/, /ipns/ and /ipld/ are rejected: the daemon would resolve them as content paths, letting a closed-world MFS tool read from the network. Copy content into MFS with mfs_cp, whose source is an MfsCopySource."
+      "pattern": "^/(?:(?:[^/.i][^/]*|i(?:[^/p][^/]*)?|ip(?:[^/fnl][^/]*)?|ipf(?:[^/s][^/]*)?|ipn(?:[^/s][^/]*)?|ipl(?:[^/d][^/]*)?|ip(?:fs|ns|ld)[^/]+|\\.[^/.][^/]*|\\.\\.[^/]+)(?:/(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)?)*|ip(?:fs|ns|ld))?$",
+      "description": "An absolute path in the node's Mutable File System (MFS). Paths under /ipfs/, /ipns/ and /ipld/ are rejected: the daemon would resolve them as content paths, letting a closed-world MFS tool read from the network. Copy content into MFS with mfs_cp, whose source is an MfsCopySource. A segment equal to . or .. is rejected, and so is an empty first segment (//): path cleaning would otherwise turn /a/../ipns/x or //ipfs/x into a content path (R13 security L2). Bare /ipfs, /ipns and /ipld name ordinary MFS entries."
     },
     "ipfs_Multiaddr": {
       "type": "string",

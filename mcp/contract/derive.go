@@ -3,8 +3,12 @@ package contract
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
+
+// confirmationClasses are the known catalog confirmation classes.
+var confirmationClasses = []string{ClassNone, ClassWrite, ClassDestructive}
 
 // RuleFile is a derivation rule file in derivations/.
 type RuleFile struct {
@@ -27,8 +31,8 @@ func LoadRules(path string) (*RuleFile, error) {
 }
 
 // Derive evaluates every rule of r for tool t and returns the values by
-// rule name. Rule forms: always, copy:<field>, not-equal:<field>:<value>
-// and map:<field>:<k>=<v>,... (see derivations/derivation-rules.schema.json).
+// rule name. Rule forms: always, copy:<field>, not-equal:<field>:<value>,
+// in:<field>:<v>,<v>... and map:<field>:<k>=<v>,... (see derivations/derivation-rules.schema.json).
 func (c *Catalog) Derive(r *RuleFile, t Tool) (map[string]any, error) {
 	out := make(map[string]any, len(r.Rules))
 	for name, rule := range r.Rules {
@@ -63,6 +67,23 @@ func (c *Catalog) EvalRule(rule string, t Tool) (any, error) {
 			return nil, err
 		}
 		return fmt.Sprint(v) != want, nil
+	case "in":
+		// Allow-list: true only when the field's value is one of the listed
+		// values. A confirmation class outside the known set is an error, so a
+		// new class is never exposed by default (R13 security L7).
+		f, list, ok := strings.Cut(rest, ":")
+		if !ok || list == "" {
+			return nil, fmt.Errorf("malformed rule %q", rule)
+		}
+		v, err := c.field(f, t)
+		if err != nil {
+			return nil, err
+		}
+		s := fmt.Sprint(v)
+		if f == "confirmation" && !slices.Contains(confirmationClasses, s) {
+			return nil, fmt.Errorf("rule %q: unknown confirmation class %q", rule, s)
+		}
+		return slices.Contains(strings.Split(list, ","), s), nil
 	case "map":
 		f, pairs, ok := strings.Cut(rest, ":")
 		if !ok {

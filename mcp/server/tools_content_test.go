@@ -70,7 +70,8 @@ func TestIpfsAddSendsBytesAndKeepsDefaultRecipe(t *testing.T) {
 
 	// Only the explicit pin option is sent: the CID recipe stays the daemon's.
 	opts := d.lastCall("add").Opts
-	assert.Equal(t, map[string]any{"pin": true}, opts)
+	// fast-provide is off because the add default would announce the root.
+	assert.Equal(t, map[string]any{"pin": true, "fast-provide-root": false, "fast-provide-dag": false}, opts)
 	assert.Zero(t, d.count("provide/once"), "no announcement unless asked")
 
 	// The result carries a text fallback and a resource_link to the content.
@@ -92,7 +93,7 @@ func TestIpfsAddRecipeOverridesAreOptIn(t *testing.T) {
 		"cid_version": 1, "raw_leaves": true, "chunker": "size-262144", "hash": "sha2-512",
 	})
 	assert.Equal(t, map[string]any{
-		"pin": false, "cid-version": 1, "raw-leaves": true, "chunker": "size-262144", "hash": "sha2-512",
+		"pin": false, "fast-provide-root": false, "fast-provide-dag": false, "cid-version": 1, "raw-leaves": true, "chunker": "size-262144", "hash": "sha2-512",
 	}, d.lastCall("add").Opts)
 }
 
