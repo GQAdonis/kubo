@@ -248,6 +248,12 @@ jobs:
         if: matrix.package == 'chat'
         working-directory: mcp/chat
         run: node node_modules/electron/install.js
+      # A runner has no trackpad, so macOS shows classic scroll bars that take
+      # 15px of the Electron window; the baselines were captured with overlay
+      # scroll bars. Match that host setting instead of touching baselines.
+      - name: Use overlay scroll bars (as on the baseline host)
+        if: matrix.package == 'chat'
+        run: defaults write -g AppleShowScrollBars -string WhenScrolling
       - name: Build the MCP App views
         if: matrix.package == 'app'
         working-directory: mcp/app

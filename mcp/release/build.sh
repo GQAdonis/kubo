@@ -7,11 +7,20 @@
 # Environment:
 #   TARGETS   space separated goos/goarch list (default: the five release targets)
 #   GOTAGS    extra build tags passed to make (default: none)
+#   KUBO_MCP_SIGNING_KEY  path to the SSH private key that signs SHA256SUMS
+#             (required; no default). ssh-keygen may prompt for the passphrase
+#             or use ssh-agent.
+#   KUBO_MCP_UNSIGNED  set to 1 to build without signing (warns loudly)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 [ -f Makefile ] && [ -d cmd/ipfs ] || { echo "run from the kubo repo root" >&2; exit 1; }
+
+# shellcheck source=signing.sh
+. "$ROOT/mcp/release/signing.sh"
+# Fail before building when signing is not configured.
+signing_preflight || exit 1
 
 DIST="$ROOT/mcp/release/dist"
 STAGE="$DIST/.stage"
@@ -45,8 +54,22 @@ running daemon over that daemon's RPC API.
 
 It needs a running Kubo daemon 0.29.0 or newer. Docs: docs/mcp/ in the source
 tree (ADR-0001 and ADR-0003 explain placement, confirmation and auth).
-Verify the download with SHA256SUMS before running it. Licenses: LICENSE,
-LICENSE-APACHE, LICENSE-MIT.
+Licenses: LICENSE, LICENSE-APACHE, LICENSE-MIT.
+
+Verifying a release: SHA256SUMS is signed (SHA256SUMS.sig, SSH signature,
+namespace ${SIGN_NAMESPACE}). Put the archive, SHA256SUMS and SHA256SUMS.sig in one
+directory, then, with a release public key you obtained independently of this
+download (a key shipped in the same download proves nothing), write one line
+to a file named allowed_signers:
+
+    <identity> namespaces="${SIGN_NAMESPACE}" <keytype> <base64>
+
+    ssh-keygen -Y verify -f allowed_signers -I <identity> \\
+      -n ${SIGN_NAMESPACE} -s SHA256SUMS.sig < SHA256SUMS
+    shasum -a 256 -c SHA256SUMS
+
+Both commands must succeed. This needs OpenSSH 8.1 or newer. A build made with
+KUBO_MCP_UNSIGNED=1 has no SHA256SUMS.sig and is unsigned.
 RD
 }
 
@@ -71,5 +94,6 @@ for t in $TARGETS; do
 done
 
 (cd "$DIST" && shasum -a 256 kubo-mcp_* > SHA256SUMS)
+sign_sums "$DIST"
 echo "version: $VERSION"
 ls -l "$DIST"

@@ -27,7 +27,20 @@ See `docs/mcp/` in the source tree and `mcp/README.md`.
 | `kubo-mcp_@VERSION@_linux-arm64.tar.gz` | Linux arm64 |
 | `kubo-mcp_@VERSION@_windows-amd64.zip` | Windows x86-64 |
 
-Verify with `shasum -a 256 -c SHA256SUMS` before running. These binaries are not signed or notarized; macOS may quarantine a downloaded binary.
+`SHA256SUMS` is signed with an SSH key (`SHA256SUMS.sig`, namespace `kubo-mcp-release`). The binaries themselves are not notarized; macOS may quarantine a downloaded binary.
+
+## Verifying a release
+
+You need only `ssh-keygen` (OpenSSH 8.1 or newer). Download the archive, `SHA256SUMS` and `SHA256SUMS.sig` into one directory. Get the release public key from a source independent of this download (for example the repository at a commit you trust); a key delivered with the archives proves nothing. Save it as `allowed_signers`, one line:
+
+    <identity> namespaces="kubo-mcp-release" <keytype> <base64>
+
+Then run both commands; both must succeed:
+
+    ssh-keygen -Y verify -f allowed_signers -I <identity> -n kubo-mcp-release -s SHA256SUMS.sig < SHA256SUMS
+    shasum -a 256 -c SHA256SUMS
+
+From a source checkout, `mcp/release/verify.sh [--allowed-signers FILE] [DIST_DIR]` does both. A release built with `KUBO_MCP_UNSIGNED=1` has no `.sig` and is unsigned; `verify.sh --allow-unsigned` checks its checksums only.
 
 ## Not included in this release
 
