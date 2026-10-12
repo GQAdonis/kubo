@@ -45,6 +45,10 @@ const (
 type item struct {
 	p       server.Pending
 	resolve server.ResolveFunc
+	// decided hides the item from the pending list once any client resolved
+	// it. It stays addressable until the confirmation expires, so a repeat
+	// resolve gets the broker's "already resolved" answer.
+	decided bool
 }
 
 // PendingView is the wire form of a waiting confirmation.
@@ -159,6 +163,18 @@ func (c *channel) add(ctx context.Context, name string, p server.Pending, resolv
 	}()
 }
 
+// forget hides a decided confirmation from the pending list of every resolver.
+func (c *channel) forget(id string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, m := range c.items {
+		if it, ok := m[id]; ok {
+			it.decided = true
+			m[id] = it
+		}
+	}
+}
+
 // authenticate returns the resolver a request speaks for, or an HTTP status.
 func (c *channel) authenticate(r *http.Request) (string, int, string) {
 	if h := r.Header.Get("Authorization"); h != "" {
@@ -196,6 +212,9 @@ func (c *channel) handlePending(w http.ResponseWriter, r *http.Request) {
 	c.mu.Lock()
 	out := make([]PendingView, 0, len(c.items[name]))
 	for _, it := range c.items[name] {
+		if it.decided {
+			continue
+		}
 		out = append(out, PendingView{
 			ID:            it.p.ID,
 			Summary:       it.p.Summary.Text,
@@ -233,7 +252,12 @@ func (c *channel) handleResolve(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "no such pending confirmation for this client")
 		return
 	}
-	if err := it.resolve(body.Approve); err != nil {
+	err := it.resolve(body.Approve)
+	if err == nil || errors.Is(err, server.ErrConfirmationResolved) || errors.Is(err, server.ErrConfirmationExpired) {
+		// Decided or over: stop listing it to every client of the channel.
+		c.forget(body.ID)
+	}
+	if err != nil {
 		code := http.StatusConflict
 		if errors.Is(err, server.ErrConfirmationExpired) {
 			code = http.StatusGone

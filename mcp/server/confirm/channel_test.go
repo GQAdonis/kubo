@@ -308,3 +308,35 @@ func stdinWith(t *testing.T, s string) *os.File {
 	t.Cleanup(func() { _ = f.Close() })
 	return f
 }
+
+func TestChannelResolvedItemLeavesEveryClientsList(t *testing.T) {
+	e := newChanEnv(t, ModeDesktop)
+	resolved := 0
+	second := pending("second")
+	second.ID = "cf_2"
+	require.NoError(t, e.m.Resolvers()[0].Request(t.Context(), second, func(bool) error {
+		resolved++
+		if resolved > 1 {
+			return server.ErrConfirmationResolved
+		}
+		return nil
+	}))
+	list := func() []any {
+		status, out := e.do(t, http.MethodGet, pendingPath, "Bearer "+e.key, "", nil)
+		require.Equal(t, http.StatusOK, status)
+		return out["pending"].([]any)
+	}
+	require.Len(t, list(), 2)
+
+	// One client resolves; a second client listing afterwards no longer sees it.
+	status, _ := e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_2", "approve": false})
+	require.Equal(t, http.StatusOK, status)
+	remaining := list()
+	require.Len(t, remaining, 1)
+	assert.Equal(t, "cf_1", remaining[0].(map[string]any)["id"])
+
+	// A repeat resolve still gets the broker's answer, not a vanished item.
+	status, out := e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_2", "approve": true})
+	assert.Equal(t, http.StatusConflict, status)
+	assert.Contains(t, out["error"], "already resolved")
+}
