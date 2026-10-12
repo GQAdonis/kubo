@@ -8,7 +8,7 @@
     "shortName": "ipfs-mcp",
     "protocolVersion": "v0.9",
     "contractVersion": "0.1.0",
-    "contractDigest": "f6553939a44b5eb3"
+    "contractDigest": "79c3e0368de66f9c"
   },
   "instructions": "IPFS components for an agent that operates the person's own Kubo node. Each view component draws the structured output of one MCP tool: set `tool` to the tool name and bind `output` to the data model path that holds the tool's structuredContent. Output that does not match the tool's schema is not drawn. Write and destructive tools always pass a confirmation first: use ApprovalCard or ConfirmationDialog to show it, and wire approveAction only when this surface can really approve. Never imply an action ran before it did.",
   "components": {

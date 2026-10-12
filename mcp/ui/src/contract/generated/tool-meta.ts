@@ -2,7 +2,7 @@
 // Regenerate with `pnpm gen:contract`; tests fail when this file drifts from the contract.
 
 export const CONTRACT_VERSION = "0.1.0";
-export const CONTRACT_DIGEST = "c73f95e726473e51";
+export const CONTRACT_DIGEST = "98b2d7539b57dea3";
 export const A2UI_CATALOG_ID = "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json";
 export const A2UI_CATALOG_ALIASES = ["ipfs-mcp"] as const;
 export const A2UI_CATALOG_SHORT_NAME = "ipfs-mcp";

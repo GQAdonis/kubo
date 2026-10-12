@@ -120,7 +120,7 @@
       "name": "ipfs_node_status",
       "group": "node",
       "title": "Server status",
-      "description": "Status of this MCP server and its daemon connection: reachability, version gate, enabled groups, read-only mode and tools unavailable on this daemon.",
+      "description": "Status of this MCP server and its daemon connection: reachability, version gate, enabled groups, read-only mode and tools unavailable on this daemon. If the ipfs-troubleshooting skill is available, load it first for the diagnosis order and error-code meanings.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -151,7 +151,7 @@
       "name": "ipfs_add",
       "group": "content",
       "title": "Add content",
-      "description": "Add text or base64 bytes from the request as a UnixFS file using Kubo's default CID recipe unless recipe options are given. Never reads host files. Pinning and providing are explicit.",
+      "description": "Add text or base64 bytes from the request as a UnixFS file using Kubo's default CID recipe unless recipe options are given. Never reads host files. Pinning and providing are explicit. If the ipfs-publish-content skill is available, load it first for publishing workflows (pin, provide, share links).",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -185,7 +185,7 @@
       "name": "ipfs_cat",
       "group": "content",
       "title": "Read file",
-      "description": "Read bytes of a UnixFS file by CID or content path, with offset and length. Output is capped and marked truncated. Untrusted content.",
+      "description": "Read bytes of a UnixFS file by CID or content path, with offset and length. Output is capped and marked truncated. Untrusted content. If the ipfs-retrieve-verify skill is available, load it first to read, page and verify content safely.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -215,7 +215,7 @@
       "name": "ipfs_get",
       "group": "content",
       "title": "Get content",
-      "description": "Describe a file or directory by CID or content path and return small text files inline; larger or directory content is returned as an ipfs:// resource link. Untrusted content.",
+      "description": "Describe a file or directory by CID or content path and return small text files inline; larger or directory content is returned as an ipfs:// resource link. Untrusted content. If the ipfs-retrieve-verify skill is available, load it first to read, page and verify content safely.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -246,7 +246,7 @@
       "name": "ipfs_ls",
       "group": "content",
       "title": "List directory",
-      "description": "List the entries of a UnixFS directory by CID or content path, with cursor pagination. Entry names are untrusted content.",
+      "description": "List the entries of a UnixFS directory by CID or content path, with cursor pagination. Entry names are untrusted content. If the ipfs-retrieve-verify skill is available, load it first to read, page and verify content safely.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -306,7 +306,7 @@
       "name": "pin_add",
       "group": "pin",
       "title": "Pin content",
-      "description": "Pin a CID or content path on the connected node, fetching missing blocks from the network.",
+      "description": "Pin a CID or content path on the connected node, fetching missing blocks from the network. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -367,7 +367,7 @@
       "name": "pin_update",
       "group": "pin",
       "title": "Update pin",
-      "description": "Move a recursive pin from one CID to another, transferring only the differences. By default (unpin true) the old pin is removed, which has the effect of pin_rm on it. Destructive: off by default, always confirmed.",
+      "description": "Move a recursive pin from one CID to another, transferring only the differences. By default (unpin true) the old pin is removed, which has the effect of pin_rm on it. Destructive: off by default, always confirmed. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -401,7 +401,7 @@
       "name": "pin_rm",
       "group": "pin",
       "title": "Remove pin",
-      "description": "Remove a pin. Unpinned content becomes eligible for garbage collection. Destructive: always confirmed.",
+      "description": "Remove a pin. Unpinned content becomes eligible for garbage collection. Destructive: always confirmed. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -526,7 +526,7 @@
       "name": "mfs_write",
       "group": "mfs",
       "title": "Write MFS file",
-      "description": "Replace the content of an MFS file with text or base64 bytes from the request (created when missing). Overwrites existing content.",
+      "description": "Replace the content of an MFS file with text or base64 bytes from the request (created when missing). Overwrites existing content. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -590,7 +590,7 @@
       "name": "mfs_cp",
       "group": "mfs",
       "title": "Copy into MFS",
-      "description": "Copy an MFS path or an /ipfs/ content path to a new MFS path. Fails when the destination exists.",
+      "description": "Copy an MFS path or an /ipfs/ content path to a new MFS path. Fails when the destination exists. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -622,7 +622,7 @@
       "name": "mfs_mv",
       "group": "mfs",
       "title": "Move MFS path",
-      "description": "Move or rename an MFS path. Fails when the destination exists.",
+      "description": "Move or rename an MFS path. Fails when the destination exists. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -653,7 +653,7 @@
       "name": "mfs_rm",
       "group": "mfs",
       "title": "Remove MFS path",
-      "description": "Remove an MFS file or directory. Destructive: always confirmed.",
+      "description": "Remove an MFS file or directory. Destructive: always confirmed. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -684,7 +684,7 @@
       "name": "ipns_publish",
       "group": "names",
       "title": "Publish IPNS name",
-      "description": "Publish a content path under a keystore key's IPNS name, replacing the previous record.",
+      "description": "Publish a content path under a keystore key's IPNS name, replacing the previous record. If the ipfs-ipns-names skill is available, load it first for key handling and the publish-and-update flow.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -715,7 +715,7 @@
       "name": "ipns_resolve",
       "group": "names",
       "title": "Resolve IPNS name",
-      "description": "Resolve an IPNS name or DNSLink to a content path. The resolved value comes from the network and is untrusted.",
+      "description": "Resolve an IPNS name or DNSLink to a content path. The resolved value comes from the network and is untrusted. If the ipfs-ipns-names skill is available, load it first for key handling and the publish-and-update flow.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -775,7 +775,7 @@
       "name": "key_gen",
       "group": "names",
       "title": "Generate key",
-      "description": "Generate a new keystore key. Never returns private key material.",
+      "description": "Generate a new keystore key. Never returns private key material. If the ipfs-ipns-names skill is available, load it first for key handling and the publish-and-update flow.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -868,7 +868,7 @@
       "name": "dag_get",
       "group": "dag",
       "title": "Get DAG node",
-      "description": "Get an IPLD node as dag-json. Large nodes are returned as a resource link. Untrusted content.",
+      "description": "Get an IPLD node as dag-json. Large nodes are returned as a resource link. Untrusted content. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -929,7 +929,7 @@
       "name": "dag_put",
       "group": "dag",
       "title": "Put DAG node",
-      "description": "Store one IPLD node given as dag-json text.",
+      "description": "Store one IPLD node given as dag-json text. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -960,7 +960,7 @@
       "name": "car_import",
       "group": "dag",
       "title": "Import CAR",
-      "description": "Import a CAR file given as base64. Root pinning must be stated explicitly with pin_roots. Never announces immediately (fast-provide is off); use routing_provide to announce.",
+      "description": "Import a CAR file given as base64. Root pinning must be stated explicitly with pin_roots. Never announces immediately (fast-provide is off); use routing_provide to announce. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -991,7 +991,7 @@
       "name": "car_export",
       "group": "dag",
       "title": "Export CAR",
-      "description": "Export the DAG under a root CID as a CAR file: inline base64 up to the cap, otherwise an ipfs:// resource link. Untrusted content.",
+      "description": "Export the DAG under a root CID as a CAR file: inline base64 up to the cap, otherwise an ipfs:// resource link. Untrusted content. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -1202,7 +1202,7 @@
       "name": "repo_gc",
       "group": "diag",
       "title": "Garbage collect",
-      "description": "Run garbage collection: remove unpinned blocks from the repo. Destructive: always confirmed.",
+      "description": "Run garbage collection: remove unpinned blocks from the repo. Destructive: always confirmed. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -1236,7 +1236,7 @@
       "name": "ipfs_index_search",
       "group": "index",
       "title": "Search index",
-      "description": "Semantic search over content indexed by ipfs mcp (requires embeddings configuration). Returns matching chunks with their CIDs; chunk text is read back from the node. Untrusted content. The query goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable.",
+      "description": "Semantic search over content indexed by ipfs mcp (requires embeddings configuration). Returns matching chunks with their CIDs; chunk text is read back from the node. Untrusted content. The query goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -1266,7 +1266,7 @@
       "name": "ipfs_index_cid",
       "group": "index",
       "title": "Index CID",
-      "description": "Explicitly chunk, embed and store one UnixFS file by CID in the index (requires embeddings configuration; respects the MIME allowlist and size cap). Reads the file through the node as ipfs_cat does; adds, pins and announces nothing. Content left out is reported in skipped_reason. The text goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable.",
+      "description": "Explicitly chunk, embed and store one UnixFS file by CID in the index (requires embeddings configuration; respects the MIME allowlist and size cap). Reads the file through the node as ipfs_cat does; adds, pins and announces nothing. Content left out is reported in skipped_reason. The text goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
