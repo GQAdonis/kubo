@@ -416,11 +416,10 @@
             ]
           },
           "default": [
-            "native",
-            "desktop"
+            "native"
           ],
-          "description": "The out-of-band human gate for clients that cannot elicit. native is the OS presence prompt (macos-localauth on macOS, linux-polkit on Linux); desktop is a paired IPFS Desktop window; cli is `ipfs mcp confirm` on a TTY, is enabled only by naming it (here, in --confirm or IPFS_MCP_CONFIRM) or by confirmation.cli, and never approves calls from the stdio session. A mechanism the host cannot offer is skipped. Precedence: --confirm, then IPFS_MCP_CONFIRM, then this key, then the default.",
-          "offSwitch": "Empty list, --confirm=none or IPFS_MCP_CONFIRM=none: no out-of-band resolver runs. Per-call confirmation still applies: elicitation is used when the client supports it, otherwise write and destructive calls are refused with confirmation_unavailable.",
+          "description": "The out-of-band human gate for clients that cannot elicit. native is the OS presence prompt (macos-localauth on macOS, linux-polkit on Linux); desktop is a paired IPFS Desktop window and is opt-in since 2026-10-12 (the default is native only): it resolves write-class confirmations only, after Touch ID in the Desktop window, is never a presence resolver, and has no Windows support this phase; cli is `ipfs mcp confirm` on a TTY, is enabled only by naming it (here, in --confirm or IPFS_MCP_CONFIRM) or by confirmation.cli, and never approves calls from the stdio session. A mechanism the host cannot offer is skipped. Precedence: --confirm, then IPFS_MCP_CONFIRM, then this key, then the default.",
+          "offSwitch": "Leaving desktop out (the default) keeps the paired Desktop channel off. Empty list, --confirm=none or IPFS_MCP_CONFIRM=none: no out-of-band resolver runs. Per-call confirmation still applies: elicitation is used when the client supports it, otherwise write and destructive calls are refused with confirmation_unavailable.",
           "ownerChange": "native-confirmation-prompt",
           "flag": "--confirm",
           "env": "IPFS_MCP_CONFIRM"
@@ -447,7 +446,7 @@
         "cli": {
           "type": "boolean",
           "default": false,
-          "description": "true enables the cli mode (ipfs mcp confirm) as if cli were listed in confirmation.modes; with confirmation.modes absent, it adds cli to the default modes (native, desktop). The principals[].shell_capable rule and the TTY requirement still apply, and cli never satisfies requires_native_prompt. cli never approves a confirmation opened by the stdio session (the local principal), because a stdio host cannot assert that it has no shell: a non-eliciting stdio client whose only resolver is cli gets confirmation_unavailable, and ipfs mcp warns at start. --confirm and IPFS_MCP_CONFIRM still win: when either is given, this key adds nothing. Setting false while confirmation.modes lists cli is a validation error.",
+          "description": "true enables the cli mode (ipfs mcp confirm) as if cli were listed in confirmation.modes; with confirmation.modes absent, it adds cli to the default modes (native). The principals[].shell_capable rule and the TTY requirement still apply, and cli never satisfies requires_native_prompt. cli never approves a confirmation opened by the stdio session (the local principal), because a stdio host cannot assert that it has no shell: a non-eliciting stdio client whose only resolver is cli gets confirmation_unavailable, and ipfs mcp warns at start. --confirm and IPFS_MCP_CONFIRM still win: when either is given, this key adds nothing. Setting false while confirmation.modes lists cli is a validation error.",
           "offSwitch": "false (default): ipfs mcp confirm is refused unless cli is named in --confirm, IPFS_MCP_CONFIRM or confirmation.modes. true is for headless servers only and needs a TTY.",
           "ownerChange": "native-confirmation-prompt",
           "flag": "--confirm=cli"

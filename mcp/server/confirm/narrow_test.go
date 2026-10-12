@@ -28,7 +28,7 @@ func TestFileModes(t *testing.T) {
 		{name: "cli false alone changes nothing", cli: &no},
 		{name: "modes only", modes: list(ModeNative), want: []string{ModeNative}, wantExplicit: true},
 		{name: "empty modes", modes: list(), want: []string{}, wantExplicit: true},
-		{name: "cli true alone extends the default", cli: &yes, want: []string{ModeNative, ModeDesktop, ModeCLI}, wantExplicit: true},
+		{name: "cli true alone extends the default", cli: &yes, want: []string{ModeNative, ModeCLI}, wantExplicit: true},
 		{name: "cli true extends modes", modes: list(ModeNative), cli: &yes, want: []string{ModeNative, ModeCLI}, wantExplicit: true},
 		{name: "cli true with empty modes", modes: list(), cli: &yes, want: []string{ModeCLI}, wantExplicit: true},
 		{name: "cli true with cli already listed", modes: list(ModeCLI), cli: &yes, want: []string{ModeCLI}, wantExplicit: true},
@@ -44,7 +44,7 @@ func TestFileModes(t *testing.T) {
 		yes := true
 		got, _ := FileModes(nil, &yes)
 		got[0] = "mutated"
-		assert.Equal(t, []string{ModeNative, ModeDesktop}, DefaultModes)
+		assert.Equal(t, []string{ModeNative}, DefaultModes)
 		in := []string{ModeNative}
 		got, _ = FileModes(&in, &yes)
 		got[0] = "mutated"

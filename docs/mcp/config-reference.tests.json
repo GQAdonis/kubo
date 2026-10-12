@@ -47,8 +47,8 @@
     "agent.loop.max_steps": { "tests": ["TestLoopStopsAtTheStepLimit"] },
     "agent.loop.max_tokens": { "tests": ["TestLoopStopsAtTheTokenBudget"] },
     "agent.loop.wall_clock": { "tests": ["TestLoopStopsAtTheWallClock"] },
-    "confirmation": { "tests": ["TestConfiguredDefaultsToNativeAndDesktop", "TestNoModesBuildsNoResolver"] },
-    "confirmation.modes": { "tests": ["TestConfigConfirmationModes", "TestNoModesBuildsNoResolver", "TestNonElicitingClientWithoutResolverIsRefused"] },
+    "confirmation": { "tests": ["TestConfiguredDefaultsToNativeOnly", "TestNoModesBuildsNoResolver"] },
+    "confirmation.modes": { "tests": ["TestConfigConfirmationModes", "TestNoModesBuildsNoResolver", "TestNonElicitingClientWithoutResolverIsRefused", "TestConfiguredDefaultsToNativeOnly"] },
     "confirmation.resolvers": {
       "tests": ["TestConfirmationKeyDefaults", "TestResolversNarrowTheModes", "TestConfirmationResolversNarrowEverySource", "TestResolversDoNotAffectCLI", "TestNarrowingToNothingEmitsTheStartupWarning", "TestEmptyResolversRunNoPresenceOrDesktopResolver", "TestConfirmationResolversRejectUnknownNames", "TestConfigExamplesValidate", "TestMCPConfirmationConfigKeys"]
     },
@@ -95,7 +95,7 @@
       "--api-auth-file": { "doc": "Absolute path of a file holding the daemon's RPC API secret; same meaning as `--api-auth-env`. Default: none. Off: leave unset.", "tests": ["TestResolveAPIAuth", "TestResolveAPIAuthRefusals"] },
       "--no-app-views": { "key": "tools.app_views", "tests": ["TestAppViewsOffSwitch", "TestMCPAppViewsOff"] },
       "--print-rpc-allowed-paths": { "doc": "Prints an `API.Authorizations` entry whose `AllowedPaths` list only the RPC commands of the enabled tools (honors `--tools`, `--read-only` and `tools.disabled`), then exits without contacting the daemon. Default: false. Nothing to turn off.", "tests": ["TestRPCAllowedPathsFollowTheToolSelection", "TestRPCAuthorizationEntryIsJSONWithoutARealSecret"] },
-      "--confirm": { "key": "confirmation.modes", "tests": ["TestParseModes", "TestNoModesBuildsNoResolver", "TestConfiguredDefaultsToNativeAndDesktop"] },
+      "--confirm": { "key": "confirmation.modes", "tests": ["TestParseModes", "TestNoModesBuildsNoResolver", "TestConfiguredDefaultsToNativeOnly"] },
       "--llm-base-url": { "key": "llm.base_url", "tests": ["TestAgentHasNoDefaultEndpointOrModel", "TestFlagsOverrideConfigFile"] },
       "--llm-model": { "key": "llm.model", "tests": ["TestAgentHasNoDefaultEndpointOrModel"] },
       "--llm-api-key-env": { "key": "llm.api_key", "tests": ["TestLiteralKeyFlagsAreRejectedAndNeverEchoed"] },

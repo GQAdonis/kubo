@@ -56,7 +56,7 @@ The gate picks the first mechanism that applies to the calling session.
 
 1. **MCP elicitation.** If the client advertised elicitation at initialize, ~~the server calls `ServerSession.Elicit` with~~ the server asks the client's human with a summary naming the tool, the CIDs, paths or names, and the effect. Accept runs the call once. Decline or cancel aborts it. (Superseded in part: the call to `ServerSession.Elicit` is replaced by a multi round trip; see [Amendment (2026-10-09)](#amendment-2026-10-09), item 1.)
 2. **External resolution with a human-presence factor.** For every session or principal that cannot elicit, the call becomes a pending confirmation in an in-process broker with an ID, a summary and an expiry. It is resolved only by a surface a same-user background process cannot drive: the paired IPFS Desktop confirmation window, a macOS LocalAuthentication prompt (Touch ID or password), or a Linux polkit authentication-agent prompt. An AG-UI interrupt answered by a user gesture in the chat island resolves calls for the `ui` principal. The resolvers, their platform limits and the headless `--confirm=cli` opt-in are decided in ADR-0004 and built in `native-confirmation-prompt`.
-3. **No resolver available.** Where neither elicitation nor a presence-factor resolver exists (Windows without paired Desktop, Linux without the operator-installed polkit action), writes and destructive calls are refused with `confirmation_unavailable`. They never fall through to silent execution (Round 0 answer R3).
+3. **No resolver available.** Where neither elicitation nor a presence-factor resolver exists (Windows without paired Desktop, Linux without the operator-installed polkit action), writes and destructive calls are refused with `confirmation_unavailable`. They never fall through to silent execution (Round 0 answer R3). (Superseded in part: Windows has no resolver this phase, paired Desktop or not; see the R14 amendment of 2026-10-12.)
 
 ### 4. The two-step confirm token: binding handle, not consent
 
@@ -133,7 +133,7 @@ The mapping onto go-sdk is one adapter:
 ### Negative
 
 - Hosts without elicitation get an extra step per write: a native prompt outside the agent host. This invites approval fatigue.
-- Users on Windows without a paired IPFS Desktop, and on Linux without the polkit action, cannot perform writes from non-eliciting clients at all.
+- Users on Windows without a paired IPFS Desktop, and on Linux without the polkit action, cannot perform writes from non-eliciting clients at all. (Superseded in part: on Windows this holds with or without Desktop this phase; R14 amendment.)
 - The registered `mcp-pinning-with-confirmation` tasks 1.1-1.4 were written when the token was the fallback gate. Under this ADR its real-daemon test of "a confirmed `pin_rm` removes the pin" needs an approved external resolution (or elicitation), not only a repeated call with the token.
 - The static bearer token has no rotation or per-request expiry of its own; rotation means restarting `ipfs mcp` with a new token file.
 - Scopes are coarse (three) until an OAuth verifier allows finer ones.
@@ -219,7 +219,7 @@ Decisions from the Round 4 review of the `ipfs-mcp-server` phase. Where this dis
 
 ### 2. The human gate is on by default and has one off switch
 
-- **Decision.** The out-of-band gate for clients that cannot elicit runs by default with `native,desktop`. It is selected by `--confirm`, then `IPFS_MCP_CONFIRM`, then `confirmation.modes` in the config file, then the default. `cli` is enabled only by naming it. `IPFS_MCP_CONFIRM=none` (or `--confirm=none`, or `confirmation.modes: []`) turns the gate off.
+- **Decision.** The out-of-band gate for clients that cannot elicit runs by default with `native,desktop` (superseded: `native` only since the R14 amendment of 2026-10-12). It is selected by `--confirm`, then `IPFS_MCP_CONFIRM`, then `confirmation.modes` in the config file, then the default. `cli` is enabled only by naming it. `IPFS_MCP_CONFIRM=none` (or `--confirm=none`, or `confirmation.modes: []`) turns the gate off.
 - **What "off" means.** Per-call confirmation of write and destructive tools is never turned off. With the gate off, elicitation still confirms calls from clients that support it; every other write or destructive call is refused with `confirmation_unavailable`. Turning the gate off can only make the server refuse more.
 
 ### 3. The anonymous loopback principal is read-only
@@ -286,7 +286,7 @@ Recorded from the R11 phase-boundary review (`.agent-team/kubo-ipfs-agentic/find
 
 ### Consequences of the R11 amendment
 
-- On Windows, and on any host without the macOS or polkit factor, destructive calls from `ui` and `a2a` principals are refused with `confirmation_unavailable` until the Desktop window ships, even when Desktop is paired. Destructive tools stay usable from a `human-mcp` session that elicits.
+- On Windows, and on any host without the macOS or polkit factor, destructive calls from `ui` and `a2a` principals are refused with `confirmation_unavailable` even when Desktop is paired; since the R14 amendment of 2026-10-12, also after the Desktop window ships. Destructive tools stay usable from a `human-mcp` session that elicits.
 - The `requires_native_prompt` descriptions in `mcp/contract/confirmation/confirmation.schema.json` still list `desktop`, and the generated `mcp/ui/catalog/ipfs-mcp.catalog.json` copies that text. Both need a coordinated regeneration with the `ui-ux-engineer` role. Until then, this amendment and `IsPresenceResolver` govern. (Done later in R11: the schema, the config schema and the generated catalog were corrected; see `docs/mcp/progress-report.md` section 5.1.)
 
 ## Amendment (2026-10-11, operator decisions after R11): accepted residual risk, and three confirmation keys
@@ -302,7 +302,7 @@ Operator decisions of 2026-10-11 (`docs/mcp/progress-report.md` section 5.1; `.p
   - Same OS user only. The verifier is a private file (`os.CreateTemp`, mode 0600) in the operator's repo directory (`$IPFS_PATH/mcp-confirm-pairing.json` by default, or `IPFS_MCP_PAIRING_FILE`), and the socket directory's owner is checked (R11 L4). Another user cannot replace the verifier or reach the socket unless the operator's own directory permissions allow it.
   - Same-user processes are outside the write-gate threat model already: they can call the daemon's RPC API directly with the operator's own credentials. The confirmation gate protects against an agent acting through `ipfs mcp`, not against arbitrary code running as the operator.
 - **How to turn Desktop off.** Leave `desktop` out of the modes (`--confirm=native`, `IPFS_MCP_CONFIRM=native`, or `confirmation.modes: ["native"]`), or leave it out of `confirmation.resolvers` (for example `["macos-localauth", "linux-polkit"]`). Without `desktop`, the verifier file is never read and the risk does not apply.
-- **Revisit when.** The Desktop confirmation window ships with its own presence factor (R11 amendment, item 1). At that point `desktop` may become a presence resolver, and this acceptance no longer covers it: the verifier must then be protected against same-user replacement, or `desktop` must stay a write-only resolver.
+- **Revisit when.** The Desktop confirmation window ships with its own presence factor (R11 amendment, item 1). At that point `desktop` may become a presence resolver, and this acceptance no longer covers it: the verifier must then be protected against same-user replacement, or `desktop` must stay a write-only resolver. (Superseded: the R14 amendment of 2026-10-12 decides that `desktop` stays write-only and is never a presence resolver, and makes it opt-in.)
 
 ### 2. `confirmation.resolvers`, `confirmation.cli` and `confirmation.ttl` are implemented
 
@@ -331,6 +331,47 @@ The operator chose to implement the three keys rather than remove them. This rep
 - **Why not accept it as residual risk.** Section 3's rule for `cli` is "only for principals the operator asserts are not shell-capable" (rejected alternatives table). Stdio cannot make that assertion, so allowing it would contradict the original decision rather than accept a bounded risk.
 - **Falsifier.** A stdio call is approved through `ipfs mcp confirm` or a POST carrying the cli header: block.
 - **Pins.** Named by the `mcp-server-engineer` in the R12 fix pass; the spec scenario is "Shell-capable stdio host with only the cli resolver" in `openspec/changes/native-confirmation-prompt/specs/mcp-out-of-band-confirmation/spec.md`.
+
+## Amendment (2026-10-12, R14): Desktop is opt-in and needs Touch ID, version 2 channel authentication, no Windows resolver
+
+Recorded from the R14 reviews of the Desktop pairing and confirmation window (`.agent-team/kubo-ipfs-agentic/findings/security/r14-desktop-confirm.md`, `.agent-team/kubo-ipfs-agentic/findings/review/r14-desktop-confirm.md`) and the operator's decisions of 2026-10-12. Where this disagrees with the text above, including the R11 amendment and the amendment of 2026-10-11, this amendment governs.
+
+### The incident (HG-1 evidence for the Desktop row)
+
+During the Desktop end-to-end run on a throwaway test node, an unknown process under the same user clicked Desktop's Approve 4 to 6 seconds after the confirmation window appeared. Computer-use agents run on this Mac. The window took focus and stayed on top on every show, which made it a target for any agent clicking stale coordinates. A click in a window is therefore not a presence factor, and with the default modes `native,desktop` a paired Desktop let a click approve a write that would otherwise have needed Touch ID (security H-1). This is the HG-1 result for the paired Desktop channel, recorded in `mcp/server/confirm/MECHANISMS.md`.
+
+### Decision 1: Desktop needs Touch ID, and it leaves the default modes
+
+- **Default modes are `native` only.** `desktop` is opt-in: name it in `--confirm`, `IPFS_MCP_CONFIRM` or `confirmation.modes`. This supersedes the Round 4 amendment's default `native,desktop`. The contract default is updated (`mcp/contract/config/ipfs-mcp-config.schema.json`); the server change is `native-confirmation-prompt` task 1.8.
+- **Touch ID in the Desktop window.** Desktop asks for Touch ID (`systemPreferences.promptTouchID`) before it sends an approval. It also arms Approve only after a delay and re-arms it when the request or focus changes, does not steal focus or stay on top, and sets content protection on the window. Owner: `desktop-agent-chat` tasks 1.7 (arming, focus, content protection) and 1.8 (Touch ID).
+- **`desktop` is never a presence resolver.** The server cannot verify that Desktop asked for Touch ID, the pairing key can be harvested or the verifier forged by a same-user process (amendment of 2026-10-11), and the incident shows the window can be driven. This closes the path in the R11 amendment (item 1) and in the 2026-10-11 amendment ("Revisit when") under which `desktop` could become a presence resolver once the window shipped. A destructive call that requires the native prompt stays refused unless `macos-localauth` or `linux-polkit` approves it.
+- **The 2026-10-11 acceptance still holds** for verifier forgery, now narrowed further: it applies only when the operator opts in to `desktop`.
+
+### Decision 2: version 2 channel authentication
+
+The static bearer key is retired for `desktop`. Desktop authenticates each request with HMAC-SHA-256 over a canonical string that binds the socket, method, path, timestamp, a 16-byte nonce and the body hash. The server rejects stale timestamps (+/- 30 s) and replayed nonces (60 s cache, 4096 entries), and proves possession of the verifier on every response, so Desktop ignores sockets that cannot prove it (security M-1). The HMAC key is the stored verifier, `SHA-256(key)`, which both sides can compute. Cost, accepted: the 0600 pairing file becomes equivalent to the key for a same-user reader, inside the same-user bound already accepted. There is no version negotiation: both sides ship together in this fork, and a bearer request is refused with `auth_version_unsupported`. `ipfs mcp confirm` keeps its cli marker; it never sent the key. `PendingView` gains `targets` (security M-2). The full protocol, error codes and a test vector are in `MECHANISMS.md`, "Channel authentication, version 2". Server: `native-confirmation-prompt` task 1.7. Client: `desktop-agent-chat` task 1.9.
+
+### Decision 3: reachable off switches and a confirmation surface separate from the chat
+
+Desktop gets tray entries to pair again, unpair and turn Desktop confirmations on or off, and confirmations stop depending on the agent chat being on (security M-4, review M5). Owner: `desktop-agent-chat` task 1.10.
+
+### Windows has no resolver this phase
+
+Desktop's channel client is inert on `win32`, so Windows has no out-of-band resolver this phase (review H2). Section 3 item 3, the Consequences bullet on Windows and the R11 consequences bullet named a paired Desktop as the Windows path; they are superseded by this paragraph. On Windows, writes and destructive calls from clients that cannot elicit are refused with `confirmation_unavailable`. Writes work from `human-mcp` clients that elicit. A Windows transport for Desktop is a later change.
+
+### For the server engineer: stale text to correct
+
+- `mcp/server/broker.go:41-45` (`IsPresenceResolver` comment: "no Desktop confirmation window consumes the pairing key"): say `desktop` never counts.
+- `mcp/server/confirm/platform_other.go:12`: stop telling Windows users to pair Desktop.
+- `cmd/ipfs/kubo/mcp_confirm.go:33` (`--confirm` help, "Default: native,desktop") and any other default text, with `TestCommandDocsWidth`.
+- `mcp/server/confirm/channel.go` header comment (bearer form) once version 2 lands.
+
+### Falsifiers
+
+- A Desktop approval reaches the server for a confirmation that requires the native prompt: block.
+- A request authenticated with a bearer key, a replayed nonce, a stale timestamp, or a signature made for another socket is accepted: block.
+- Desktop shows content from a socket whose server proof did not verify: block.
+- With no `--confirm`, no `IPFS_MCP_CONFIRM` and no `confirmation.modes`, the Desktop channel resolves anything: block.
 
 ## References
 

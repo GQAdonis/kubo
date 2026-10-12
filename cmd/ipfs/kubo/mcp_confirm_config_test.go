@@ -24,7 +24,7 @@ func TestConfirmationCLIKeyEnablesCLIMode(t *testing.T) {
 	modes, explicit, err := confirmModesForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: file}))
 	require.NoError(t, err)
 	assert.True(t, explicit)
-	assert.Equal(t, []string{confirm.ModeNative, confirm.ModeDesktop, confirm.ModeCLI}, modes)
+	assert.Equal(t, []string{confirm.ModeNative, confirm.ModeCLI}, modes)
 
 	// It extends the listed modes, too.
 	file = writeMCPConfig(t, `{"confirmation": {"cli": true, "modes": ["native"]}}`)

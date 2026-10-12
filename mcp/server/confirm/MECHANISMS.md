@@ -17,15 +17,17 @@ call never approve. If a mechanism is missing, the call is refused with
 |---|---|---|---|---|---|
 | macOS LocalAuthentication | `macos-localauth` | no | done (below) | pending, operator runs `hg1/attempt.sh` | on by default (`native`) |
 | Linux polkit | `linux-polkit` | no | not run: no Linux machine in this environment | pending, operator | on by default (`native`) once the action is installed; refuses without it |
-| Windows | none | no | n/a | n/a | refuses unless paired with IPFS Desktop (pairing is a later change) |
-| Paired Desktop channel | `desktop` | no | automated IPC cases (test/cli `TestMCPConfirmHG1`) | needs Desktop (later) | on by default (`desktop`) once paired; resolves write-class confirmations only, not a presence resolver (see below) |
+| Windows | none | no | n/a | n/a | no resolver this phase: Desktop's channel client is inert on `win32`; non-eliciting writes get `confirmation_unavailable` |
+| Paired Desktop channel | `desktop` | no | automated IPC cases (test/cli `TestMCPConfirmHG1`) | failed for a bare click (2026-10-12, below); Touch ID in the Desktop window added | opt-in (name `desktop`); write-class only, never a presence resolver; channel auth version 2 (below) |
 | `ipfs mcp confirm` | `cli` | no | automated IPC cases | n/a (explicit weak opt-in) | enabled with `--confirm=cli` only |
 
 Defaults. With no `--confirm` and no `IPFS_MCP_CONFIRM`, the gate is on:
-`native,desktop`. macOS uses LocalAuthentication when `/usr/bin/swift` exists,
+`native`. macOS uses LocalAuthentication when `/usr/bin/swift` exists,
 otherwise it fails closed with a message naming the Xcode command line tools
 (`xcode-select --install`). Linux uses polkit only when the action is
-installed, otherwise it fails closed. Windows uses `desktop` only when paired.
+installed, otherwise it fails closed. Windows has no resolver this phase.
+`desktop` is opt-in since 2026-10-12: name it in `--confirm`, `IPFS_MCP_CONFIRM`
+or `confirmation.modes`.
 A mechanism the host cannot offer is skipped and a client that cannot elicit
 gets `confirmation_unavailable`. `cli` is never a default; name it with
 `--confirm=cli`. The off switch is `--confirm=none` or `IPFS_MCP_CONFIRM=none`
@@ -34,9 +36,8 @@ gets `confirmation_unavailable`. `cli` is never a default; name it with
 
 `requires_native_prompt` (a destructive call from a `ui` or `a2a` principal)
 is satisfied only by a presence-factor resolver: `macos-localauth` or
-`linux-polkit` (`server.IsPresenceResolver`). `desktop` does not count until a
-Desktop confirmation window consumes the pairing key (ADR-0003, R11
-amendment). `cli` and `agui-interrupt` never satisfy it. With only those
+`linux-polkit` (`server.IsPresenceResolver`). `desktop` never counts (ADR-0003,
+amendment of 2026-10-12). `cli` and `agui-interrupt` never satisfy it. With only those
 available, the call is `confirmation_unavailable`. The broker enforces this on
 `Resolve`, and the gate enforces it when choosing resolvers.
 
@@ -137,33 +138,180 @@ process is unavailable; this is recorded as `unavailable`, not as a pass.
 
 ## Windows
 
-No native presence factor is implemented. `--confirm=native` yields a resolver
-that is always unavailable; confirmation works only through the paired IPFS
-Desktop window, which lands in a later change. Until then a non-eliciting
-client gets `confirmation_unavailable`.
+No native presence factor is implemented, and IPFS Desktop's channel client
+is inert on `win32` (Node cannot reach the Unix-socket channel there). Windows
+has no out-of-band resolver this phase: `--confirm=native` yields a resolver
+that is always unavailable, and a non-eliciting client gets
+`confirmation_unavailable`. Writes work from clients that elicit. A Windows
+transport for Desktop is a later change.
 
 ## Paired Desktop channel
 
 HTTP over a Unix socket in a private (0700) directory, one socket per server
-process. A client authenticates with `Authorization: Bearer <pairing key>`. The
-server stores only a SHA-256 of the key (`ipfs mcp pair` prints the key once;
-Desktop keeps it in `safeStorage`). An unpaired client can neither list nor
-resolve; a wrong key gets 403; the cli marker is 403 unless `--confirm=cli`.
-A same-user process can reach the socket but cannot approve without the key.
-Automated cases: `TestMCPConfirmHG1` (no key, forged key, `ipfs mcp confirm`
-without `--confirm=cli`).
+process (`<pid>-<n>.sock`). The server stores only a verifier,
+`V = SHA-256(pairing key)` (32 bytes, hex in the pairing file). `ipfs mcp pair`
+prints the key once; Desktop keeps it in `safeStorage` and derives `V` itself.
 
-No Desktop confirmation window consumes the key yet, so the key alone is the
-whole factor. For that reason `desktop` is not a presence resolver. It resolves
-write-class confirmations but never a destructive call that requires the
-native prompt. It becomes a presence resolver only when the Desktop window
-ships and adds a user gesture of its own.
+Decided 2026-10-12 (ADR-0003, amendment of that date):
 
-`ipfs mcp pair` needs a terminal on stdin. It refuses while any server accepts
-connections on a socket in the confirmation directory; a stale socket file
-does not block it. A new pairing replaces the old one. The channel re-reads
-the stored verifier on every request, so the old key stops working on running
-servers at once.
+- `desktop` is **opt-in**. The default modes are `native` only; name `desktop`
+  in `--confirm`, `IPFS_MCP_CONFIRM` or `confirmation.modes` to use it.
+- `desktop` is **not a presence resolver**, now or when the window ships. It
+  resolves write-class confirmations only; a confirmation that requires the
+  native prompt is never offered to it.
+- Desktop asks for Touch ID (`systemPreferences.promptTouchID`) in its own
+  window before it sends an approval, arms Approve only after a delay, does
+  not steal focus, and sets content protection on the window. These are
+  Desktop-side checks; the server cannot verify them, which is why `desktop`
+  stays write-only.
+- Windows: Desktop's channel client is inert on `win32`, so Windows has no
+  resolver this phase (see Windows above).
+
+### Channel authentication, version 2
+
+Version 2 replaces the bearer key. The key never crosses the socket. Both sides ship
+in this fork together, so there is no negotiation and no fallback: a server
+accepts only version 2 for `desktop`, and Desktop speaks only version 2.
+
+**Key.** `K = V`, the 32 raw bytes of `SHA-256(UTF-8 pairing key)`. Desktop
+computes it from the key; the server reads it from the pairing file. All HMACs
+are HMAC-SHA-256 with key `K`. Consequence, accepted: the pairing file (mode
+0600 under the operator's account) is now equivalent to the key. A same-user
+process could already replace it (accepted residual risk, ADR-0003 amendment
+of 2026-10-11); with version 2 it can also read it and act as Desktop without
+leaving a trace. Keep the file private. A public-key scheme (Desktop signs, the
+server stores only a public key) would remove this; it is a possible version 3.
+
+**Request headers** (Desktop to server, every request):
+
+| Header | Value |
+|---|---|
+| `X-IPFS-MCP-Auth-Version` | `2` |
+| `X-IPFS-MCP-Timestamp` | Unix time in whole seconds, decimal ASCII, no sign, no leading zeros |
+| `X-IPFS-MCP-Nonce` | 16 random bytes from a CSPRNG, base64url without padding (22 characters) |
+| `X-IPFS-MCP-Signature` | base64url without padding of `HMAC(K, request string)` (43 characters) |
+
+**Request string.** These fields joined with a single `\n` (0x0A), no trailing
+newline, all ASCII:
+
+```
+ipfs-mcp-confirm-v2
+request
+<socket>        base name of the socket the client connected to, e.g. 4242-1.sock
+<METHOD>        GET or POST, upper case
+<path>          exact request path, e.g. /v1/pending (no query string; any query is rejected)
+<timestamp>     the X-IPFS-MCP-Timestamp value, byte for byte
+<nonce>         the X-IPFS-MCP-Nonce value, byte for byte
+<body-sha256>   lower-case hex SHA-256 of the raw request body bytes (of the empty string for GET)
+```
+
+The socket name binds a request to one server, so a signed request captured by
+a rogue listener cannot be replayed to another socket.
+
+**Server checks, in this order** (body read first, limit 4 KiB as today):
+
+1. `Authorization` present: reject (v1 bearer retired).
+2. Version header missing while the cli marker is absent: `auth_required`.
+3. Version not exactly `2`: `auth_version_unsupported`.
+4. Timestamp, nonce or signature malformed (wrong length, not base64url, not
+   decimal): `auth_malformed`.
+5. `|server time - timestamp| > 30 s`: `auth_stale`.
+6. No valid pairing (missing or invalid file): `auth_invalid`.
+7. Signature does not match (constant-time compare): `auth_invalid`.
+8. Nonce already in the replay cache: `auth_replayed`.
+9. Insert the nonce, then serve.
+
+**Replay cache.** Per server process, in memory. Each accepted nonce is kept
+for 60 s (twice the timestamp window), then dropped. At most 4096 entries;
+when full after dropping expired entries, new requests get
+`auth_busy` (HTTP 503 with `Retry-After: 1`) and nothing is evicted early.
+Desktop polls about once a second, so a real client uses about 60 entries. A
+restart empties the cache; the 30 s window bounds replay across a restart.
+
+**Server proof** (server to Desktop, on every response to a request that passed
+check 4, while a valid pairing exists): header `X-IPFS-MCP-Server-Proof`,
+base64url without padding of `HMAC(K, response string)`:
+
+```
+ipfs-mcp-confirm-v2
+response
+<socket>
+<nonce>          the request's nonce
+<status>         HTTP status code, decimal
+<body-sha256>    lower-case hex SHA-256 of the raw response body bytes
+```
+
+Desktop verifies the proof (constant time) before it reads or shows anything
+from a response. A response without a valid proof means the socket does not
+hold the verifier: Desktop ignores that socket for the rest of the session
+(until a new pairing), shows nothing from it, never sends it a resolve, and
+logs the event once.
+
+**Test vector** (both implementations must reproduce it; computed with Python
+`hmac`/`hashlib` on 2026-10-12):
+
+- pairing key `example-pairing-key`; `K` hex
+  `bb7a643be3798381e468615dc1397a9e2cb519d7d2a927fcb7f5ea7a7a6d847f`
+- socket `4242-1.sock`, `GET /v1/pending`, timestamp `1760270400`, nonce bytes
+  0x00..0x0f, so nonce `AAECAwQFBgcICQoLDA0ODw`, empty body
+- signature `kJV7qp4TLPIC1phDIUnyT_W0YR9_eMnJlKfzv4uWtzs`
+- response status 200, body `{"pending":[]}` followed by one `\n` (as Go's
+  `json.Encoder` writes it): server proof
+  `paaByo8rrHXnI8pwzkw0SFyWQ7DUnkM3CwbGy0bZsbs`
+
+**Errors.** Every rejection is JSON `{"error": "<message>", "code": "<code>"}`
+(`code` is new and additive):
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `auth_required` | 401 | No authentication headers and no cli marker |
+| `auth_version_unsupported` | 401 | `Authorization: Bearer` (v1) or a version other than 2; response header `X-IPFS-MCP-Auth-Versions: 2` |
+| `auth_malformed` | 400 | A header has the wrong form, or the path has a query |
+| `auth_stale` | 401 | Timestamp outside +/- 30 s |
+| `auth_invalid` | 403 | Not paired, or the signature does not match |
+| `auth_replayed` | 401 | Nonce seen within 60 s |
+| `auth_busy` | 503 | Replay cache full |
+
+**cli path, unchanged.** `ipfs mcp confirm` sends `X-IPFS-MCP-Confirm: cli` and
+no key (`cli.go`); it is accepted only when cli confirmation is on. A request
+that carries version-2 headers is authenticated as `desktop` only; the cli
+marker on it is ignored.
+
+### Pending view
+
+`GET /v1/pending` returns `{"pending": [PendingView...]}`. `PendingView` gains
+`targets` (additive, R14 security M-2): the confirmation summary's structured
+targets, always present, possibly empty:
+
+```json
+"targets": [{"kind": "cid", "value": "bafy..."}, {"kind": "mfs_path", "value": "/docs/a.txt"}]
+```
+
+`kind` is one of the contract's `Target` kinds (`confirmation.schema.json`
+`$defs/Target`: `cid`, `content_path`, `mfs_path`, `key`, `ipns_name`, `peer`,
+`repo`, `index`, `content`). Desktop renders targets from this field with their
+kind labels and stops extracting CIDs from the summary text.
+
+### Other server rules
+
+- The socket directory is created and checked with `Lstat`; a symlink is
+  refused (R14 security L-4).
+- `ipfs mcp pair` needs a terminal on stdin and refuses while any server
+  accepts connections on a socket in the confirmation directory; a stale socket
+  file does not block it. A new pairing replaces the old one, and the channel
+  re-reads the verifier on every request, so the old key stops working on
+  running servers at once.
+- Automated cases: `TestMCPConfirmHG1` (no key, forged key, `ipfs mcp confirm`
+  without cli confirmation). Version 2 adds cases for a bearer request, a stale
+  timestamp, a replayed nonce, a signature for another socket, a tampered
+  body, and a server proof checked by a test client.
+
+### HG-1 evidence (2026-10-12)
+
+During the Desktop end-to-end run on a throwaway test node, an unknown
+same-user process (computer-use agents run on this Mac) clicked Desktop's
+Approve 4 to 6 seconds after the window appeared. A click in a window is not
+a presence factor. This is the evidence behind the decisions above.
 
 ## `ipfs mcp confirm` (`--confirm=cli`)
 

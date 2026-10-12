@@ -38,11 +38,11 @@ const (
 
 // IsPresenceResolver reports whether a resolver carries a presence factor: the
 // native system prompt. Only these may approve a confirmation that requires a
-// native prompt. The paired Desktop channel does not count yet: no Desktop
-// confirmation window consumes the pairing key, so the key alone (which any
-// process that ran `ipfs mcp pair` holds) would be the whole factor. The cli
-// resolver has no secret (a same-user pty can drive it) and agui-interrupt is a
-// chat answer, so neither counts.
+// native prompt. The paired Desktop channel never counts: a click in a window
+// is not a presence factor (HG-1 evidence of 2026-10-12), and the server cannot
+// verify the Touch ID check Desktop makes, so desktop resolves write-class
+// confirmations only. The cli resolver has no secret (a same-user pty can drive
+// it) and agui-interrupt is a chat answer, so neither counts.
 func IsPresenceResolver(name string) bool {
 	switch name {
 	case ResolverMacOSLocalAuth, ResolverLinuxPolkit:

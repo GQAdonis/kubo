@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfiguredDefaultsToNativeAndDesktop(t *testing.T) {
+func TestConfiguredDefaultsToNativeOnly(t *testing.T) {
 	current.mu.Lock()
 	saved := current.cfg
 	current.cfg = nil
@@ -17,8 +17,14 @@ func TestConfiguredDefaultsToNativeAndDesktop(t *testing.T) {
 	t.Setenv(EnvModes, "")
 	cfg, err := configured()
 	require.NoError(t, err)
-	assert.Equal(t, []string{ModeNative, ModeDesktop}, cfg.Modes, "the human gate is on by default")
+	assert.Equal(t, []string{ModeNative}, cfg.Modes, "the human gate is on by default, native only")
+	assert.False(t, cfg.Has(ModeDesktop), "desktop is opt-in")
 	assert.False(t, cfg.Has(ModeCLI), "cli is never a default")
+
+	t.Setenv(EnvModes, "native,desktop")
+	cfg, err = configured()
+	require.NoError(t, err)
+	assert.True(t, cfg.Has(ModeDesktop), "naming desktop enables it")
 
 	t.Setenv(EnvModes, "none")
 	cfg, err = configured()

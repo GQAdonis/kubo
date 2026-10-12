@@ -186,19 +186,19 @@ func TestReplacedPairingRevokesTheOldKeyOnARunningChannel(t *testing.T) {
 	e := newChanEnv(t, ModeDesktop)
 	pairing := filepath.Join(e.dir, "pairing.json")
 
-	status, _ := e.do(t, http.MethodGet, pendingPath, "Bearer "+e.key, "", nil)
+	status, _ := e.do(t, http.MethodGet, pendingPath, "v2:"+e.key, "", nil)
 	require.Equal(t, http.StatusOK, status, "the first key works")
 
 	newKey, err := Pair(pairing)
 	require.NoError(t, err)
 
-	status, _ = e.do(t, http.MethodGet, pendingPath, "Bearer "+e.key, "", nil)
+	status, _ = e.do(t, http.MethodGet, pendingPath, "v2:"+e.key, "", nil)
 	assert.Equal(t, http.StatusForbidden, status, "the replaced key stops working without a restart")
-	status, _ = e.do(t, http.MethodGet, pendingPath, "Bearer "+newKey, "", nil)
+	status, _ = e.do(t, http.MethodGet, pendingPath, "v2:"+newKey, "", nil)
 	assert.Equal(t, http.StatusOK, status, "the new key works on the running server")
 
 	require.NoError(t, os.Remove(pairing))
-	status, _ = e.do(t, http.MethodGet, pendingPath, "Bearer "+newKey, "", nil)
+	status, _ = e.do(t, http.MethodGet, pendingPath, "v2:"+newKey, "", nil)
 	assert.Equal(t, http.StatusForbidden, status, "a removed pairing revokes every key")
 }
 

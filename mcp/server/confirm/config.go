@@ -36,11 +36,12 @@ const (
 )
 
 // DefaultModes is what runs when neither --confirm nor IPFS_MCP_CONFIRM is
-// set: the human gate is on. A mechanism the platform cannot offer (no
-// /usr/bin/swift, no polkit action, an unpaired Desktop) is left out and the
-// call is refused with confirmation_unavailable. cli is never a default.
+// set: the human gate is on, with the native prompt only. A mechanism the
+// platform cannot offer (no /usr/bin/swift, no polkit action) is left out and
+// the call is refused with confirmation_unavailable. desktop and cli are
+// opt-in: name them in --confirm, IPFS_MCP_CONFIRM or confirmation.modes.
 // --confirm=none (or IPFS_MCP_CONFIRM=none) turns the gate's resolvers off.
-var DefaultModes = []string{ModeNative, ModeDesktop}
+var DefaultModes = []string{ModeNative}
 
 // EnvModes is the environment variable that carries --confirm.
 const EnvModes = "IPFS_MCP_CONFIRM"

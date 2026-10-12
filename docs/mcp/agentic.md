@@ -137,13 +137,13 @@ Writes by agents are confirmed like any other ([user guide](user-guide.md#confir
 | `ui` (chat) | the chat's approve gesture, or the system prompt / Desktop | system prompt or Desktop only |
 | `a2a` | system prompt or Desktop only | system prompt or Desktop only |
 | `human-mcp` client that elicits | elicitation | elicitation |
-| `human-mcp` client that cannot elicit | system prompt or Desktop (or `ipfs mcp confirm` under `--confirm=cli`) | same |
+| `human-mcp` client that cannot elicit | system prompt, or Desktop if named in `--confirm` (write-class only), or `ipfs mcp confirm` under `--confirm=cli` | same |
 
 The native prompt per OS:
 
 - **macOS:** LocalAuthentication (Touch ID, Apple Watch or the login password) through `/usr/bin/swift`, which needs the Xcode command line tools (`xcode-select --install`). On by default.
 - **Linux:** polkit, after root installs the action from `mcp/server/confirm/polkit/` (`INSTALL.md`) and with an authentication agent in the session. Not yet run on a Linux machine.
-- **Windows:** no native prompt; only a paired IPFS Desktop window, which is not delivered yet. Non-eliciting writes are refused there.
+- **Windows:** no native prompt, and no Desktop window this phase (Desktop's channel client is inert on Windows). Non-eliciting writes are refused there.
 - **Headless:** `--confirm=cli` on the server and `ipfs mcp confirm [<id>]` in a terminal, which reads the answer from the TTY only. It has no presence factor beyond the terminal, never approves destructive calls from `ui` or `a2a` principals, and requires `"shell_capable": false` on every principal with write grants.
 
 The real-hardware check that a same-user process cannot approve the native prompt (HG-1) is still pending.

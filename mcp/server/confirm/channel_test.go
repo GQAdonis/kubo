@@ -3,12 +3,14 @@ package confirm
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -63,7 +65,48 @@ func newChanEnv(t *testing.T, modes ...string) *chanEnv {
 	return e
 }
 
+// do sends one request. auth "v2:<key>" signs it with channel authentication
+// version 2 for that pairing key; any other non-empty auth is sent as the
+// Authorization header; cli sets the cli marker.
 func (e *chanEnv) do(t *testing.T, method, path, auth, cli string, body any) (int, map[string]any) {
+	t.Helper()
+	var raw []byte
+	if body != nil {
+		var err error
+		raw, err = json.Marshal(body)
+		require.NoError(t, err)
+	}
+	h := http.Header{}
+	if key, ok := strings.CutPrefix(auth, "v2:"); ok {
+		h = e.sign(key, method, path, raw)
+	} else if auth != "" {
+		h.Set("Authorization", auth)
+	}
+	if cli != "" {
+		h.Set(cliHeader, cli)
+	}
+	status, _, out := e.raw(t, method, path, h, raw)
+	var m map[string]any
+	_ = json.Unmarshal(out, &m)
+	return status, m
+}
+
+// sign builds the version 2 headers for key, bound to this channel's socket.
+func (e *chanEnv) sign(key, method, path string, body []byte) http.Header {
+	k := sha256.Sum256([]byte(key))
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
+	nonce := newNonce()
+	h := http.Header{}
+	h.Set(authVersionHeader, authVersion)
+	h.Set(timestampHeader, ts)
+	h.Set(nonceHeader, nonce)
+	h.Set(signatureHeader, signRequest(k[:], e.m.ch.socketName(), method, path, ts, nonce, body))
+	return h
+}
+
+// raw sends a request with exactly these headers and returns the status, the
+// response headers and the raw body.
+func (e *chanEnv) raw(t *testing.T, method, path string, h http.Header, body []byte) (int, http.Header, []byte) {
 	t.Helper()
 	sock := e.m.ch.sockPath
 	hc := &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -72,24 +115,19 @@ func (e *chanEnv) do(t *testing.T, method, path, auth, cli string, body any) (in
 	}}}
 	var rd io.Reader
 	if body != nil {
-		b, err := json.Marshal(body)
-		require.NoError(t, err)
-		rd = bytes.NewReader(b)
+		rd = bytes.NewReader(body)
 	}
 	req, err := http.NewRequestWithContext(t.Context(), method, "http://confirm"+path, rd)
 	require.NoError(t, err)
-	if auth != "" {
-		req.Header.Set("Authorization", auth)
-	}
-	if cli != "" {
-		req.Header.Set(cliHeader, cli)
+	for k, v := range h {
+		req.Header[k] = v
 	}
 	resp, err := hc.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	var out map[string]any
-	_ = json.NewDecoder(resp.Body).Decode(&out)
-	return resp.StatusCode, out
+	out, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return resp.StatusCode, resp.Header, out
 }
 
 func (e *chanEnv) none(t *testing.T) {
@@ -111,12 +149,20 @@ func TestChannelRejectsUnauthenticatedAndForgedClients(t *testing.T) {
 	status, _ = e.do(t, http.MethodGet, pendingPath, "", "", nil)
 	assert.Equal(t, http.StatusUnauthorized, status, "an unpaired client cannot even list")
 
-	// A forged key, and near misses of the real one.
-	for _, forged := range []string{"Bearer forged", "Bearer " + e.key + "x", "Bearer " + e.key[1:], "Bearer ", "Basic " + e.key, e.key} {
-		status, _ = e.do(t, http.MethodPost, resolvePath, forged, "", body)
+	// A bearer key is retired, whether forged or the real one.
+	for _, bearer := range []string{"Bearer forged", "Bearer " + e.key, "Basic " + e.key, e.key} {
+		status, out := e.do(t, http.MethodPost, resolvePath, bearer, "", body)
+		assert.Equal(t, http.StatusUnauthorized, status, bearer)
+		assert.Equal(t, codeUnsupported, out["code"], bearer)
+		status, _ = e.do(t, http.MethodGet, pendingPath, bearer, "", nil)
+		assert.Equal(t, http.StatusUnauthorized, status, bearer)
+	}
+
+	// A signature made with a forged key, and near misses of the real one.
+	for _, forged := range []string{"forged", e.key + "x", e.key[1:]} {
+		status, out := e.do(t, http.MethodPost, resolvePath, "v2:"+forged, "", body)
 		assert.Equal(t, http.StatusForbidden, status, forged)
-		status, _ = e.do(t, http.MethodGet, pendingPath, forged, "", nil)
-		assert.Equal(t, http.StatusForbidden, status, forged)
+		assert.Equal(t, codeInvalid, out["code"], forged)
 	}
 
 	// The CLI marker with a wrong value.
@@ -127,19 +173,19 @@ func TestChannelRejectsUnauthenticatedAndForgedClients(t *testing.T) {
 
 func TestChannelPairedDesktopResolves(t *testing.T) {
 	e := newChanEnv(t, ModeDesktop)
-	status, out := e.do(t, http.MethodGet, pendingPath, "Bearer "+e.key, "", nil)
+	status, out := e.do(t, http.MethodGet, pendingPath, "v2:"+e.key, "", nil)
 	require.Equal(t, http.StatusOK, status)
 	list := out["pending"].([]any)
 	require.Len(t, list, 1)
 	assert.Contains(t, list[0].(map[string]any)["summary"], "Remove the pin")
 
-	status, _ = e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_1", "approve": true})
+	status, _ = e.do(t, http.MethodPost, resolvePath, "v2:"+e.key, "", map[string]any{"id": "cf_1", "approve": true})
 	require.Equal(t, http.StatusOK, status)
 	assert.Equal(t, decisionFrom{server.ResolverDesktop, true}, <-e.results)
 
-	status, _ = e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_other", "approve": true})
+	status, _ = e.do(t, http.MethodPost, resolvePath, "v2:"+e.key, "", map[string]any{"id": "cf_other", "approve": true})
 	assert.Equal(t, http.StatusNotFound, status)
-	status, _ = e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_1", "approve": true, "extra": 1})
+	status, _ = e.do(t, http.MethodPost, resolvePath, "v2:"+e.key, "", map[string]any{"id": "cf_1", "approve": true, "extra": 1})
 	assert.Equal(t, http.StatusBadRequest, status, "unknown fields are rejected")
 }
 
@@ -152,7 +198,7 @@ func TestChannelCLIModeIsRefusedUnlessEnabled(t *testing.T) {
 
 	// Even the paired desktop client cannot answer another client's item: the
 	// cli table is empty here.
-	status, _ = e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_x", "approve": true})
+	status, _ = e.do(t, http.MethodPost, resolvePath, "v2:"+e.key, "", map[string]any{"id": "cf_x", "approve": true})
 	assert.Equal(t, http.StatusNotFound, status)
 }
 
@@ -322,21 +368,21 @@ func TestChannelResolvedItemLeavesEveryClientsList(t *testing.T) {
 		return nil
 	}))
 	list := func() []any {
-		status, out := e.do(t, http.MethodGet, pendingPath, "Bearer "+e.key, "", nil)
+		status, out := e.do(t, http.MethodGet, pendingPath, "v2:"+e.key, "", nil)
 		require.Equal(t, http.StatusOK, status)
 		return out["pending"].([]any)
 	}
 	require.Len(t, list(), 2)
 
 	// One client resolves; a second client listing afterwards no longer sees it.
-	status, _ := e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_2", "approve": false})
+	status, _ := e.do(t, http.MethodPost, resolvePath, "v2:"+e.key, "", map[string]any{"id": "cf_2", "approve": false})
 	require.Equal(t, http.StatusOK, status)
 	remaining := list()
 	require.Len(t, remaining, 1)
 	assert.Equal(t, "cf_1", remaining[0].(map[string]any)["id"])
 
 	// A repeat resolve still gets the broker's answer, not a vanished item.
-	status, out := e.do(t, http.MethodPost, resolvePath, "Bearer "+e.key, "", map[string]any{"id": "cf_2", "approve": true})
+	status, out := e.do(t, http.MethodPost, resolvePath, "v2:"+e.key, "", map[string]any{"id": "cf_2", "approve": true})
 	assert.Equal(t, http.StatusConflict, status)
 	assert.Contains(t, out["error"], "already resolved")
 }

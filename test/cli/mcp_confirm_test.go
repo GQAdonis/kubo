@@ -3,6 +3,11 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net"
@@ -10,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -225,6 +231,24 @@ func TestMCPConfirmTestResolver(t *testing.T) {
 	})
 }
 
+// signV2 adds channel authentication version 2 headers, written from the spec
+// in mcp/server/confirm/MECHANISMS.md and not from the server's code.
+func signV2(req *http.Request, key, sock, path string, body []byte) {
+	k := sha256.Sum256([]byte(key))
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
+	nb := make([]byte, 16)
+	_, _ = rand.Read(nb)
+	nonce := base64.RawURLEncoding.EncodeToString(nb)
+	bh := sha256.Sum256(body)
+	str := strings.Join([]string{"ipfs-mcp-confirm-v2", "request", filepath.Base(sock), req.Method, path, ts, nonce, hex.EncodeToString(bh[:])}, "\n")
+	m := hmac.New(sha256.New, k[:])
+	m.Write([]byte(str))
+	req.Header.Set("X-IPFS-MCP-Auth-Version", "2")
+	req.Header.Set("X-IPFS-MCP-Timestamp", ts)
+	req.Header.Set("X-IPFS-MCP-Nonce", nonce)
+	req.Header.Set("X-IPFS-MCP-Signature", base64.RawURLEncoding.EncodeToString(m.Sum(nil)))
+}
+
 // channelRequest sends one HTTP request to the confirmation socket.
 func channelRequest(t *testing.T, sock, method, path, auth, cliMarker string, body any) (int, string) {
 	t.Helper()
@@ -233,14 +257,18 @@ func channelRequest(t *testing.T, sock, method, path, auth, cliMarker string, bo
 		return d.DialContext(ctx, "unix", sock)
 	}}, Timeout: 10 * time.Second}
 	var rd io.Reader
+	var raw []byte
 	if body != nil {
-		b, err := json.Marshal(body)
+		var err error
+		raw, err = json.Marshal(body)
 		require.NoError(t, err)
-		rd = bytes.NewReader(b)
+		rd = bytes.NewReader(raw)
 	}
 	req, err := http.NewRequestWithContext(t.Context(), method, "http://confirm"+path, rd)
 	require.NoError(t, err)
-	if auth != "" {
+	if key, ok := strings.CutPrefix(auth, "v2:"); ok {
+		signV2(req, key, sock, path, raw)
+	} else if auth != "" {
 		req.Header.Set("Authorization", auth)
 	}
 	if cliMarker != "" {
@@ -311,10 +339,18 @@ func TestMCPConfirmHG1(t *testing.T) {
 		status, _ = channelRequest(t, sock, http.MethodGet, "/v1/pending", "", "", nil)
 		assert.Equal(t, http.StatusUnauthorized, status)
 	})
-	t.Run("forged key", func(t *testing.T) {
-		for _, forged := range []string{"Bearer forged", "Bearer " + key + "0", "Bearer " + id} {
-			status, _ := channelRequest(t, sock, http.MethodPost, "/v1/resolve", forged, "", resolveBody)
+	t.Run("bearer key, forged or real", func(t *testing.T) {
+		for _, bearer := range []string{"Bearer forged", "Bearer " + key, "Bearer " + id} {
+			status, body := channelRequest(t, sock, http.MethodPost, "/v1/resolve", bearer, "", resolveBody)
+			assert.Equal(t, http.StatusUnauthorized, status, bearer)
+			assert.Contains(t, body, "auth_version_unsupported")
+		}
+	})
+	t.Run("forged signing key", func(t *testing.T) {
+		for _, forged := range []string{"forged", key + "0", id} {
+			status, body := channelRequest(t, sock, http.MethodPost, "/v1/resolve", "v2:"+forged, "", resolveBody)
 			assert.Equal(t, http.StatusForbidden, status, forged)
+			assert.Contains(t, body, "auth_invalid")
 		}
 	})
 	t.Run("cli marker while the server was not started with --confirm=cli", func(t *testing.T) {
@@ -353,7 +389,7 @@ func TestMCPConfirmHG1(t *testing.T) {
 	// were the key check and not a broken channel.
 	_, id2 := confirmation(t, pinAdd(t, cs, cid))
 	require.NotEmpty(t, id2)
-	status, body := channelRequest(t, sock, http.MethodPost, "/v1/resolve", "Bearer "+key, "", map[string]any{"id": id2, "approve": true})
+	status, body := channelRequest(t, sock, http.MethodPost, "/v1/resolve", "v2:"+key, "", map[string]any{"id": id2, "approve": true})
 	require.Equal(t, http.StatusOK, status, body)
 	eventuallyCode(t, cs, cid, "")
 	assert.True(t, isPinned(node, cid))

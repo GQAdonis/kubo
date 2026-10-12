@@ -25,7 +25,7 @@ These parts are designed and partly built, but do not work end to end in this bu
 
 - **The chat in the Web UI that Kubo serves.** The Web UI that `ipfs daemon` serves at `/webui` does not include the agent chat yet. The chat exists in the Web UI fork's source tree only (see [chat setup](chat-setup.md)).
 - **The native confirmation prompt, verified on real hardware.** The macOS Touch ID or password prompt is on by default and works on the development machine, but the check that a same-user process cannot approve it (HG-1) has not been run on real hardware, and the Linux polkit prompt has not been run on a Linux machine at all.
-- **IPFS Desktop pairing and its confirmation window.** `ipfs mcp pair` creates a pairing key, but IPFS Desktop has no released window to enter it or to approve confirmations. On Windows there is therefore no out-of-band prompt: only clients that support MCP elicitation can confirm writes.
+- **IPFS Desktop pairing and its confirmation window.** `ipfs mcp pair` creates a pairing key, and the IPFS Desktop fork's confirmation window is built but not released or run by the operator yet. `desktop` is off unless you name it in `--confirm`. On Windows there is no out-of-band prompt this phase (Desktop's channel client is inert there): only clients that support MCP elicitation can confirm writes.
 - **Desktop chat pairing.** The Desktop chat has no way yet to obtain its token from `ipfs mcp`.
 - **WebMCP in the Web UI.** Not available.
 - **A Kimi Code plugin.** Kimi Code gets the skills only; there is no plugin package for it.
@@ -211,10 +211,10 @@ Two cautions:
 Every tool that changes something is confirmed per call, on every transport. This cannot be turned off; it can only become stricter.
 
 1. **Elicitation.** If the client supports MCP elicitation, the server asks the client's user, and only an explicit approval runs the call. A decline, a cancel or no answer leaves the node unchanged.
-2. **Out-of-band prompt.** If the client cannot elicit, the call waits for a person on this machine: the system prompt (`native`: Touch ID or the login password on macOS, polkit on Linux) or a paired IPFS Desktop window (`desktop`). The server answers `confirmation_required` with a confirmation ID; the client repeats the identical call after approval, and it runs exactly once.
+2. **Out-of-band prompt.** If the client cannot elicit, the call waits for a person on this machine: the system prompt (`native`: Touch ID or the login password on macOS, polkit on Linux) or, if you opted in, a paired IPFS Desktop window (`desktop`, write-class calls only). The server answers `confirmation_required` with a confirmation ID; the client repeats the identical call after approval, and it runs exactly once.
 3. **Nothing available.** The call is refused with `confirmation_unavailable` and nothing changes.
 
-`--confirm` (or `IPFS_MCP_CONFIRM`, or `confirmation.modes`) chooses the out-of-band mechanisms; the default is `native,desktop`. A mechanism the host cannot offer is skipped. `--confirm=none` turns them off, after which only eliciting clients can confirm. `--confirm=cli` adds `ipfs mcp confirm`, which approves from a terminal on headless servers; it has no presence factor beyond that terminal, it needs a TTY on stdin and the same `--confirm=cli` on both sides, and under it every HTTP principal with write grants must declare `"shell_capable": false`.
+`--confirm` (or `IPFS_MCP_CONFIRM`, or `confirmation.modes`) chooses the out-of-band mechanisms; the default is `native` only. `desktop`, the paired IPFS Desktop window, is opt-in: name it, for example `--confirm=native,desktop`. It approves write-class calls only, after Touch ID in the Desktop window, and never a destructive call from a `ui` or `a2a` principal. A mechanism the host cannot offer is skipped. `--confirm=none` turns them off, after which only eliciting clients can confirm. `--confirm=cli` adds `ipfs mcp confirm`, which approves from a terminal on headless servers; it has no presence factor beyond that terminal, it needs a TTY on stdin and the same `--confirm=cli` on both sides, and under it every HTTP principal with write grants must declare `"shell_capable": false`.
 
 Limits you should know:
 

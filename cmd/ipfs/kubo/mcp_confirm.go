@@ -16,21 +16,22 @@ import (
 
 // Out-of-band confirmation for `ipfs mcp`: the --confirm option, `ipfs mcp
 // confirm` and `ipfs mcp pair`. It is attached to mcpCmd from init so the
-// command definition in mcp.go is untouched. On by default with native and
-// desktop: macOS asks Touch ID or the password (needs /usr/bin/swift from the
-// Xcode command line tools), Linux asks polkit (needs the operator-installed
-// action), Windows needs a paired IPFS Desktop. A mechanism the host cannot
+// command definition in mcp.go is untouched. On by default with native only:
+// macOS asks Touch ID or the password (needs /usr/bin/swift from the Xcode
+// command line tools), Linux asks polkit (needs the operator-installed
+// action), Windows has no resolver this phase. A mechanism the host cannot
 // offer is skipped and a client that cannot elicit gets
 // confirmation_unavailable. --confirm=none or IPFS_MCP_CONFIRM=none turns the
-// resolvers off; cli is only enabled by naming it (--confirm=cli, IPFS_MCP_CONFIRM,
-// confirmation.modes or confirmation.cli). confirmation.resolvers narrows the
-// native and desktop resolvers after the modes are resolved.
+// resolvers off. desktop (write-class confirmations through the paired IPFS
+// Desktop window) and cli are opt-in: name them in --confirm, IPFS_MCP_CONFIRM,
+// confirmation.modes (or confirmation.cli for cli). confirmation.resolvers
+// narrows the native and desktop resolvers after the modes are resolved.
 
 const mcpConfirmOptionName = "confirm"
 
 func init() {
 	mcpCmd.Options = append(mcpCmd.Options, cmds.StringOption(mcpConfirmOptionName,
-		"Out-of-band confirmation for clients that cannot elicit: native, desktop, cli, none (comma separated). Default: native,desktop."))
+		"Out-of-band confirmation for clients that cannot elicit: native, desktop, cli, none (comma separated). Default: native. desktop and cli are opt-in."))
 
 	extra := commands.CreateCmdExtras(commands.SetDoesNotUseRepo(true), commands.SetDoesNotUseConfigAsInput(true))
 	subs := map[string]*cmds.Command{
@@ -105,7 +106,7 @@ is a secret: anyone who has it can approve for Desktop.
 // confirmModes resolves the gate modes with precedence --confirm, then
 // IPFS_MCP_CONFIRM, then confirmation.modes in the --mcp-config file, which
 // confirmation.cli true extends with cli. explicit is false when none of them
-// is set, so the default (native, desktop) applies. An empty list, "none" or
+// is set, so the default (native) applies. An empty list, "none" or
 // `"modes": []` turns the resolvers off.
 func confirmModes(req *cmds.Request, cfg *mcpserver.Config) (modes []string, explicit bool, err error) {
 	// A flag that was given, even empty, decides: --confirm= means no resolvers.
