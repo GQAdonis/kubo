@@ -49,10 +49,15 @@ test('target size: every control is at least 24 CSS px, and the primary controls
   await ask(page, userTextOf('write-interrupt'));
   await expect(page.getByText('Awaiting a person', { exact: true })).toBeVisible();
   const sizes = await page.evaluate(() =>
-    [...(document.querySelector('ipfs-agent-chat')?.shadowRoot?.querySelectorAll('button, textarea, summary, [tabindex="0"]') ?? [])].map((el) => {
-      const r = el.getBoundingClientRect();
-      return { name: (el.getAttribute('aria-label') ?? el.textContent ?? el.tagName).trim().slice(0, 30), w: Math.round(r.width), h: Math.round(r.height), tag: el.tagName };
-    }),
+    [...(document.querySelector('ipfs-agent-chat')?.shadowRoot?.querySelectorAll('button, textarea, summary, [tabindex="0"]') ?? [])]
+      // A control inside a closed <details> is not rendered, so nobody can reach it and it has no size to judge. Chromium
+      // skips that subtree's layout lazily, so its rect reads as a stale box or as 0 depending on timing: measuring it
+      // is what made this test flaky. The summary that owns a closed <details> is still measured.
+      .filter((el) => !el.parentElement?.closest('details:not([open])'))
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return { name: (el.getAttribute('aria-label') ?? el.textContent ?? el.tagName).trim().slice(0, 30), w: Math.round(r.width), h: Math.round(r.height), tag: el.tagName };
+      }),
   );
   expect(sizes.length).toBeGreaterThan(4);
   for (const s of sizes) {

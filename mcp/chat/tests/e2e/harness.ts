@@ -45,6 +45,8 @@ export interface FixtureRequest {
   matched: string | undefined;
 }
 
+const ELECTRON_DEVICE_SCALE_FACTOR = Number(process.env['E2E_DEVICE_SCALE_FACTOR'] ?? 2);
+
 const SIZE = { width: 1024, height: 768 };
 
 function readEnv(): E2eEnv {
@@ -106,7 +108,12 @@ export const test = base.extend<{ runtime: Runtime; harness: Harness }>({
           await app?.close(); // one window at a time; a spec that opens twice gets a fresh Electron each time
           app = await electron.launch({
             executablePath: electronExecutable(),
-            args: [resolve(import.meta.dirname, 'electron-main.cjs')],
+            // Pin the device scale factor. The committed Electron baselines were captured on a Retina display (factor 2).
+            // A headless runner has factor 1, where Playwright sizes the same full-page capture 585x1731 instead of
+            // 584x1730. Chromium reads this switch only from the command line (appendSwitch in the main process is too
+            // late, and Emulation overrides are reset by the screenshot), so the captures no longer depend on the
+            // host display. E2E_DEVICE_SCALE_FACTOR reproduces another display.
+            args: [`--force-device-scale-factor=${ELECTRON_DEVICE_SCALE_FACTOR}`, resolve(import.meta.dirname, 'electron-main.cjs')],
             env: {
               ...(process.env as Record<string, string>),
               HARNESS_ORIGIN: env.harnessOrigin,
