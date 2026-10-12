@@ -2,17 +2,17 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 957,
-  "derivedRevision": 957,
+  "sourceRevision": 962,
+  "derivedRevision": 962,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 957
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 962
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T10:12:00.472696Z",
+  "updatedAt": "2026-10-12T10:26:40.357392Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
-    "mcp-architecture-adrs",
+    "webmcp-host-spike",
     "2"
   ],
   "root": {
@@ -20,7 +20,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 22,
+      "done": 23,
       "total": 36
     },
     "children": [
@@ -30,7 +30,7 @@
         "canonicalId": "ipfs-mcp-server",
         "status": "PENDING",
         "progress": {
-          "done": 22,
+          "done": 23,
           "total": 36
         },
         "children": [
@@ -64,9 +64,9 @@
           {
             "type": "change",
             "id": "mcp-architecture-adrs",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 5,
+              "done": 6,
               "total": 6
             }
           },

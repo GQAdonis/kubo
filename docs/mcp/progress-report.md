@@ -70,7 +70,7 @@ Both builds compile (R9 evidence). The modules stay listed in `go.mod` either wa
 ### 2.4 ADRs
 
 - [ADR-0001](0001-mcp-server-placement.md): `ipfs mcp` is a daemon RPC client in the root module (F4).
-- ADR-0002 (WebMCP in the Web UI): not written. It waits for the WebMCP host spike report.
+- [ADR-0002](0002-webmcp-web-ui.md): WebMCP tools in the Web UI. Status Deferred (2026-10-12, operator decision) until the WebMCP host probe yields a spike report with GO for a host.
 - [ADR-0003](0003-confirmation-and-auth.md): confirmation of writes and destructive calls; replaceable auth verifier (static bearer now, OAuth2 later).
 - [ADR-0004](0004-agentic-endpoints-and-llm.md): AG-UI and A2A served by `ipfs mcp`; model calls proxied to an operator-configured endpoint; human-presence prompt for non-eliciting writes.
 - [ADR-0005](0005-agent-chat-ui.md): the chat is a React 19 shadow-root island in the Web UI fork that talks only to `ipfs mcp`; the Desktop fork is hardened.
@@ -208,7 +208,7 @@ Source: canonical runtime, revision 832, 2026-10-10. "Done" is the runtime's cou
 |---|---|---|---|---|
 | 1 | team-ownership-grant | complete | 6/6 | |
 | 2 | mcp-tool-contract | complete | 9/9 | |
-| 3 | mcp-architecture-adrs | pending | 5/6 | ADR-0002 waits for the WebMCP spike report |
+| 3 | mcp-architecture-adrs | pending | 5/6 | ADR-0002 waits for the WebMCP spike report. 2026-10-12: ADR-0002 written as Deferred, task 1.2 ticked; runtime close pending |
 | 4 | webmcp-host-spike | pending | 2/5 | Operator probes in Codex desktop and Kimi desktop; then the report |
 | 5 | mcp-server-core-stdio | complete | 7/7 | |
 | 6 | mcp-ui-component-library | complete | 8/8 | |
@@ -248,7 +248,7 @@ Summary: 21 complete and 14 open. Of the open ones, 6 wait on an operator action
 
 Not delivered:
 
-- G8 WebMCP: no tool package, no Web UI integration, no ADR-0002. The host probes have not been run.
+- G8 WebMCP: no tool package, no Web UI integration. ADR-0002 records the decision as Deferred (2026-10-12). The host probes have not been run.
 - Web UI CID delivery: Kubo does not pin or serve a new Web UI CID. `core/corehttp/webui.go` is unchanged.
 - Topology B (UAR hosts AG-UI and A2A): deferred. No published UAR release contains the conformance items, and the conformance request has not been filed.
 - Desktop pairing and the native confirmation window.
@@ -392,7 +392,7 @@ Re-verified after the R12 pass: `go test ./mcp/... ./cmd/ipfs/kubo/` ok; `go vet
 
 Operator actions:
 
-1. Run the WebMCP probe in Codex desktop and Kimi desktop (`webmcp-host-spike` 1.2, 1.3; runbook in [`mcp/webmcp/spike/RUNBOOK.md`](../../mcp/webmcp/spike/RUNBOOK.md)).
+1. Run the WebMCP probe in Codex desktop and Kimi desktop (`webmcp-host-spike` 1.2, 1.3; runbook in [`mcp/webmcp/spike/RUNBOOK.md`](../../mcp/webmcp/spike/RUNBOOK.md)). [ADR-0002](0002-webmcp-web-ui.md) is Deferred until then (2026-10-12); a GO result per host moves it to Accepted for that host and unparks `webmcp-tool-package`, `webui-webmcp-integration` and `webui-cid-delivery`.
 2. After the spike report, choose D1, D2 or D3 for Web UI delivery (`webui-cid-delivery` 1.1). D2 also needs approval for the Web UI CID bump in `core/corehttp/webui.go`.
 3. File the UAR conformance request ([`mcp/uar/requests/CONFORMANCE.md`](../../mcp/uar/requests/CONFORMANCE.md); `uar-conformance-request` 1.2), or confirm topology B stays deferred.
 4. Run the real native prompt (`native-confirmation-prompt` 1.5, `mcp/server/confirm/hg1/attempt.sh`).
@@ -423,3 +423,4 @@ The 34 stale "bottleneck" blockers in the KBD runtime (records of failed boundar
 - 2026-10-12: release signing key committed (`b4c7b4fd9`); chat CI fixed (`4f79a0933`); run 38230221369 all six jobs green; `mcp-ci-workflow` complete.
 - 2026-10-12: signed release build verified end to end by the operator (`0.44.0-dev-17c5cf4a9`, 5 archives, good signature); not published.
 - 2026-10-12: `phase-boundary-review` 1.1, 1.2 and 1.4-1.7 closed (1.2 re-run on the final tree); `check_plan_deps.py` fixed; 34 stale KBD bottleneck blockers cleared; 1.3 and 1.8 remain open.
+- 2026-10-12: ADR-0002 (WebMCP in the Web UI) written with status Deferred by operator decision, because the WebMCP host probe has not run (`webmcp-host-spike` 1.2, 1.3 open; no `REPORT.md`). A GO result per host moves it to Accepted. `webmcp-tool-package`, `webui-webmcp-integration`, `webui-cid-delivery` and `webui-agent-chat`'s WebMCP prerequisite stay parked. `mcp-architecture-adrs` 1.2 ticked; runtime close pending.

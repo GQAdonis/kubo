@@ -1999,3 +1999,17 @@ Append-only. Dated entries. Mark superseded entries; do not delete them.
 - Exact next work: /kbd-assess ipfs-mcp-server
 - Verification:
   - none recorded
+
+<!-- karpathy-progress-event:kpm-5965b5c5ad2a82aaf106c944f169d8ed -->
+## Progress boundary — 2026-10-12T10:24:54.566040Z
+
+- Event: `kpm-5965b5c5ad2a82aaf106c944f169d8ed`
+- Boundary: `task` / `complete`
+- Position: `ipfs-mcp-server` / `mcp-architecture-adrs` / `2`
+- Class and elapsed time: `product` / `0.0` hours
+- Commit: `9342d70d3c30e209a86f447b96c4b42166b545b2`
+- Files: `.kbd-orchestrator/current-waypoint.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks-status.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/hooks.log.jsonl`, `.kbd-orchestrator/phases/ipfs-mcp-server/progress.json`, `.kbd-orchestrator/phases/ipfs-mcp-server/tasks.md`, `.kbd-orchestrator/position-reminder.txt`, `.kbd-orchestrator/position.json`, `.prometheus/decisions.md`, `docs/mcp/0002-webmcp-web-ui.md`, `docs/mcp/progress-report.md`, `openspec/changes/mcp-architecture-adrs/tasks.md`
+- Blocker: none
+- Exact next work: /kbd-assess ipfs-mcp-server
+- Verification:
+  - none recorded

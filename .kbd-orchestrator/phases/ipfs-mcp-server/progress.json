@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 923,
-  "derivedRevision": 923,
+  "sourceRevision": 962,
+  "derivedRevision": 962,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 923
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 962
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T10:02:05.660370Z",
+  "last_updated": "2026-10-12T10:26:40.357392Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 22,
+  "changes_completed": 23,
   "implementation_total": 36,
-  "implementation_completed": 22,
+  "implementation_completed": 23,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 22,
+      "completed": 23,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 22,
+      "completed": 23,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -106,12 +106,12 @@
     {
       "id": "mcp-architecture-adrs",
       "title": "mcp-architecture-adrs",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 6,
-      "tasks_done": 5,
+      "tasks_done": 6,
       "last_task_completed": "1.6 Write `docs/mcp/0006-embeddings-surrealdb.md` from the addendum ADR-0006 draft, completed with plan revision 2's re-score: `ipfs mcp` embeds and stores in both topologies; embedded = managed local `surreal start surrealkv://` from an operator-supplied binary; remote = operator URL; cgo excluded.",
-      "next_task_pending": "1.2 Write `docs/mcp/0002-webmcp-web-ui.md`, with the status set from the spike report (Accepted per GO host, or Deferred).",
+      "next_task_pending": null,
       "blockers": []
     },
     {
