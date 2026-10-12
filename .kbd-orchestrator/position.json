@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 962,
-  "derivedRevision": 962,
+  "sourceRevision": 968,
+  "derivedRevision": 968,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 962
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 968
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T10:26:40.357392Z",
+  "updatedAt": "2026-10-12T10:46:18.314005Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
@@ -20,7 +20,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 23,
+      "done": 24,
       "total": 36
     },
     "children": [
@@ -30,7 +30,7 @@
         "canonicalId": "ipfs-mcp-server",
         "status": "PENDING",
         "progress": {
-          "done": 23,
+          "done": 24,
           "total": 36
         },
         "children": [
@@ -334,9 +334,9 @@
           {
             "type": "change",
             "id": "mcp-plugin-marketplaces",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 4,
+              "done": 5,
               "total": 5
             }
           },

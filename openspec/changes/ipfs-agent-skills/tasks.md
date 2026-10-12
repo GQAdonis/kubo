@@ -14,3 +14,4 @@ Change-level prerequisites (plan revision 2): every task in this change also req
     - `read bafy... and t...` routes to `ipfs-content-search` instead of `ipfs-retrieve-verify`;
     - `confirmation_unavailable ... add something` routes to `ipfs-publish-content` instead of `ipfs-troubleshooting`.
   - Open: the live-model near-miss trigger run. The 6 near-miss queries (`expect: null`) are not scored by the lexical proxy. Until that run is recorded, and the two misroutes are fixed or accepted, this task stays open (R11-Q06).
+  - Live run (2026-10-12, `mcp/skills/evals/results-2026-10-12.md`): `skills-ref validate` valid for all 8 again; near-miss queries 6/6 clean; should-trigger 5 of 22 (23%) called the expected `ipfs:` skill, the rest used the MCP tools or the `ipfs` CLI directly. No threshold is stated in the spec, so the task stays open pending an operator decision on the bar (see "Proposed next steps" in the results file).

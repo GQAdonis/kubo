@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 962,
-  "derivedRevision": 962,
+  "sourceRevision": 968,
+  "derivedRevision": 968,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 962
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 968
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T10:26:40.357392Z",
+  "last_updated": "2026-10-12T10:46:18.314005Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 23,
+  "changes_completed": 24,
   "implementation_total": 36,
-  "implementation_completed": 23,
+  "implementation_completed": 24,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 23,
+      "completed": 24,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 23,
+      "completed": 24,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -436,12 +436,12 @@
     {
       "id": "mcp-plugin-marketplaces",
       "title": "mcp-plugin-marketplaces",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 5,
-      "tasks_done": 4,
-      "last_task_completed": "1.4 Build the OpenCode plugin and marketplace.",
-      "next_task_pending": "1.5 Install and load each plugin in the real harness (Claude Code end to end; Codex and OpenCode at least config load).",
+      "tasks_done": 5,
+      "last_task_completed": "1.5 Install and load each plugin in the real harness (Claude Code end to end; Codex and OpenCode at least config load).",
+      "next_task_pending": null,
       "blockers": []
     },
     {

@@ -7,7 +7,7 @@ MARKETPLACE  ROOT
 kubo-ipfs    /Users/gqadonis/Projects/references/kubo
 $ codex plugin add ipfs@kubo-ipfs
 Added plugin `ipfs` from marketplace `kubo-ipfs`.
-Installed plugin root: /private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.NpqWECk9lv/codex-home/plugins/cache/kubo-ipfs/ipfs/0.1.0
+Installed plugin root: /private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/codex-home/plugins/cache/kubo-ipfs/ipfs/0.1.0
 $ codex plugin list
 Marketplace `kubo-ipfs`
 /Users/gqadonis/Projects/references/kubo/.agents/plugins/marketplace.json
@@ -16,10 +16,10 @@ PLUGIN          STATUS              VERSION  SOURCE
 ipfs@kubo-ipfs  installed, enabled  0.1.0    /Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs
 $ codex mcp list
 Name  Command  Args  Env                                   Cwd                                                                                                                    Status   Auth       
-ipfs  ipfs     mcp   PLUGIN_DATA=*****, PLUGIN_ROOT=*****  /private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.NpqWECk9lv/codex-home/plugins/cache/kubo-ipfs/ipfs/0.1.0  enabled  Unsupported
+ipfs  ipfs     mcp   PLUGIN_DATA=*****, PLUGIN_ROOT=*****  /private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/codex-home/plugins/cache/kubo-ipfs/ipfs/0.1.0  enabled  Unsupported
 $ codex_probe.py (app-server: plugin/read, skills/list, mcpServerStatus/list)
 {
- "initialize_codexHome": "/private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.NpqWECk9lv/codex-home",
+ "initialize_codexHome": "/private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/codex-home",
  "plugin_read_id": "ipfs@kubo-ipfs",
  "plugin_read_installed_enabled": [
   true,
