@@ -2,25 +2,25 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1053,
-  "derivedRevision": 1053,
+  "sourceRevision": 1076,
+  "derivedRevision": 1076,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1053
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1076
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T15:50:49.857417Z",
+  "updatedAt": "2026-10-12T22:36:12.091329Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
-    "uar-conformance-request",
-    "2"
+    "native-confirmation-prompt",
+    "5"
   ],
   "root": {
     "type": "phase",
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 27,
+      "done": 31,
       "total": 37
     },
     "children": [
@@ -30,7 +30,7 @@
         "canonicalId": "ipfs-mcp-server",
         "status": "PENDING",
         "progress": {
-          "done": 27,
+          "done": 31,
           "total": 37
         },
         "children": [
@@ -127,9 +127,9 @@
           {
             "type": "change",
             "id": "uar-conformance-request",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 1,
+              "done": 2,
               "total": 2
             }
           },
@@ -226,9 +226,9 @@
           {
             "type": "change",
             "id": "uar-integration-spike",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 1,
+              "done": 5,
               "total": 5
             }
           },
@@ -298,9 +298,9 @@
           {
             "type": "change",
             "id": "agentic-uar-integration",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 4,
               "total": 4
             }
           },
@@ -316,9 +316,9 @@
           {
             "type": "change",
             "id": "webui-cid-delivery",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 1,
+              "done": 3,
               "total": 3
             }
           },

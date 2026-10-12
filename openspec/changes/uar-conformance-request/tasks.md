@@ -6,4 +6,4 @@ Change-level prerequisites (plan revision 2): every task in this change also req
 ## 1. Cross-team request
 
 - [x] 1.1 Write `mcp/uar/requests/CONFORMANCE.md` with every requested item, its acceptance check and the published-release-only gate rule. Verify: every item names an observable check that can be run against a published UAR release
-- [ ] 1.2 The operator files the request with the UAR team and records the issue or PR link in `mcp/uar/requests/CONFORMANCE.md`. Verify: the link is recorded with the date
+- [x] 1.2 The operator files the request with the UAR team and records the issue or PR link in `mcp/uar/requests/CONFORMANCE.md`. Verify: the link is recorded with the date

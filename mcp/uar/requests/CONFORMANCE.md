@@ -3,9 +3,9 @@
 - **From:** the kubo-ipfs-agentic team, GQAdonis/kubo fork (phase `ipfs-mcp-server`, OpenSpec change `uar-conformance-request`)
 - **To:** the Universal Agent Runtime (UAR) team
 - **Date written:** 2026-10-09
-- **UAR source examined:** `/Users/gqadonis/Projects/prometheus/universal-agent-runtime`, HEAD `a7cb9729` (2026-10-01), remote `GQAdonis/universal-agent-runtime`, read-only. Kubo has not edited and will not edit UAR code.
+- **UAR source examined:** `/Users/gqadonis/Projects/prometheus/universal-agent-runtime`, HEAD `a7cb9729` (2026-10-01); re-checked at `b4244aea` (2026-10-12) for issue 379, remote `GQAdonis/universal-agent-runtime`, read-only. Kubo has not edited and will not edit UAR code.
 
-Filed: <link> on <date>
+Filed: https://github.com/Prometheus-AGS/universal-agent-runtime/issues/379 on 2026-10-12 (by the lead at the operator's direction; status per item re-checked against UAR `main` `b4244aea`, all nine items missing or partial; to be handled later)
 
 (The line above is completed by the operator when the request is filed. It is task 1.2 of `uar-conformance-request` and is an operator action.)
 
