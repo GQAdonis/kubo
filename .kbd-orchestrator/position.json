@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 923,
-  "derivedRevision": 923,
+  "sourceRevision": 957,
+  "derivedRevision": 957,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 923
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 957
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T10:02:05.660370Z",
+  "updatedAt": "2026-10-12T10:12:00.472696Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",

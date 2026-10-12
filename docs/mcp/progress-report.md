@@ -402,18 +402,14 @@ Operator actions:
 8. Run a paired Desktop on macOS once pairing is built (`desktop-agent-chat` 1.6).
 9. At the end: approve and commit the phase including `AGENTS.md`, and commit the Web UI and Desktop forks (`phase-boundary-review` 1.8). Tags, pushes and publishing are separate approvals.
 
-R11 status on 2026-10-11: 1.4, 1.5 and 1.6 (the reviews and the judge) ran, and 1.7 (the batched correction pass) is applied. Re-verification of the fixes and the 1.2 integration gate on the final tree are pending.
+`phase-boundary-review` status on 2026-10-12: 6 of 8 tasks complete.
 
-Next step: Round 11, `phase-boundary-review`. It covers:
+- 1.1, 1.4, 1.5, 1.6, 1.7: done in R11 and R12 (judge route, security and quality reviews, cross-family judge, batched corrections).
+- 1.2: re-run on the final tree on 2026-10-12. Build, fmt, `test_unit` (3106 tests, 0 failed), module sync, replace check, `TestGateway`, `TestDefaultMatchesExpectedProfile`, `TestTelemetry`, `TestProvider`, `TestCommandDocsWidth` and the MCP `test/cli` suite pass. Lint reports only the upstream macOS-only `fuse/node/mount_darwin.go` ST1005 (CI lint on Linux is clean). One `TestGateway` subtest failed once on its fixed port and passed on rerun. `check_plan_deps.py` passes (176 tasks, 176 rows) after `mcp-ci-workflow` and 15 missing rows were added.
+- 1.3: open. The G9-G12 acceptance set needs the `uar-integration-spike` report and the topology-2 gate result (item 3 above).
+- 1.8: open. Operator approval and commit (item 9 above).
 
-- 1.1: confirm the cross-family judge route works; if not, the phase is recorded `pending_review` and does not complete.
-- 1.2: run every blocking constraint on the final tree: build, fmt, lint, unit tests, module sync, replace check, `TestGateway`, `TestDefaultMatchesExpectedProfile`, `TestTelemetry`, `TestProvider`, `TestCommandDocsWidth`, and all MCP `test/cli` suites on free ports; rebuild the release.
-- 1.3: the G9-G12 acceptance set: unconfigured principals get nothing, `egress_ack` refusals, no self-confirm, deny and expiry final, check-uar refusals, both SurrealDB modes, embedding off by default, pin-aware deletion, chat isolation, and the recorded topology-B result.
-- 1.4: independent security review (server, auth, broker and resolvers, agent endpoints, egress, supervised SurrealDB, both forks, plugins), including a re-test of the R3 handle defect.
-- 1.5: independent quality, compatibility and UI review, including the carried warnings.
-- 1.6: the cross-family adversarial judge over the phase diff.
-- 1.7: one batched correction cycle by the owning roles.
-- 1.8: operator approval and commit.
+The 34 stale "bottleneck" blockers in the KBD runtime (records of failed boundary evaluations on tasks that are complete or task IDs that do not exist) were cleared on 2026-10-12. The one real blocker kept is `ipfs-agent-skills-1.4-live-eval`.
 
 ## Change log
 
@@ -426,3 +422,4 @@ Next step: Round 11, `phase-boundary-review`. It covers:
 - 2026-10-11: `SHA256SUMS` signing decided and implemented (section 5.1, decision 4): SSH signing with a new dedicated ed25519 key, namespace `kubo-mcp-release`, in `a36a99219`; user guide "Verifying a release" added; the key and its `allowed_signers` line are pending. First CI run 38182586841 recorded (decision 5): all jobs ok except 32 `electron44` screenshots in Playwright `chat`, caused by classic scroll bars on the runner; overlay scroll bars set on the chat job in `a36a99219`, re-run 38200585039 pending.
 - 2026-10-12: release signing key committed (`b4c7b4fd9`); chat CI fixed (`4f79a0933`); run 38230221369 all six jobs green; `mcp-ci-workflow` complete.
 - 2026-10-12: signed release build verified end to end by the operator (`0.44.0-dev-17c5cf4a9`, 5 archives, good signature); not published.
+- 2026-10-12: `phase-boundary-review` 1.1, 1.2 and 1.4-1.7 closed (1.2 re-run on the final tree); `check_plan_deps.py` fixed; 34 stale KBD bottleneck blockers cleared; 1.3 and 1.8 remain open.
