@@ -56,6 +56,8 @@ Writes to `../ipfs-webui/src/webmcp/**` require review by the `security-reviewer
 
 `team.json` and the native exports are unowned (W5): task 1.2 writes the exact `team.json` patch and re-export command into this change folder, and the operator applies them at OG-11. Task 1.3 verifies the applied grants.
 
+Task 1.2 artifacts: `team-json.patch` (the exact patch, `git apply --check`-verified against the current `team.json`) and `og11-apply-and-reexport.md` (the OG-11 apply, re-export and merge commands, dry-run verified).
+
 ## Capabilities
 
 ### New Capabilities

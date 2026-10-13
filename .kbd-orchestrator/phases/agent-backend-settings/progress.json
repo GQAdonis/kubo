@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1310,
-  "derivedRevision": 1310,
+  "sourceRevision": 1314,
+  "derivedRevision": 1314,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1310
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1314
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-13T12:20:23.780047Z",
+  "last_updated": "2026-10-13T12:38:56.080091Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 28,
   "changes_completed": 0,
@@ -76,9 +76,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 3,
-      "tasks_done": 1,
-      "last_task_completed": "Record the ownership extension in the proposal: `ui-ux-engineer` gains the whole `../ipfs-webui/**` fork (with `src/webmcp/**` writes still requiring security review), `../ipfs-desktop/src/tray.js`, D",
-      "next_task_pending": "Write the exact `team.json` patch and the native re-export command into the change folder, not applied (W5: `team.json` and the exports are unowned). Acceptance: `git apply --check` of the patch succe",
+      "tasks_done": 2,
+      "last_task_completed": "Write the exact `team.json` patch and the native re-export command into the change folder, not applied (W5: `team.json` and the exports are unowned). Acceptance: `git apply --check` of the patch succe",
+      "next_task_pending": "After OG-11, verify the applied grants. Acceptance: `jq '.roles[] | {id, owns}'` shows the patch's paths; a grep of `.claude/agents`, `.codex/agents`, `.kimi-code/agents`, `.opencode/agents` finds the",
       "blockers": []
     },
     {
