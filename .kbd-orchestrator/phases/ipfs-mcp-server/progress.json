@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1130,
-  "derivedRevision": 1130,
+  "sourceRevision": 1326,
+  "derivedRevision": 1326,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1130
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1326
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-13T09:45:07.891722Z",
+  "last_updated": "2026-10-13T13:45:25.084764Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
   "changes_completed": 31,
@@ -50,7 +50,7 @@
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 31,
-      "total": 37,
+      "total": 65,
       "status": "IN_PROGRESS"
     },
     "evidence": {
