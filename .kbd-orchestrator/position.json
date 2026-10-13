@@ -2,18 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1084,
-  "derivedRevision": 1084,
+  "sourceRevision": 1129,
+  "derivedRevision": 1129,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1084
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1129
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-12T23:39:57.172495Z",
+  "updatedAt": "2026-10-13T01:33:45.020209Z",
   "cursor": [
     "ipfs-mcp-server",
     "execute",
     "native-confirmation-prompt",
-    "1.7"
+    "5"
   ],
   "root": {
     "type": "phase",
@@ -156,7 +156,7 @@
             "id": "native-confirmation-prompt",
             "status": "PENDING",
             "progress": {
-              "done": 5,
+              "done": 7,
               "total": 8
             }
           },
@@ -282,7 +282,7 @@
             "id": "desktop-agent-chat",
             "status": "PENDING",
             "progress": {
-              "done": 3,
+              "done": 10,
               "total": 12
             }
           },
@@ -363,7 +363,7 @@
             "id": "phase-boundary-review",
             "status": "PENDING",
             "progress": {
-              "done": 6,
+              "done": 7,
               "total": 8
             }
           }

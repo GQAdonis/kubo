@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1084,
-  "derivedRevision": 1084,
+  "sourceRevision": 1129,
+  "derivedRevision": 1129,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1084
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1129
   },
   "conflictCount": 0,
   "phase": "ipfs-mcp-server",
   "phaseId": "ipfs-mcp-server",
   "parentPhase": null,
-  "last_updated": "2026-10-12T23:39:57.172495Z",
+  "last_updated": "2026-10-13T01:33:45.020209Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
   "changes_completed": 31,
@@ -219,9 +219,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 8,
-      "tasks_done": 5,
+      "tasks_done": 7,
       "last_task_completed": "1.4 Add test/cli tests with a test-only resolver build tag: a non-eliciting write waits and runs once on approval, never on deny or expiry; and the automated HG-1 IPC case: a background process under the same user, with no TTY, connects to the confirmation channel without the pairing key, with a forged key and through `ipfs mcp confirm` without `--confirm=cli`, and sends approve.",
-      "next_task_pending": "(mcp-server-engineer; R14 security M-1, M-2; operator decision 2, 2026-10-12) Implement ch",
+      "next_task_pending": "1.5 The operator runs the HG-1 UI case with the committed script `mcp/server/confirm/hg1/attempt.sh` on macOS (and Linux if available): while a real prompt is pending, a background process under the same user (started with `nohup`, no TTY) tries synthetic input (macOS: `osascript` System Events click and keystroke Return; Linux X11: `xdotool key Return` and click; Linux Wayland: recorded as unavailable).",
       "blockers": []
     },
     {
@@ -373,9 +373,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 12,
-      "tasks_done": 3,
-      "last_task_completed": "1.3 Add the `safeStorage` token bridge in main and preload.",
-      "next_task_pending": "(ui-ux-engineer; operator decision 3, security M-4, review M5, M8, L6, L8) Tray entries to",
+      "tasks_done": 10,
+      "last_task_completed": "1.5 Add Electron e2e tests: a pending write appears in the modal with its CIDs; approve runs it once; deny does not; and the disabled state (chat off, unpaired) exposes no bridge call and no confirmation channel.",
+      "next_task_pending": "(ui-ux-engineer; operator decision 1, 2026-10-12) Ask for Touch ID with `systemPreferences",
       "blockers": []
     },
     {
@@ -472,9 +472,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 8,
-      "tasks_done": 6,
+      "tasks_done": 7,
       "last_task_completed": "1.7 One batched correction cycle by the owning roles.",
-      "next_task_pending": "1.3 Run the G9-G12 acceptance set: unconfigured principal gets nothing; `egress_ack` refusals on every `contentEgress` tool; out-of-band gate (no self-confirm, deny and expiry final); check-uar refusals; both SurrealDB modes; embedding off by default; pin-aware deletion; chat island isolation; the `uar-integration-spike` report and the topology-2 gate result.",
+      "next_task_pending": "1.8 Operator approval and commit, including AGENTS.md, plus the operator commits in the Web UI and Desktop forks.",
       "blockers": []
     }
   ],

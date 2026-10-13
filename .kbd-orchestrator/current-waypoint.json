@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1084,
-  "derivedRevision": 1084,
+  "sourceRevision": 1129,
+  "derivedRevision": 1129,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1084
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1129
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -22,7 +22,7 @@
   "parentPhase": null,
   "childPointer": null,
   "change": "native-confirmation-prompt",
-  "currentTask": "1.7",
+  "currentTask": "5",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": "execute",
@@ -31,9 +31,9 @@
   "implementationCompleted": 31,
   "implementationTotal": 37,
   "planRevision": 1,
-  "revision": 1084,
+  "revision": 1129,
   "exactNextCommand": "/kbd-assess ipfs-mcp-server",
   "nextChange": "native-confirmation-prompt",
-  "nextTask": "1.7",
-  "updatedAt": "2026-10-12T23:39:57.172495Z"
+  "nextTask": "5",
+  "updatedAt": "2026-10-13T01:33:45.020209Z"
 }
