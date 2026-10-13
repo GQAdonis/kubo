@@ -19,9 +19,15 @@ Dispatch contract for the Execute stage. Plan: `plan.md` (28 changes, 139 tasks,
 - Reviewers: Claude Code native `reviewer` and `security-reviewer` (claude-opus-5-5), separate context, only at the points the plan names.
 - Pushes, PRs, merges, cluster and registry actions: operator gates; the lead pushes branches under OG-1.
 
-## Operator gate OG-1 (pending)
+## Operator gate OG-1 (answered 2026-10-13)
 
-The operator directed "proceed to plan" and then "keep going as if [kbd-handoff] was already complete" without answering D0-D18. Work proceeds on the assumed defaults in plan section 1 for changes whose decisions are not contested; OG-1 answers are to be recorded here verbatim when given. Round 1 change `team-ownership-agent-backend` depends only on D10 (assumed default).
+Operator, verbatim: "accept all, and yes copy the skills".
+
+- D0-D18: accepted as recommended in plan section 1 (and assessment.md), including D0 (prepare the CORS-reduction PR now), D1 (dedicated console hostname; the name itself is still OG-2), D17 (the architect's single end-of-phase `WebUIPath` edit, so OG-7 is satisfied), and the plan-made assumptions.
+- Pre-approved: the driver's feature-branch pushes and draft PRs in the four repos, the Desktop install into `/Applications`, and progress-report commits.
+- Container registry for candidate images (PR-12): `ghcr.io/gqadonis/kubo`, the registry already used for the deployed image (plan-made assumption, accepted).
+- PR-K3: builder skills copied into `~/.kimi-code/skills` on 2026-10-13: `golang-patterns`, `golang-testing`, `mcp-builder`, `documentation-and-adrs`, `api-and-interface-design` (from `~/.claude/skills`), `go-mcp-server-generator` (from the repo's `.agents/skills`). Each has a `SKILL.md`.
+- ADR-0009 may move to `Accepted`.
 
 ## Dispatch
 
