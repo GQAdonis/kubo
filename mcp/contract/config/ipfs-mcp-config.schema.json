@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ipfs mcp configuration file (--mcp-config)",
-  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint.",
+  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint. An absent Secret file or token environment variable named by any SecretRef is never fatal: startup proceeds with a warning and only the dependent feature is disabled (the principal whose credential reference does not resolve authenticates nothing; the agent backend whose key reference does not resolve answers backend_not_configured) until the reference resolves (CRITICAL-2, ADR-0009 section 1).",
   "flag": "--mcp-config",
   "env": "IPFS_MCP_CONFIG",
   "type": "object",
@@ -145,16 +145,18 @@
               "human-mcp",
               "ui",
               "a2a",
-              "uar"
+              "uar",
+              "admin"
             ],
             "default": null,
+            "description": "admin (ADR-0009 section 3) is scoped to the runtime settings route only: settings read and write, no tool access. An admin token is refused on /mcp, /agui and /a2a, and a tool principal's token is refused on the settings route (path-scoped authorization). The tool-group keys (groups, write_groups, destructive_groups, egress_ack, shell_capable, check, uar) grant an admin principal nothing and are ignored for it. The settings route is mounted only when an admin principal is configured and agent.settings.enabled is not false.",
             "offSwitch": "Remove the principal entry.",
             "ownerChange": "mcp-agent-principal-enforcement"
           },
           "credential": {
             "$ref": "#/$defs/SecretRef",
             "default": null,
-            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401.",
+            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled, with a warning at start: startup proceeds and the principal authenticates nothing until the reference resolves (CRITICAL-2).",
             "ownerChange": "mcp-http-transport-auth"
           },
           "groups": {
@@ -272,7 +274,7 @@
         ]
       },
       "default": [],
-      "offSwitch": "Empty (default): no ui, a2a or uar principal exists and HTTP has no authenticated principal. A loopback listener with no credential configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused.",
+      "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no credential configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused.",
       "ownerChange": "mcp-agent-principal-enforcement"
     },
     "llm": {
@@ -310,7 +312,7 @@
             }
           ],
           "default": null,
-          "offSwitch": "null (default): requests carry no key (local servers).",
+          "offSwitch": "null (default): requests carry no key (local servers). An api_key reference whose environment variable or file is absent is never fatal: startup proceeds with a warning, only the dependent agent backend is disabled, and /agui answers 503 backend_not_configured until the reference resolves (CRITICAL-2).",
           "ownerChange": "mcp-llm-proxy-loop",
           "flag": "--llm-api-key-env, --llm-api-key-file"
         },
@@ -326,7 +328,7 @@
         "model"
       ],
       "default": null,
-      "offSwitch": "null (default): no LLM backend, /agui and /a2a are not mounted, no model call is ever made.",
+      "offSwitch": "null (default): no LLM backend and no model call is ever made. /agui stays mounted whenever agent.agui is true and answers every run request 503 backend_not_configured until a backend is configured (flag, this section, or a settings write applied without restart); /a2a requires this section and is not mounted without it. The backend can appear and change at runtime through the settings API; a run in flight finishes on the backend it started with (ADR-0009 section 1).",
       "ownerChange": "mcp-llm-proxy-loop"
     },
     "agent": {
@@ -336,9 +338,17 @@
         "agui": {
           "type": "boolean",
           "default": false,
+          "description": "true mounts /agui whether or not an llm backend is configured: with no backend the route answers every run request 503 backend_not_configured (the settings page's empty state) until a backend is configured, which can happen at runtime through the settings API without a restart. Stock `ipfs mcp` keeps this flag off; Desktop's sidecar and the LKE manifest pass --agui (ADR-0009 section 8).",
           "offSwitch": "false (default): /agui is not mounted (404).",
           "ownerChange": "mcp-agui-endpoint",
           "flag": "--agui"
+        },
+        "a2ui": {
+          "type": "boolean",
+          "default": true,
+          "description": "Server-emitted A2UI surface messages on /agui (catalog discovery plus server-built surfaces, D15). Defaults on wherever /agui is on; it is a separate off switch so surfaces can be stopped without unmounting /agui.",
+          "offSwitch": "false: no A2UI surface message is emitted on /agui; the run stream is otherwise unchanged and the client-side ToolCallCard fallback renders. No effect when agent.agui is false.",
+          "ownerChange": "agent-settings-contract"
         },
         "a2a": {
           "type": "boolean",
@@ -364,6 +374,44 @@
             "allowCredentials": false,
             "vary": "Origin"
           }
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Master switch for the runtime settings route. The route is mounted only when an admin principal is configured and this key is not false (ADR-0009 section 3).",
+              "offSwitch": "false: the settings route is not mounted even with an admin principal configured; every request to it gets 404, nothing is written and nothing is dialed.",
+              "ownerChange": "agent-settings-contract"
+            },
+            "accept_secrets": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the settings API accepts write-only secret fields (the LLM api_key). On LKE this is false: the cloud key lives in an out-of-band Kubernetes Secret mounted as a file referenced by llm.api_key, and the page renders the key field as set on the server (ADR-0009 section 5).",
+              "offSwitch": "false: a settings write carrying a secret field is refused with secrets_not_accepted (403); a key is then set only by llm.api_key in this file or by the --llm-api-key-env/--llm-api-key-file flags.",
+              "ownerChange": "agent-settings-contract"
+            },
+            "dir": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/AbsolutePath"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Directory holding the settings overlay, written with mode 0600 and applied atomically (write-then-rename). Effective settings resolve flags > overlay > this config file (ADR-0009 section 7). A write-only key stored through the settings API becomes a 0600 file here referenced as a SecretRef file.",
+              "offSwitch": "null (default): no overlay is read or written; the effective settings come from the flags and this file only, and nothing is persisted across restarts.",
+              "ownerChange": "agent-settings-contract",
+              "flag": "--settings-dir"
+            }
+          },
+          "default": {},
+          "offSwitch": "Omit the section; without an admin principal the settings route is not mounted regardless of these keys.",
+          "ownerChange": "agent-settings-contract"
         },
         "loop": {
           "type": "object",
@@ -750,27 +798,13 @@
       "if": {
         "properties": {
           "agent": {
-            "anyOf": [
-              {
-                "properties": {
-                  "agui": {
-                    "const": true
-                  }
-                },
-                "required": [
-                  "agui"
-                ]
-              },
-              {
-                "properties": {
-                  "a2a": {
-                    "const": true
-                  }
-                },
-                "required": [
-                  "a2a"
-                ]
+            "properties": {
+              "a2a": {
+                "const": true
               }
+            },
+            "required": [
+              "a2a"
             ]
           }
         },

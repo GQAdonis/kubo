@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.get / ipfsDesktop.agentSettings.get",
+  "description": "Messages of the SettingsClient.get() method (agent-settings-contract task 1.5). On the Desktop bridge this is the IPC channel ipfsDesktop.agentSettings.get; on HTTP it is GET on the settings route with the admin bearer (mcp-agent-settings-api 1.2). The request carries no payload. The response mirrors the server read shape (../settings-read.schema.json) field for field and, like it, never carries key material: a configured API key is reported only as api_key {set, source}. When no admin principal is configured or agent.settings.enabled is false, the HTTP transport answers 404 and the Desktop bridge reports the route as unavailable through status(); neither state is this document.",
+  "$defs": {
+    "GetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Empty payload. The channel takes no arguments."
+    },
+    "GetResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "backend", "system_prompt"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": { "$ref": "#/$defs/Revision" },
+        "backend": {
+          "anyOf": [
+            { "$ref": "#/$defs/BackendRead" },
+            { "type": "null" }
+          ],
+          "description": "The effective agent-loop backend, resolved as flags > overlay > config (ADR-0009 section 7). null means no backend is configured; agent surfaces then answer backend_not_configured and the settings page shows its first-run state (assessment-ui 5.4)."
+        },
+        "system_prompt": { "$ref": "#/$defs/SystemPromptRead" }
+      }
+    },
+    "Revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque revision of the effective settings, mirroring the server ETag. Every mutating method (set, setApiKey, clearApiKey) requires the current revision; a stale one is rejected with revision_conflict. On HTTP this is the ETag/If-Match header; on IPC it travels as a body field because the channel has no headers."
+    },
+    "ApiKeyStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["set"],
+      "properties": {
+        "set": {
+          "type": "boolean",
+          "description": "Whether a key is configured. Key material is never returned by any read."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["settings_api", "environment", "file"],
+          "description": "Where the configured key comes from: settings_api (written through setApiKey, on Desktop held in safeStorage and applied to the sidecar), environment (the variable named by llm.api_key), file (a SecretRef file, for example a Kubernetes Secret mount). Present exactly when set is true."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "set": { "const": true } },
+            "required": ["set"]
+          },
+          "then": { "required": ["source"] },
+          "else": { "not": { "required": ["source"] } }
+        }
+      ],
+      "description": "Key presence and provenance only, mirroring ../settings-read.schema.json. There is no field that can carry key material."
+    },
+    "BackendRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "openai: an operator-configured OpenAI-compatible endpoint (G10). uar: kubo creates and proxies a Universal Agent Runtime agent (D14, ADR-0010)."
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+          "maxLength": 2048,
+          "description": "Base URL of the backend endpoint. Maps from assessment-ui 5.2 openai.baseUrl and uar.url."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The effective model name. Maps from assessment-ui 5.2 openai.model."
+        },
+        "api_key": { "$ref": "#/$defs/ApiKeyStatus" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "openai" } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["base_url", "model", "api_key"] }
+        }
+      ]
+    },
+    "SystemPromptRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["safety_prefix", "custom"],
+      "properties": {
+        "safety_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The fixed safety prefix the server always prepends (mcp-agent-hot-reload 1.4). Set by the binary, not writable, cannot be removed, emptied or overridden by custom."
+        },
+        "custom": {
+          "type": "string",
+          "description": "The operator-configured part of the system prompt. May be empty. It only ever extends safety_prefix, never replaces it."
+        }
+      }
+    }
+  }
+}

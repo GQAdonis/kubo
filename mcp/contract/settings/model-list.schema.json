@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp agent settings: model-list shapes",
+  "description": "Request and result of the model-list endpoint (mcp-agent-settings-api 1.4). With no base_url the configured backend is queried; when no backend is configured the endpoint answers backend_not_configured. A base_url is a candidate URL under the same rules as test-connection (https, or http on loopback, no credentials). Nothing is persisted.",
+  "$defs": {
+    "ModelListRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "$schema": { "type": "string" },
+        "base_url": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^(https://[^\\s/@]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]{1,5})?)(/[^\\s]*)?$",
+          "description": "Optional candidate URL to list models from instead of the configured backend. Same URL rules as test-connection."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Backend kind to query as. Absent means openai, or the configured backend's kind when base_url is absent."
+        }
+      }
+    },
+    "ModelListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["models"],
+      "properties": {
+        "models": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "description": "Model identifier as the backend reports it, suitable for backend.model."
+              }
+            }
+          },
+          "description": "Models the backend reports. Entries may carry backend-specific extra fields, which clients must treat as informational."
+        }
+      }
+    }
+  }
+}

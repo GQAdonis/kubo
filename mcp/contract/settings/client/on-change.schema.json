@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.onChange / ipfsDesktop.agentSettings.onChange",
+  "description": "Event payload delivered to a SettingsClient.onChange() subscriber (agent-settings-contract task 1.5). On HTTP the client subscribes to the settings change stream (SSE, mcp-agent-settings-api 1.5); on the Desktop bridge the main process pushes ipfsDesktop.agentSettings.onChange to the trusted frame (desktop-agent-settings-bridge 1.2: push events replace the read-once at window creation, so a second tab and Desktop reflect changes, assessment-ui 5.2). The event carries only the new revision; subscribers re-read through get() to fetch the new state. It never carries settings values or key material. The payload mirrors the server change event (../settings-event.schema.json) exactly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "revision"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "type": {
+      "const": "settings_changed",
+      "description": "Event discriminator. The only event kind on this channel."
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "The new settings revision, equal to what a subsequent get() returns."
+    }
+  }
+}

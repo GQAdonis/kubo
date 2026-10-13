@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp agent settings: write shape",
+  "description": "Body of PUT on the settings route (ADR-0009 sections 1, 5, 6 and 7). Partial update: only present fields change. The current revision must be presented in the HTTP If-Match header; a missing or stale revision is refused with revision_conflict (412). Secret fields are write-only: api_key is accepted as a string (or null to clear), stored as a 0600 file referenced as SecretRef{File}, and never returned by any read. When agent.settings.accept_secrets is false, the presence of api_key is refused with secrets_not_accepted. A write that changes the model host to one not already in the calling principal's egress_ack must carry egress_confirmation naming exactly that host, and extends egress_ack for that host only (D4). The response on success is the read shape (settings-read.schema.json) with the new revision.",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "$schema": { "type": "string" },
+    "backend": { "$ref": "#/$defs/BackendWrite" },
+    "system_prompt": {
+      "type": "string",
+      "maxLength": 32768,
+      "description": "Replacement for the custom part of the system prompt. The fixed safety prefix is always prepended by the server and cannot be removed, emptied or overridden by this value."
+    },
+    "egress_confirmation": { "$ref": "#/$defs/EgressConfirmation" }
+  },
+  "$defs": {
+    "BackendWrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Switch the backend kind (openai: OpenAI-compatible endpoint; uar: Universal Agent Runtime, D14)."
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+          "maxLength": 2048,
+          "description": "New backend base URL. Never carries credentials; keys go in api_key only. A change to a host not already acknowledged needs egress_confirmation."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "api_key": {
+          "anyOf": [
+            { "type": "string", "minLength": 1, "maxLength": 512 },
+            { "type": "null" }
+          ],
+          "description": "Write-only. A string replaces the stored key; null clears it. Refused with secrets_not_accepted when agent.settings.accept_secrets is false (on LKE the key is set out-of-band as a Kubernetes Secret, ADR-0009 section 5). Never appears in the read shape."
+        }
+      }
+    },
+    "EgressConfirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "pattern": "^([a-z0-9.-]+|\\[[0-9a-f:]+\\])(:[0-9]{1,5})?$",
+          "maxLength": 260,
+          "description": "The exact newly chosen model host the caller confirms it may send node content to (D4). It must equal the host of the base_url in the same write; any other egress change is refused with egress_confirmation_required."
+        }
+      },
+      "description": "Required exactly when the write changes the model host to one not already in the calling principal's egress_ack. Extends egress_ack for this host only."
+    }
+  }
+}

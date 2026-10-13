@@ -371,7 +371,7 @@ func checkToolSchema(t *testing.T, p string) map[string]any {
 
 func TestAllSchemasAgainstMetaSchema(t *testing.T) {
 	var docs []string
-	for _, dir := range []string{"schemas", "confirmation", "resources", "derivations", "agentic", "fixtures", "config"} {
+	for _, dir := range []string{"schemas", "confirmation", "resources", "derivations", "agentic", "fixtures", "config", "settings"} {
 		for _, p := range jsonFiles(t, dir) {
 			if strings.HasSuffix(p, ".schema.json") || p == "schemas/common.json" {
 				docs = append(docs, p)

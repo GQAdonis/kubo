@@ -6,7 +6,6 @@
     "relative-surreal-binary.json": "/embedded/properties/surreal_binary",
     "reserved-port.json": "/http/properties/listen",
     "reserved-port-multiaddr.json": "/http/properties/listen",
-    "agui-without-llm.json": "llm",
     "unknown-confirm-mode.json": "/confirmation/properties/modes",
     "trusted-peers-agent-version.json": "/trusted_peers"
   }

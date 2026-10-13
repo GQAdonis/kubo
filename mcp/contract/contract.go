@@ -17,7 +17,7 @@ import (
 	"slices"
 )
 
-//go:embed catalog.json catalog.schema.json schemas confirmation resources derivations agentic fixtures config
+//go:embed catalog.json catalog.schema.json schemas confirmation resources derivations agentic fixtures config settings
 var files embed.FS
 
 // FS returns the embedded contract files, rooted at mcp/contract.

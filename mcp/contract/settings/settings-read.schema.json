@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp agent settings: read shape",
+  "description": "Response body of GET on the settings route, and of a successful PUT (ADR-0009 sections 1, 5 and 7). The read never carries key material: a configured API key is reported only as api_key {set, source}. revision changes whenever any effective setting changes and is also exposed as the HTTP ETag response header; a write presents it as If-Match (a missing or stale value is refused with revision_conflict). The route is served only to an admin principal and answers 404 when no admin principal is configured or agent.settings.enabled is false; none of those states is this document.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["revision", "backend", "system_prompt"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "revision": { "$ref": "#/$defs/Revision" },
+    "backend": {
+      "anyOf": [
+        { "$ref": "#/$defs/BackendRead" },
+        { "type": "null" }
+      ],
+      "description": "The effective agent-loop backend, resolved as flags > overlay > config (ADR-0009 section 7). null means no backend is configured; agent surfaces then answer backend_not_configured."
+    },
+    "system_prompt": { "$ref": "#/$defs/SystemPromptRead" }
+  },
+  "$defs": {
+    "Revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque revision of the effective settings, exposed as the HTTP ETag. A write must present the current revision in If-Match; a stale one is refused with revision_conflict (412)."
+    },
+    "ApiKeyStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["set"],
+      "properties": {
+        "set": {
+          "type": "boolean",
+          "description": "Whether a key is configured. Key material is never returned by any read."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["settings_api", "environment", "file"],
+          "description": "Where the configured key comes from: settings_api (written through this API, stored as a 0600 file in the settings directory referenced as SecretRef{File}), environment (the variable named by llm.api_key), file (a SecretRef file, for example a Kubernetes Secret mount). Present exactly when set is true."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "set": { "const": true } },
+            "required": ["set"]
+          },
+          "then": { "required": ["source"] },
+          "else": { "not": { "required": ["source"] } }
+        }
+      ],
+      "description": "Key presence and provenance only. There is no field that can carry key material."
+    },
+    "BackendRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "openai: an operator-configured OpenAI-compatible endpoint (G10); kubo proxies the bounded agent loop to it. uar: kubo creates and proxies a Universal Agent Runtime agent (D14, ADR-0010)."
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+          "maxLength": 2048,
+          "description": "Base URL of the backend endpoint. For openai this is the OpenAI-compatible base URL (llm.base_url); for uar the UAR instance URL."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The effective model name (llm.model)."
+        },
+        "api_key": { "$ref": "#/$defs/ApiKeyStatus" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "openai" } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["base_url", "model", "api_key"] }
+        }
+      ]
+    },
+    "SystemPromptRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["safety_prefix", "custom"],
+      "properties": {
+        "safety_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The fixed safety prefix the server always prepends to the system prompt (mcp-agent-hot-reload 1.4). It is set by the binary, is not writable through the API, and cannot be removed, emptied or overridden by custom. The effective system prompt is safety_prefix followed by custom."
+        },
+        "custom": {
+          "type": "string",
+          "description": "The operator-configured part of the system prompt. May be empty. It only ever extends safety_prefix, never replaces it."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp agent settings: test-connection shapes",
+  "description": "Request and result of the test-connection endpoint (mcp-agent-settings-api 1.4). The check probes a candidate URL only: https, or http on loopback; credentials in the URL are rejected; the server applies a bounded timeout and persists nothing. Authentication, when needed, uses the currently stored key, never a key sent with this request.",
+  "$defs": {
+    "TestConnectionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_url"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "base_url": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^(https://[^\\s/@]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]{1,5})?)(/[^\\s]*)?$",
+          "description": "Candidate endpoint URL. https for any host; http only for loopback (localhost, 127.0.0.1, [::1]). No userinfo: a URL carrying credentials does not validate."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Backend kind to probe as. Absent means openai."
+        }
+      }
+    },
+    "TestConnectionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Whether the candidate URL answered as the chosen backend kind within the bounded timeout."
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Why the check failed when ok is false. Never includes credentials or key material."
+        }
+      }
+    }
+  }
+}
