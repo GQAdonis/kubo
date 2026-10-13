@@ -1,1 +1,1 @@
-{"totalRuns":16,"failedRuns":0,"lastRun":{"ts":"2026-10-13T11:36:08Z","kind":"plan","edge":"after","name":"agent-backend-settings","hookId":"legacy-plan-complete","layer":"builtin","mode":"augment","status":0},"lastFailure":null}
+{"totalRuns":23,"failedRuns":0,"lastRun":{"ts":"2026-10-13T12:20:24Z","kind":"task","edge":"after","name":"team-ownership-agent-backend:1.1","hookId":"karpathy-progress-task-boundary","layer":"builtin","mode":"augment","status":0},"lastFailure":null}

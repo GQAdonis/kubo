@@ -2,18 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1304,
-  "derivedRevision": 1304,
+  "sourceRevision": 1310,
+  "derivedRevision": 1310,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1304
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1310
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-13T11:36:01.984667Z",
+  "updatedAt": "2026-10-13T12:20:23.780047Z",
   "cursor": [
     "agent-backend-settings",
-    "plan",
+    "execute",
     "team-ownership-agent-backend",
-    "1.1"
+    "1.2"
   ],
   "root": {
     "type": "phase",
@@ -39,7 +39,7 @@
             "id": "team-ownership-agent-backend",
             "status": "PENDING",
             "progress": {
-              "done": 0,
+              "done": 1,
               "total": 3
             }
           },

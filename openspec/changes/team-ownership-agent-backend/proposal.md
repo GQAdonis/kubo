@@ -14,6 +14,48 @@ This phase edits paths no role owns: most of the Web UI fork, Desktop tray, side
 
 Full task text and acceptance checks are in `tasks.md`; code-running checks run once in `phase-integration-gate` unless the plan names an exception.
 
+## Ownership extension (task 1.1 record)
+
+Every path from the assessment "Ownership" section (revision 2), plus round-2 S3 and plan-review W5. Sibling repositories are written relative to the kubo repo root (`../`).
+
+### `ui-ux-engineer` gains
+
+| Path | Source and constraint |
+|---|---|
+| `../ipfs-webui/**` (the whole fork) | D10; subsumes the unowned paths listed in assessment "Ownership": `src/navigation/**`, `src/status/**`, `src/files/**`, `src/peers/**`, the other route folders, `src/bundles/routes.js`, `public/index.html`, `public/manifest.json`, and `public/locales/en/*.json` beyond `agentChat` |
+| `../ipfs-webui/src/webmcp/**` | Included in the whole-fork grant, but every write still requires security review (see "Reviewer of `src/webmcp`" below) |
+| `../ipfs-desktop/src/tray.js` | assessment "Ownership" |
+| `../ipfs-desktop/assets/icons/**`, `../ipfs-desktop/assets/build/**` | Desktop branding assets, assessment "Ownership" |
+| `PRODUCT.md` (kubo) | round-2 S3 |
+
+### `mcp-server-engineer` gains
+
+| Path | Source and constraint |
+|---|---|
+| `../ipfs-desktop/src/daemon/mcp-sidecar*.js` | Sidecar lifecycle additions under `src/daemon/**` (assessment "Ownership"); the files are created by `desktop-mcp-sidecar`, they do not exist yet |
+| The sidecar wiring lines in `../ipfs-desktop/src/daemon/index.js` | assessment "Ownership" (`src/daemon/**` additions); only the wiring lines, not the whole file |
+| `../ipfs-desktop/test/**/mcp-sidecar*` | plan-review W5 |
+
+### `ipfs-agent-architect` gains
+
+| Path | Source and constraint |
+|---|---|
+| `docs/config.md` | round-2 S3; pointer entries only (D12 keeps the full `ipfs mcp` key entries in `docs/mcp/config-reference.md`) |
+| `docs/changelogs/v0.44.md` | plan-review W5; TOC and Highlights only — the Changelog and Contributors sections stay auto-generated (AGENTS.md) |
+| A know-me-cluster feature branch under `namespaces/ipfs/**` | D10; the `lke-origin-isolation` and `lke-agent-settings` work |
+
+### Stays with `ipfs-agent-architect`
+
+- The `WebUIPath` edit in `core/corehttp/webui.go` stays with the architect under D17 (the single operator-approved end-of-phase bump, OG-7).
+
+### Reviewer of `src/webmcp`
+
+Writes to `../ipfs-webui/src/webmcp/**` require review by the `security-reviewer` role (Claude Code, separate context per W3) before merge.
+
+### Application
+
+`team.json` and the native exports are unowned (W5): task 1.2 writes the exact `team.json` patch and re-export command into this change folder, and the operator applies them at OG-11. Task 1.3 verifies the applied grants.
+
 ## Capabilities
 
 ### New Capabilities
