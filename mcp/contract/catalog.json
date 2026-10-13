@@ -1,0 +1,1360 @@
+{
+  "$schema": "./catalog.schema.json",
+  "contractVersion": "0.1.0",
+  "minKuboVersion": "0.29.0",
+  "toolSelection": {
+    "description": "ADR-0003 section 2 (operator decision 2026-10-09). The default tool set on every transport is every group with confirmation classes none and write; destructive-class tools are excluded. They are enabled by naming the selector 'destructive' (stdio --tools or config tools.groups) or, for HTTP, AG-UI and A2A principals, by a per-principal destructive_groups grant. Enabled destructive calls are still always confirmed. read_only (--read-only) leaves only class none.",
+    "destructiveSelector": "destructive",
+    "default": {
+      "groups": [
+        "node",
+        "content",
+        "pin",
+        "mfs",
+        "names",
+        "dag",
+        "routing",
+        "diag",
+        "index"
+      ],
+      "classes": [
+        "none",
+        "write"
+      ]
+    },
+    "readOnly": {
+      "classes": [
+        "none"
+      ]
+    }
+  },
+  "groups": [
+    {
+      "name": "node",
+      "title": "Node",
+      "description": "Identity, version and server status.",
+      "diagnostic": true
+    },
+    {
+      "name": "content",
+      "title": "Content",
+      "description": "Add and read UnixFS content.",
+      "diagnostic": false
+    },
+    {
+      "name": "pin",
+      "title": "Pins",
+      "description": "Pin, list, verify, update and remove pins.",
+      "diagnostic": false
+    },
+    {
+      "name": "mfs",
+      "title": "MFS",
+      "description": "The node's Mutable File System.",
+      "diagnostic": false
+    },
+    {
+      "name": "names",
+      "title": "IPNS and keys",
+      "description": "Publish and resolve IPNS names; manage keystore keys without export.",
+      "diagnostic": false
+    },
+    {
+      "name": "dag",
+      "title": "DAG and CAR",
+      "description": "IPLD nodes and CAR import/export.",
+      "diagnostic": false
+    },
+    {
+      "name": "routing",
+      "title": "Routing",
+      "description": "Find providers and peers; announce CIDs.",
+      "diagnostic": false
+    },
+    {
+      "name": "diag",
+      "title": "Diagnostics",
+      "description": "Peers, bandwidth, repo statistics and garbage collection.",
+      "diagnostic": true
+    },
+    {
+      "name": "index",
+      "title": "Search index",
+      "description": "Embedding index over content added through ipfs mcp (off unless embeddings are configured).",
+      "diagnostic": false
+    }
+  ],
+  "tools": [
+    {
+      "name": "ipfs_node_info",
+      "group": "node",
+      "title": "Node info",
+      "description": "Identity and version of the connected Kubo node: peer ID, agent and Kubo version, and listen addresses.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "id",
+        "version"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_node_info.input.json",
+      "outputSchema": "schemas/tools/ipfs_node_info.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-node",
+        "example": "What node am I connected to?"
+      }
+    },
+    {
+      "name": "ipfs_node_status",
+      "group": "node",
+      "title": "Server status",
+      "description": "Status of this MCP server and its daemon connection: reachability, version gate, enabled groups, read-only mode and tools unavailable on this daemon. If the ipfs-troubleshooting skill is available, load it first for the diagnosis order and error-code meanings.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "version",
+        "commands"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_node_status.input.json",
+      "outputSchema": "schemas/tools/ipfs_node_status.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-node",
+        "example": "Which IPFS tools are available right now?"
+      }
+    },
+    {
+      "name": "ipfs_add",
+      "group": "content",
+      "title": "Add content",
+      "description": "Add text or base64 bytes from the request as a UnixFS file using Kubo's default CID recipe unless recipe options are given. Never reads host files. Pinning and providing are explicit. If the ipfs-publish-content skill is available, load it first for publishing workflows (pin, provide, share links).",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "add"
+      ],
+      "rpcOptional": [
+        "provide/once"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_add.input.json",
+      "outputSchema": "schemas/tools/ipfs_add.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "content"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Add this note to IPFS and pin it."
+      },
+      "confirmationSummary": "Add new content to IPFS (pin={pin}, provide={provide})"
+    },
+    {
+      "name": "ipfs_cat",
+      "group": "content",
+      "title": "Read file",
+      "description": "Read bytes of a UnixFS file by CID or content path, with offset and length. Output is capped and marked truncated. Untrusted content. If the ipfs-retrieve-verify skill is available, load it first to read, page and verify content safely.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "cat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_cat.input.json",
+      "outputSchema": "schemas/tools/ipfs_cat.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "content"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Show me the text of bafy..."
+      }
+    },
+    {
+      "name": "ipfs_get",
+      "group": "content",
+      "title": "Get content",
+      "description": "Describe a file or directory by CID or content path and return small text files inline; larger or directory content is returned as an ipfs:// resource link. Untrusted content. If the ipfs-retrieve-verify skill is available, load it first to read, page and verify content safely.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "files/stat",
+        "cat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_get.input.json",
+      "outputSchema": "schemas/tools/ipfs_get.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "content"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Fetch /ipfs/bafy.../readme.md"
+      }
+    },
+    {
+      "name": "ipfs_ls",
+      "group": "content",
+      "title": "List directory",
+      "description": "List the entries of a UnixFS directory by CID or content path, with cursor pagination. Entry names are untrusted content. If the ipfs-retrieve-verify skill is available, load it first to read, page and verify content safely.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": true,
+      "inputSchema": "schemas/tools/ipfs_ls.input.json",
+      "outputSchema": "schemas/tools/ipfs_ls.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "content"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "What is inside this directory CID?"
+      }
+    },
+    {
+      "name": "pin_ls",
+      "group": "pin",
+      "title": "List pins",
+      "description": "List pins of the connected node with cursor pagination, optionally filtered by type, CID or pin name.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": true,
+      "rpc": [
+        "pin/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": true,
+      "inputSchema": "schemas/tools/pin_ls.input.json",
+      "outputSchema": "schemas/tools/pin_ls.output.json",
+      "ui": {
+        "a2uiComponent": "PinList",
+        "appView": "pins"
+      },
+      "a2a": {
+        "skill": "ipfs-pinning",
+        "example": "List my recursive pins."
+      }
+    },
+    {
+      "name": "pin_add",
+      "group": "pin",
+      "title": "Pin content",
+      "description": "Pin a CID or content path on the connected node, fetching missing blocks from the network. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "pin/add"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/pin_add.input.json",
+      "outputSchema": "schemas/tools/pin_add.output.json",
+      "ui": {
+        "a2uiComponent": "PinList",
+        "appView": "pins"
+      },
+      "a2a": {
+        "skill": "ipfs-pinning",
+        "example": "Pin bafy... as 'project docs'."
+      },
+      "confirmationSummary": "Pin {path} (recursive={recursive})"
+    },
+    {
+      "name": "pin_verify",
+      "group": "pin",
+      "title": "Verify pins",
+      "description": "Verify that pinned DAGs are complete and their blocks are intact, with cursor pagination over pins.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": true,
+      "rpc": [
+        "pin/verify"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": true,
+      "inputSchema": "schemas/tools/pin_verify.input.json",
+      "outputSchema": "schemas/tools/pin_verify.output.json",
+      "ui": {
+        "a2uiComponent": "PinList",
+        "appView": "pins"
+      },
+      "a2a": {
+        "skill": "ipfs-pinning",
+        "example": "Are all my pins intact?"
+      }
+    },
+    {
+      "name": "pin_update",
+      "group": "pin",
+      "title": "Update pin",
+      "description": "Move a recursive pin from one CID to another, transferring only the differences. By default (unpin true) the old pin is removed, which has the effect of pin_rm on it. Destructive: off by default, always confirmed. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "confirmation": "destructive",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "pin/update"
+      ],
+      "rpcOptional": [
+        "pin/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/pin_update.input.json",
+      "outputSchema": "schemas/tools/pin_update.output.json",
+      "ui": {
+        "a2uiComponent": "PinList",
+        "appView": "pins"
+      },
+      "a2a": {
+        "skill": "ipfs-pinning",
+        "example": "Replace the pin on the old site root with the new one."
+      },
+      "confirmationSummary": "Move pin from {from} to {to} (unpin old={unpin})"
+    },
+    {
+      "name": "pin_rm",
+      "group": "pin",
+      "title": "Remove pin",
+      "description": "Remove a pin. Unpinned content becomes eligible for garbage collection. Destructive: always confirmed. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "destructive",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "pin/rm"
+      ],
+      "rpcOptional": [
+        "pin/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/pin_rm.input.json",
+      "outputSchema": "schemas/tools/pin_rm.output.json",
+      "ui": {
+        "a2uiComponent": "PinList",
+        "appView": "pins"
+      },
+      "a2a": {
+        "skill": "ipfs-pinning",
+        "example": "Unpin bafy..."
+      },
+      "confirmationSummary": "Remove the pin on {path} (recursive={recursive})"
+    },
+    {
+      "name": "mfs_ls",
+      "group": "mfs",
+      "title": "List MFS directory",
+      "description": "List entries of an MFS directory with cursor pagination. Entry names may come from imported content and are untrusted.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "files/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": true,
+      "inputSchema": "schemas/tools/mfs_ls.input.json",
+      "outputSchema": "schemas/tools/mfs_ls.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "What is in my MFS root?"
+      }
+    },
+    {
+      "name": "mfs_stat",
+      "group": "mfs",
+      "title": "Stat MFS path",
+      "description": "Show the CID, type and sizes of an MFS path.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "files/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_stat.input.json",
+      "outputSchema": "schemas/tools/mfs_stat.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "What is the CID of /notes?"
+      }
+    },
+    {
+      "name": "mfs_read",
+      "group": "mfs",
+      "title": "Read MFS file",
+      "description": "Read bytes of an MFS file with offset and length. Output is capped and marked truncated. Untrusted content.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "files/read",
+        "files/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_read.input.json",
+      "outputSchema": "schemas/tools/mfs_read.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "Read /notes/a.txt"
+      }
+    },
+    {
+      "name": "mfs_write",
+      "group": "mfs",
+      "title": "Write MFS file",
+      "description": "Replace the content of an MFS file with text or base64 bytes from the request (created when missing). Overwrites existing content. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "files/write",
+        "files/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_write.input.json",
+      "outputSchema": "schemas/tools/mfs_write.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "Save this text as /notes/a.txt"
+      },
+      "confirmationSummary": "Replace the content of MFS file {path}"
+    },
+    {
+      "name": "mfs_mkdir",
+      "group": "mfs",
+      "title": "Make MFS directory",
+      "description": "Create an MFS directory.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "files/mkdir",
+        "files/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_mkdir.input.json",
+      "outputSchema": "schemas/tools/mfs_mkdir.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "Create /projects/demo"
+      },
+      "confirmationSummary": "Create MFS directory {path}"
+    },
+    {
+      "name": "mfs_cp",
+      "group": "mfs",
+      "title": "Copy into MFS",
+      "description": "Copy an MFS path or an /ipfs/ content path to a new MFS path. Fails when the destination exists. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "files/cp",
+        "files/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_cp.input.json",
+      "outputSchema": "schemas/tools/mfs_cp.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "Copy /ipfs/bafy... to /archive/site"
+      },
+      "confirmationSummary": "Copy {source} to MFS {destination}"
+    },
+    {
+      "name": "mfs_mv",
+      "group": "mfs",
+      "title": "Move MFS path",
+      "description": "Move or rename an MFS path. Fails when the destination exists. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "files/mv"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_mv.input.json",
+      "outputSchema": "schemas/tools/mfs_mv.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "Rename /notes/a.txt to /notes/b.txt"
+      },
+      "confirmationSummary": "Move MFS {source} to {destination}"
+    },
+    {
+      "name": "mfs_rm",
+      "group": "mfs",
+      "title": "Remove MFS path",
+      "description": "Remove an MFS file or directory. Destructive: always confirmed. If the ipfs-mfs-workspace skill is available, load it first for MFS path rules and turning the tree into a durable CID.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "destructive",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "files/rm"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/mfs_rm.input.json",
+      "outputSchema": "schemas/tools/mfs_rm.output.json",
+      "ui": {
+        "a2uiComponent": "MfsTree",
+        "appView": "mfs"
+      },
+      "a2a": {
+        "skill": "ipfs-mfs",
+        "example": "Delete /tmp/scratch"
+      },
+      "confirmationSummary": "Remove MFS {path} (recursive={recursive})"
+    },
+    {
+      "name": "ipns_publish",
+      "group": "names",
+      "title": "Publish IPNS name",
+      "description": "Publish a content path under a keystore key's IPNS name, replacing the previous record. If the ipfs-ipns-names skill is available, load it first for key handling and the publish-and-update flow.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "name/publish"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipns_publish.input.json",
+      "outputSchema": "schemas/tools/ipns_publish.output.json",
+      "ui": {
+        "a2uiComponent": "IpnsRecordCard",
+        "appView": null
+      },
+      "a2a": {
+        "skill": "ipfs-names",
+        "example": "Publish bafy... under my key 'blog'."
+      },
+      "confirmationSummary": "Publish {path} under IPNS key {key}"
+    },
+    {
+      "name": "ipns_resolve",
+      "group": "names",
+      "title": "Resolve IPNS name",
+      "description": "Resolve an IPNS name or DNSLink to a content path. The resolved value comes from the network and is untrusted. If the ipfs-ipns-names skill is available, load it first for key handling and the publish-and-update flow.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "name/resolve"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipns_resolve.input.json",
+      "outputSchema": "schemas/tools/ipns_resolve.output.json",
+      "ui": {
+        "a2uiComponent": "IpnsRecordCard",
+        "appView": null
+      },
+      "a2a": {
+        "skill": "ipfs-names",
+        "example": "What does /ipns/docs.ipfs.tech point to?"
+      }
+    },
+    {
+      "name": "key_list",
+      "group": "names",
+      "title": "List keys",
+      "description": "List keystore keys (names and IPNS key IDs). Never returns private key material.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "key/list"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/key_list.input.json",
+      "outputSchema": "schemas/tools/key_list.output.json",
+      "ui": {
+        "a2uiComponent": "IpnsRecordCard",
+        "appView": null
+      },
+      "a2a": {
+        "skill": "ipfs-names",
+        "example": "Which IPNS keys do I have?"
+      }
+    },
+    {
+      "name": "key_gen",
+      "group": "names",
+      "title": "Generate key",
+      "description": "Generate a new keystore key. Never returns private key material. If the ipfs-ipns-names skill is available, load it first for key handling and the publish-and-update flow.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "key/gen"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/key_gen.input.json",
+      "outputSchema": "schemas/tools/key_gen.output.json",
+      "ui": {
+        "a2uiComponent": "IpnsRecordCard",
+        "appView": null
+      },
+      "a2a": {
+        "skill": "ipfs-names",
+        "example": "Create a key named 'blog'."
+      },
+      "confirmationSummary": "Generate key {name} ({type})"
+    },
+    {
+      "name": "key_rename",
+      "group": "names",
+      "title": "Rename key",
+      "description": "Rename a keystore key. Never overwrites an existing key.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "key/rename"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/key_rename.input.json",
+      "outputSchema": "schemas/tools/key_rename.output.json",
+      "ui": {
+        "a2uiComponent": "IpnsRecordCard",
+        "appView": null
+      },
+      "a2a": {
+        "skill": "ipfs-names",
+        "example": "Rename key 'blog' to 'site'."
+      },
+      "confirmationSummary": "Rename key {old_name} to {new_name}"
+    },
+    {
+      "name": "key_rm",
+      "group": "names",
+      "title": "Remove key",
+      "description": "Remove a keystore key. Its IPNS name can no longer be updated. Destructive: always confirmed.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "destructive",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "key/rm"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/key_rm.input.json",
+      "outputSchema": "schemas/tools/key_rm.output.json",
+      "ui": {
+        "a2uiComponent": "IpnsRecordCard",
+        "appView": null
+      },
+      "a2a": {
+        "skill": "ipfs-names",
+        "example": "Delete the key 'old-site'."
+      },
+      "confirmationSummary": "Remove key {name}"
+    },
+    {
+      "name": "dag_get",
+      "group": "dag",
+      "title": "Get DAG node",
+      "description": "Get an IPLD node as dag-json. Large nodes are returned as a resource link. Untrusted content. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "dag/get",
+        "dag/resolve"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/dag_get.input.json",
+      "outputSchema": "schemas/tools/dag_get.output.json",
+      "ui": {
+        "a2uiComponent": "DagViewer",
+        "appView": "dag"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Show the DAG node at bafy..."
+      }
+    },
+    {
+      "name": "dag_stat",
+      "group": "dag",
+      "title": "DAG statistics",
+      "description": "Count blocks and bytes of one or more DAGs, with deduplication statistics.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "dag/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/dag_stat.input.json",
+      "outputSchema": "schemas/tools/dag_stat.output.json",
+      "ui": {
+        "a2uiComponent": "DagViewer",
+        "appView": "dag"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "How big is the DAG under bafy...?"
+      }
+    },
+    {
+      "name": "dag_put",
+      "group": "dag",
+      "title": "Put DAG node",
+      "description": "Store one IPLD node given as dag-json text. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "dag/put"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/dag_put.input.json",
+      "outputSchema": "schemas/tools/dag_put.output.json",
+      "ui": {
+        "a2uiComponent": "DagViewer",
+        "appView": "dag"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Store this JSON as a dag-cbor node."
+      },
+      "confirmationSummary": "Store a DAG node ({store_codec}, pin={pin})"
+    },
+    {
+      "name": "car_import",
+      "group": "dag",
+      "title": "Import CAR",
+      "description": "Import a CAR file given as base64. Root pinning must be stated explicitly with pin_roots. Never announces immediately (fast-provide is off); use routing_provide to announce. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "dag/import"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/car_import.input.json",
+      "outputSchema": "schemas/tools/car_import.output.json",
+      "ui": {
+        "a2uiComponent": "DagViewer",
+        "appView": "dag"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Import this CAR and pin its roots."
+      },
+      "confirmationSummary": "Import a CAR file (pin roots={pin_roots})"
+    },
+    {
+      "name": "car_export",
+      "group": "dag",
+      "title": "Export CAR",
+      "description": "Export the DAG under a root CID as a CAR file: inline base64 up to the cap, otherwise an ipfs:// resource link. Untrusted content. If the ipfs-dag-car skill is available, load it first for explicit pinning and round-trip checks.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "dag/export"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/car_export.input.json",
+      "outputSchema": "schemas/tools/car_export.output.json",
+      "ui": {
+        "a2uiComponent": "DagViewer",
+        "appView": "dag"
+      },
+      "a2a": {
+        "skill": "ipfs-content",
+        "example": "Export bafy... as a CAR."
+      }
+    },
+    {
+      "name": "routing_findprovs",
+      "group": "routing",
+      "title": "Find providers",
+      "description": "Find peers that provide a CID through the configured routing system.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "peerSuppliedFields": ["/providers/*/addrs"],
+      "contentEgress": false,
+      "rpc": [
+        "routing/findprovs"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/routing_findprovs.input.json",
+      "outputSchema": "schemas/tools/routing_findprovs.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-routing",
+        "example": "Who provides bafy...?"
+      }
+    },
+    {
+      "name": "routing_findpeer",
+      "group": "routing",
+      "title": "Find peer",
+      "description": "Find the addresses of a peer through the configured routing system.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "peerSuppliedFields": ["/addrs"],
+      "contentEgress": false,
+      "rpc": [
+        "routing/findpeer"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/routing_findpeer.input.json",
+      "outputSchema": "schemas/tools/routing_findpeer.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-routing",
+        "example": "Where is peer 12D3KooW...?"
+      }
+    },
+    {
+      "name": "routing_provide",
+      "group": "routing",
+      "title": "Announce CID",
+      "description": "Announce that this node provides a CID. Makes no announcement and says so when the node has Provide.Enabled=false.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "routing/provide"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/routing_provide.input.json",
+      "outputSchema": "schemas/tools/routing_provide.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-routing",
+        "example": "Announce bafy... to the network."
+      },
+      "confirmationSummary": "Announce {cid} to the routing system (recursive={recursive})"
+    },
+    {
+      "name": "swarm_peers",
+      "group": "diag",
+      "title": "Connected peers",
+      "description": "List currently connected peers with cursor pagination.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "peerSuppliedFields": ["/peers/*/addr"],
+      "contentEgress": false,
+      "rpc": [
+        "swarm/peers"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": true,
+      "inputSchema": "schemas/tools/swarm_peers.input.json",
+      "outputSchema": "schemas/tools/swarm_peers.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-node",
+        "example": "How many peers am I connected to?"
+      }
+    },
+    {
+      "name": "stats_bw",
+      "group": "diag",
+      "title": "Bandwidth",
+      "description": "Report bandwidth totals and rates, optionally for one peer or protocol.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "stats/bw"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/stats_bw.input.json",
+      "outputSchema": "schemas/tools/stats_bw.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-node",
+        "example": "How much bandwidth is the node using?"
+      }
+    },
+    {
+      "name": "repo_stat",
+      "group": "diag",
+      "title": "Repo statistics",
+      "description": "Report repository size, storage limit and object count. Does not return local filesystem paths.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "repo/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/repo_stat.input.json",
+      "outputSchema": "schemas/tools/repo_stat.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-node",
+        "example": "How full is my repo?"
+      }
+    },
+    {
+      "name": "repo_gc",
+      "group": "diag",
+      "title": "Garbage collect",
+      "description": "Run garbage collection: remove unpinned blocks from the repo. Destructive: always confirmed. If the ipfs-pin-management skill is available, load it first for the safe order of pin and garbage-collection steps.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "destructive",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "repo/gc"
+      ],
+      "rpcOptional": [
+        "pin/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/repo_gc.input.json",
+      "outputSchema": "schemas/tools/repo_gc.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-node",
+        "example": "Free space by running GC."
+      },
+      "confirmationSummary": "Run garbage collection on the repo"
+    },
+    {
+      "name": "ipfs_index_search",
+      "group": "index",
+      "title": "Search index",
+      "description": "Semantic search over content indexed by ipfs mcp (requires embeddings configuration). Returns matching chunks with their CIDs; chunk text is read back from the node. Untrusted content. The query goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "rpc": [
+        "cat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_index_search.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_search.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "content"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "Find my notes about pinning strategy."
+      }
+    },
+    {
+      "name": "ipfs_index_cid",
+      "group": "index",
+      "title": "Index CID",
+      "description": "Explicitly chunk, embed and store one UnixFS file by CID in the index (requires embeddings configuration; respects the MIME allowlist and size cap). Reads the file through the node as ipfs_cat does; adds, pins and announces nothing. Content left out is reported in skipped_reason. The text goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "cat",
+        "files/stat"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_index_cid.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_cid.output.json",
+      "ui": {
+        "a2uiComponent": "ContentCard",
+        "appView": "content"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "Index bafy... for search."
+      },
+      "confirmationSummary": "Index {cid} with the configured embedder"
+    },
+    {
+      "name": "ipfs_index_status",
+      "group": "index",
+      "title": "Index status",
+      "description": "Report whether indexing is configured, the store mode and reachability, the embedder model and counts. Contacts no embedder. An unreachable store is store_reachable false; a store that fails after answering is index_unavailable, which is retryable.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_index_status.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_status.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "Is search indexing on?"
+      }
+    },
+    {
+      "name": "ipfs_index_reconcile",
+      "group": "index",
+      "title": "Reconcile index",
+      "description": "Delete index entries of CIDs that no longer have any pin (direct, recursive or indirect), one page of indexed CIDs at a time; dry_run lists what would be deleted. Vectors are kept, with a warning, when the pin check or the delete fails. Contacts no embedder. An unreachable vector store is index_unavailable, which is retryable.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [
+        "pin/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": true,
+      "inputSchema": "schemas/tools/ipfs_index_reconcile.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_reconcile.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "Clean up index entries for unpinned content."
+      },
+      "confirmationSummary": "Delete index entries of unpinned CIDs (dry run={dry_run})"
+    }
+  ]
+}

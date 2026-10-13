@@ -1,0 +1,47 @@
+{
+  "mode": "artifact",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan schedules `mcp-embedding-index-lifecycle` before its declared dependency `mcp-embeddings-surrealdb` is actually complete because the lifecycle task rows omit the N7/PR dependency.",
+      "evidence": "Change 31 declares `mcp-embedding-index-lifecycle` depends on `N7, content tools, routing-diag, pinning`, but its task rows list prerequisites only as `PR-1` for 1.1-1.3 and `PR-1; PR-5; PR-9; PR-10` for 1.4, with no `mcp-embeddings-surrealdb`/N7 prerequisite. Round 7 runs `webui-agent-chat, mcp-embedding-index-lifecycle, mcp-plugin-marketplaces, mcp-user-docs`, so the task-level scheduler could start lifecycle work without the store/schema/embedder from N7.",
+      "suggested_fix": "Add explicit prerequisites on every `mcp-embedding-index-lifecycle` task for completion of `mcp-embeddings-surrealdb` (and the specific content/routing/pinning tool tasks it relies on), not just the change-level dependency."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "`mcp-user-docs` is planned to document finished agentic, embeddings, and chat behavior while its task rows only require PR-1, so documentation can run before the features it documents exist.",
+      "evidence": "Change 33 says `mcp-user-docs` depends on `R1 deps + N11, N12, N13, N7` and describes docs for `Agentic guide, embeddings guide (links N7b's section), chat setup`, but task rows `mcp-user-docs` 1.4, 1.5, and 1.6 list prerequisites only `PR-1`. Section D6 also says `N7b runs in Round 7 and writes its own docs section`, while `mcp-user-docs` is also in Round 7, creating no enforceable ordering between lifecycle docs and the guide that links them.",
+      "suggested_fix": "Add task-level prerequisites: 1.4 after N11/N12/N13, 1.5 after N7 and N7b docs, 1.6 after N4/N5/N6/N12/N14 as applicable; or move `mcp-user-docs` to a later serial round after all documented features complete."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "`mcp-release-binaries` has a change-level dependency on `http, tool groups, app views` but its task rows lack those prerequisites and it is scheduled before later features that affect the final binary.",
+      "evidence": "Change 28 declares `mcp-release-binaries` depends on `http, tool groups, app views`, but task rows 1.1 and 1.2 list only `PR-1`, and 1.3 lists `PR-1; PR-5`. It is scheduled in Round 6 before Round 7 changes `webui-agent-chat`, `mcp-embedding-index-lifecycle`, `mcp-plugin-marketplaces`, and `mcp-user-docs`, even though section 5 says `The final archives are rebuilt on the final tree in phase-boundary-review 1.2` but the release-binaries smoke task itself could run against an incomplete tree.",
+      "suggested_fix": "Either move release archive creation/smoke to after all binary-affecting changes or make `mcp-release-binaries` explicitly produce only provisional artifacts and require final rebuild/smoke as the acceptance criterion."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The AG-UI/A2A endpoint tasks omit their stated dependencies on the LLM loop and native confirmation prompt, so endpoint implementation can start before the loop and gate it integrates with exist.",
+      "evidence": "Change 23 `mcp-agui-endpoint` declares dependencies `N11, N14`, and Change 24 `mcp-a2a-endpoint` declares dependencies `N11, N14`, but task rows for `mcp-agui-endpoint` 1.1-1.4 and `mcp-a2a-endpoint` 1.1-1.4 list prerequisites only `PR-1` or `PR-1; PR-5; PR-9`; none require completion of `mcp-llm-proxy-loop` or `native-confirmation-prompt`.",
+      "suggested_fix": "Add task-level prerequisites for the specific N11 and N14 tasks each endpoint consumes, especially interrupt/resume, confirmation mapping, and disabled-state tests."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

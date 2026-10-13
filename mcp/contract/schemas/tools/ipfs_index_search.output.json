@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_search output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "model": {
+      "type": "string"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cid",
+          "chunk_index",
+          "score",
+          "text"
+        ],
+        "properties": {
+          "cid": {
+            "$ref": "../common.json#/$defs/Cid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "chunk_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "score": {
+            "type": "number"
+          },
+          "text": {
+            "type": "string",
+            "description": "Chunk text. Untrusted content."
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "model",
+    "results"
+  ]
+}

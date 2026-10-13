@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "key_rm output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "removed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "id"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "../common.json#/$defs/KeyName"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "removed"
+  ]
+}

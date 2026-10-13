@@ -1,0 +1,43 @@
+{
+  "mode": "diff",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/confirm/cli.go",
+      "claim": "The CLI prints untrusted confirmation text directly to the terminal, allowing control-sequence injection to disguise the operation being approved.",
+      "evidence": "decide prints p.Summary, p.Tool, p.Class and p.ID with fmt.Fprintf without sanitization; in contrast, presence.go explicitly removes control and Unicode formatting characters from p.Summary.Text because a tool argument can shape the dialog. An embedded carriage return or ANSI erase/cursor sequence in the CLI summary can overwrite the displayed operation before the operator types yes.",
+      "suggested_fix": "Sanitize all server-provided terminal fields before displaying them, including control characters and Unicode formatting characters, and add tests using ANSI escape sequences and carriage returns in tool arguments."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/confirm/factor_polkit.go",
+      "claim": "The Linux native confirmation gate trusts PATH-selected executables to attest human authentication.",
+      "evidence": "newPolkitFactor sets pkact and pkchk to the bare names \"pkaction\" and \"pkcheck\"; check only verifies lookup succeeds, and authenticate executes pkcheck through execRunner. execRunner uses exec.CommandContext and inherits os.Environ(). A PATH-prepended pkcheck that exits 0 produces pkAuthorized and approves without any polkit authentication.",
+      "suggested_fix": "Use trusted system executable paths and verify their ownership and writability, rather than executing arbitrary PATH-selected programs; test that a fake pkcheck placed first on PATH cannot authenticate."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/confirm/pairing.go",
+      "claim": "Replacing a pairing does not revoke the old key on running confirmation servers.",
+      "evidence": "Pair documents that it replaces any earlier pairing, and the pair command says running it again replaces the pairing. However, Build reads loadVerifier only once and newChannel stores that verifier in c.verifier; authenticate subsequently compares every bearer key against that unchanged snapshot. The old key continues to approve pending operations while the newly printed key is rejected by the running server.",
+      "suggested_fix": "Implement live, atomic pairing rotation and revocation for active channels, or explicitly require and enforce a server restart when pairing changes; test that the old key is rejected after replacement."
+    },
+    {
+      "severity": "WARNING",
+      "file": "mcp/server/confirm/factor_macos.go",
+      "claim": "The macOS availability probe can block indefinitely even after the confirmation request is canceled.",
+      "evidence": "macFactor.check invokes m.run(context.WithoutCancel(ctx), ...) inside sync.Once.Do with no replacement deadline. nativeResolver.Request calls check synchronously, so a stalled Swift interpreter or toolchain startup blocks that request and every subsequent check waiting on the same sync.Once.",
+      "suggested_fix": "Give the probe an explicit bounded timeout independent of the request, and test a runner that waits until its context is canceled."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

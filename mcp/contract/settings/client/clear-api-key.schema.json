@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.clearApiKey / ipfsDesktop.agentSettings.clearApiKey",
+  "description": "Messages of the SettingsClient.clearApiKey() method (agent-settings-contract task 1.5), the Remove action beside the write-only key field (assessment-ui 5.2). On the Desktop bridge (IPC channel ipfsDesktop.agentSettings.clearApiKey) the main process deletes the key from safeStorage and applies the removal to the sidecar. On HTTP it maps to PUT on the settings route with backend.api_key set to null (../settings-write.schema.json). Like setApiKey, it is refused with secrets_not_accepted when agent.settings.accept_secrets is false, because on such a host (LKE) the key is managed out-of-band and the API must not appear to remove it.",
+  "$defs": {
+    "ClearApiKeyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The current revision as returned by get() or a previous mutation. Maps to the HTTP If-Match header; a stale value is rejected with revision_conflict (412)."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Which backend kind's key to clear. Absent means the configured or currently selected backend kind."
+        }
+      }
+    },
+    "ClearApiKeyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "api_key"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The new revision after the apply."
+        },
+        "api_key": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["set"],
+          "properties": {
+            "set": {
+              "const": false,
+              "description": "Always false after a successful clear; no source field is present."
+            }
+          },
+          "description": "Key presence only, mirroring ApiKeyStatus with set=false. Key material never appears in any message."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "key_gen input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "$ref": "../common.json#/$defs/KeyName"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "ed25519",
+        "rsa"
+      ],
+      "default": "ed25519"
+    },
+    "size": {
+      "type": "integer",
+      "enum": [
+        2048,
+        3072,
+        4096
+      ],
+      "description": "RSA key size; ignored for ed25519."
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

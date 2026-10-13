@@ -1,0 +1,36 @@
+{
+  "$schema": "./uri-conventions.schema.json",
+  "schemes": [
+    {
+      "scheme": "ipfs",
+      "template": "ipfs://{cid}{/path*}",
+      "schemaDef": "IpfsUri",
+      "contentPath": "/ipfs/{cid}{/path*}",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "listable": false,
+      "description": "Immutable content by CID. resources/read returns file bytes (text or blob, capped like ipfs_cat) or a directory listing as JSON. Tools return these URIs in resource_link blocks for large or directory results."
+    },
+    {
+      "scheme": "ipns",
+      "template": "ipns://{name}{/path*}",
+      "schemaDef": "IpnsUri",
+      "contentPath": "/ipns/{name}{/path*}",
+      "returnsUntrustedContent": true,
+      "contentEgress": true,
+      "listable": false,
+      "description": "Mutable content by IPNS name or DNSLink domain, resolved at read time through the daemon."
+    },
+    {
+      "scheme": "ui",
+      "template": "ui://ipfs-mcp/{view}",
+      "schemaDef": "UiUri",
+      "mimeType": "text/html;profile=mcp-app",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "listable": true,
+      "views": ["content", "pins", "mfs", "dag", "node-status"],
+      "description": "MCP App views (SEP-1865) embedded with go:embed and linked from tools through _meta.ui. Content Security Policy default-src 'none' widened only to bundled assets; no remote origins."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "target": "minimax",
+  "verification": {
+    "level": "source-verified",
+    "source": "https://github.com/MiniMax-AI/minimax-code/blob/main/packages/local-runtime-v2/src/service/agent/storage/canonical-agent-config.ts",
+    "version": "@minimax-ai/code 0.4.12; source inspected 2026-09-24",
+    "live": "unverified"
+  },
+  "diagnostics": [
+    "Source-verified serialization only; installed native validation and live execution are unverified.",
+    "Only explicit model IDs are translated. Resolve tier, skill, capability and price policies with agent-team-models before native invocation.",
+    "mcode exec has no verified custom-agent selector. The MiniMax plugin manifest supports skills/MCP/hooks/apps, not an agents field; no agent plugin is invented.",
+    "Role overrides are preserved without native schema certification. Skill IDs refer to separately installed skills; prompt mentions do not install or authorize them."
+  ],
+  "instructions": [
+    "Review staged artifacts before installation. Export grants no execution or registration authority.",
+    "Install agents/<name>/agent.md under the active MiniMax user-data directory: MINIMAX_DATA_DIR, MAVIS_DATA_DIR, or default ~/.minimax. Export does not install there."
+  ],
+  "files": [
+    {
+      "file": "agents/ipfs-agent-architect/agent.md",
+      "sha256": "3c8cfb65205ab61373ad622afd26cf636cb88f538c67571e80910307f73a2826"
+    },
+    {
+      "file": "agents/mcp-server-engineer/agent.md",
+      "sha256": "239bf8a72f4e9175f4442ac784eb0b5adadbb8d3d43e463e793761e7423e3d2a"
+    },
+    {
+      "file": "agents/skills-plugin-specialist/agent.md",
+      "sha256": "9620fc0ca3e511fc388147c9cfd0bb3f15406df348cb550f2351aecc663154ce"
+    },
+    {
+      "file": "agents/ui-ux-engineer/agent.md",
+      "sha256": "c004a9d4b4683c9005a8832d67c95b38e32e07d5baa16662d822ae7d14ad7fdb"
+    },
+    {
+      "file": "agents/security-reviewer/agent.md",
+      "sha256": "e6d661668dec581d921f2d9420899ef584412a5cf8d4c363630d525548c8358d"
+    },
+    {
+      "file": "agents/reviewer/agent.md",
+      "sha256": "b8c7646fea301f92d451cebbf704fb09a5d98d64e2bef99e7fbff9694f8c5218"
+    },
+    {
+      "file": "export-receipt.json",
+      "sha256": "808e576eb001ca185f5b7181692713258722f2e9d0a930210df4d0e3b87ea941"
+    }
+  ]
+}

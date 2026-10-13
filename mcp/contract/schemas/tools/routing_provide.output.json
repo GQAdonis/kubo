@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "routing_provide output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "announced": {
+      "type": "boolean"
+    },
+    "providing_disabled": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "cid",
+    "announced",
+    "providing_disabled"
+  ]
+}

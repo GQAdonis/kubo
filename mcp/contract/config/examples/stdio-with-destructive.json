@@ -1,0 +1,15 @@
+{
+  "tools": {
+    "groups": [
+      "node",
+      "content",
+      "pin",
+      "mfs",
+      "names",
+      "dag",
+      "routing",
+      "diag",
+      "destructive"
+    ]
+  }
+}

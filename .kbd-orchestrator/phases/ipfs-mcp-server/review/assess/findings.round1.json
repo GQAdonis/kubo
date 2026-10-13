@@ -1,0 +1,55 @@
+{
+  "mode": "artifact",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "unknown",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment does not record the chosen architecture option required by G1 and instead leaves the decision provisional.",
+      "evidence": "G1 requires: \"Architecture decision by assessment ... record the chosen option and rejected alternatives as an ADR\". The artifact says: \"Provisional; to be attacked by the independent critic before any ADR is written\" and \"No ADR yet.\"",
+      "suggested_fix": "Either mark G1 as not achieved and explicitly state the assessment cannot choose yet, or provide a final chosen option plus rejected alternatives and identify the ADR work still required separately."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment claims ADRs and docs/mcp are missing while cited path metadata says mcp/README.md exists, creating an unsupported codebase-state contradiction.",
+      "evidence": "Assessment table says: \"ADRs `docs/mcp/` | MISSING | `ls docs/mcp` -> no such directory\" and recommends docs under `mcp/README.md`; packet cited_paths says: \"EXISTS   mcp/README.md  -> 29 matches (.agents/skills/vercel-composition-patterns/README.md, .agents/skills/vercel-react-best-practices/README.md, .agents/skills/vercel-react-native-skills/README.md)\" while the file_tree contains no `./mcp` directory.",
+      "suggested_fix": "Correct the path evidence: distinguish actual missing `mcp/README.md`/`mcp/` from unrelated grep matches in `.agents/skills`, and remove any claim implying an existing mcp README."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment asserts detailed team ownership and AGENTS.md policy facts that are not supported by the file_tree packet and are based on uncommitted state.",
+      "evidence": "The assessment says: \"Team state exists (`.agent-team/kubo-ipfs-agentic/team.json`) with six roles\" and \"per the (uncommitted) AGENTS.md team section, edits there must go through an architect-owned OpenSpec change first.\" The file_tree lists `./.agent-team/kubo-ipfs-agentic` but not `team.json`, and the constraints state AGENTS.md remains authoritative while warning that AGENTS.md has uncommitted additions.",
+      "suggested_fix": "Either cite only packet-supported files and committed constraints, or mark the ownership claims as unverified/non-baseline and avoid using them as option scoring inputs."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The G5 assessment misses part of the goal by not assessing the required individual skills for push/pull, pinning, IPNS, MFS, DAG/CAR, and troubleshooting.",
+      "evidence": "G5 requires \"agentskills.io-compliant skills for push/pull, pinning, IPNS, MFS, DAG/CAR and troubleshooting, packaged as plugins and marketplaces for Claude Code, Codex, OpenCode and Kimi Code.\" The spec gap summary only says: \"Skills and marketplace packaging (G5) | No | No skill list, no plugin manifests, no launch command (depends on G1).\"",
+      "suggested_fix": "Add a G5 gap breakdown naming each required skill area and each marketplace/plugin target, with current presence/absence and any path/package implications."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment contains unverifiable claims about external SDK versions, MCP spec dates, dependencies, and binary-size probes that are not supported by the provided file tree.",
+      "evidence": "Examples include: \"go-sdk v1.8.0 provides `StdioTransport`, `StreamableHTTPHandler`...\", \"go-sdk v1.8.0 negotiates `2026-07-28`\", and measured dependency/binary-size claims such as \"+2.74 MB\". No `mcp/` module or SDK files exist in the file_tree, and the artifact says measurements were in a scratchpad, not the repo.",
+      "suggested_fix": "Move external SDK/version/measurement claims into analysis/research inputs or label them explicitly as non-codebase probes; keep assessment findings focused on repository-supported gaps."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

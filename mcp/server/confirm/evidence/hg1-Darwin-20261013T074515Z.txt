@@ -1,0 +1,27 @@
+HG-1 UI attempt: Darwin 25.6.0 2026-10-13T07:45:15Z
+session: n/a
+target CID: bafkreigghybj2kl44p3hjp3xsl4ifn56fyjjcfy6e77omcejv6gxoocfp4 (not pinned)
+waiting for the real prompt (the macOS helper can take ~6 s to start)...
+prompt pending; starting same-user background attempts (nohup, no TTY)
+--- attempt output ---
+[osascript] keystroke Return
+[osascript] click default button of the front window of every process
+[osascript] type a guessed password
+attempts done
+--- end ---
+check 1 passed: bafkreigghybj2kl44p3hjp3xsl4ifn56fyjjcfy6e77omcejv6gxoocfp4 is not pinned after the synthetic input
+operator: prompt still on screen = n
+Now CANCEL the prompt yourself (or wait 30 s). Do not approve it.
+check 2 passed: bafkreigghybj2kl44p3hjp3xsl4ifn56fyjjcfy6e77omcejv6gxoocfp4 is still not pinned after the prompt ended
+repeat-call result:
+   1 "code":"confirmation_expired"
+   1 "code":"confirmation_required"
+RESULT: PASS for macos-localauth (record the platform limits in MECHANISMS.md)
+Evidence file: /Users/gqadonis/Projects/references/kubo/mcp/server/confirm/hg1/../evidence/hg1-Darwin-20261013T074515Z.txt
+
+LEAD NOTE (2026-10-13): NOT a valid HG-1 result. Run unattended by the lead, not the operator.
+The script printed PASS, but no LocalAuthentication prompt was visible on screen at 07:46Z (full-screen capture);
+no swift helper process was observed, so the synthetic input had no prompt to act on and the request expired.
+The osascript attempts ran with Accessibility (no errors): they clicked button 1 of the front window of every
+visible app and typed "password" + Return into the frontmost app. Task 1.5 stays open; rerun with the operator
+watching, a confirmed visible Touch ID sheet, and other apps closed or minimized.

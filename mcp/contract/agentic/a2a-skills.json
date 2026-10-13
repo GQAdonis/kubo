@@ -1,0 +1,14 @@
+{
+  "$schema": "./a2a-skills.schema.json",
+  "source": "A2A 1.0.0 AgentSkill (https://github.com/a2aproject/A2A/blob/main/docs/specification.md): id, name, description required; tags, examples, inputModes, outputModes optional.",
+  "description": "A2A skills for the agent card at /.well-known/agent-card.json. Each skill covers whole tool groups; the card lists only skills whose groups the requesting principal may use. Tool-level examples come from catalog a2a.example.",
+  "skills": [
+    { "id": "ipfs-node", "name": "IPFS node status", "description": "Report the connected Kubo node's identity, server status, peers, bandwidth and repository; run garbage collection with human approval.", "groups": ["node", "diag"], "tags": ["ipfs", "kubo", "diagnostics"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] },
+    { "id": "ipfs-content", "name": "IPFS content", "description": "Add and read UnixFS content, IPLD DAG nodes and CAR files on the connected node. Writes need human approval.", "groups": ["content", "dag"], "tags": ["ipfs", "cid", "unixfs", "ipld", "car"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] },
+    { "id": "ipfs-pinning", "name": "IPFS pinning", "description": "List, verify, add, update and remove pins. Changes need human approval.", "groups": ["pin"], "tags": ["ipfs", "pin"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] },
+    { "id": "ipfs-mfs", "name": "IPFS files (MFS)", "description": "Browse and change the node's Mutable File System. Changes need human approval.", "groups": ["mfs"], "tags": ["ipfs", "mfs", "files"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] },
+    { "id": "ipfs-names", "name": "IPNS names and keys", "description": "Resolve and publish IPNS names and manage keystore keys without exporting key material. Changes need human approval.", "groups": ["names"], "tags": ["ipfs", "ipns", "keys"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] },
+    { "id": "ipfs-routing", "name": "IPFS routing", "description": "Find providers and peers and announce CIDs (announcing needs human approval and respects the node's Provide settings).", "groups": ["routing"], "tags": ["ipfs", "dht", "routing"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] },
+    { "id": "ipfs-search", "name": "IPFS content search", "description": "Semantic search over content indexed by ipfs mcp when embeddings are configured.", "groups": ["index"], "tags": ["ipfs", "search", "embeddings"], "inputModes": ["text/plain", "application/json"], "outputModes": ["text/plain", "application/json"] }
+  ]
+}

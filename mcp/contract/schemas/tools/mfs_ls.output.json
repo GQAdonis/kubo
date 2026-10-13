@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_ls output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "directory"
+            ]
+          },
+          "size": {
+            "$ref": "../common.json#/$defs/ByteCount"
+          },
+          "cid": {
+            "$ref": "../common.json#/$defs/Cid"
+          }
+        }
+      }
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    }
+  },
+  "required": [
+    "path",
+    "entries",
+    "page"
+  ]
+}

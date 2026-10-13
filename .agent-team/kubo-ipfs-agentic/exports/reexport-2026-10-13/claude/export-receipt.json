@@ -1,0 +1,89 @@
+{
+  "target": "claude",
+  "verification": {
+    "level": "source-verified",
+    "source": "https://code.claude.com/docs/en/sub-agents",
+    "version": "documentation inspected 2026-09-24",
+    "live": "unverified"
+  },
+  "capabilities": {
+    "agent-definition": "emitted",
+    "role-model": "emitted",
+    "team-options": "emitted",
+    "agent-plugin": "emitted",
+    "agent-marketplace": "emitted",
+    "static-team-roster": "not-emitted",
+    "model-policy-resolution": "not-emitted"
+  },
+  "requiredCapabilities": [],
+  "portableModelPolicies": {
+    "team": null,
+    "skills": null,
+    "roles": {
+      "ipfs-agent-architect": {
+        "tier": "hard",
+        "capabilities": [
+          "function_calling",
+          "long_context"
+        ]
+      },
+      "mcp-server-engineer": {
+        "tier": "medium",
+        "capabilities": [
+          "function_calling"
+        ]
+      },
+      "skills-plugin-specialist": {
+        "tier": "medium",
+        "capabilities": [
+          "function_calling"
+        ]
+      },
+      "ui-ux-engineer": {
+        "tier": "medium",
+        "capabilities": [
+          "function_calling",
+          "vision"
+        ]
+      },
+      "security-reviewer": {
+        "tier": "hard"
+      },
+      "reviewer": {
+        "tier": "hard"
+      }
+    }
+  },
+  "nativeProvenance": null,
+  "nativeOptions": null,
+  "roleOverrides": {
+    "ipfs-agent-architect": {
+      "model": "opus"
+    },
+    "mcp-server-engineer": {
+      "model": "sonnet"
+    },
+    "skills-plugin-specialist": {
+      "model": "sonnet"
+    },
+    "ui-ux-engineer": {
+      "model": "sonnet"
+    },
+    "security-reviewer": {
+      "model": "opus"
+    },
+    "reviewer": {
+      "model": "opus"
+    }
+  },
+  "diagnostics": [
+    "Source-verified serialization only; installed native validation and live execution are unverified.",
+    "Only explicit model IDs are translated. Resolve tier, skill, capability and price policies with agent-team-models before native invocation.",
+    "These are native subagents; installing them does not create an experimental Claude agent team or enable that feature.",
+    "Role overrides are preserved without native schema certification. Skill IDs refer to separately installed skills; prompt mentions do not install or authorize them."
+  ],
+  "instructions": [
+    "Review staged artifacts before installation. Export grants no execution or registration authority.",
+    "Choose project .claude/agents or the staged local marketplace/plugin. Do not install both copies. Settings options are a proposed project .claude/settings.json."
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "confirmation_id": "cf_Ui7dEstrUct1veXy",
+  "state": "pending",
+  "summary": {
+    "tool": "repo_gc",
+    "class": "destructive",
+    "text": "Run garbage collection on the repo",
+    "targets": [{ "kind": "repo", "value": "connected node" }]
+  },
+  "expires_at": "2026-10-09T12:02:00Z",
+  "resolvers": ["desktop", "macos-localauth"],
+  "principal_kind": "ui",
+  "requires_native_prompt": true
+}

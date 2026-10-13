@@ -1,0 +1,831 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IPFS MCP confirmation protocol",
+  "description": "Messages of the confirmation gate (ADR-0003, docs/mcp/0003-confirmation-and-auth.md). Tools of class write or destructive have no side effect until a human approves. Mechanism 1: clients that advertised elicitation get an MCP elicitation request, carried in an SEP-2322 multi round trip (InputRequiredResult, then InputRetry); the server never calls ServerSession.Elicit, which go-sdk v1.8.0 refuses on protocol 2026-07-28. The round trip's requestState is a server-signed binding handle, not consent: only the user's answer in inputResponses approves (RequestStateClaims, RequestStateAcceptance). Mechanism 2: every other session or principal gets a pending confirmation in the broker, resolved only by a human-presence resolver (paired IPFS Desktop window, macOS LocalAuthentication, Linux polkit, an AG-UI interrupt answered by a user gesture for the ui principal, or the headless --confirm=cli opt-in). Mechanism 3: with no resolver the call is refused (confirmation_unavailable). The two-step confirm token is a binding handle, not consent: it is accepted only after its pending confirmation was approved by mechanism 1 or 2, it is never issued to or accepted from principals of kind a2a or uar, and it guarantees the executed call is exactly the confirmed call (same session, principal, tool and canonical arguments; single use).",
+  "$defs": {
+    "ConfirmationClass": {
+      "type": "string",
+      "enum": [
+        "write",
+        "destructive"
+      ]
+    },
+    "Target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "cid",
+            "content_path",
+            "mfs_path",
+            "key",
+            "ipns_name",
+            "peer",
+            "repo",
+            "index",
+            "content"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      }
+    },
+    "Summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "class",
+        "text",
+        "targets"
+      ],
+      "description": "What the user is asked to approve. text is rendered from the catalog confirmationSummary template and names the CID, path or name affected.",
+      "properties": {
+        "tool": {
+          "type": "string"
+        },
+        "class": {
+          "$ref": "#/$defs/ConfirmationClass"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Target"
+          }
+        }
+      }
+    },
+    "ElicitationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "params"
+      ],
+      "description": "MCP elicitation/create request for a client that advertised the elicitation capability. On the wire it is the value of inputRequests.confirm in an InputRequiredResult (SEP-2322); the SDK delivers it to the client's user.",
+      "properties": {
+        "method": {
+          "const": "elicitation/create"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "message",
+            "requestedSchema"
+          ],
+          "properties": {
+            "mode": {
+              "const": "form"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 500
+            },
+            "requestedSchema": {
+              "type": "object",
+              "required": [
+                "type",
+                "properties",
+                "required"
+              ],
+              "properties": {
+                "type": {
+                  "const": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "required": [
+                    "confirm"
+                  ],
+                  "properties": {
+                    "confirm": {
+                      "type": "object",
+                      "required": [
+                        "type"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "boolean"
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": {
+                  "const": [
+                    "confirm"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ElicitationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "description": "Client answer, the value of inputResponses.confirm in an InputRetry. Only action accept with content.confirm true approves; decline, cancel, accept without confirm true, or a missing answer abort with no side effect.",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "decline",
+            "cancel"
+          ]
+        },
+        "content": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "confirm": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "ConfirmationRequired": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmation_id",
+        "state",
+        "summary",
+        "expires_at",
+        "resolvers"
+      ],
+      "description": "Carried in ToolError.error.confirmation. code confirmation_required: a new pending confirmation was created; code confirmation_pending: a token or retry arrived while it is still pending. Repeating the call never approves it; only a resolver in resolvers does.",
+      "properties": {
+        "confirmation_id": {
+          "$ref": "#/$defs/ConfirmationId"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "denied",
+            "expired"
+          ],
+          "description": "Approved confirmations never appear here: an approved call runs."
+        },
+        "summary": {
+          "$ref": "#/$defs/Summary"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expiry is denial."
+        },
+        "resolvers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Resolver"
+          },
+          "description": "Human-presence resolvers that may approve this confirmation, in order of preference. Never contains token."
+        },
+        "confirm_token": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{32,1000}$",
+          "description": "Binding handle for sessions of kind human-mcp that cannot elicit: after a resolver approves, repeat the same call with this token to run it exactly once. Rejected (confirmation_pending, confirmation_declined or confirmation_expired) unless the confirmation is approved. Never present for principals of kind a2a or uar."
+        },
+        "requires_native_prompt": {
+          "type": "boolean",
+          "default": false,
+          "description": "Same meaning as PendingConfirmation.requires_native_prompt: true for destructive calls from the ui and a2a principals (ADR-0003 Round 7 amendment). Only a presence resolver (macos-localauth or linux-polkit) decides; desktop never counts, even with Touch ID in its window (ADR-0003, amendment of 2026-10-12; it still resolves write-class confirmations when the operator enables it), and cli and agui-interrupt never do, and with no presence resolver available the call is refused with confirmation_unavailable. An in-chat surface must not offer an approve control and may only offer deny. Absent means false."
+        },
+        "principal_kind": {
+          "type": "string",
+          "enum": [
+            "human-mcp",
+            "ui",
+            "a2a",
+            "uar"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "principal_kind"
+            ],
+            "properties": {
+              "principal_kind": {
+                "enum": [
+                  "a2a",
+                  "uar"
+                ]
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "confirm_token"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "requires_native_prompt"
+            ],
+            "properties": {
+              "requires_native_prompt": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "summary": {
+                "properties": {
+                  "class": {
+                    "const": "destructive"
+                  }
+                }
+              },
+              "resolvers": {
+                "not": {
+                  "contains": {
+                    "const": "agui-interrupt"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ConfirmationId": {
+      "type": "string",
+      "pattern": "^cf_[A-Za-z0-9_-]{16,64}$"
+    },
+    "ConfirmTokenClaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "cid",
+        "sid",
+        "pid",
+        "tool",
+        "args_sha256",
+        "exp",
+        "nonce"
+      ],
+      "description": "Fields bound by the token's HMAC-SHA256 (per-process random key). The encoded token is opaque to clients; these fields are fixed so the binding is reviewable and testable. args_sha256 is the SHA-256 of the canonical JSON (RFC 8785) of the arguments without confirm_token. The server accepts the token only when the pending confirmation cid is in state approved, then moves it to executed.",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "cid": {
+          "$ref": "#/$defs/ConfirmationId"
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "MCP session ID (stdio: a per-process random ID)."
+        },
+        "pid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Principal name."
+        },
+        "tool": {
+          "type": "string"
+        },
+        "args_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "exp": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Expiry, Unix seconds. Expiry is denial."
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16,64}$",
+          "description": "Single-use; recorded on first use."
+        },
+        "use": {
+          "const": "confirm_token",
+          "description": "Domain separation from RequestStateClaims, which the server signs with the same key. Optional in claims version 1 for compatibility; a server that signs request states with the confirm-token key must set it and must reject a token whose use is not confirm_token."
+        }
+      }
+    },
+    "Resolver": {
+      "type": "string",
+      "enum": [
+        "elicitation",
+        "agui-interrupt",
+        "desktop",
+        "macos-localauth",
+        "linux-polkit",
+        "cli"
+      ],
+      "description": "Human-presence mechanisms. The confirm token is deliberately not a resolver."
+    },
+    "PendingConfirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmation_id",
+        "state",
+        "principal",
+        "summary",
+        "created_at",
+        "expires_at"
+      ],
+      "description": "Broker record for out-of-band resolution. Transitions: pending to approved, denied or expired; approved to executed exactly once.",
+      "properties": {
+        "confirmation_id": {
+          "$ref": "#/$defs/ConfirmationId"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "denied",
+            "expired",
+            "executed"
+          ]
+        },
+        "principal": {
+          "type": "string"
+        },
+        "principal_kind": {
+          "type": "string",
+          "enum": [
+            "human-mcp",
+            "ui",
+            "a2a",
+            "uar"
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/Summary"
+        },
+        "resolver": {
+          "$ref": "#/$defs/Resolver"
+        },
+        "requires_native_prompt": {
+          "type": "boolean",
+          "description": "True for destructive calls from the ui and a2a principals: neither a chat answer nor an A2A message nor cli approves; only a presence resolver (macos-localauth or linux-polkit) does; desktop never counts."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolved_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmation_id",
+        "status"
+      ],
+      "description": "Result reported when a confirmation ends without execution.",
+      "properties": {
+        "confirmation_id": {
+          "$ref": "#/$defs/ConfirmationId"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "declined",
+            "denied",
+            "expired",
+            "invalid"
+          ]
+        }
+      }
+    },
+    "TokenAcceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmation_state",
+        "accepted",
+        "error_code"
+      ],
+      "description": "Decision table for a presented token (all other checks passing: signature, single use, session, principal, tool, arguments, expiry).",
+      "properties": {
+        "confirmation_state": {
+          "enum": [
+            "pending",
+            "approved",
+            "denied",
+            "expired",
+            "executed"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "error_code": {
+          "enum": [
+            "none",
+            "confirmation_pending",
+            "confirmation_declined",
+            "confirmation_expired",
+            "confirmation_invalid"
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "confirmation_state": {
+              "const": "approved"
+            },
+            "accepted": {
+              "const": true
+            },
+            "error_code": {
+              "const": "none"
+            }
+          }
+        },
+        {
+          "properties": {
+            "confirmation_state": {
+              "const": "pending"
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_pending"
+            }
+          }
+        },
+        {
+          "properties": {
+            "confirmation_state": {
+              "const": "denied"
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_declined"
+            }
+          }
+        },
+        {
+          "properties": {
+            "confirmation_state": {
+              "const": "expired"
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_expired"
+            }
+          }
+        },
+        {
+          "properties": {
+            "confirmation_state": {
+              "const": "executed"
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_invalid"
+            }
+          }
+        }
+      ]
+    },
+    "RequestState": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{32,1000}$",
+      "description": "Opaque, server-signed handle for one elicitation round trip: base64url claims (RequestStateClaims) followed by an HMAC-SHA256 under the per-process key. Clients echo it unchanged and never interpret it. It is not consent and never approves a call by itself."
+    },
+    "InputRequiredResult": {
+      "type": "object",
+      "required": [
+        "inputRequests",
+        "requestState"
+      ],
+      "description": "First tool result for a write or destructive call from a session that advertised elicitation (SEP-2322 multi round trip, go-sdk resultType input_required). The call has no side effect. The server opens a pending confirmation for mechanism elicitation and asks the user through inputRequests.confirm. The SDK obtains the answer (client side from protocol 2026-07-28, server side before) and retries the call as an InputRetry.",
+      "properties": {
+        "resultType": {
+          "const": "input_required"
+        },
+        "isError": {
+          "const": false
+        },
+        "inputRequests": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "confirm"
+          ],
+          "properties": {
+            "confirm": {
+              "$ref": "#/$defs/ElicitationRequest"
+            }
+          }
+        },
+        "requestState": {
+          "$ref": "#/$defs/RequestState"
+        }
+      }
+    },
+    "InputRetry": {
+      "type": "object",
+      "required": [
+        "name",
+        "arguments",
+        "inputResponses",
+        "requestState"
+      ],
+      "description": "Params of the retried tools/call. name and arguments must be the first call's (the canonical arguments hash is rechecked); arguments never carry confirm_token on this path. requestState is echoed from the InputRequiredResult.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "arguments": {
+          "type": "object",
+          "not": {
+            "required": [
+              "confirm_token"
+            ]
+          }
+        },
+        "inputResponses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "confirm"
+          ],
+          "properties": {
+            "confirm": {
+              "$ref": "#/$defs/ElicitationResult"
+            }
+          }
+        },
+        "requestState": {
+          "$ref": "#/$defs/RequestState"
+        }
+      }
+    },
+    "RequestStateClaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "use",
+        "cid",
+        "sid",
+        "pid",
+        "tool",
+        "args_sha256",
+        "exp",
+        "nonce"
+      ],
+      "description": "Fields bound by the request state's HMAC. Same binding as ConfirmTokenClaims (session, principal, tool, canonical arguments, expiry, single-use nonce) plus use, which keeps the two handles apart: a confirm token is never accepted as a request state, and a request state is never accepted as a confirm token. cid names a confirmation opened by mechanism elicitation; a request state for a confirmation opened for external resolution is invalid.",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "use": {
+          "const": "request_state"
+        },
+        "cid": {
+          "$ref": "#/$defs/ConfirmationId"
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "pid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "tool": {
+          "type": "string"
+        },
+        "args_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "exp": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Equals the confirmation's expires_at. Expiry is denial."
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16,64}$"
+        }
+      }
+    },
+    "RequestStateAcceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state_check",
+        "accepted",
+        "error_code"
+      ],
+      "description": "Decision table for an InputRetry. state_check is evaluated first: valid means the HMAC verifies, use is request_state, session, principal, tool and arguments match, the session advertised elicitation at initialize, the confirmation exists and was opened by mechanism elicitation, and the request state has not expired. Only then does the user's answer count, and only while the confirmation is pending. The opposite of TokenAcceptance, which requires approved: a request state never carries an approval, it only lets the answer in inputResponses resolve the confirmation it names.",
+      "properties": {
+        "state_check": {
+          "enum": [
+            "valid",
+            "tampered",
+            "wrong_use",
+            "other_call",
+            "not_eliciting",
+            "unknown",
+            "expired"
+          ],
+          "description": "tampered: HMAC or encoding fails. wrong_use: a confirm token presented as a request state. other_call: session, principal, tool or arguments differ. not_eliciting: the session did not advertise elicitation, or the confirmation was opened for external resolution. unknown: no such confirmation. expired: exp passed."
+        },
+        "confirmation_state": {
+          "enum": [
+            "pending",
+            "approved",
+            "denied",
+            "expired",
+            "executed"
+          ]
+        },
+        "answer": {
+          "enum": [
+            "accept_confirmed",
+            "accept_unconfirmed",
+            "decline",
+            "cancel",
+            "missing"
+          ],
+          "description": "accept_confirmed is action accept with content.confirm true; every other value denies."
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "error_code": {
+          "enum": [
+            "none",
+            "confirmation_declined",
+            "confirmation_expired",
+            "confirmation_invalid"
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "confirmation_state",
+            "answer"
+          ],
+          "properties": {
+            "state_check": {
+              "const": "valid"
+            },
+            "confirmation_state": {
+              "const": "pending"
+            },
+            "answer": {
+              "const": "accept_confirmed"
+            },
+            "accepted": {
+              "const": true
+            },
+            "error_code": {
+              "const": "none"
+            }
+          }
+        },
+        {
+          "required": [
+            "confirmation_state",
+            "answer"
+          ],
+          "properties": {
+            "state_check": {
+              "const": "valid"
+            },
+            "confirmation_state": {
+              "const": "pending"
+            },
+            "answer": {
+              "enum": [
+                "accept_unconfirmed",
+                "decline",
+                "cancel",
+                "missing"
+              ]
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_declined"
+            }
+          }
+        },
+        {
+          "required": [
+            "confirmation_state"
+          ],
+          "properties": {
+            "state_check": {
+              "const": "valid"
+            },
+            "confirmation_state": {
+              "enum": [
+                "approved",
+                "denied",
+                "expired",
+                "executed"
+              ]
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_invalid"
+            }
+          }
+        },
+        {
+          "properties": {
+            "state_check": {
+              "enum": [
+                "tampered",
+                "wrong_use",
+                "other_call",
+                "not_eliciting",
+                "unknown"
+              ]
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_invalid"
+            }
+          }
+        },
+        {
+          "properties": {
+            "state_check": {
+              "const": "expired"
+            },
+            "accepted": {
+              "const": false
+            },
+            "error_code": {
+              "const": "confirmation_expired"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

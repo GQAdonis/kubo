@@ -5,6 +5,11 @@ is read once at node instantiation, either for an offline command, or when
 starting the daemon. Commands that execute on a running daemon do not read the
 config file at runtime.
 
+The `ipfs mcp` command does not use this file: its settings live in a
+separate JSON file named by `--mcp-config` or `IPFS_MCP_CONFIG`, documented
+with every key, default and off switch in
+[docs/mcp/config-reference.md](mcp/config-reference.md).
+
 # Table of Contents
 
 - [The Kubo config file](#the-kubo-config-file)

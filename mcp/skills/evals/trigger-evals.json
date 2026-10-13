@@ -1,0 +1,130 @@
+[
+ {
+  "query": "put these meeting notes on ipfs and give me the cid, no pinning needed: 'Weekly sync 2026-10-12. Decisions: ship the plugin, defer Kimi packaging. Owner: Travis.'",
+  "expect": "ipfs-publish-content"
+ },
+ {
+  "query": "upload this json config so other people can fetch it and announce it to the network too: {\"theme\":\"dark\",\"relays\":[\"r1\",\"r2\"],\"version\":3}",
+  "expect": "ipfs-publish-content"
+ },
+ {
+  "query": "can you share this README text as an ipfs:// link: '# Tiny Garden\\nA two-page guide to growing herbs on a balcony.'",
+  "expect": "ipfs-publish-content"
+ },
+ {
+  "query": "read bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi and tell me what the file says",
+  "expect": "ipfs-retrieve-verify"
+ },
+ {
+  "query": "list the files inside the directory bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354 and check that the content matches its hash",
+  "expect": "ipfs-retrieve-verify"
+ },
+ {
+  "query": "open /ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/readme and show me the first 2 KB",
+  "expect": "ipfs-retrieve-verify"
+ },
+ {
+  "query": "make sure bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy never gets garbage collected on my node",
+  "expect": "ipfs-pin-management"
+ },
+ {
+  "query": "my ipfs repo is nearly full, can you free up some disk space by removing the stuff that isn't pinned",
+  "expect": "ipfs-pin-management"
+ },
+ {
+  "query": "verify that everything I have pinned on my node is still intact and not missing blocks",
+  "expect": "ipfs-pin-management"
+ },
+ {
+  "query": "I need a stable address for my site that I can point at new versions later; the current version is bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+  "expect": "ipfs-ipns-names"
+ },
+ {
+  "query": "generate a new key called blog and publish bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi under it with a 5 minute ttl",
+  "expect": "ipfs-ipns-names"
+ },
+ {
+  "query": "what does /ipns/docs.ipfs.tech currently resolve to",
+  "expect": "ipfs-ipns-names"
+ },
+ {
+  "query": "I want a working folder on my node called /work/site where I can edit index.html and rename files before publishing it",
+  "expect": "ipfs-mfs-workspace"
+ },
+ {
+  "query": "copy bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi into /work/site/assets in my mutable file system",
+  "expect": "ipfs-mfs-workspace"
+ },
+ {
+  "query": "write 'hello world' to /work/site/notes.txt on my node and tell me the folder's CID afterwards",
+  "expect": "ipfs-mfs-workspace"
+ },
+ {
+  "query": "how many unique blocks does bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354 have and how much do it and bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi share",
+  "expect": "ipfs-dag-car"
+ },
+ {
+  "query": "export bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi to a CAR file so I can move it to another machine offline",
+  "expect": "ipfs-dag-car"
+ },
+ {
+  "query": "store a dag-cbor node {\"title\":\"index\",\"links\":[bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy]} on my node",
+  "expect": "ipfs-dag-car"
+ },
+ {
+  "query": "pin_rm isn't showing up in my ipfs tools list, why is that",
+  "expect": "ipfs-troubleshooting"
+ },
+ {
+  "query": "my ipfs tools say confirmation_unavailable every time I try to add something, what's wrong",
+  "expect": "ipfs-troubleshooting"
+ },
+ {
+  "query": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi just hangs and times out, nobody seems to have it. figure out why",
+  "expect": "ipfs-troubleshooting"
+ },
+ {
+  "query": "search the notes I published to ipfs for anything about the Q3 budget",
+  "expect": "ipfs-content-search"
+ },
+ {
+  "query": "is semantic search over my ipfs content set up on this node?",
+  "expect": "ipfs-content-search"
+ },
+ {
+  "query": "index bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy so I can query it by meaning later",
+  "expect": "ipfs-content-search"
+ },
+ {
+  "query": "write a Python function that computes a SHA-256 hash of a file",
+  "expect": null
+ },
+ {
+  "query": "explain how Merkle trees work in git",
+  "expect": null
+ },
+ {
+  "query": "set up an S3 bucket policy to keep my website files private",
+  "expect": null
+ },
+ {
+  "query": "pin this tweet to the top of my profile",
+  "expect": null
+ },
+ {
+  "query": "garbage collect the unused Docker images on my laptop",
+  "expect": null
+ },
+ {
+  "query": "pin a Python dependency to version 2.1 in requirements.txt",
+  "expect": null
+ },
+ {
+  "query": "rename the SSH key I use for GitHub from id_rsa to id_work and update my ssh config",
+  "expect": null
+ },
+ {
+  "query": "export my Postgres database to a dump file I can move to another machine",
+  "expect": null
+ }
+]

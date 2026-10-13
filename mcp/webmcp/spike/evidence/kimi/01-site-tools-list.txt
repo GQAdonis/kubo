@@ -1,0 +1,1 @@
+01 Site tools panel: Kimi shows a "WebMCP" badge with an info icon in the address bar (see 00-page-loaded.jpg); the panel behind it was not opened in this run.

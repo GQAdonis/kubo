@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_add input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "type": "string",
+      "maxLength": 1398104,
+      "description": "File content. Decoded size cap is 1048576 bytes. A path-like string is added literally."
+    },
+    "encoding": {
+      "$ref": "../common.json#/$defs/Encoding",
+      "default": "utf8"
+    },
+    "filename": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^(?:[^/.][^/]*|\\.[^/.][^/]*|\\.\\.[^/]+)$",
+      "description": "Optional name; when set the file is wrapped in a directory. It may not contain /, and it may not be . or .. alone."
+    },
+    "pin": {
+      "type": "boolean",
+      "description": "Pin the added content recursively. Required and explicit."
+    },
+    "provide": {
+      "type": "boolean",
+      "description": "Announce the CID to the routing system. Required and explicit; has no effect when the node has Provide.Enabled=false."
+    },
+    "cid_version": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "description": "Recipe override. Omit to keep the default recipe."
+    },
+    "raw_leaves": {
+      "type": "boolean",
+      "description": "Recipe override. Omit to keep the default recipe."
+    },
+    "chunker": {
+      "type": "string",
+      "pattern": "^(size-[0-9]+|rabin(-[0-9]+){0,3}|buzhash)$",
+      "description": "Recipe override. Omit to keep the default recipe."
+    },
+    "hash": {
+      "type": "string",
+      "enum": [
+        "sha2-256",
+        "sha2-512",
+        "sha3-256",
+        "blake2b-256",
+        "blake3"
+      ],
+      "description": "Recipe override. Omit to keep the default recipe."
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "content",
+    "pin",
+    "provide"
+  ]
+}

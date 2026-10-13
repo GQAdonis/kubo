@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IPFS MCP tool catalog",
+  "description": "Shape of catalog.json. Cross-field rules (annotation consistency, untrusted content implies contentEgress, referenced files exist, RPC paths exist in Kubo) are enforced by the Go validator in this directory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "minKuboVersion",
+    "toolSelection",
+    "groups",
+    "tools"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "contractVersion": {
+      "$ref": "#/$defs/SemVer"
+    },
+    "minKuboVersion": {
+      "$ref": "#/$defs/SemVer",
+      "description": "Global minimum daemon version. ipfs mcp refuses to start against an older daemon."
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Group"
+      }
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Tool"
+      }
+    },
+    "toolSelection": {
+      "$ref": "#/$defs/ToolSelection"
+    }
+  },
+  "$defs": {
+    "SemVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "Group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "title",
+        "description",
+        "diagnostic"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "diagnostic": {
+          "type": "boolean",
+          "description": "Troubleshooting group. Drives the derived WebMCP debugging annotation."
+        }
+      }
+    },
+    "Tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "group",
+        "title",
+        "description",
+        "annotations",
+        "confirmation",
+        "returnsUntrustedContent",
+        "contentEgress",
+        "rpc",
+        "minKuboVersion",
+        "paginated",
+        "inputSchema",
+        "outputSchema",
+        "ui",
+        "a2a"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^(ipfs|pin|ipns|key|mfs|dag|car|routing|swarm|stats|repo)_[a-z0-9]+(_[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "group": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 1024
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "readOnlyHint",
+            "destructiveHint",
+            "idempotentHint",
+            "openWorldHint"
+          ],
+          "description": "MCP ToolAnnotations, authored. Advisory to clients; enforcement comes from the confirmation class.",
+          "properties": {
+            "readOnlyHint": {
+              "type": "boolean"
+            },
+            "destructiveHint": {
+              "type": "boolean"
+            },
+            "idempotentHint": {
+              "type": "boolean"
+            },
+            "openWorldHint": {
+              "type": "boolean"
+            }
+          }
+        },
+        "confirmation": {
+          "type": "string",
+          "enum": [
+            "none",
+            "write",
+            "destructive"
+          ],
+          "description": "Enforced by the server: write and destructive calls have no side effect until confirmed. destructive: the call can remove an operator-held object (a pin, an MFS entry, a keystore key or repo blocks), including through an option default such as pin_update unpin; destructive tools are off by default and enabled only by the destructive selector. write: every other state change. A write tool may still set destructiveHint true when it replaces state at the target it names (overwrite, newer IPNS record, index cleanup) without removing such an object; destructiveHint is advisory, the class is what the server enforces."
+        },
+        "returnsUntrustedContent": {
+          "type": "boolean",
+          "description": "The result can carry bytes or names controlled by someone other than the operator. Every successful result of such a tool carries `_meta[\"ai.ipfs/untrusted-content\"] = true` (contract.UntrustedContentMetaKey); clients and the agent loop frame that result as data, never instructions. Drives WebMCP untrustedContentHint and untrusted-content framing in the agent loop."
+        },
+        "peerSuppliedFields": {"type": "array", "uniqueItems": true, "minItems": 1, "items": {"type": "string", "pattern": "^(/([a-z_]+|\\*))+$"}, "description": "Output fields whose values are supplied by remote peers (addresses, and any other peer-reported string), as slash paths into the structured result where * is any array index, for example /peers/*/addr. The object that holds each listed field carries an untrusted boolean (common.json PeerSuppliedUntrusted): false only when the entry's peer ID is in the ipfs mcp config key trusted_peers, true otherwise, absent read as true. When any entry of a result is untrusted the server also sets _meta[\"ai.ipfs/untrusted-content\"] = true, so the agent loop frames the result as data. Independent of contentEgress (OQ-EGRESS-ENUM unchanged). Drives WebMCP untrustedContentHint, and WebMCP marks every such entry untrusted. The node's own data (ipfs_node_info addresses) is not peer-supplied."},
+        "contentEgress": {
+          "type": "boolean",
+          "description": "The result can carry node content: stored bytes, names taken from stored data (directory entries, DAG fields, IPNS values), or an enumeration of what the node stores (the pinset, an MFS listing, index hits). A result about one item the caller named (mfs_stat, dag_stat) or about node health (repo_stat, stats_bw) is not content egress. Refused to configured principals without egress_ack; never sent to an unacknowledged model or embedder host. pin_ls and pin_verify both enumerate the pinset, so both are contentEgress (ADR-0004, Round 6 amendment)."
+        },
+        "rpc": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+(/[a-z-]+)*$"
+          },
+          "description": "Required /api/v0 command paths. The tool is omitted when the daemon lacks any of them. Empty for tools that do not call the daemon. Together with rpcOptional, the AllowedPaths that `ipfs mcp --print-rpc-allowed-paths` prints for the tool. Never list a command whose path is a prefix of a broader-privilege command (Kubo matches AllowedPaths by string prefix): `config`, for example, would also grant config writes, `config/replace` and `config/profile/apply`."
+        },
+        "rpcOptional": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+(/[a-z-]+)*$"
+          },
+          "description": "/api/v0 command paths the tool calls only for an optional input (for example ipfs_add's provide=true) and that older daemons may lack. They do not hide the tool: when one is missing or forbidden, the optional step is skipped and the result says so in warnings. They are included in the printed AllowedPaths. Disjoint from rpc. Omitted when empty."
+        },
+        "minKuboVersion": {
+          "$ref": "#/$defs/SemVer"
+        },
+        "paginated": {
+          "type": "boolean",
+          "description": "Input has cursor and limit; output has page (common.json PageInfo)."
+        },
+        "inputSchema": {
+          "$ref": "#/$defs/SchemaPath"
+        },
+        "outputSchema": {
+          "$ref": "#/$defs/SchemaPath"
+        },
+        "confirmationSummary": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 200,
+          "description": "Template for the confirmation prompt (elicitation, native prompt, AG-UI interrupt, approval card). {name} placeholders name input properties. Required for write and destructive tools."
+        },
+        "ui": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "a2uiComponent",
+            "appView"
+          ],
+          "properties": {
+            "a2uiComponent": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "A2UI component (derivations/a2ui-components.json) that renders this tool's output. null: the generic ToolCallCard."
+            },
+            "appView": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "MCP App view (resources/uri-conventions.json ui views) linked through _meta.ui. null: no view."
+            }
+          }
+        },
+        "a2a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "skill",
+            "example"
+          ],
+          "properties": {
+            "skill": {
+              "type": "string",
+              "description": "A2A skill id in agentic/a2a-skills.json whose groups include this tool's group."
+            },
+            "example": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            }
+          }
+        }
+      }
+    },
+    "SchemaPath": {
+      "type": "string",
+      "pattern": "^schemas/tools/[a-z0-9_]+\\.(input|output)\\.json$"
+    },
+    "ToolSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description",
+        "destructiveSelector",
+        "default",
+        "readOnly"
+      ],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 20
+        },
+        "destructiveSelector": {
+          "const": "destructive",
+          "description": "Name accepted in --tools, config tools.groups to enable destructive-class tools of the enabled groups. Not a group name; must not collide with one."
+        },
+        "default": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "groups",
+            "classes"
+          ],
+          "properties": {
+            "groups": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "classes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "none",
+                  "write"
+                ]
+              },
+              "description": "Never contains destructive."
+            }
+          }
+        },
+        "readOnly": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "classes"
+          ],
+          "properties": {
+            "classes": {
+              "const": [
+                "none"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

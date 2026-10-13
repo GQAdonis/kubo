@@ -1,0 +1,25 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Observation of destructive-native-prompt.json with {wait: true}: the person denied in the system prompt. Nothing is removed; the call ends with a confirmation_declined ToolError on the original toolCallId and the run finishes, so the card leaves 'Waiting for system prompt'. A deny sent from the chat ({approved: false}) while the observation is open ends that observation the same way.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-gc-1",
+    "runId": "run-2",
+    "messages": [
+      { "id": "msg-u1", "role": "user", "content": "Free some space." },
+      { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-3", "type": "function", "function": { "name": "repo_gc", "arguments": "{}" } }] }
+    ],
+    "tools": [],
+    "context": [],
+    "resume": [{ "interruptId": "int-cf_Ui7dEstrUct1veXy", "status": "resolved", "payload": { "wait": true } }]
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-gc-1", "runId": "run-2" },
+    { "type": "TOOL_CALL_RESULT", "messageId": "msg-t3", "toolCallId": "tc-3", "role": "tool", "content": "{\"error\":{\"code\":\"confirmation_declined\",\"message\":\"The confirmation was declined in the system prompt; nothing was changed.\",\"retryable\":false,\"tool\":\"repo_gc\"}}" },
+    { "type": "TEXT_MESSAGE_START", "messageId": "msg-a2", "role": "assistant" },
+    { "type": "TEXT_MESSAGE_CONTENT", "messageId": "msg-a2", "delta": "Garbage collection was declined, so nothing was removed." },
+    { "type": "TEXT_MESSAGE_END", "messageId": "msg-a2" },
+    { "type": "RUN_FINISHED", "threadId": "thread-gc-1", "runId": "run-2", "outcome": { "type": "success" } }
+  ]
+}

@@ -1,0 +1,242 @@
+{
+  "schema": 1,
+  "mimeType": "text/html;profile=mcp-app",
+  "csp": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+  "resourceMeta": {
+    "ui": {
+      "prefersBorder": false
+    }
+  },
+  "views": [
+    {
+      "id": "content",
+      "uri": "ui://ipfs-mcp/content",
+      "name": "IPFS content",
+      "description": "File bytes, directory listings, search hits and add receipts for content on your node.",
+      "file": "content.html",
+      "bytes": 752026,
+      "sha256": "b612ea21c434b61c46b0c997faf55e3fb035279ffaa24b9fb5e5077f59f6a4c9",
+      "tools": [
+        {
+          "name": "ipfs_add",
+          "confirmation": "write",
+          "component": "ContentCard"
+        },
+        {
+          "name": "ipfs_cat",
+          "confirmation": "none",
+          "component": "ContentCard"
+        },
+        {
+          "name": "ipfs_get",
+          "confirmation": "none",
+          "component": "ContentCard"
+        },
+        {
+          "name": "ipfs_ls",
+          "confirmation": "none",
+          "component": "ContentCard"
+        },
+        {
+          "name": "ipfs_index_search",
+          "confirmation": "none",
+          "component": "ContentCard"
+        },
+        {
+          "name": "ipfs_index_cid",
+          "confirmation": "write",
+          "component": "ContentCard"
+        }
+      ]
+    },
+    {
+      "id": "pins",
+      "uri": "ui://ipfs-mcp/pins",
+      "name": "IPFS pins",
+      "description": "What your node keeps: the pin list, verification results and pin changes.",
+      "file": "pins.html",
+      "bytes": 752020,
+      "sha256": "532f52f69fa3cbec1c7385723e9b503e9faa5d54db85c7728f3cca3351101a77",
+      "tools": [
+        {
+          "name": "pin_ls",
+          "confirmation": "none",
+          "component": "PinList"
+        },
+        {
+          "name": "pin_add",
+          "confirmation": "write",
+          "component": "PinList"
+        },
+        {
+          "name": "pin_verify",
+          "confirmation": "none",
+          "component": "PinList"
+        },
+        {
+          "name": "pin_update",
+          "confirmation": "destructive",
+          "component": "PinList"
+        },
+        {
+          "name": "pin_rm",
+          "confirmation": "destructive",
+          "component": "PinList"
+        }
+      ]
+    },
+    {
+      "id": "mfs",
+      "uri": "ui://ipfs-mcp/mfs",
+      "name": "IPFS files",
+      "description": "The mutable file system on your node: listings, file details and change receipts.",
+      "file": "mfs.html",
+      "bytes": 752020,
+      "sha256": "f94f3a4bb3b02e6ad3b3b03f4e918dcfc8ee1e3f0055e7766864fa90ed46cc52",
+      "tools": [
+        {
+          "name": "mfs_ls",
+          "confirmation": "none",
+          "component": "MfsTree"
+        },
+        {
+          "name": "mfs_stat",
+          "confirmation": "none",
+          "component": "MfsTree"
+        },
+        {
+          "name": "mfs_read",
+          "confirmation": "none",
+          "component": "ContentCard"
+        },
+        {
+          "name": "mfs_write",
+          "confirmation": "write",
+          "component": "MfsTree"
+        },
+        {
+          "name": "mfs_mkdir",
+          "confirmation": "write",
+          "component": "MfsTree"
+        },
+        {
+          "name": "mfs_cp",
+          "confirmation": "write",
+          "component": "MfsTree"
+        },
+        {
+          "name": "mfs_mv",
+          "confirmation": "write",
+          "component": "MfsTree"
+        },
+        {
+          "name": "mfs_rm",
+          "confirmation": "destructive",
+          "component": "MfsTree"
+        }
+      ]
+    },
+    {
+      "id": "dag",
+      "uri": "ui://ipfs-mcp/dag",
+      "name": "IPFS DAG",
+      "description": "DAG nodes, sizes and CAR transfers as a tree you can follow.",
+      "file": "dag.html",
+      "bytes": 752018,
+      "sha256": "158b3130289052a8da8bd8cb8b09a6147cb74bd7e38ff743cff6fc674a0985e2",
+      "tools": [
+        {
+          "name": "dag_get",
+          "confirmation": "none",
+          "component": "DagViewer"
+        },
+        {
+          "name": "dag_stat",
+          "confirmation": "none",
+          "component": "DagViewer"
+        },
+        {
+          "name": "dag_put",
+          "confirmation": "write",
+          "component": "DagViewer"
+        },
+        {
+          "name": "car_import",
+          "confirmation": "write",
+          "component": "DagViewer"
+        },
+        {
+          "name": "car_export",
+          "confirmation": "none",
+          "component": "DagViewer"
+        }
+      ]
+    },
+    {
+      "id": "node-status",
+      "uri": "ui://ipfs-mcp/node-status",
+      "name": "IPFS node status",
+      "description": "Node identity, server status, peers, bandwidth, repo usage, providers and index status.",
+      "file": "node-status.html",
+      "bytes": 752034,
+      "sha256": "57984fc808f5c3247874c4df159b41dc82467b87df719a23228a000200321ab9",
+      "tools": [
+        {
+          "name": "ipfs_node_info",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "ipfs_node_status",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "routing_findprovs",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "routing_findpeer",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "routing_provide",
+          "confirmation": "write",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "swarm_peers",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "stats_bw",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "repo_stat",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "repo_gc",
+          "confirmation": "destructive",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "ipfs_index_status",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "ipfs_index_reconcile",
+          "confirmation": "write",
+          "component": "NodeStatusPanel"
+        }
+      ]
+    }
+  ]
+}

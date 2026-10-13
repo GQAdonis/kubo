@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_ls output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "cid",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "cid": {
+            "$ref": "../common.json#/$defs/Cid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "directory",
+              "symlink",
+              "unknown"
+            ]
+          },
+          "size": {
+            "$ref": "../common.json#/$defs/ByteCount"
+          }
+        }
+      }
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    }
+  },
+  "required": [
+    "path",
+    "entries",
+    "page"
+  ]
+}

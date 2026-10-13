@@ -1,0 +1,9 @@
+# ipfs mcp with no daemon reachable (fake HOME, no api file)
+$ echo <initialize request> | ipfs mcp
+Error: ipfs mcp: ipfs daemon API is not reachable: no api file at <scratch>/codex-ipfs-path/api and no --api given; start `ipfs daemon` or pass --api
+$ claude mcp list   (plugin installed in an isolated CLAUDE_CONFIG_DIR, no daemon)
+
+plugin:ipfs:ipfs: ipfs mcp - ✘ Failed to connect — CONNECTION_CLOSED: Connection closed
+# Codex 0.160.1: mcpServerStatus/list toolsError "MCP startup failed: handshaking with MCP server failed: connection closed: initialize response"
+# OpenCode 1.18.35: opencode mcp list: "ipfs failed / MCP error -32000: Connection closed"
+# (the last two lines were observed in this work session before verify.sh existed; verify.sh records the connected case)

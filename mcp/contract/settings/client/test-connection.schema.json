@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.testConnection / ipfsDesktop.agentSettings.testConnection",
+  "description": "Messages of the SettingsClient.testConnection() method (agent-settings-contract task 1.5). On the Desktop bridge this is the IPC channel ipfsDesktop.agentSettings.testConnection; on HTTP it is POST on the test-connection endpoint (mcp-agent-settings-api 1.4). The check probes a candidate URL only: https, or http on loopback; credentials in the URL are rejected; nothing is persisted. A candidate key is never accepted in the request (assessment-ui 5.2's apiKey field is dropped for this reason): authentication, when needed, uses the currently stored key, on Desktop the key held in safeStorage by the main process. When the probe succeeds the implementation may also list models (HTTP: the model-list endpoint, ../model-list.schema.json; bridge: the same call through the sidecar) and return them in models, which is how the model combobox (assessment-ui 5.2) is populated without a separate IPC channel.",
+  "$defs": {
+    "TestConnectionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_url"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "base_url": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^(https://[^\\s/@]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]{1,5})?)(/[^\\s]*)?$",
+          "description": "Candidate endpoint URL, mapping assessment-ui 5.2's url. https for any host; http only for loopback (localhost, 127.0.0.1, [::1]). No userinfo: a URL carrying credentials does not validate."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Backend kind to probe as, mapping assessment-ui 5.2's backend. Absent means openai."
+        }
+      }
+    },
+    "TestConnectionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Whether the candidate URL answered as the chosen backend kind within the bounded timeout."
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Why the check failed when ok is false; the UI renders this as the inline status line (role=status, assessment-ui 5.2). Never includes credentials or key material."
+        },
+        "latency_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Round-trip time of the probe as measured by the client implementation, mapping assessment-ui 5.2's latencyMs. Informational; absent when the implementation does not measure it."
+        },
+        "models": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": "Model identifiers reported by the candidate backend, mapping assessment-ui 5.2's models. Present only after a successful probe when the implementation listed them via the model-list endpoint (../model-list.schema.json); absent on failure or when the backend hides its model list, in which case the combobox stays free-text."
+        }
+      }
+    }
+  }
+}

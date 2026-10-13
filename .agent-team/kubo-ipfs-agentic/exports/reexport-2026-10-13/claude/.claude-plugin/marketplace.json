@@ -1,0 +1,13 @@
+{
+  "name": "kubo-ipfs-agentic-marketplace",
+  "owner": {
+    "name": "kubo-ipfs-agentic"
+  },
+  "plugins": [
+    {
+      "name": "kubo-ipfs-agentic",
+      "source": "./plugins/kubo-ipfs-agentic",
+      "description": "Build an IPFS MCP server for agents, agentskills.io-compliant skills packaged as plugins for Codex, Claude Code, OpenCode and Kimi Code marketplaces, and an MCP App with a shared A2UI-compatible React 19 component library for IPFS-specific agentic UI, without breaking Kubo RPC, gateway, CID or wire compatibility guarantees."
+    }
+  ]
+}

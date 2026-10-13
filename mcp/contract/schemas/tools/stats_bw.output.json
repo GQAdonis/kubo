@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "stats_bw output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "total_in": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "total_out": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "rate_in": {
+      "type": "number",
+      "minimum": 0
+    },
+    "rate_out": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "total_in",
+    "total_out",
+    "rate_in",
+    "rate_out"
+  ]
+}

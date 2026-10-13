@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dag_stat input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "$ref": "../common.json#/$defs/ContentPath"
+      }
+    }
+  },
+  "required": [
+    "paths"
+  ]
+}

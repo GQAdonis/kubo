@@ -1,0 +1,483 @@
+{
+  "schemaVersion": "2",
+  "generatedBy": "kbd-runtime",
+  "projectionContractVersion": 2,
+  "sourceRevision": 1326,
+  "derivedRevision": 1326,
+  "frontier": {
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1326
+  },
+  "conflictCount": 0,
+  "phase": "ipfs-mcp-server",
+  "phaseId": "ipfs-mcp-server",
+  "parentPhase": null,
+  "last_updated": "2026-10-13T13:45:25.084764Z",
+  "last_updated_by": "kbd-runtime",
+  "changes_total": 37,
+  "changes_completed": 31,
+  "implementation_total": 37,
+  "implementation_completed": 31,
+  "completion": {
+    "primaryCounter": "implementation",
+    "implementation": {
+      "completed": 31,
+      "total": 37,
+      "status": "IN_PROGRESS"
+    },
+    "evidence": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    },
+    "certification": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    },
+    "publication": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    }
+  },
+  "completionScopes": {
+    "completion": "phase",
+    "runCompletion": "run"
+  },
+  "runCompletion": {
+    "scope": "run",
+    "runId": "ipfs-mcp-server-20261009T081630Z",
+    "primaryCounter": "implementation",
+    "implementation": {
+      "completed": 31,
+      "total": 65,
+      "status": "IN_PROGRESS"
+    },
+    "evidence": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    },
+    "certification": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    },
+    "publication": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    }
+  },
+  "changes": [
+    {
+      "id": "mcp-ci-workflow",
+      "title": "Fork CI workflow for the mcp/ checks",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "Correct the mcp/app/embed.go check-dist comment",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-trusted-peers",
+      "title": "Peer-supplied addresses marked untrusted unless the peer ID is in trusted_peers",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 4,
+      "tasks_done": 4,
+      "last_task_completed": "(ui-ux-engineer) Regenerate `mcp/ui` from the contract. Verify: `pnpm gen:check` passes",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "team-ownership-grant",
+      "title": "team-ownership-grant",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "1.6 Re-run the native export and consistency check after 1.5.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-tool-contract",
+      "title": "mcp-tool-contract",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 9,
+      "tasks_done": 9,
+      "last_task_completed": "2.3 Add contract entries for `ipfs_index_search`, `ipfs_index_cid`, `ipfs_index_status` and `ipfs_index_reconcile` with schemas and confirmation classes.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-architecture-adrs",
+      "title": "mcp-architecture-adrs",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "1.6 Write `docs/mcp/0006-embeddings-surrealdb.md` from the addendum ADR-0006 draft, completed with plan revision 2's re-score: `ipfs mcp` embeds and stores in both topologies; embedded = managed local `surreal start surrealkv://` from an operator-supplied binary; remote = operator URL; cgo excluded.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "webmcp-host-spike",
+      "title": "webmcp-host-spike",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.5 Write `mcp/webmcp/spike/REPORT.md` with GO/NO-GO per host against the four criteria (`document.modelContext` present, `echo` registers, the host agent invokes it, the transcript contains the nonce",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-server-core-stdio",
+      "title": "mcp-server-core-stdio",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 7,
+      "tasks_done": 7,
+      "last_task_completed": "1.7 Write the `ipfs mcp` help text.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-ui-component-library",
+      "title": "mcp-ui-component-library",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 8,
+      "tasks_done": 8,
+      "last_task_completed": "2.3 Run WCAG 2.2 AA checks (axe, keyboard, reduced motion) in light and dark and the no-remote-assets scan on the chat primitives.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-pinning-with-confirmation",
+      "title": "mcp-pinning-with-confirmation",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.5 Extend the gate state machine for external resolution (pending to approved, denied or expired by the native prompt, an AG-UI interrupt answer or another out-of-band resolver; A2A input-required waits) and refuse the two-step token from principals marked as unable to elicit, so no agent can confirm itself.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-http-transport-auth",
+      "title": "mcp-http-transport-auth",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 7,
+      "tasks_done": 7,
+      "last_task_completed": "1.7 Add the route-mount interface and path-scoped authorization for `/mcp`, `/agui`, `/a2a` and `/.well-known/agent-card.json`, sharing the AuthVerifier, Host and Origin policy and body limits, so a token for one path's principal is never accepted on another for a tool outside its groups (G9-4), and set the default listen address to `127.0.0.1:5050`, overridable by flag and env.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "uar-conformance-request",
+      "title": "uar-conformance-request",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 2,
+      "tasks_done": 2,
+      "last_task_completed": "1.2 The operator files the request with the UAR team and records the issue or PR link in `mcp/uar/requests/CONFORMANCE.md`.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "agent-chat-island",
+      "title": "agent-chat-island",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 4,
+      "tasks_done": 4,
+      "last_task_completed": "1.4 Record the bundle size and replay recorded contract AG-UI fixtures (including an interrupt) through the client with a local fixture server on a free port; no live `ipfs mcp` run here, because `/agui` (N12) lands in Round 7 and the live run is `webui-agent-chat` 1.3.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-agent-principal-enforcement",
+      "title": "mcp-agent-principal-enforcement",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.5 Add test/cli acceptance tests: an unconfigured principal gets nothing; no `contentEgress` tool without `egress_ack`; check-uar refuses a fixture UAR with defaults; disabled state: with no `--config`, no principal of kind `ui`, `a2a` or `uar` exists and no check-uar connection is made.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "native-confirmation-prompt",
+      "title": "native-confirmation-prompt",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 8,
+      "tasks_done": 7,
+      "last_task_completed": "1.4 Add test/cli tests with a test-only resolver build tag: a non-eliciting write waits and runs once on approval, never on deny or expiry; and the automated HG-1 IPC case: a background process under the same user, with no TTY, connects to the confirmation channel without the pairing key, with a forged key and through `ipfs mcp confirm` without `--confirm=cli`, and sends approve.",
+      "next_task_pending": "1.5 The operator runs the HG-1 UI case with the committed script `mcp/server/confirm/hg1/attempt.sh` on macOS (and Linux if available): while a real prompt is pending, a background process under the same user (started with `nohup`, no TTY) tries synthetic input (macOS: `osascript` System Events click and keystroke Return; Linux X11: `xdotool key Return` and click; Linux Wayland: recorded as unavailable).",
+      "blockers": []
+    },
+    {
+      "id": "mcp-tools-content",
+      "title": "mcp-tools-content",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 3,
+      "tasks_done": 3,
+      "last_task_completed": "1.3 Write test/cli real-daemon tests, including CID equality with `ipfs add` defaults and confirmation on add.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-tools-mfs",
+      "title": "mcp-tools-mfs",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 2,
+      "tasks_done": 2,
+      "last_task_completed": "1.2 Write test/cli real-daemon tests for decoding and for destructive `mfs_rm` confirmation.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-tools-ipns-keys",
+      "title": "mcp-tools-ipns-keys",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 2,
+      "tasks_done": 2,
+      "last_task_completed": "1.2 Write test/cli real-daemon tests, including publish/resolve and `key_rm` confirmation.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-tools-dag-car",
+      "title": "mcp-tools-dag-car",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 2,
+      "tasks_done": 2,
+      "last_task_completed": "1.2 Write unit and test/cli tests using the existing `test/cli/fixtures/*.car`.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-tools-routing-diag",
+      "title": "mcp-tools-routing-diag",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 2,
+      "tasks_done": 2,
+      "last_task_completed": "1.2 Write unit and test/cli tests, including that `Provide.Enabled=false` silences `routing_provide`, and `repo_gc` confirmation.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "webmcp-tool-package",
+      "title": "webmcp-tool-package",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 3,
+      "tasks_done": 3,
+      "last_task_completed": "1.3 Write unit tests, plus integration tests against a real `ipfs` daemon started from `PATH` with a temporary `IPFS_PATH` and non-default ports.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-llm-proxy-loop",
+      "title": "mcp-llm-proxy-loop",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "1.6 Add test/cli falsifier tests G10-1 to G10-4 on dynamically chosen free ports: tool-call round trip with Ollama (and the pinned published UAR release when available), zero outbound connections when unconfigured, egress refusal.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "uar-integration-spike",
+      "title": "uar-integration-spike",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.1 Record the topology-B gate result: published UAR release, tag and digest or package, and contained conformance items; stop and mark N2 and N3 deferred if it fails.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-app-views",
+      "title": "mcp-app-views",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 3,
+      "last_task_completed": "1.3 Add the rebuild-and-diff check script.",
+      "next_task_pending": "1.4 Check rendering in a real host (Claude Code), and check that tools stay usable without the UI.",
+      "blockers": []
+    },
+    {
+      "id": "ipfs-agent-skills",
+      "title": "ipfs-agent-skills",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 4,
+      "tasks_done": 4,
+      "last_task_completed": "1.4 Run `skills-ref validate` on all skills, the catalog name check and trigger evals.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "webui-webmcp-integration",
+      "title": "webui-webmcp-integration",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 4,
+      "last_task_completed": "1.3 Run Jest with the mocked `modelContext`, plus `npm run eslint` and typecheck per the fork's `AGENTS.md`.",
+      "next_task_pending": "1.4 The operator runs the fork build in each spike-GO host.",
+      "blockers": []
+    },
+    {
+      "id": "mcp-agui-endpoint",
+      "title": "mcp-agui-endpoint",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 7,
+      "tasks_done": 7,
+      "last_task_completed": "2.3 (ui-ux-engineer) Add the same three fixtures to the `mcp/chat` fixture replay, render `RUN_ERROR` by `code` (limit reasons and `backend_error`) and treat 409 `session_busy` as retryable and `failed_precondition` as \"answer the open interrupt first\". Verify: the chat replay test passes for every file in `mcp/contract/fixtures/agui/`",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-a2a-endpoint",
+      "title": "mcp-a2a-endpoint",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 7,
+      "tasks_done": 7,
+      "last_task_completed": "2.3 Pin the destructive rule: with only the `cli` resolver, a destructive data-part call from an `a2a` principal ends `TASK_STATE_REJECTED` with `confirmation_unavailable` and opens no confirmation. Verify: a `mcp/server` unit test, plus the existing presence-resolver test showing `requires_native_prompt: true` in the task metadata",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "desktop-agent-chat",
+      "title": "desktop-agent-chat",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 12,
+      "tasks_done": 10,
+      "last_task_completed": "1.5 Add Electron e2e tests: a pending write appears in the modal with its CIDs; approve runs it once; deny does not; and the disabled state (chat off, unpaired) exposes no bridge call and no confirmation channel.",
+      "next_task_pending": "(ui-ux-engineer; operator decision 1, 2026-10-12) Ask for Touch ID with `systemPreferences",
+      "blockers": []
+    },
+    {
+      "id": "mcp-embeddings-surrealdb",
+      "title": "mcp-embeddings-surrealdb",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.5 Add test/cli per-mode acceptance tests with the real `surreal` 3.3.0 binary on free ports: disabled (no process, no connection), embedded (lifecycle, kill cleanup, loopback bind, insert and KNN), remote (separately started server, credentials from env); and write the embeddings modes section of `docs/mcp`.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "agentic-uar-integration",
+      "title": "agentic-uar-integration",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 4,
+      "tasks_done": 4,
+      "last_task_completed": null,
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-release-binaries",
+      "title": "mcp-release-binaries",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 3,
+      "tasks_done": 3,
+      "last_task_completed": "1.3 Smoke test: the host-architecture binary runs `ipfs mcp` against a harness daemon.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "webui-cid-delivery",
+      "title": "webui-cid-delivery",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 3,
+      "tasks_done": 3,
+      "last_task_completed": "1.3 If D2: add a changelog Highlights entry (TOC and Highlights only).",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "webui-agent-chat",
+      "title": "webui-agent-chat",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 3,
+      "last_task_completed": "1.4 Persist the chat token in browser storage (operator decision 2026-10-10)",
+      "next_task_pending": "1.3 With N4, N12 and N14 complete, the operator runs the fork Web UI in a browser and through a Desktop build bundling it (D1) against `ipfs mcp --http --agui` with a local backend, performing a read and a confirmed write in chat.",
+      "blockers": []
+    },
+    {
+      "id": "mcp-embedding-index-lifecycle",
+      "title": "mcp-embedding-index-lifecycle",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.5 (Round 8 contract amendment, see design.md) mcp-server-engineer: return pin_rm/pin_update/repo_gc/ipfs_index_reconcile warnings in the structured `warnings` field and remove `_meta[\"ai.ipfs/warnings\"]`; `ipfs_index_cid` skipped_reason `not_a_file` and `empty`; `ipfs_index_search` reads hit text with `cat` offline. ui-ux-engineer: regenerate mcp/ui contract and catalog, add skip-reason copy, show warnings on pin and node-status outputs, rebuild mcp/app. Verify: go test ./mcp/... and TestMCPEmbeddingIndex pass; mcp/ui gen:check passes; mcp/app check:dist passes",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-plugin-marketplaces",
+      "title": "mcp-plugin-marketplaces",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 5,
+      "tasks_done": 5,
+      "last_task_completed": "1.5 Install and load each plugin in the real harness (Claude Code end to end; Codex and OpenCode at least config load).",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-user-docs",
+      "title": "mcp-user-docs",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "1.6 Write the Web UI and Desktop chat setup (toggle, endpoint, token bridge, Desktop pairing) and add the changelog Highlights lines for G9-G12.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "phase-boundary-review",
+      "title": "phase-boundary-review",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 8,
+      "tasks_done": 7,
+      "last_task_completed": "1.7 One batched correction cycle by the owning roles.",
+      "next_task_pending": "1.8 Operator approval and commit, including AGENTS.md, plus the operator commits in the Web UI and Desktop forks.",
+      "blockers": []
+    }
+  ],
+  "children": {},
+  "migrationStatus": null
+}

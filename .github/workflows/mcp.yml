@@ -1,0 +1,273 @@
+# MCP checks for the GQAdonis/kubo fork (OpenSpec change `mcp-ci-workflow`).
+#
+# Runs the `ipfs mcp` Go checks, the config reference and skills checks, and
+# the mcp/ui, mcp/app and mcp/chat unit and Playwright suites. Every job is
+# guarded by the repository name, so nothing here runs if this branch is ever
+# proposed to ipfs/kubo. Upstream workflows are not modified.
+#
+# Third-party actions are pinned by full commit SHA. Upstream workflows in this
+# repository pin these actions by tag, so the SHAs were resolved with
+# `git ls-remote --tags` on 2026-10-11 (the tag named in each comment).
+# Every checkout sets persist-credentials: false, so no later step can read
+# the GITHUB_TOKEN from .git/config.
+#
+# Node and pnpm: no package declares `packageManager` and there is no .nvmrc
+# or versions.toml pin. The engines field asks for Node >= 22; the versions
+# below are the ones the lockfiles (lockfileVersion 9.0) were produced and
+# tested with on the operator's machine. setup-node runs first, so pnpm is
+# installed and run with that Node; pnpm/action-setup caches the pnpm store.
+
+name: MCP
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &mcp-paths
+      - 'mcp/**'
+      - 'cmd/ipfs/kubo/mcp*'
+      - 'test/cli/mcp*'
+      - 'test/cli/harness/**'
+      - 'docs/mcp/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - 'mk/**'
+      - '.github/workflows/mcp.yml'
+  push:
+    branches:
+      - 'master'
+      - 'feat/**'
+    paths: *mcp-paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.25.0'
+
+jobs:
+  go:
+    name: Go (build, vet, race, CLI, config reference, skills)
+    if: github.repository == 'GQAdonis/kubo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GOTRACEBACK: single
+      TEST_DOCKER: 0
+      TEST_FUSE: 0
+      TEST_VERBOSE: 1
+      GIT_PAGER: cat
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out Kubo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: 'go.mod'
+      - name: Build ipfs
+        run: make build
+      - name: go vet (nomcp)
+        run: go vet -tags nomcp ./cmd/ipfs/... ./mcp/... ./test/cli/...
+      - name: go vet (noagent)
+        run: go vet -tags noagent ./cmd/ipfs/... ./mcp/... ./test/cli/...
+      - name: Unit tests with the race detector
+        run: go test -race -count=1 ./mcp/... ./cmd/ipfs/kubo/
+      - name: MCP CLI integration tests
+        env:
+          IPFS_PATH: ${{ runner.temp }}/ipfs-test
+        run: |
+          export PATH="$GITHUB_WORKSPACE/cmd/ipfs:$PATH"
+          mkdir -p "$IPFS_PATH"
+          go test -count=1 ./test/cli/... -run 'TestMCP|TestCommandDocsWidth' -skip Ollama
+      - name: Config reference matches the schema, the sidecar and --help
+        run: python3 docs/mcp/config_reference.py --check --ipfs cmd/ipfs/ipfs
+      - name: Skills match the tool contract
+        run: python3 mcp/skills/scripts/check_skills.py
+
+  go-lint:
+    name: Go lint
+    if: github.repository == 'GQAdonis/kubo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TEST_DOCKER: 0
+      TEST_FUSE: 0
+      TEST_VERBOSE: 1
+      GIT_PAGER: cat
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out Kubo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: 'go.mod'
+      - name: golangci-lint
+        run: make -O test_go_lint
+
+  ui-unit:
+    name: UI unit (mcp/ui, mcp/app, mcp/chat)
+    if: github.repository == 'GQAdonis/kubo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out Kubo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          package_json_file: mcp/ui/package.json
+          cache: true
+          cache_dependency_path: |
+            mcp/ui/pnpm-lock.yaml
+            mcp/app/pnpm-lock.yaml
+            mcp/chat/pnpm-lock.yaml
+      - name: mcp/ui install
+        working-directory: mcp/ui
+        run: pnpm install --frozen-lockfile
+      - name: mcp/ui generated contract and catalog are current
+        working-directory: mcp/ui
+        run: pnpm gen:check
+      - name: mcp/ui typecheck
+        working-directory: mcp/ui
+        run: pnpm typecheck
+      - name: mcp/ui unit tests
+        working-directory: mcp/ui
+        run: pnpm test
+      - name: mcp/ui build
+        working-directory: mcp/ui
+        run: pnpm build
+      - name: mcp/ui external URL scan
+        working-directory: mcp/ui
+        run: pnpm test:scan
+      - name: mcp/app install
+        working-directory: mcp/app
+        run: pnpm install --frozen-lockfile
+      - name: mcp/app typecheck
+        working-directory: mcp/app
+        run: pnpm typecheck
+      - name: mcp/app unit tests
+        working-directory: mcp/app
+        run: pnpm test
+      - name: mcp/app committed dist matches its source
+        working-directory: mcp/app
+        run: pnpm check:dist
+      - name: mcp/app bundle scan
+        working-directory: mcp/app
+        run: pnpm test:scan
+      - name: mcp/chat install
+        working-directory: mcp/chat
+        run: pnpm install --frozen-lockfile
+      - name: mcp/chat typecheck
+        working-directory: mcp/chat
+        run: pnpm typecheck
+      - name: mcp/chat unit tests
+        working-directory: mcp/chat
+        run: pnpm test
+      - name: mcp/chat build and external URL scan
+        working-directory: mcp/chat
+        run: |
+          pnpm build
+          pnpm test:scan
+
+  playwright:
+    name: Playwright (${{ matrix.package }})
+    if: github.repository == 'GQAdonis/kubo'
+    # The committed screenshot baselines have platform-agnostic paths
+    # (__screenshots__/<project>/..., no {platform} in snapshotPathTemplate)
+    # and were produced on the operator's macOS 26 arm64 host. macos-26 is the
+    # GitHub-hosted arm64 image of the same OS major version, pinned instead of
+    # macos-latest so the image does not move under the baselines. CI never
+    # regenerates or overwrites the baselines; a mismatch is resolved by a
+    # recorded decision (openspec/changes/mcp-ci-workflow, task 1.4).
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [ui, app, chat]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out Kubo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          package_json_file: mcp/ui/package.json
+          cache: true
+          cache_dependency_path: |
+            mcp/ui/pnpm-lock.yaml
+            mcp/app/pnpm-lock.yaml
+            mcp/chat/pnpm-lock.yaml
+      - name: mcp/ui install and build (linked by mcp/app and mcp/chat)
+        working-directory: mcp/ui
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Install
+        if: matrix.package != 'ui'
+        working-directory: mcp/${{ matrix.package }}
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium for Playwright
+        working-directory: mcp/${{ matrix.package }}
+        run: pnpm exec playwright install chromium
+      - name: Download the Electron 44 binary (its install script is not run by pnpm)
+        if: matrix.package == 'chat'
+        working-directory: mcp/chat
+        run: node node_modules/electron/install.js
+      # A runner has no trackpad, so macOS shows classic scroll bars that take
+      # 15px of the Electron window; the baselines were captured with overlay
+      # scroll bars. Match that host setting instead of touching baselines.
+      - name: Use overlay scroll bars (as on the baseline host)
+        if: matrix.package == 'chat'
+        run: defaults write -g AppleShowScrollBars -string WhenScrolling
+      - name: Build the MCP App views
+        if: matrix.package == 'app'
+        working-directory: mcp/app
+        run: pnpm build
+      - name: Playwright
+        working-directory: mcp/${{ matrix.package }}
+        run: pnpm test:visual
+      - name: Upload Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-${{ matrix.package }}
+          path: |
+            mcp/${{ matrix.package }}/test-results/
+            mcp/${{ matrix.package }}/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14

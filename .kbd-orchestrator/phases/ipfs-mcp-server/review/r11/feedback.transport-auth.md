@@ -1,0 +1,3 @@
+- [CRITICAL] mcp/server/http.go: The request-rejection diagnostics log request destinations and browser origins, violating the blocking no-tracking constraint.
+- [CRITICAL] cmd/ipfs/kubo/mcp_http.go: An explicit --http=false does not override an enabled HTTP transport in the configuration file.
+- [WARNING] cmd/ipfs/kubo/mcp_http.go: The HTTP address flag leaks its value across command parses in the same process.

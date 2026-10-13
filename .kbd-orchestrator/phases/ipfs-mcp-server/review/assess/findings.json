@@ -1,0 +1,55 @@
+{
+  "mode": "artifact",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment bases the G1 placement decision on unsupported claims about a nested module being impossible or blocked, which can drive the plan to the wrong architecture.",
+      "evidence": "The artifact claims: \"A nested module cannot be linked into `ipfs` cleanly\" and \"The require resolves either through a published version or through a root `replace ... => ./mcp/server`, which the no-external-replace check flags\" and later rejects B because \"`go install` is blocked by the fork module path and the self-replace pattern.\" The provided file tree only shows existing root and submodule paths, while the constraints only forbid committed external replace directives and allow existing self-replaces; nothing in the packet proves a new nested module could not be given its own import path, released separately, or kept out of the root binary. This unsupported assertion is central to rejecting B/F2 and choosing F4.",
+      "suggested_fix": "Revise the assessment to separate proven repo facts from speculative distribution concerns, and evaluate B without claiming it is technically blocked unless the exact proposed module path, go.mod contents, and failing command output are provided."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment omits a concrete gap analysis for G7 independent security and quality review at the phase boundary.",
+      "evidence": "G7 goal: \"Work is executed by the kubo-ipfs-agentic agent team with independent security and quality review at the phase boundary.\" The artifact's GOAL PROGRESS row only says: \"G7 Team execution with independent review | NOT STARTED | Role files exist [local, uncommitted].\" It does not assess what review artifacts, reviewer independence criteria, phase-boundary gates, or required handoff outputs are missing.",
+      "suggested_fix": "Add a G7 gap section identifying required independent security/quality review artifacts, reviewer ownership or non-authoring constraints, and phase-boundary acceptance gates."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment presents non-baseline, untracked team configuration as execution-relevant evidence despite the project file tree not supporting those files as committed baseline.",
+      "evidence": "The artifact repeatedly relies on \"`.agent-team/kubo-ipfs-agentic/team.json` (untracked) assigns six roles\" and says \"ui-ux-engineer owns...\" recommendations require a team.json update. The file tree includes `.agent-team/kubo-ipfs-agentic` but does not list `.agent-team/kubo-ipfs-agentic/team.json`, and the artifact itself labels these facts \"[local, uncommitted]\" and \"not Kubo baseline.\"",
+      "suggested_fix": "Keep untracked team routing out of baseline assessment conclusions, or clearly mark it as non-blocking operational context and assess G7 against committed/project-level requirements only."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment makes baseline status claims about tracked changes that are unsupported by the review packet file tree.",
+      "evidence": "The header states: \"tracked changes only in AGENTS.md and .gitignore; team/tool state untracked.\" The file tree does not include `.gitignore`, and the packet provides no git status output. This cannot be verified from the supplied file tree or constraints.",
+      "suggested_fix": "Remove the tracked-change claim or include the exact `git status --short` evidence in the artifact; do not use it as baseline evidence otherwise."
+    },
+    {
+      "severity": "WARNING",
+      "file": "assessment.md",
+      "line": 0,
+      "claim": "The assessment claims an existing MCP README citation error was caused by a basename grep, but the packet's cited paths already records the ambiguous hit and does not prove the command used.",
+      "evidence": "The artifact says: \"The review packet's \\\"EXISTS mcp/README.md\\\" came from a basename grep that hit unrelated `README.md` files under `.agents/skills/vercel-*`.\" The packet's cited_paths says `EXISTS mcp/README.md -> 29 matches (.agents/skills/vercel-composition-patterns/README.md, ...)`, but does not disclose that a basename grep was used. The file tree does support `mcp/` missing, but not the asserted cause.",
+      "suggested_fix": "State only the supported fact: `mcp/README.md` is absent because `mcp/` is absent; omit the unverifiable explanation of how cited_paths was generated."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

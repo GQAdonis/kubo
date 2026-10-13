@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!--
+  Operator-installed polkit action for `ipfs mcp --confirm=native` on Linux.
+  Kubo never installs this file. Install it as root (see INSTALL.md).
+
+  auth_self asks the person at the machine for their own password in their
+  session's authentication agent. It is deliberately not auth_self_keep or
+  auth_admin_keep: nothing is cached, so every confirmation is a fresh prompt.
+  allow_any and allow_inactive are "no": a remote (ssh) or inactive session
+  cannot be prompted and is refused.
+-->
+<policyconfig>
+  <vendor>Kubo</vendor>
+  <vendor_url>https://github.com/ipfs/kubo</vendor_url>
+
+  <action id="org.ipfs.kubo.mcp.confirm">
+    <description>Approve an operation requested by an AI agent through IPFS MCP</description>
+    <message>Authenticate to approve: $(summary)</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_self</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

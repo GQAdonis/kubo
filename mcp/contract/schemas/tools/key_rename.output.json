@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "key_rename output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "old_name": {
+      "$ref": "../common.json#/$defs/KeyName"
+    },
+    "new_name": {
+      "$ref": "../common.json#/$defs/KeyName"
+    },
+    "id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "old_name",
+    "new_name",
+    "id"
+  ]
+}

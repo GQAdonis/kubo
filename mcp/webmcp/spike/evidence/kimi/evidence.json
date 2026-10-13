@@ -1,0 +1,49 @@
+{
+  "probe": "webmcp-host-spike/1",
+  "nonce": "WMCP-VW8X-8RS4-52FQ",
+  "nonceFromCryptoRandom": true,
+  "loadedAt": "2026-10-12T13:32:55.310Z",
+  "url": "http://127.0.0.1:53638/",
+  "origin": "http://127.0.0.1:53638",
+  "isSecureContext": true,
+  "topLevel": true,
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.250 Safari/537.36",
+  "criteria": {
+    "documentModelContextPresent": true,
+    "registerToolIsFunction": true,
+    "echoRegistration": "registered",
+    "echoRegistrationDetail": "registerTool resolved at 2026-10-12T13:32:55.313Z",
+    "calledByHostAgent": true,
+    "callCount": 1
+  },
+  "navigatorModelContextDeprecated": true,
+  "permissionsPolicy": {
+    "api": "document.featurePolicy",
+    "tools": "allowed",
+    "detail": "tools is a recognised feature (82 features listed)"
+  },
+  "modelContextMembers": [
+    "addEventListener",
+    "dispatchEvent",
+    "executeTool",
+    "getTools",
+    "ontoolchange",
+    "registerTool",
+    "removeEventListener",
+    "when"
+  ],
+  "inPageGetTools": {
+    "status": "ok",
+    "names": [
+      "echo"
+    ]
+  },
+  "calls": [
+    {
+      "n": 1,
+      "at": "2026-10-12T13:34:02.489Z",
+      "message": "kimi probe",
+      "hadSignal": false
+    }
+  ]
+}

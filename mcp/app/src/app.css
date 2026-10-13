@@ -1,0 +1,48 @@
+/* Page-level rules for the MCP App documents. Tokens and component rules come from
+   @gqadonis/ipfs-mcp-ui (injected by UiScope); this file only places the view in its frame. */
+html {
+  color-scheme: dark light;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.app {
+  box-sizing: border-box;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-3);
+}
+
+.app-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.app-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.app-status:empty {
+  display: none;
+}
+
+.app-text {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.app-waiting {
+  margin: 0;
+}

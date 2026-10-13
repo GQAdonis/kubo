@@ -1,0 +1,7 @@
+{
+  "state_check": "valid",
+  "confirmation_state": "pending",
+  "answer": "decline",
+  "accepted": false,
+  "error_code": "confirmation_declined"
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "routing_findpeer input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "peer_id": {
+      "$ref": "../common.json#/$defs/PeerId"
+    }
+  },
+  "required": [
+    "peer_id"
+  ]
+}

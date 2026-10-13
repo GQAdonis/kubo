@@ -1,0 +1,79 @@
+# Claude Code end-to-end with a real model session, 2026-10-12
+# claude 2.1.296 (Claude Code); fork ipfs built with make build at 9342d70d3 (kubo/0.44.0-dev)
+# Operator-approved run in the operator's logged-in Claude Code. Account, email and session identifiers are not included.
+# Isolated daemon: scratch IPFS_PATH, API 127.0.0.1:5181, gateway 127.0.0.1:8281, no swarm, started with 'ipfs daemon --offline' under timeout 1800, PID 49010 (timeout) / 49012 (ipfs). Stopped with 'ipfs shutdown' using that IPFS_PATH; ports 5181/8281 free afterwards. No default-port daemon was touched.
+# Pointing the plugin at the daemon: the plugin's .mcp.json runs 'ipfs mcp' with no flags. 'ipfs' is the first PATH entry cmd/ipfs, and IPFS_PATH in the claude process environment selects the repo (documented discovery: --api, then $IPFS_PATH/api, then ~/.ipfs/api). No committed plugin file was edited.
+
+## Plugin and marketplace state BEFORE
+claude plugin list: 26 plugins (sorted-name sha256 prefix fd7d0840d769cdd0); none named ipfs.
+claude plugin marketplace list: 23 marketplaces (sha256 prefix 84d5b3661dc546e8); none named kubo-ipfs.
+(Full lists belong to the operator's configuration and are not copied here.)
+
+## Install and health (verbatim)
+$ claude plugin marketplace add <repo>
+Adding marketplace…✔ Successfully added marketplace: kubo-ipfs (declared in user settings)
+$ claude plugin install ipfs@kubo-ipfs
+Installing plugin "ipfs@kubo-ipfs"...✔ Successfully installed plugin: ipfs@kubo-ipfs (scope: user)
+$ claude plugin details ipfs
+IPFS (Kubo MCP) (ipfs) 0.1.0
+  Description: Eight IPFS skills plus the 'ipfs mcp' stdio server, launched from PATH against your own Kubo node.
+  Source: ipfs@kubo-ipfs
+
+Component inventory
+  Skills (8)  ipfs-content-search, ipfs-dag-car, ipfs-ipns-names, ipfs-mfs-workspace, ipfs-pin-management, ipfs-publish-content, ipfs-retrieve-verify, ipfs-troubleshooting
+  Agents (0)
+  Hooks (0)
+  MCP servers (1)  ipfs  (tool schemas resolved at runtime; not counted)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~1,657 tok   added to every session
+
+Per-component (rounded)
+  component             always-on  on-invoke
+  ipfs-pin-management        ~200      ~1.8k
+  ipfs-content-search        ~220      ~1.1k
+  ipfs-publish-content       ~180      ~1.6k
+  ipfs-dag-car               ~200      ~1.4k
+  ipfs-troubleshooting       ~250      ~2.1k
+  ipfs-ipns-names            ~200      ~1.5k
+  ipfs-mfs-workspace         ~210      ~1.4k
+  ipfs-retrieve-verify       ~190      ~1.4k
+
+  On-invoke cost is paid each time a skill or agent fires.
+  Token counts are estimates and may differ from actual usage.
+$ claude mcp list
+Checking MCP server health…
+plugin:ipfs:ipfs: ipfs mcp - ✔ Connected
+
+## Headless sessions (stream-json summarized; raw files kept out of the repo because they carry identifiers)
+### Session 1 and 2: FAILED, plugin server 'failed' at init
+Cause: Claude Code had written plugin:ipfs:ipfs into ~/.claude/mcp-needs-auth-cache.json (a 15 minute skip cache) at 05:25:50 local, between the successful 'claude mcp list' and the first headless session. The model reported that the server was skipped after a recent failure. 'ipfs mcp' itself was fine: a direct initialize handshake worked and 'claude mcp list' showed Connected. I removed only that cache entry (backup kept in the scratchpad) and retried.
+
+### Session 3: PASSED
+$ claude -p "Use the ipfs MCP node info tool (ipfs_node_info) and report only the peer ID and the Kubo version." --output-format stream-json --verbose --max-turns 4 --allowedTools mcp__plugin_ipfs_ipfs__ipfs_node_info
+INIT ipfs mcp: [('plugin:ipfs:ipfs', 'connected')] ipfs tools: ['mcp__plugin_ipfs_ipfs__car_export', 'mcp__plugin_ipfs_ipfs__car_import', 'mcp__plugin_ipfs_ipfs__dag_get', 'mcp__plugin_ipfs_ipfs__dag_put']
+TOOL_USE ToolSearch {"query": "select:mcp__plugin_ipfs_ipfs__ipfs_node_info", "max_results": 1}
+RESULT [{'type': 'tool_reference', 'tool_name': 'mcp__plugin_ipfs_ipfs__ipfs_node_info'}]
+TOOL_USE mcp__plugin_ipfs_ipfs__ipfs_node_info {}
+RESULT {"peer_id":"12D3KooWRNu5FA6d2DL7BUdE6N2UfL7FaBwZvWP23GxrASqe7MgQ","agent_version":"kubo/0.44.0-dev/9342d70d3/GQAdonis","version":"0.44.0-dev","commit":"9342d70d3","repo_version":"18","addresses":[]}
+TEXT - **Peer ID:** `12D3KooWRNu5FA6d2DL7BUdE6N2UfL7FaBwZvWP23GxrASqe7MgQ`
+- **Kubo version:** `0.44.0-dev`
+FINAL False 0.7916186000000001
+(peer ID above is the scratch repo's; it matches 'ipfs --api=/ip4/127.0.0.1/tcp/5181 id' for the isolated daemon)
+Observation: at session end the debug log shows 'Ignoring non-JSON line on stdout: JSON Parse error: Unexpected EOF' and 'STDIO connection closed after 13s (cleanly)'. Harmless; reported to the server owner.
+Write tools were not allowed: only ipfs_node_info (readOnlyHint true) was in --allowedTools.
+
+## Cleanup
+$ claude plugin uninstall ipfs@kubo-ipfs
+✔ Successfully uninstalled plugin: ipfs (scope: user)
+$ claude plugin marketplace remove kubo-ipfs
+✔ Successfully removed marketplace: kubo-ipfs
+Removed the leftover plugin:ipfs:ipfs entry from ~/.claude/mcp-needs-auth-cache.json (the only file-level change outside the plugin commands).
+
+## Plugin and marketplace state AFTER
+claude plugin list: 26 plugins (sha256 prefix fd7d0840d769cdd0); none named ipfs.
+claude plugin marketplace list: 23 marketplaces (sha256 prefix 84d5b3661dc546e8); none named kubo-ipfs.
+plugins identical to BEFORE: True; marketplaces identical to BEFORE: True
+ipfs mentions in 'claude plugin list', 'marketplace list', 'mcp list' after: 0
+Note: 'claude mcp list' output differed only in three HTTP plugin servers (engineering asana/github/pagerduty) that were listed as failing before and not listed after; unrelated to this plugin.

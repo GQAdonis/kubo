@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UAR effective settings as read by ipfs mcp check-uar",
+  "description": "The only settings shape check-uar accepts (ADR-0007). It is Kubo's normalized form of UAR's effective settings (mcp/uar/requests/CONFORMANCE.md item 8). check-uar reads it from the path pinned in uar-preflight.json, never from a guessed path. A response that does not validate (including the per-key record array UAR serves at GET /api/uar/settings at HEAD a7cb9729) is unreadable settings: check verify refuses the principal. Field presence rules: revision, llm and both embedders are required (missing means refuse); governance, native_tools and mcp_servers are the tool inventory (missing means write groups are withdrawn, HG-2). Unknown extra fields are ignored so a UAR release may return more.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["revision", "llm", "knowledge_base_embedder", "memory_embedder"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "revision": {
+      "description": "Changes whenever any value below changes. A string (hash) or a non-negative integer (counter).",
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 256 },
+        { "type": "integer", "minimum": 0 }
+      ]
+    },
+    "llm": { "$ref": "#/$defs/Provider" },
+    "knowledge_base_embedder": { "$ref": "#/$defs/Provider" },
+    "memory_embedder": { "$ref": "#/$defs/Provider" },
+    "governance": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the governance gate is effectively enabled. false withdraws write groups."
+        },
+        "tool_approval": {
+          "type": "string",
+          "description": "The effective tool-approval policy, informational."
+        }
+      }
+    },
+    "native_tools": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["terminal_exec_enabled"],
+      "properties": {
+        "terminal_exec_enabled": {
+          "type": "boolean",
+          "description": "true withdraws write groups."
+        },
+        "shell_tools": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Names of any other enabled shell-capable native tools. Non-empty withdraws write groups. Absent means none."
+        }
+      }
+    },
+    "mcp_servers": {
+      "type": "array",
+      "description": "Every MCP server UAR is configured with. Any entry that is not this ipfs mcp (an http entry whose URL is the /mcp route of the bound HTTP listen address) withdraws write groups. A stdio entry is never this ipfs mcp.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["name", "transport"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "transport": { "type": "string", "enum": ["http", "streamable-http", "sse", "stdio"] },
+          "url": { "type": "string" },
+          "command": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "Provider": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["provider_host"],
+      "properties": {
+        "model": { "type": "string" },
+        "provider_host": {
+          "type": "string",
+          "description": "Host (optionally with port) of the provider endpoint the effective value calls, or the literal local (in-process or loopback, no network) or disabled (not used). A remote host must be in the principal's egress_ack.",
+          "pattern": "^(local|disabled|[A-Za-z0-9.-]+(:[0-9]{1,5})?|\\[[0-9A-Fa-f:]+\\](:[0-9]{1,5})?)$",
+          "maxLength": 260
+        }
+      }
+    }
+  }
+}

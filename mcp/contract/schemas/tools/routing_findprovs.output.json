@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "routing_findprovs output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "addrs"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "../common.json#/$defs/PeerId"
+          },
+          "addrs": {
+            "type": "array",
+            "items": {
+              "$ref": "../common.json#/$defs/Multiaddr"
+            },
+            "description": "Supplied by the peer (or by the routing system on its behalf); trusted only when this entry's untrusted is false."
+          },
+          "untrusted": {
+            "$ref": "../common.json#/$defs/PeerSuppliedUntrusted"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "cid",
+    "providers"
+  ]
+}

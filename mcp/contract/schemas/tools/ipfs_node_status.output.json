@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_node_status output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "daemon_reachable": {
+      "type": "boolean"
+    },
+    "daemon_version": {
+      "type": "string"
+    },
+    "min_kubo_version": {
+      "type": "string",
+      "description": "Global minimum from the contract."
+    },
+    "version_supported": {
+      "type": "boolean"
+    },
+    "contract_version": {
+      "type": "string"
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "stdio",
+        "http"
+      ]
+    },
+    "read_only": {
+      "type": "boolean"
+    },
+    "enabled_groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unavailable_tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "reason"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "missing_rpc_command",
+              "daemon_too_old",
+              "group_disabled",
+              "destructive_disabled",
+              "read_only",
+              "not_configured",
+              "principal_not_granted"
+            ],
+            "description": "Why the tool is not offered. When several apply, the first in this order wins: read_only (the server runs with --read-only and the tool is not class none), group_disabled (the tool's group is not selected), destructive_disabled (the group is selected, the tool is class destructive and the destructive selector was not named in --tools or config tools.groups; destructive tools are off by default, ADR-0003), principal_not_granted, not_configured, daemon_too_old, missing_rpc_command (the daemon does not list a required RPC command; missing_rpc names them)."
+          },
+          "missing_rpc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "daemon_reachable",
+    "version_supported",
+    "contract_version",
+    "transport",
+    "read_only",
+    "enabled_groups",
+    "unavailable_tools"
+  ]
+}

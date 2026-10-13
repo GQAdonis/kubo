@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_status output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "embedded",
+        "remote"
+      ]
+    },
+    "store_reachable": {
+      "type": "boolean"
+    },
+    "auto": {
+      "type": "boolean"
+    },
+    "model": {
+      "type": "string"
+    },
+    "dimensions": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "indexed_cids": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "chunk_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cid_indexed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "enabled",
+    "mode",
+    "auto"
+  ]
+}

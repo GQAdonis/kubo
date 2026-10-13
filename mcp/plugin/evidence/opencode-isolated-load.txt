@@ -1,0 +1,57 @@
+# opencode 1.18.35
+# config: only a plugin entry; the plugin adds the MCP server and the skills path
+{ "$schema": "https://opencode.ai/config.json", "plugin": ["file:///Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs/opencode/ipfs-mcp.js"] }
+$ opencode debug paths   (all under the scratch HOME)
+home       /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home
+data       /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.local/share/opencode
+bin        /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.cache/opencode/bin
+log        /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.local/share/opencode/log
+repos      /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.local/share/opencode/repos
+cache      /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.cache/opencode
+config     /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.config/opencode
+state      /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/home/.local/state/opencode
+tmp        /var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/opencode
+$ opencode debug config
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "file:///Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs/opencode/ipfs-mcp.js"
+  ],
+  "plugin_origins": [
+    {
+      "spec": "file:///Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs/opencode/ipfs-mcp.js",
+      "source": "/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/opencode-plugin.json",
+      "scope": "global"
+    }
+  ],
+  "agent": {},
+  "mode": {},
+  "command": {},
+  "username": "gqadonis",
+  "mcp": {
+    "ipfs": {
+      "type": "local",
+      "command": [
+        "ipfs",
+        "mcp"
+      ],
+      "enabled": true
+    }
+  },
+  "skills": {
+    "paths": [
+      "/Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs/skills"
+    ]
+  }
+}
+$ opencode debug skill   (names)
+['customize-opencode', 'ipfs-retrieve-verify', 'ipfs-publish-content', 'ipfs-troubleshooting', 'ipfs-ipns-names', 'ipfs-dag-car', 'ipfs-content-search', 'ipfs-pin-management', 'ipfs-mfs-workspace']
+$ opencode mcp list   (starts 'ipfs mcp' against the private daemon)
+
+┌  MCP Servers
+│
+●  ✓ ipfs connected
+│      ipfs mcp
+│
+└  1 server(s)
+

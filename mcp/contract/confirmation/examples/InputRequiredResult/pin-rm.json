@@ -1,0 +1,20 @@
+{
+  "resultType": "input_required",
+  "inputRequests": {
+    "confirm": {
+      "method": "elicitation/create",
+      "params": {
+        "mode": "form",
+        "message": "Remove the pin on bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi (recursive=true)",
+        "requestedSchema": {
+          "type": "object",
+          "properties": {
+            "confirm": { "type": "boolean", "title": "Remove pin" }
+          },
+          "required": ["confirm"]
+        }
+      }
+    }
+  },
+  "requestState": "eyJ2IjoxLCJ1c2UiOiJyZXF1ZXN0X3N0YXRlIn0_c2lnbmF0dXJlLXBsYWNlaG9sZGVy"
+}

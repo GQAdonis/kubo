@@ -1,0 +1,81 @@
+{
+  "mode": "decision",
+  "verdict": "BLOCK",
+  "judge_model": "anthropic/claude-opus-5-5 (harness-native fresh-context subagent)",
+  "isolation_mode": "harness-native",
+  "producer_model": "claude-opus-5-5",
+  "cross_model_check": "same-model-collision",
+  "confidence": 72,
+  "what_would_change_this": "(1) A stated, measurable falsifier for the shared principle (for example: an N2 GO criterion on operator setup time on a clean home machine, plus a dated deadline after which undelivered N1 items flip G9 to (a) instead of shipping non-conformant). (2) Evidence that UAR can be launched from the documented path such that no default model, no remote memory embedder and no 0.0.0.0 bind are reachable even if the operator edits nothing, or a Kubo-side launcher/validator that refuses to start otherwise. (3) A source read showing what UAR does with a per-call MCP approval pause on an A2A-originated task. Any of these would downgrade the corresponding CRITICAL to WARNING or remove it.",
+  "disconfirming": [
+    "The decision is largely two-way: Kubo adds no daemon listener, no config key and no go.mod dependency (assessment-addendum.md:302, 540), so reversing to option (a)/L2 later costs mostly new work, not unwinding shipped Kubo surface.",
+    "Most rejections (b daemon listener, E2 cgo/BSL, E5 daemon-wide hook) rest on AGENTS.md rules and verifiable facts (no cgo in Kubo, BSL 1.1 license), and those rejections stand regardless of the findings below.",
+    "The addendum does surface its biggest weaknesses as operator questions (questions 1-5, 8-10) and risks 1-5, so the operator is not being asked to approve blind; the findings are about the decision being recorded as the decision of record before those answers exist, and about specific claims that overstate what holds.",
+    "The N2 real-service spike is a genuine GO/NO-GO gate on the plumbing (tools/list, one read, one gated write through UAR) and defers N3/N5/N6/N7 on failure (line 539)."
+  ],
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 295,
+      "claim": "The decision has no stated falsifier or assumptions, and its flip conditions are constructed so that the core principle survives every outcome, making it unfalsifiable in practice.",
+      "evidence": "Packet decision_fields.missing_fields = [\"assumptions\", \"falsifier\"]. The only outcome-based flip for the G9 principle is line 328: 'The UAR conformance request is declined or not delivered within this phase | Ship G9 as \"UAR-hosted, non-conformant A2A, UAR-profile AG-UI\", stated plainly in the docs, or flip to (a) on operator choice.' Non-delivery therefore keeps the decision by default. Every other flip (lines 326-329, 345-346, 369-371, 390-392) triggers on an operator preference, not on a measured result. The N2 spike (line 522) tests plumbing the addendum already asserts from source reading; it does not test the load-bearing assumptions the addendum itself names as the main weaknesses: operator setup cost (Risk 2, line 549, 'may be the deciding objection') and another team's delivery (Risk 1, line 548). No threshold, measurement or date is given for either.",
+      "suggested_fix": "Add an explicit Assumptions list (UAR team accepts and delivers N1 items; operators can install UAR on target platforms; UAR's per-call approval holds on every UAR entry path; UAR memory/model defaults are overridable without code) and a Falsifier with thresholds and dates, e.g. 'If N1 items A2A agent-card path, TaskState casing and input-required are not merged in UAR by Round 5, G9 flips to (a) or (e1); non-conformant shipping is not an automatic fallback' and 'If N2 cannot bring UAR up from published artifacts on macOS and Linux in under N minutes without a source build, G10 flips to L2.'"
+    },
+    {
+      "severity": "CRITICAL",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 480,
+      "claim": "The ADR-0006 claim 'nothing leaves the machine by default' and G10's 'off unless configured' are contradicted by the addendum's own verified UAR defaults, and the decision satisfies the hard G10/G12 no-default-endpoint and no-egress requirements only through documentation over a runtime it cannot control.",
+      "evidence": "Line 480: 'Positive: no cgo, no BSL code and no vector store in Kubo, and nothing leaves the machine by default.' Line 265: 'The memory subsystem defaults to OpenAI text-embedding-3-small (uar:src/config.rs:1464-1465), so the remote embedder is a default there.' Line 49: 'The default model is openai/gpt-4o (uar:src/config.rs:1476), an implicit default endpoint.' Line 179: 'The feature is off unless configured. Nothing in Kubo starts UAR or contacts it on its own.' Line 550 (Risk 3): 'An operator who starts UAR without our examples exposes an agent with node-write tools on all interfaces.' The mitigation (line 553) is only that 'the N1 request asks UAR for safer defaults', and N1's exit is 'issues filed and acknowledged' (line 521), not delivered. The example-config list (lines 335-338) sets JWT, loopback and an explicit provider but never mentions overriding the memory subsystem's OpenAI embedder. original_intent G10: 'no default endpoint, off unless configured'; G12: 'no content leaves the machine without explicit operator configuration'.",
+      "suggested_fix": "Either make UAR-side safe defaults (no default model, no default remote memory embedder, loopback bind, CORS allowlist) a delivered prerequisite gating N3/N5/N7, or add a Kubo-side check (for example `ipfs mcp` refusing the UAR principal, or a documented launcher that validates UAR's effective config) so the guarantee is enforced rather than documented. At minimum, add the memory-embedder override to the example configs and remove 'nothing leaves the machine by default' from ADR-0006 until it is true."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 308,
+      "claim": "The decision asserts the human confirmation gate holds 'today' through UAR, but its own evidence shows the approval pause is not wired to A2A, so the gate's behavior on the A2A path of G9 is unknown (hang, timeout, or a non-human approver).",
+      "evidence": "Line 308: 'Today. The human gate is UAR's per-call approval ... This is accepted as safe but noisy.' Line 42: 'Tool approval never surfaces as A2A input-required: the only mapping arm (RunStatus::Paused) is never assigned [sub].' Line 100 calls UAR's approval 'stronger than T2 because UAR asks a human for every call' without saying which human approves an A2A-originated task, where by definition the caller is another agent. N2 (line 522) only tests the AG-UI stream, not A2A.",
+      "suggested_fix": "Read UAR's runtime path for an approval pause on an A2A task and record the outcome; add an A2A gated-write case to N2's GO criteria; state that A2A delegation of writes is unsupported until N1's input-required item lands."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 333,
+      "claim": "G10 is reinterpreted so that the goal's second alternative ('or an operator-configured OpenAI-compatible server with API key') also requires UAR, and the goal's stated mechanism ('proxy') is the option rejected.",
+      "evidence": "original_intent G10: 'proxy to an operator-configured Universal Agent Runtime instance ... or an operator-configured OpenAI-compatible server with API key'. Line 333: 'Both G10 backends run through UAR.' Line 166 rejects L3 'Proxy only'. Line 186 scores L1 'Operator setup cost 2' and Goal fit 4 versus L2 Goal fit 5. The 'or' in the goal plainly reads as a path that does not need UAR; the addendum turns it into a UAR configuration and leaves the question to operator question 2 (line 568) while already recording L1 as the decision.",
+      "suggested_fix": "Record G10 as undecided pending operator question 2, or state explicitly that L1 narrows G10 and that the non-UAR path is unmet until the operator accepts that narrowing."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 144,
+      "claim": "The option scores that select (d), L1 and E1 have no derivation or weights, and several conflict with facts in the same document, so the tables read as a rationalization of the chosen option.",
+      "evidence": "Line 144 gives (d) Security 4, equal to (a), although the same document records for UAR CORS 'allow_origin(Any)' (line 47), default bind 0.0.0.0 (line 50), JWT disabled in dev configs (line 51), and Risk 3 'exposes an agent with node-write tools on all interfaces' (line 550). (d) gets 'Rules fit 4' despite UAR's implicit default endpoint (line 49), and 'Time to working result 4' while conformance depends on another team (line 548). No column weights or aggregation rule are stated; the bolded winner is asserted, not computed.",
+      "suggested_fix": "State weights and the aggregation rule, and rescore (d) Security and Rules fit for the UAR-as-shipped defaults, with a separate 'after N1 delivered' column as was done for Interop."
+    },
+    {
+      "severity": "WARNING",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 375,
+      "claim": "G12 quietly narrows 'content added through the agent surfaces' to content added through UAR, so content added by agents through the other planned agent surfaces (stdio MCP hosts, MCP App, WebMCP in G8) is never embedded.",
+      "evidence": "original_intent G12: 'automatic embedding of content added through the agent surfaces'. Line 376: 'UAR ingests content that an agent added through ipfs_add (bytes it already holds) or explicitly asked to index'. G2/G3/G8 define stdio, Streamable HTTP and WebMCP agent surfaces that do not pass through UAR. The narrowing is not listed as a limitation or operator question.",
+      "suggested_fix": "List it as a scope narrowing in DECISION G12 and add it to operator question 8, or describe how non-UAR surfaces trigger indexing (for example an explicit index tool reachable from any surface)."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": ".kbd-orchestrator/phases/ipfs-mcp-server/assessment-addendum.md",
+      "line": 381,
+      "claim": "Deleting a CID's vectors on agent pin_rm is wrong when the content is still pinned by another root or another pin type, so the deletion policy can drop the index for content the node still holds.",
+      "evidence": "Line 381: 'When the agent calls pin_rm or repo_gc through UAR, UAR deletes that CID's vectors after the call succeeds.' pin_rm removes one pin; it does not mean the blocks are gone or unpinned elsewhere. The reconciliation at line 382 uses pin_ls but the immediate path does not check it.",
+      "suggested_fix": "On pin_rm, check `pin_ls` for the CID (including indirect pins) before deleting vectors; on repo_gc, delete only the CIDs the GC output reports as removed."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": "review packet (meta)",
+      "claim": "This review does not provide the cross-model guarantee required for decision mode: the judge and the producer are the same model, so this findings file is expected to fail findings.schema.json (decision mode requires cross_model_check = verified-distinct).",
+      "evidence": "Packet producer_model: 'claude-opus-5-5'. This judge runs as claude-opus-5-5 in a harness-native subagent. Also: packet truncation.any_truncated = true (decision_document 39924 of 56485 bytes); the judge read the full file at the path in file_tree, and line numbers above refer to that file.",
+      "suggested_fix": "Re-run through the cross-family route that G7's scope change records (dispatch-judge.sh to gpt-6.1-sol through the liter-llm gateway) before treating this addendum as reviewed."
+    }
+  ]
+}

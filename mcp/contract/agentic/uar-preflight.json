@@ -1,0 +1,8 @@
+{
+  "$schema": "./uar-preflight.schema.json",
+  "minVersion": null,
+  "settingsPath": null,
+  "settingsSchema": "./uar-effective-settings.schema.json",
+  "recheckInterval": "30s",
+  "pinnedFrom": null
+}

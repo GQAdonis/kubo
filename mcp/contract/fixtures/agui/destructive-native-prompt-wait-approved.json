@@ -1,0 +1,25 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Observation of destructive-native-prompt.json: the island resumes with {wait: true} and the run stays open until the system prompt decides. The person approved in the system prompt, so repo_gc runs once and its result is reported on the original toolCallId; the card leaves 'Waiting for system prompt'.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-gc-1",
+    "runId": "run-2",
+    "messages": [
+      { "id": "msg-u1", "role": "user", "content": "Free some space." },
+      { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-3", "type": "function", "function": { "name": "repo_gc", "arguments": "{}" } }] }
+    ],
+    "tools": [],
+    "context": [],
+    "resume": [{ "interruptId": "int-cf_Ui7dEstrUct1veXy", "status": "resolved", "payload": { "wait": true } }]
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-gc-1", "runId": "run-2" },
+    { "type": "TOOL_CALL_RESULT", "messageId": "msg-t3", "toolCallId": "tc-3", "role": "tool", "content": "{\"removed_count\":42}" },
+    { "type": "TEXT_MESSAGE_START", "messageId": "msg-a2", "role": "assistant" },
+    { "type": "TEXT_MESSAGE_CONTENT", "messageId": "msg-a2", "delta": "Garbage collection removed 42 blocks." },
+    { "type": "TEXT_MESSAGE_END", "messageId": "msg-a2" },
+    { "type": "RUN_FINISHED", "threadId": "thread-gc-1", "runId": "run-2", "outcome": { "type": "success" } }
+  ]
+}

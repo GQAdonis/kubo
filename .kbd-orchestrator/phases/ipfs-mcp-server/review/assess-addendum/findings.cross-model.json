@@ -1,0 +1,79 @@
+{
+  "mode": "decision",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "decision_fields.missing_fields",
+      "claim": "The parsed decision has no stated assumptions or falsifier, making the commit-level decision unfalsifiable despite relying on conditional delivery.",
+      "evidence": "`decision_fields.missing_fields` contains `[\"assumptions\", \"falsifier\"]`, `decision_fields.assumptions` is `[]`, and `decision_fields.falsifier` is `null`, while the decision says: \"This principle is conditional on the assumptions above. Every falsifier defers by default rather than shipping a weaker result.\"",
+      "suggested_fix": "Promote the load-bearing assumptions and falsifiers into the decision fields or rewrite the DECISION section to include explicit measurable assumptions, falsifiers, thresholds, deadlines, and default actions."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "DECISION / original_intent G10",
+      "claim": "The decision chooses a UAR-only backend path that does not satisfy the stated G10 requirement for either UAR or an operator-configured OpenAI-compatible server.",
+      "evidence": "Original intent G10 requires: \"proxy to an operator-configured Universal Agent Runtime instance ... or an operator-configured OpenAI-compatible server with API key\". The decision says: \"UAR owns the agent loop, the LLM client... Kubo grows no LLM client\". The document itself admits this narrows G10: \"L1 UAR is the only agent loop... This narrows G10, which reads as two alternatives, one of them without UAR: the non-UAR alternative would be unmet.\"",
+      "suggested_fix": "Do not commit to UAR-only unless the operator explicitly amends G10; otherwise choose L2 or an equivalent path that supports a raw OpenAI-compatible backend."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "ASSUMPTIONS AND FALSIFIERS / A10.1",
+      "claim": "A load-bearing operator preference is unresolved, so the decision commits to a path before the required operator answer exists.",
+      "evidence": "A10.1 states: \"The operator accepts G10's OpenAI-compatible path running through UAR (question 2)\" with falsifier \"The operator answers 'no'\". The G10 section says: \"The choice between them is the operator's (question 2).\" The final decision nevertheless selects: \"UAR owns the agent loop, the LLM client...\"",
+      "suggested_fix": "Block the decision until operator question 2 is answered, or make the decision explicitly pending rather than selecting the UAR-owned path."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "DECISION / original_intent G12",
+      "claim": "The decision does not meet G12's requirement to support both embedded and remote SurrealDB modes, because it assigns embeddings and SurrealDB entirely to UAR and rejects embedding SurrealDB in Kubo.",
+      "evidence": "Original intent G12 requires embeddings \"stored in SurrealDB with vector search, supporting both embedded and remote SurrealDB modes\". The decision says: \"UAR owns... embeddings and SurrealDB\" and \"Kubo grows no... vector store\". The document also says: \"G12 must not embed SurrealDB into the `ipfs` binary\" and the selected E1 is \"UAR owns embedding, the store and search\".",
+      "suggested_fix": "Either amend G12 to mean UAR-provided SurrealDB modes only, or add a Kubo-side/sidecar design that actually supports the required embedded and remote modes without violating build and license constraints."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "KUBO-SIDE ENFORCEMENT / What Kubo cannot enforce",
+      "claim": "The selected architecture knowingly leaves the no-egress guarantee only partially met for stdio-spawned UAR, contradicting the original G12 guarantee.",
+      "evidence": "Original intent G12 says: \"no content leaves the machine without explicit operator configuration\". The document states: \"No node content reaches a remote model without operator configuration | Yes, over HTTP... No over stdio: a stdio client that spawns `ipfs mcp` cannot be identified... G10/G12 partially met: met over HTTP; the stdio-spawned UAR path is documented as unsupported for the egress guarantee.\"",
+      "suggested_fix": "Make stdio UAR unsupported for content-egress tools by default, or add a principal/egress mechanism for stdio before claiming G10/G12 delivery."
+    },
+    {
+      "severity": "WARNING",
+      "file": "KUBO-SIDE ENFORCEMENT / check-uar",
+      "claim": "The enforcement design depends on unverified UAR settings fields, so the key safety check may be impossible to implement as described.",
+      "evidence": "`check-uar` says it reads settings fields exposing \"the effective model, embedders and governance state\" but immediately marks them as \"[unverified]; N2 confirms them.\" A10.3 then admits the fallback if absent: \"G10's egress guarantee is marked partially met (operator-asserted, not verified).\"",
+      "suggested_fix": "Do not accept this as an enforcement decision until the settings API is verified, or require refusal rather than `check: assert` when effective providers cannot be read."
+    },
+    {
+      "severity": "WARNING",
+      "file": "G9 / ASSUMPTIONS AND FALSIFIERS A9.1",
+      "claim": "The selected G9 architecture depends on another team merging core UAR conformance work by Round 4, but the decision commits to UAR ownership before that dependency is secured.",
+      "evidence": "A9.1 assumes \"The UAR team accepts and merges the core conformance items\" and falsifies if they are \"not merged on UAR main\" by Round 4. The Summary says: \"UAR is not conformant enough to be used as-is\" with missing A2A and AG-UI features. The decision nevertheless says: \"UAR owns... AG-UI/A2A\".",
+      "suggested_fix": "Make the UAR-hosted G9 decision conditional/pending until N1 is merged, or choose an in-Kubo fallback now."
+    },
+    {
+      "severity": "WARNING",
+      "file": "ASSUMPTIONS AND FALSIFIERS / A10.2",
+      "claim": "The setup-cost threshold is arbitrary and could reject or accept UAR based on an unsupported number.",
+      "evidence": "A10.2 falsifies if setup takes \"more than 30 minutes or more than 15 operator steps\" but the document gives no source or rationale for 30 minutes or 15 steps.",
+      "suggested_fix": "Tie the threshold to an operator-stated requirement, support burden estimate, or comparable installation baseline."
+    },
+    {
+      "severity": "WARNING",
+      "file": "G11 / U2 island through proxy",
+      "claim": "The preferred chat UI path keeps the chat in the admin-privileged Web UI origin while acknowledging that keeping it out of that origin may be safer and undecided.",
+      "evidence": "The document states: \"The Web UI origin is admin-privileged\" and \"Kubo sets no CSP\". It scores \"U2 island, through the `ipfs mcp` proxy\" highest, but then says: \"Keeping the chat out of the admin origin is a legitimate operator preference (question 6).\"",
+      "suggested_fix": "Resolve operator question 6 and the CSP/admin-origin risk before selecting U2; otherwise choose U3 for isolation."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  },
+  "checked_classes": []
+}

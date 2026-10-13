@@ -1,0 +1,16 @@
+{
+  "phase": "ipfs-mcp-server",
+  "dispatchedAt": "2026-10-09T12:30:00Z",
+  "backend": "openspec",
+  "driver": "kbd-apply",
+  "assignedChanges": 35,
+  "assignedTasks": 161,
+  "firstRound": {
+    "round": "R0",
+    "changes": ["team-ownership-grant"],
+    "mode": "serial, alone"
+  },
+  "pendingWork": "All 35 changes / 161 tasks pending at dispatch; Round 0 task 1.1 (operator question) first.",
+  "routes": "plan.md TASK MODEL ASSIGNMENTS; primary route Claude Code native subagents",
+  "note": "Dispatch receipt only. Execute remains active until the completion checklist in kbd-execute holds."
+}

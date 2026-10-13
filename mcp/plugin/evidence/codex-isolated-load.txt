@@ -1,0 +1,101 @@
+# codex-cli 0.160.1
+$ codex plugin marketplace add <repo>
+Added marketplace `kubo-ipfs` from /Users/gqadonis/Projects/references/kubo.
+Installed marketplace root: /Users/gqadonis/Projects/references/kubo
+$ codex plugin marketplace list
+MARKETPLACE  ROOT
+kubo-ipfs    /Users/gqadonis/Projects/references/kubo
+$ codex plugin add ipfs@kubo-ipfs
+Added plugin `ipfs` from marketplace `kubo-ipfs`.
+Installed plugin root: /private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/codex-home/plugins/cache/kubo-ipfs/ipfs/0.1.0
+$ codex plugin list
+Marketplace `kubo-ipfs`
+/Users/gqadonis/Projects/references/kubo/.agents/plugins/marketplace.json
+
+PLUGIN          STATUS              VERSION  SOURCE
+ipfs@kubo-ipfs  installed, enabled  0.1.0    /Users/gqadonis/Projects/references/kubo/mcp/plugin/ipfs
+$ codex mcp list
+Name  Command  Args  Env                                   Cwd                                                                                                                    Status   Auth       
+ipfs  ipfs     mcp   PLUGIN_DATA=*****, PLUGIN_ROOT=*****  /private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/codex-home/plugins/cache/kubo-ipfs/ipfs/0.1.0  enabled  Unsupported
+$ codex_probe.py (app-server: plugin/read, skills/list, mcpServerStatus/list)
+{
+ "initialize_codexHome": "/private/var/folders/ln/0wnpd96j26z2qhvx9m6hwt2r0000gn/T/tmp.GsxtDoP4ET/codex-home",
+ "plugin_read_id": "ipfs@kubo-ipfs",
+ "plugin_read_installed_enabled": [
+  true,
+  true
+ ],
+ "plugin_read_skills": [
+  "ipfs:ipfs-content-search",
+  "ipfs:ipfs-dag-car",
+  "ipfs:ipfs-ipns-names",
+  "ipfs:ipfs-mfs-workspace",
+  "ipfs:ipfs-pin-management",
+  "ipfs:ipfs-publish-content",
+  "ipfs:ipfs-retrieve-verify",
+  "ipfs:ipfs-troubleshooting"
+ ],
+ "plugin_read_mcpServers": [
+  "ipfs"
+ ],
+ "skills_list_plugin_skills(pluginId set)": [
+  "ipfs:ipfs-content-search",
+  "ipfs:ipfs-dag-car",
+  "ipfs:ipfs-ipns-names",
+  "ipfs:ipfs-mfs-workspace",
+  "ipfs:ipfs-pin-management",
+  "ipfs:ipfs-publish-content",
+  "ipfs:ipfs-retrieve-verify",
+  "ipfs:ipfs-troubleshooting"
+ ],
+ "mcpServerStatus/list": [
+  {
+   "name": "ipfs",
+   "pluginId": "ipfs@kubo-ipfs",
+   "serverInfo": {
+    "name": "ipfs-mcp",
+    "title": "IPFS",
+    "version": "0.44.0-dev",
+    "description": null,
+    "icons": null,
+    "websiteUrl": null
+   },
+   "toolsError": null,
+   "tool_count": 32,
+   "tools": [
+    "car_export",
+    "car_import",
+    "dag_get",
+    "dag_put",
+    "dag_stat",
+    "ipfs_add",
+    "ipfs_cat",
+    "ipfs_get",
+    "ipfs_ls",
+    "ipfs_node_info",
+    "ipfs_node_status",
+    "ipns_publish",
+    "ipns_resolve",
+    "key_gen",
+    "key_list",
+    "key_rename",
+    "mfs_cp",
+    "mfs_ls",
+    "mfs_mkdir",
+    "mfs_mv",
+    "mfs_read",
+    "mfs_stat",
+    "mfs_write",
+    "pin_add",
+    "pin_ls",
+    "pin_verify",
+    "repo_stat",
+    "routing_findpeer",
+    "routing_findprovs",
+    "routing_provide",
+    "stats_bw",
+    "swarm_peers"
+   ]
+  }
+ ]
+}

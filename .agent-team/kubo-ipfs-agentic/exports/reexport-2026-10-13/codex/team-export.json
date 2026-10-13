@@ -1,0 +1,59 @@
+{
+  "target": "codex",
+  "verification": {
+    "level": "source-verified",
+    "source": "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+    "version": "documentation inspected 2026-09-24",
+    "live": "unverified"
+  },
+  "capabilities": {
+    "agent-definition": "emitted",
+    "role-model": "emitted",
+    "team-options": "emitted",
+    "agent-plugin": "not-emitted",
+    "agent-marketplace": "not-emitted",
+    "static-team-roster": "not-emitted",
+    "model-policy-resolution": "not-emitted"
+  },
+  "diagnostics": [
+    "Source-verified serialization only; installed native validation and live execution are unverified.",
+    "Only explicit model IDs are translated. Resolve tier, skill, capability and price policies with agent-team-models before native invocation.",
+    "Codex agent names use underscores (role-id becomes role_id) and set memories.generate_memories=false so subagent threads do not write the user-level memory summary.",
+    "Standalone agent files are supported. A Codex plugin agents manifest field is not verified; no such field is emitted.",
+    "Role overrides are preserved without native schema certification. Skill IDs refer to separately installed skills; prompt mentions do not install or authorize them."
+  ],
+  "instructions": [
+    "Review staged artifacts before installation. Export grants no execution or registration authority.",
+    "Review and merge .codex/agents and optional .codex/config.toml into the project; config values are native Codex options."
+  ],
+  "files": [
+    {
+      "file": ".codex/agents/ipfs_agent_architect.toml",
+      "sha256": "e88a1e7564dabd81447fe9eb244a7982c0a8ca74295475f747a2f26ae52b6cfc"
+    },
+    {
+      "file": ".codex/agents/mcp_server_engineer.toml",
+      "sha256": "64a869e7db608ab81c9dc086b65410f89ccca6ff96a22930a2ba3d490b97e7cf"
+    },
+    {
+      "file": ".codex/agents/skills_plugin_specialist.toml",
+      "sha256": "f629324f5568988e3bad9bacb3a62472284e64e2c683eeb647b5e7244adaf3a4"
+    },
+    {
+      "file": ".codex/agents/ui_ux_engineer.toml",
+      "sha256": "87dd76c101acdd54a5800477636c665b1fe3eb570d64eb7994698122b923ed77"
+    },
+    {
+      "file": ".codex/agents/security_reviewer.toml",
+      "sha256": "38c44861ed72bfa7c71ad272701718a2abfead52492a616f0f44a9f333ba3c8b"
+    },
+    {
+      "file": ".codex/agents/reviewer.toml",
+      "sha256": "1fd5b2a5f33ec8e93738de3ed0136db02a1ec5490494874d2b160bee5bc69a98"
+    },
+    {
+      "file": "export-receipt.json",
+      "sha256": "b0e5bc037273bdc15ba17fc10f78a8e3f0b0f22058deb884772f88ea9419b3c0"
+    }
+  ]
+}

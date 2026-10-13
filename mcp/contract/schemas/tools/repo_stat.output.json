@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "repo_stat output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "repo_size": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "storage_max": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "num_objects": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "repo_size",
+    "storage_max",
+    "num_objects"
+  ]
+}

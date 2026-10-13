@@ -1,0 +1,29 @@
+{
+  "mode": "diff",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/policy.go",
+      "claim": "UAR startup diagnostics still log connection destinations, violating the blocking no-tracking constraint.",
+      "evidence": "StartupReport formats \"the UAR instance at %s\" with id.UAR.CardURL when CheckAssert is selected, and cmd/ipfs/kubo/mcp_http.go serveHTTP prints every returned line to stderr. The no-tracking constraint forbids code that \"collects, logs or reports ... whom it connects to\" and explicitly applies to mcp/server logging. Removing Host and Origin values from request-rejection logs does not remove this reporting path.",
+      "suggested_fix": "Remove CardURL from startup diagnostics and audit preflight summaries before logging them so configured or discovered connection destinations are not emitted."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/egress.go",
+      "claim": "The local-only egress acknowledgement incorrectly authorizes an endpoint whose actual DNS hostname is \"local\".",
+      "evidence": "IsLocalHost returns true when host == EgressLocal, where EgressLocal is the literal \"local\". AckCovers consequently accepts ack [\"local\"] for HostFromURL(\"https://local\") or \"local:443\". A hostname named \"local\" is not a loopback address and can resolve to another machine; the code confuses the acknowledgement sentinel with an endpoint hostname. This contradicts AckCovers' stated guarantee that \"local\" covers loopback hosts \"and nothing else\" and G12's requirement that content not leave the machine without explicit operator configuration.",
+      "suggested_fix": "Separate acknowledgement sentinel handling from endpoint classification: classify actual endpoint hosts as local only for genuine loopback names or addresses, and never classify the ordinary hostname \"local\" as loopback. Add tests demonstrating that a local-only acknowledgement refuses https://local and https://local:443."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

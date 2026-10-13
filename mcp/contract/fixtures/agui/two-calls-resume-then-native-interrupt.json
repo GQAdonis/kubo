@@ -1,0 +1,155 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Resume of two-calls-write-interrupt.json with a single entry approving the write after a user gesture. pin_add runs once and is reported on tc-7; the queued repo_gc (announced in run-1, so not re-emitted) then needs the native prompt, and the run ends with its own single interrupt. The client answers it in the next run with {approved: false} or {wait: true}; two-calls-native-wait-approved.json is that third run, and destructive-native-prompt-wait-*.json cover the other outcomes.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-two-1",
+    "runId": "run-2",
+    "messages": [
+      {
+        "id": "msg-u1",
+        "role": "user",
+        "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku, then free some space."
+      },
+      {
+        "id": "msg-a1",
+        "role": "assistant",
+        "toolCalls": [
+          {
+            "id": "tc-7",
+            "type": "function",
+            "function": {
+              "name": "pin_add",
+              "arguments": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}"
+            }
+          },
+          {
+            "id": "tc-8",
+            "type": "function",
+            "function": {
+              "name": "repo_gc",
+              "arguments": "{}"
+            }
+          }
+        ]
+      }
+    ],
+    "tools": [],
+    "context": [],
+    "resume": [
+      {
+        "interruptId": "int-cf_Tw0CallsWr1teAbCd",
+        "status": "resolved",
+        "payload": {
+          "approved": true
+        }
+      }
+    ]
+  },
+  "events": [
+    {
+      "type": "RUN_STARTED",
+      "threadId": "thread-two-1",
+      "runId": "run-2"
+    },
+    {
+      "type": "TOOL_CALL_RESULT",
+      "messageId": "msg-t7",
+      "toolCallId": "tc-7",
+      "role": "tool",
+      "content": "{\"pins\":[\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\"]}"
+    },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        {
+          "id": "msg-u1",
+          "role": "user",
+          "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku, then free some space."
+        },
+        {
+          "id": "msg-a1",
+          "role": "assistant",
+          "toolCalls": [
+            {
+              "id": "tc-7",
+              "type": "function",
+              "function": {
+                "name": "pin_add",
+                "arguments": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}"
+              }
+            },
+            {
+              "id": "tc-8",
+              "type": "function",
+              "function": {
+                "name": "repo_gc",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "msg-t7",
+          "role": "tool",
+          "toolCallId": "tc-7",
+          "content": "{\"pins\":[\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\"]}"
+        }
+      ]
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "thread-two-1",
+      "runId": "run-2",
+      "outcome": {
+        "type": "interrupt",
+        "interrupts": [
+          {
+            "id": "int-cf_Tw0CallsGcNat1veXy",
+            "reason": "tool_call",
+            "message": "Run garbage collection on the repo. Confirm in the system prompt; you can deny here.",
+            "toolCallId": "tc-8",
+            "responseSchema": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "approved": {
+                      "const": false
+                    }
+                  },
+                  "required": [
+                    "approved"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "wait": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "wait"
+                  ]
+                }
+              ]
+            },
+            "expiresAt": "2026-10-09T12:02:00Z",
+            "metadata": {
+              "ipfs-mcp": {
+                "confirmation_id": "cf_Tw0CallsGcNat1veXy",
+                "tool": "repo_gc",
+                "class": "destructive",
+                "requires_native_prompt": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

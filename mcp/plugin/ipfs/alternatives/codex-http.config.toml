@@ -1,0 +1,9 @@
+# Add to ~/.codex/config.toml (or a trusted project's .codex/config.toml) to
+# use a running 'ipfs mcp --http' instead of the plugin's stdio server.
+# Disable the plugin's stdio server first so the two do not both register
+# an "ipfs" server (see mcp/plugin/README.md).
+# IPFS_MCP_TOKEN names an environment variable that holds the bearer token the
+# server was started with; the token itself is never written here.
+[mcp_servers.ipfs_http]
+url = "http://127.0.0.1:5050/mcp"
+bearer_token_env_var = "IPFS_MCP_TOKEN"

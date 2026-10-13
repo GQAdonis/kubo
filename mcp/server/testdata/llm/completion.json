@@ -1,0 +1,1 @@
+{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"","tool_calls":[{"id":"","type":"function","function":{"name":"ipfs_node_info","arguments":""}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":7,"completion_tokens":3}}

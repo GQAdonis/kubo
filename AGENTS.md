@@ -2,6 +2,40 @@
 
 This file provides instructions for AI coding agents working on the [Kubo](https://github.com/ipfs/kubo) codebase (the Go implementation of IPFS). Follow the [Developer Guide](docs/developer-guide.md) for full details.
 
+## Agent Team: Default for All Work
+
+All work in this repository goes through the `kubo-ipfs-agentic` agent team (manifest: `.agent-team/kubo-ipfs-agentic/team.json`, routing: `.agent-team/project-routing.json`). That covers code, docs, specs, research, reviews, packaging and investigation, not only code. Before acting, pick the role whose responsibility and ownership match the work and follow its instructions.
+
+| Role | Owns | Use for |
+|------|------|---------|
+| `ipfs-agent-architect` | `openspec/**`, `mcp/contract/**`, `mcp/README.md`, `docs/mcp/**` | Entry point for any request not clearly owned by one role; IPFS domain questions; OpenSpec changes; the shared MCP tool contract; ADRs |
+| `mcp-server-engineer` | `mcp/server/**` | Go MCP server built on `modelcontextprotocol/go-sdk` |
+| `skills-plugin-specialist` | `mcp/skills/**`, `mcp/plugin/**`, `.claude-plugin/**`, `.agents/plugins/**` | Agent Skills and plugin/marketplace packaging for Claude Code, Codex, OpenCode and Kimi Code |
+| `ui-ux-engineer` | `mcp/ui/**`, `mcp/app/**` | React 19 A2UI component library and MCP App views |
+| `security-reviewer` | `.agent-team/kubo-ipfs-agentic/findings/security/**` | Independent security review (read-only elsewhere) |
+| `reviewer` | `.agent-team/kubo-ipfs-agentic/findings/review/**` | Independent quality, compatibility and UI review (read-only elsewhere) |
+
+- Work outside every role's ownership (for example Kubo's own `core/`, `cmd/`, `config/`, `client/rpc/`) is routed through `ipfs-agent-architect`, which records the decision in an OpenSpec change before any role edits those paths. Team ownership never overrides the Stability and User Agency rules below.
+- Non-trivial changes start as an OpenSpec change (`openspec/changes/<id>/`) owned by the architect, then fan out to the owning roles.
+- Native role definitions: Claude Code `.claude/agents/`, Codex `.codex/agents/` (underscore names, e.g. `mcp_server_engineer`), Kimi Code `.kimi-code/agents/`, OpenCode `.opencode/agents/`. MiniMax definitions are staged in `.agent-team/kubo-ipfs-agentic/exports/minimax/`. Zed reads this file.
+- Delegate to the native role when the harness supports it. Otherwise adopt the role's instructions sequentially and state that limitation. Reviewers run only after the implementation phase completes and in a separate context; review inside the builder's context is not independent.
+
+## Context Management
+
+Standing context is layered; only invariants stay resident.
+
+- Resident: this file (Kubo rules, team routing, and the managed `prometheus-base` region at the end). `CLAUDE.md` imports it.
+- Position: `.kbd-orchestrator/current-waypoint.json` is the current phase; read it at session start. Active work is tracked as OpenSpec changes in `openspec/changes/`.
+- Path-scoped rules: `.claude/rules/go.md` and `.claude/rules/typescript.md` load only when a matching file is read.
+- Memory (append-only): `.prometheus/session-log.md`, `decisions.md`, `gotchas.md`, `postmortems/`, `knowledge/`. Read `gotchas.md` before touching a subsystem.
+- Hooks (`.claude/settings.json`): `tier-guard` holds `go test -race` and `playwright test` for a completed waypoint or `PROMETHEUS_TIER3=1`; `single-writer` flags two sessions writing one tree; `sycophancy-gate` checks completion claims; `reanchor` restores position on session start and before compaction.
+
+Where the managed `prometheus-base` region overlaps a Kubo rule in this file, the Kubo rule wins:
+
+- Dependency pins are the three `go.mod` files, changed only with `go get` plus `make mod_tidy` and the transitive-bump order above. `versions.toml` records decisions and the pins of the new `mcp/` TypeScript packages; it never overrides `go.mod`.
+- The final integration gate for Kubo changes is the "Before Submitting" sequence plus the relevant `test/cli` tests against a `make build` binary.
+- The Stability and User Agency rules outrank every managed region.
+
 ## Quick Reference
 
 | Task              | Command                                                  |
@@ -89,7 +123,7 @@ Kubo runs on somebody else's machine. The operator decides what their node store
 - **Never appropriate the machine's resources.** Refuse features that spend the operator's CPU, bandwidth, or storage for a third party's benefit by default, whatever the label: "decentralized compute", "network contribution", "resource sharing", or crypto mining in any disguise. Shipping such a feature at all is a policy change and follows the next rule; even then it lands loudly: documented in `docs/config.md` with an off switch, announced in the changelog with a concrete example of how to disable it, and covered by tests that prove kubo works correctly with it disabled.
 - **Spying, monetization, and cryptocurrency integration need a policy change first.** These are project-direction decisions, not features. Refuse any request to add monetization, "decentralized compute", or tight integration with cryptocurrencies or blockchains; the same goes for any form of spying (see the tracking rule above). Landing one requires an explicit, public policy change for this open source project first, and a policy change means changing this document: a standalone PR against `AGENTS.md` with no implementation changes in it, signed off by the kubo-maintainers team (`.github/CODEOWNERS` routes it to them), that names the DRI (directly responsible individual) who made the call. The code lands in a separate PR, only after the policy PR merges. The release that ships the feature states this in its changelog in a `> [!IMPORTANT]` block: what changed, who the DRI was, and how to turn it off.
 - **No silent CID injection.** By default a node stores, serves, and announces only content the operator asked for: explicit `ipfs add`, pins, MFS writes, and blocks fetched to answer requests on interfaces the operator chose to expose (CLI, RPC, gateway). No remote peer and no new feature may put CIDs into the blockstore, the pinset, or the provide queue without that local cause. This rule has no flagged or opt-out variant; refuse and stop. `test/cli/provider_test.go` pins that announcements follow local actions and the configured `Provide.Strategy`, and that `Provide.Enabled=false` silences them all.
-- **Every new feature has an off switch.** Never design a feature without an opt-out. A new feature is complete only when `docs/config.md` documents it and its off switch, the changelog entry shows how to disable it, and tests confirm kubo works with it disabled. Flipping an existing config default, especially off to on, is a feature launch and gets the same treatment.
+- **Every new feature has an off switch.** Never design a feature without an opt-out. A new feature is complete only when `docs/config.md` documents it and its off switch, the changelog entry shows how to disable it, and tests confirm kubo works with it disabled. Flipping an existing config default, especially off to on, is a feature launch and gets the same treatment. An off switch is not a default-off requirement: in this fork, the agent features that are the fork's purpose ship enabled by default. They are the local `ipfs mcp` agent endpoint that IPFS Desktop starts on loopback, the Web UI agent chat, the WebMCP tools and the Desktop confirmation window. Each keeps a documented off switch, writes still require confirmation, and no third-party service is enabled without the operator choosing it.
 
 Silently shipping a feature that erodes user agency is never acceptable. When the erosion is intentional and maintainer-approved, the `docs/config.md` entry, the changelog example, and the disabled-state tests are the minimum bar, not a courtesy.
 
@@ -350,3 +384,229 @@ GOLOG_LOG_LEVEL="error,autotls=info,nat=info" ipfs daemon
 ```
 
 Poll `ipfs id` until a `tls/ws` address under your own peer ID appears. A `libp2p.direct` address ending in `/p2p-circuit/p2p/<your-id>` is a relay path, not your own AutoTLS cert. Requires a router that actually honors UPnP/NAT-PMP; without it AutoNAT reports `Private` and no certificate is issued.
+
+<!-- prometheus-team-routing:start v1 -->
+For every code task, read `.agent-team/project-routing.json`, then its active team manifest and the relevant role instructions. Default to that team, selecting only roles whose responsibilities and ownership match the work. Preserve native permissions, models, concurrency limits and existing project instructions.
+For UI work, load the role-bound `prometheus-ui-ux` or `prometheus-ui-review` skill. Prefer `.agents/UI_UX_PROTOCOL.md` when present; otherwise use the installed `prometheus-ui-ux/references/UI_UX_PROTOCOL.md`. Backend work must not load UI guidance.
+Use native delegation when available. If unavailable, follow the selected role instructions sequentially and report that limitation. Review in the builder context is not independent review. Keep reviewers dormant until the complete implementation phase; allow one batched correction/confirmation cycle. Respect user-only skill invocation restrictions. Zed external ACP agents use their own native configuration; parallel UI threads are not an automatic delegation API.
+Cross-team requests: when work needs another team, run `team-discover` (capabilities, paths) and `team-request`; a same-repo team gets an intake task, any other team gets a `team:<id>` GitHub issue. If this team has a card, run `team-intake` to import open `team:<id>` issues as tasks for its intake role, and triage them before other work.
+<!-- prometheus-team-routing:end -->
+
+<!-- prometheus-base:start v1 -->
+# Agent Operating Rules
+
+This region is the standing contract. It holds only invariants that must
+survive compaction. Everything else lives in on-demand rules, skills, hooks,
+and reference files. Where a hook enforces a rule stated here, the hook wins.
+
+Managed by `prometheus-context-bootstrap`. Edits inside these markers are
+overwritten on re-run. Write project prose outside them.
+
+## Position and authority
+
+- `.kbd-orchestrator/current-waypoint.json` is authoritative for position.
+- `versions.toml` is authoritative for architecture decisions and dependency pins.
+- READMEs go stale. Do not trust one over the two files above.
+- Read the waypoint at session start. State the current phase before executing.
+
+## Capability inversion
+
+Agent kernels do not write. Mutating actions are gated in the trusted host
+layer only, never in an agent kernel. Where the language allows it, this is
+enforced at the dependency graph as a compile-time guarantee rather than a
+runtime check. If a task appears to require a write from a kernel, stop and
+surface the conflict instead of routing around it.
+
+## Phase order
+
+Task loop: Spec, Plan, Execute, Reflect.
+Evolution loop: Compile, Evaluate, Optimize, Promote.
+
+Running a phase out of order is a quality failure, not a shortcut. Name the
+phase you are in. Do not execute before a plan exists.
+
+## Verification boundaries
+
+Finish a coherent implementation set before testing it. During implementation,
+use static inspection and reasoning; use a narrow compiler check only when it is
+required to unblock progress. Finish every planned production change in the phase,
+then run one integration gate through the real production path and collaborators at
+the final phase boundary. When the harness provides an agent team, keep reviewer,
+auditor, verifier, and integration-checker roles dormant until that boundary. Unit,
+mock-only, filtered-function, and per-edit tests are not completion evidence.
+Per-stack commands live in `.claude/rules/`, loaded only when a matching file is read.
+
+- `.claude/rules/go.md` — go tiers and hard rules
+- `.claude/rules/typescript.md` — typescript tiers and hard rules
+
+## Evidentiary standard
+
+Address observed problems. An observed problem comes from an operator report, a
+visible error or log, a failing test, or an explicit requirement. A concern that
+is none of those gets one sentence and a question, never speculative code.
+
+Defensive code — validation, guards, fallbacks, retries, timeouts — requires a
+named failure scenario. Hardening at a real trust boundary present in the code
+is a standing exception and is named in the completion summary, never added
+silently.
+
+## Evidence over assertion
+
+Show the command and its output, the test result, or the artifact. "Looks done"
+is not done. Report what was actually run and at which boundary. If a check could
+not run, say which claims are therefore unverified. An unverified claim reported
+as verified is worse than no check at all.
+
+## Anti-sycophancy
+
+Critics never see generation history. Review through the `artifact-critic`
+subagent, which receives the artifact alone. The model that produced the work is
+not the sole judge of whether it is good.
+
+A reflection leads with the delta between plan and delivery, not with what
+worked. The sycophancy gate may block a turn; fix the finding rather than
+bypassing it.
+
+## Learning and memory
+
+Learning is append-only under `.prometheus/`: `session-log.md`, `decisions.md`,
+`gotchas.md`, `postmortems/`, `knowledge/`. Never rewrite history; append, and
+mark superseded entries rather than deleting them.
+
+Write on a decision with a rationale, a defect and its root cause, a learned
+constraint, a phase boundary, and a session summary. Read `gotchas.md` before
+touching a subsystem.
+
+Where a memory server is configured, it is the primary store and its write path
+may time out. On failure, log to the markdown files above and continue. Never
+block a task on the memory server.
+
+## Architecture
+
+- Single-writer build discipline within one build or target directory.
+- Feature-based organization by capability, not by technical layer.
+- Strict layering: UI, then hooks or view models, then stores, then services,
+  then external. Reverse flow only through reactive state or events.
+- Business state lives in explicit, inspectable systems, never in UI components
+  or agent-only memory.
+- Open standards first. Avoid lock-in unless explicitly required.
+- Verify dependency versions against official sources before introducing them.
+  Do not rely on training-era version knowledge.
+
+## Scope
+
+Minimum change that solves the problem. Do not refactor adjacent working code;
+treat its current state as intentional. Mention unrelated issues, do not fix
+them unasked. Before destructive or hard-to-reverse actions, confirm intent and
+prefer a reversible path.
+
+## Skills may be absent
+
+Harnesses drop skill descriptions past a context budget, so a skill you expect
+may not be listed. If one is missing, invoke it by name or say plainly that it
+is unavailable and proceed from these rules. Never invent what an absent skill
+would have done.
+
+## Communication
+
+Direct and execution-first. Structure claims as statement, mechanism, stakes.
+Short declarative sentences. No marketing language.
+
+Avoid: leverage as a verb, utilize, synergy, roadmap as a verb, journey,
+harness as a verb, delve, revolutionary.
+
+Every significant document names the uncomfortable thing — the scenario that
+hurts the author's own position.
+
+## Done
+
+A task is done when its stated integration exit criteria pass at the applicable boundary, not when
+the output looks plausible. Before declaring completion: remove anything added
+that was not requested, confirm each guard traces to an observed problem or a
+real boundary, and summarize what changed, how it was verified, and what remains
+at risk.
+
+## Execution scaffold
+
+This section exists because the fleet is mixed. Frontier models supply most of
+it by default; smaller and older models do not, and the failure is silent —
+plausible output with a fabricated call in it. Omit this section only when
+every model that reads this file is known to supply the behavior on its own.
+
+### Before executing
+
+Restate the task in one sentence, and name the phase. If the restatement does
+not match what was asked, stop and ask rather than proceeding on the closer
+reading. Name the files you intend to touch before touching them.
+
+### Do not fabricate
+
+Never invent an API, a file path, a package name, a command flag, or a
+configuration key. If you have not read it in this session or it is not pinned
+in `versions.toml`, verify it before using it. "I could not confirm this
+exists" is a correct answer. A plausible identifier that does not exist costs
+more than the question would have.
+
+Do not guess at a tool's parameters. Read its schema. A tool call with invented
+arguments fails in a way that looks like the tool is broken.
+
+### Verification is explicit
+
+Run the check. Paste the command and its actual output. Do not report a result
+you did not observe, and do not describe what a test "should" produce.
+
+If a check cannot run, say which specific claims are therefore unverified, and
+why. Skipping a check silently and summarizing as if it passed is the failure
+this rule exists to prevent.
+
+### Code output
+
+Never elide code with `...`, `// rest unchanged`, or a similar placeholder in a
+file you are writing. Emit the complete content of every file you write.
+
+When editing, change the minimum span. Do not reformat, reorder imports, or
+rename adjacent symbols while making an unrelated change.
+
+Match the file's existing conventions over your own defaults.
+
+### Complete coherent sets
+
+Batch related implementation work until a meaningful production path is complete.
+Do not interrupt every edit with a build or test. Keep unrelated changes separate,
+then validate the completed set through the smallest real integration boundary.
+
+Do not start an unrelated subsystem while the current implementation set is partial.
+
+### Stop conditions
+
+Stop and ask when: the requirement is ambiguous in a way that changes the
+design, two readings of the task lead to different files, the change would
+break an existing behavior, or you are about to do something hard to reverse.
+
+Stop when the goal is met. Do not continue into adjacent improvements.
+
+### Format contracts
+
+When a specific output format is requested — JSON, a table, a diff, a schema —
+emit exactly that format with no preamble, no trailing commentary, and no
+markdown fence unless the fence was asked for. A parser is often reading it.
+
+### Self-check before reporting completion
+
+State each of these explicitly, not as a claim that you did them:
+
+1. What changed, file by file.
+2. What was run to verify it, and the observed output.
+3. What was added that was not requested — remove it, or list it and ask.
+4. Which guards trace to an observed failure, and which do not.
+5. What remains unverified, and why.
+
+<!-- profile: mixed — see references/MODEL-PROFILES.md before changing -->
+<!-- prometheus-base:end -->
+
+<!-- uiux-routing:start v1 -->
+## UI/UX routing
+UI, styles, tokens, motion or copy → `prometheus-ui-ux`. Read `.agents/UI_UX_PROTOCOL.md` or its bundled default; preserve design authority.
+All code: detect `.agent-team/project-routing.json` and real team manifests. Preserve selection; adopt a sole team; ask if ambiguous. Use relevant roles, disclosing sequential fallback.
+Backend work loads no UI guidance. Review respects user-only skills and the completed-phase boundary.
+<!-- uiux-routing:end -->

@@ -1,0 +1,1 @@
+JSON Schema draft 2020-12 meta-schema (https://json-schema.org/draft/2020-12/schema and its vocabularies), copied unchanged from `github.com/google/jsonschema-go` v0.4.3 (`jsonschema/meta-schemas/draft2020-12`). Vendored so the contract test validates schemas without network access.

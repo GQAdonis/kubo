@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "egress_not_acknowledged",
+    "message": "ipfs_cat returns node content and principal a2a-peer has no egress_ack.",
+    "retryable": false,
+    "tool": "ipfs_cat",
+    "details": { "principal": "a2a-peer" }
+  }
+}

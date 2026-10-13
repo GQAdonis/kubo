@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dag_stat output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "dags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cid",
+          "size",
+          "num_blocks"
+        ],
+        "properties": {
+          "cid": {
+            "$ref": "../common.json#/$defs/Cid"
+          },
+          "size": {
+            "$ref": "../common.json#/$defs/ByteCount"
+          },
+          "num_blocks": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "total_size": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "unique_blocks": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "shared_size": {
+      "$ref": "../common.json#/$defs/ByteCount"
+    },
+    "ratio": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "dags",
+    "total_size",
+    "unique_blocks"
+  ]
+}

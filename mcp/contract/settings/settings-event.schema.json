@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp agent settings: change event",
+  "description": "Payload (the SSE data field) of the settings change stream (mcp-agent-settings-api 1.5). The event carries only the new revision; subscribers re-read the settings route to fetch the new state. It never carries settings values or key material.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "revision"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "type": {
+      "const": "settings_changed",
+      "description": "Event discriminator. The only event kind on this stream."
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "The new settings revision, equal to the ETag a subsequent GET returns."
+    }
+  }
+}

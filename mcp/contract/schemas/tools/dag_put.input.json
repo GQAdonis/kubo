@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dag_put input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1048576,
+      "description": "The node as dag-json text."
+    },
+    "store_codec": {
+      "type": "string",
+      "enum": [
+        "dag-cbor",
+        "dag-json"
+      ],
+      "default": "dag-cbor"
+    },
+    "pin": {
+      "type": "boolean",
+      "description": "Pin the stored node. Required and explicit."
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "data",
+    "pin"
+  ]
+}

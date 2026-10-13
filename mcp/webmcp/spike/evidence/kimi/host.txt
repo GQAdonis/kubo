@@ -1,0 +1,8 @@
+Host: Kimi desktop app (Kimi.app, bundle com.moonshot.kimichat), version 3.2.15, Work mode with the built-in browser panel. The runbook names Kimi Code Desktop; this is the Kimi desktop app installed on the operator's machine.
+Model: Kimi K3, permission mode "Fully automatic"
+Surface: built-in browser (right panel); the agent opened the URL itself with its InAppBrowser tool. The address bar shows a "WebMCP" badge next to the host.
+OS: macOS 26.7.1 (arm64)
+Date: 2026-10-12 (page loaded 13:32:55Z, echo called 13:34:02Z)
+Account plan: "Vivace" badge shown next to the account name
+Driven by: Claude Code via the KimiCU desktop-control MCP (screenshots unedited), in a new task, not an existing session
+Result: GO with a caveat. Criteria 1-3 met (document.modelContext present; echo registered; agent called echo once, call count stayed 1). Criterion 4: the first answer printed the nonce as "<untrusted>" (the host masks tool output it treats as untrusted); after one follow-up prompt asking to quote the value from the tool result and not from the page, the agent quoted WMCP-VW8X-8RS4-52FQ and stated it came from the tool's returned output. navigator.modelContext is also present (deprecated, evidence only). The tool call carried no AbortSignal (hadSignal false).

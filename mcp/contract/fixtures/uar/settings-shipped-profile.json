@@ -1,0 +1,12 @@
+{
+  "$schema": "../../agentic/uar-effective-settings.schema.json",
+  "revision": "rev-profile-1",
+  "llm": { "model": "ollama/qwen3", "provider_host": "127.0.0.1:11434" },
+  "knowledge_base_embedder": { "model": "bge-m3", "provider_host": "local" },
+  "memory_embedder": { "provider_host": "disabled" },
+  "governance": { "enabled": true, "tool_approval": "required" },
+  "native_tools": { "terminal_exec_enabled": false, "shell_tools": [] },
+  "mcp_servers": [
+    { "name": "ipfs", "transport": "http", "url": "http://127.0.0.1:5050/mcp" }
+  ]
+}

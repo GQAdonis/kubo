@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp agent settings: error shape",
+  "description": "Error body of the settings route and its test-connection and model-list endpoints. code is the stable machine-readable code; the set below is closed and grows only by a contract change, so clients can switch on it. HTTP statuses: backend_not_configured 503 (no backend is configured; also the /agui answer with no backend), revision_conflict 412 (missing or stale If-Match revision), egress_confirmation_required 409 (the write would change the model host without a matching egress_confirmation), secrets_not_accepted 403 (a secret field was sent while agent.settings.accept_secrets is false). Authentication and route-absent failures (401, 404) are HTTP-level and are not this document.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "backend_not_configured",
+            "revision_conflict",
+            "egress_confirmation_required",
+            "secrets_not_accepted"
+          ],
+          "description": "Stable machine-readable code. backend_not_configured: no backend configured (503). revision_conflict: missing or stale If-Match (412). egress_confirmation_required: the write changes the model host without a matching egress_confirmation (409). secrets_not_accepted: a secret field was sent while accept_secrets is false (403)."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Human-readable message. Never includes credentials or key material."
+        },
+        "details": {
+          "type": "object",
+          "description": "Code-specific data, for example the current revision for revision_conflict or the unconfirmed host for egress_confirmation_required. Never includes credentials or key material."
+        }
+      }
+    }
+  }
+}

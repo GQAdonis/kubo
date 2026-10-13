@@ -1,0 +1,18 @@
+{
+  "name": "ipfs",
+  "displayName": "IPFS (Kubo MCP)",
+  "version": "0.1.0",
+  "description": "Eight IPFS skills and the Kubo 'ipfs mcp' server: publish, retrieve and verify content, manage pins, IPNS names, MFS and DAGs, and troubleshoot a node. Launches 'ipfs mcp' from PATH against your own node; writes and destructive tools need human confirmation.",
+  "author": {
+    "name": "Kubo MCP contributors"
+  },
+  "license": "Apache-2.0 OR MIT",
+  "keywords": [
+    "ipfs",
+    "kubo",
+    "mcp",
+    "content-addressing",
+    "ipns",
+    "pinning"
+  ]
+}

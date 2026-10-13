@@ -1,0 +1,6 @@
+{
+  "http": {
+    "enabled": true,
+    "listen": "/ip4/127.0.0.1/tcp/11434"
+  }
+}

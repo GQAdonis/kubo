@@ -1,0 +1,50 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Destructive tool from the ui principal: repo_gc interrupts with requires_native_prompt true, so the native system prompt decides: the chat surface shows no approve control and may only deny. The responseSchema accepts {approved: false} (deny) or {wait: true}, which opens a run that reports the system prompt's outcome (destructive-native-prompt-wait-*.json).",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-gc-1",
+    "runId": "run-1",
+    "messages": [{ "id": "msg-u1", "role": "user", "content": "Free some space." }],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-gc-1", "runId": "run-1" },
+    { "type": "TOOL_CALL_START", "toolCallId": "tc-3", "toolCallName": "repo_gc", "parentMessageId": "msg-a1" },
+    { "type": "TOOL_CALL_ARGS", "toolCallId": "tc-3", "delta": "{}" },
+    { "type": "TOOL_CALL_END", "toolCallId": "tc-3" },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        { "id": "msg-u1", "role": "user", "content": "Free some space." },
+        { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-3", "type": "function", "function": { "name": "repo_gc", "arguments": "{}" } }] }
+      ]
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "thread-gc-1",
+      "runId": "run-1",
+      "outcome": {
+        "type": "interrupt",
+        "interrupts": [
+          {
+            "id": "int-cf_Ui7dEstrUct1veXy",
+            "reason": "tool_call",
+            "message": "Run garbage collection on the repo. Confirm in the system prompt; you can deny here.",
+            "toolCallId": "tc-3",
+            "responseSchema": {
+              "oneOf": [
+                { "type": "object", "additionalProperties": false, "properties": { "approved": { "const": false } }, "required": ["approved"] },
+                { "type": "object", "additionalProperties": false, "properties": { "wait": { "const": true } }, "required": ["wait"] }
+              ]
+            },
+            "expiresAt": "2026-10-09T12:02:00Z",
+            "metadata": { "ipfs-mcp": { "confirmation_id": "cf_Ui7dEstrUct1veXy", "tool": "repo_gc", "class": "destructive", "requires_native_prompt": true } }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_write input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    },
+    "content": {
+      "type": "string",
+      "maxLength": 1398104,
+      "description": "New file content. Decoded size cap is 1048576 bytes."
+    },
+    "encoding": {
+      "$ref": "../common.json#/$defs/Encoding",
+      "default": "utf8"
+    },
+    "parents": {
+      "type": "boolean",
+      "default": false,
+      "description": "Create missing parent directories."
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "path",
+    "content"
+  ]
+}

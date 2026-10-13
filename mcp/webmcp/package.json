@@ -1,0 +1,44 @@
+{
+  "name": "@gqadonis/ipfs-webmcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-free WebMCP tool definitions and kubo-rpc-client executors generated from mcp/contract. No React dependency. Destructive tools are never exported.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "gen": "node scripts/gen-tools.mjs",
+    "gen:check": "node scripts/gen-tools.mjs --check",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "pnpm clean && tsc -p tsconfig.build.json",
+    "test": "vitest run --exclude tests/integration",
+    "test:integration": "vitest run tests/integration",
+    "check": "pnpm gen:check && pnpm typecheck && pnpm test && pnpm build && pnpm test:integration"
+  },
+  "dependencies": {
+    "multiformats": "13.4.0"
+  },
+  "peerDependencies": {
+    "kubo-rpc-client": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "kubo-rpc-client": "6.1.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

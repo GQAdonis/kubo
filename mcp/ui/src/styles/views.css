@@ -1,0 +1,148 @@
+/* View-specific rules: the approval panel (PolicyDecision pattern) and the IPLD tree. */
+
+/* ---- Approval panel ---- */
+.iu-approval {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--text);
+}
+
+.iu-approval__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.iu-approval__title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.iu-approval__status {
+  max-width: 66ch;
+}
+
+.iu-approval__meta {
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.iu-approval__meta > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+
+.iu-approval__meta dt {
+  min-width: 7.5rem;
+}
+
+.iu-approval__meta dd {
+  min-width: 0;
+  color: var(--text);
+}
+
+.iu-approval__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* The states differ by the word and the tint, never by color alone. */
+.iu-approval--approved {
+  background: var(--ok-tint);
+}
+.iu-approval--denied,
+.iu-approval--expired {
+  background: var(--err-tint);
+}
+.iu-approval--pending,
+.iu-approval--waiting_system_prompt {
+  background: var(--raised);
+}
+
+.iu-approval--approved .iu-approval__meta,
+.iu-approval--denied .iu-approval__meta,
+.iu-approval--expired .iu-approval__meta {
+  color: var(--text);
+}
+
+.iu-approval--approved .iu-badge,
+.iu-approval--denied .iu-badge,
+.iu-approval--expired .iu-badge {
+  background: var(--surface);
+}
+
+/* ---- IPLD tree ---- */
+.iu-json {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--iu-text-code);
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+.iu-json__group > summary {
+  cursor: pointer;
+  list-style: none;
+  /* Block flow, not flex: flex would collapse the space between the key and its type. */
+  min-block-size: 24px; /* WCAG 2.2 2.5.8 */
+  padding-block: 1px;
+  line-height: 22px;
+  border-radius: var(--radius-sm);
+}
+
+.iu-json__group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.iu-json__group > summary::before {
+  content: '\25B8';
+  display: inline-block;
+  width: 1.2em;
+  color: var(--text-muted);
+  transition: transform var(--iu-duration) var(--iu-ease);
+}
+
+.iu-json__group[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.iu-json__children {
+  margin-inline-start: 0.6em;
+  padding-inline-start: var(--space-3);
+}
+
+.iu-json__row {
+  padding-inline-start: 1.2em;
+}
+
+.iu-json__key {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.iu-json__str,
+.iu-json__num,
+.iu-json__bool {
+  color: var(--text);
+}
+
+.iu-json__null {
+  color: var(--text-muted);
+  font-style: italic;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "kubo-ipfs",
+  "description": "IPFS skills and the Kubo 'ipfs mcp' server for Claude Code",
+  "owner": {
+    "name": "Kubo MCP contributors"
+  },
+  "plugins": [
+    {
+      "name": "ipfs",
+      "source": "./mcp/plugin/ipfs",
+      "description": "Eight IPFS skills plus the 'ipfs mcp' stdio server, launched from PATH against your own Kubo node.",
+      "category": "development",
+      "tags": ["ipfs", "kubo", "mcp"]
+    }
+  ]
+}

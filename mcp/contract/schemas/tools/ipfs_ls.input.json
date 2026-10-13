@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_ls input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath"
+    },
+    "cursor": {
+      "$ref": "../common.json#/$defs/Cursor"
+    },
+    "limit": {
+      "$ref": "../common.json#/$defs/Limit"
+    }
+  },
+  "required": [
+    "path"
+  ]
+}

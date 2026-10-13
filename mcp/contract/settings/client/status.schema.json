@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.status / ipfsDesktop.agentSettings.status",
+  "description": "Messages of the SettingsClient.status() method (agent-settings-contract task 1.5). It reports transport and management state, not settings values: on the Desktop bridge (IPC channel ipfsDesktop.agentSettings.status) it is what lets the settings page show 'Managed by IPFS Desktop' with the running state and port (assessment-ui 5.5) and hide the manual endpoint and token fields; on HTTP it reports the cloud transport with no sidecar. It also carries the client-tracked applied record: the server applies synchronously and keeps no apply history, and the only history the UI shows is 'last applied by this browser/Desktop' (assessment-ui 5.3), so each SettingsClient implementation records the outcome of its own mutations.",
+  "$defs": {
+    "StatusRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Empty payload. The channel takes no arguments."
+    },
+    "StatusResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transport", "managed_by_desktop"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "transport": {
+          "type": "string",
+          "enum": ["http", "desktop-bridge"],
+          "description": "Which SettingsClient implementation answered. The provider (assessment-ui 5.6) is the only place that knows the transport; the page branches on managed_by_desktop, never on this value's string."
+        },
+        "managed_by_desktop": {
+          "type": "boolean",
+          "description": "True on the Desktop bridge: endpoint and secrets are managed in the main process, the manual endpoint and token fields are hidden, and the page shows 'Managed by IPFS Desktop' (assessment-ui 5.5). False on HTTP."
+        },
+        "endpoint": {
+          "type": "string",
+          "pattern": "^http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]{1,5})?(/[^\\s]*)?$",
+          "maxLength": 2048,
+          "description": "The loopback sidecar endpoint ('Local endpoint, managed by Desktop :PORT', assessment-ui 5.1 item 5). Present only on the Desktop bridge while the sidecar runs. Always loopback; the bridge never exposes a remote endpoint here."
+        },
+        "sidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["running"],
+          "properties": {
+            "running": {
+              "type": "boolean",
+              "description": "Whether the ipfs mcp sidecar process is running (desktop-mcp-sidecar 1.1)."
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "The loopback port the sidecar bound (desktop-mcp-sidecar 1.2: 5050 preferred, else a free loopback port, never a silent fallback). Present when running is true."
+            }
+          },
+          "description": "Sidecar state. Present only on the Desktop bridge. When the port changes the main process recreates the window (desktop-agent-settings-bridge 1.2), so the renderer never needs to re-read a stale endpoint."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The settings revision the implementation last observed, when it has read the settings route. Lets the page detect that a get() would return newer state."
+        },
+        "applied": { "$ref": "#/$defs/AppliedRecord" }
+      }
+    },
+    "AppliedRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "ok"],
+      "properties": {
+        "at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the last mutation through this client finished, mapping assessment-ui 5.2 applied.at."
+        },
+        "ok": {
+          "type": "boolean",
+          "description": "Whether that mutation applied cleanly, mapping applied.ok. On failure the previous settings stayed in effect ('Nothing was changed. The previous backend is still in use.', assessment-ui 5.3)."
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Why the last mutation failed when ok is false, mapping applied.error. Never includes credentials or key material."
+        }
+      },
+      "description": "The last apply attempted through this client, tracked by the implementation itself. Absent before the first mutation. The server deliberately keeps no apply history; this is the only history the UI shows (assessment-ui 5.3)."
+    }
+  }
+}

@@ -1,0 +1,8 @@
+- [CRITICAL] mcp/server/confirm/cli.go: The CLI prints untrusted confirmation text directly to the terminal, allowing control-sequence injection to disguise the operation being approved.
+- [CRITICAL] mcp/server/confirm/factor_polkit.go: The Linux native confirmation gate trusts PATH-selected executables to attest human authentication.
+- [CRITICAL] mcp/server/confirm/pairing.go: Replacing a pairing does not revoke the old key on running confirmation servers.
+- [WARNING] mcp/server/confirm/factor_macos.go: The macOS availability probe can block indefinitely even after the confirmation request is canceled.
+- [CRITICAL] mcp/server/confirm/pairing.go: A same-user process can forge the stored pairing verifier and authenticate as Desktop without knowing the original pairing key.
+- [CRITICAL] mcp/server/confirm/channel.go: Creating a second confirmation channel in the same process disconnects the first channel and can subsequently remove the second channel's socket.
+- [WARNING] mcp/server/confirm/cli.go: The CLI remains blocked reading terminal input after its context is canceled or the displayed confirmation expires.
+- Operator-pending adjudication: the same-user forged pairing verifier finding is proposed as accepted residual risk (same-user processes are outside the write-gate threat model; desktop is no longer a presence resolver), recorded in ADR-0003.

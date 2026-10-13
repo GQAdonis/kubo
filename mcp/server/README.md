@@ -1,0 +1,167 @@
+# mcp/server
+
+Go package `github.com/ipfs/kubo/mcp/server`: the IPFS MCP server behind `ipfs mcp`. It lives in the root module (no nested `go.mod`) and is wired from `cmd/ipfs/kubo/mcp*.go`. Decisions: [ADR-0001](../../docs/mcp/0001-mcp-server-placement.md) and [ADR-0003](../../docs/mcp/0003-confirmation-and-auth.md).
+
+## Rules
+
+- The server is a client of a running Kubo daemon. It reaches it only through `client/rpc` (`/api/v0`). It never opens the repo or takes `repo.lock`, imports no `core/` internals and has no offline mode.
+- Tools, schemas, annotations and the default selection come from the embedded [`mcp/contract`](../contract). `New` fails when a registered tool has no catalog entry.
+- On stdio, stdout carries only JSON-RPC. Logs go to stderr.
+- Tool failures are results with `isError: true` and a contract `ToolError` in `structuredContent`. Successes carry `structuredContent` plus the same JSON as a text block.
+
+## Layout
+
+| File | Purpose |
+|---|---|
+| `server.go` | `New`, `Options`, tool selection, `Run` and `RunStdio` |
+| `registry.go` | per-group registration (`registerGroup`), input validation, result building |
+| `daemon.go` | the `Daemon` interface, `RPCDaemon` over `client/rpc`, `Discover` |
+| `probe.go` | version gate and per-tool degradation from `/api/v0/commands` |
+| `errors.go` | error mapping to the contract `ErrorCode` list |
+| `tools_node.go` | `ipfs_node_info`, `ipfs_node_status` |
+| `tools_pin.go` | `pin_add`, `pin_ls`, `pin_verify`, `pin_update`, `pin_rm` |
+| `gate.go`, `elicit.go`, `broker.go`, `token.go`, `canonical.go`, `summary.go`, `principal.go` | the confirmation gate (ADR-0003) |
+| `index.go`, `index_lifecycle.go` | the `ipfs_index_*` tools, the post-add trigger and pin-aware deletion (see Search index) |
+| `pagination.go` | opaque cursors for list tools |
+| `agui.go`, `agui_wire.go`, `agui_stream.go`, `agui_resume.go` | the AG-UI endpoint `POST /agui` (`noagent` compiles it out); protocol sources in `agui/SOURCES.md` |
+| `principals.go`, `access.go`, `access_identity.go`, `egress.go`, `policy.go`, `uarcheck.go` | principal config rules, per-request policy, egress acknowledgement, the UAR preflight |
+
+To add a group, create `tools_<group>.go` with a factory and call `registerGroup` from its `init`. Handlers use `s.daemon.Call(ctx, "pin/ls", args, opts, &out)`; tests use a fake `Daemon`.
+
+## Daemon discovery
+
+`--api` (multiaddr or http(s) URL), then `$IPFS_PATH/api`, then `~/.ipfs/api`. `--api-auth` takes the same secret form as the rest of the CLI (`bearer:token`, `basic:user:pass`). The daemon must be at least the contract's `minKuboVersion` (0.29.0); pre-release suffixes are ignored. Tools whose RPC commands the daemon does not list are omitted and reported by `ipfs_node_status`. If the daemon refuses `commands`, every tool is kept.
+
+## Tool selection
+
+`--tools` takes group names and the selector `destructive`. Default: every group in the contract, without destructive tools. Naming only `destructive` adds destructive tools to the default groups. `--read-only` keeps class `none`.
+
+## Streamable HTTP and authentication
+
+`ipfs mcp --http` serves MCP over HTTP instead of stdio. It is off by default; with it off no TCP listener is opened.
+
+| Setting | Default | Override | Off switch |
+| --- | --- | --- | --- |
+| listen address | `127.0.0.1:5050` | `--http=<addr>`, `IPFS_MCP_HTTP_LISTEN`, config `http.listen` | omit `--http` |
+| allowed browser origins | none (all cross-origin requests get 403) | config `http.allowed_origins` | leave empty |
+| body limit | 4 MiB | config `http.max_body_bytes` | always enforced |
+| idle session timeout | 30m | config `http.session_timeout` | always enforced |
+
+- **Addresses.** `host:port` or a `/ip4|/ip6|/dns*/<host>/tcp/<port>` multiaddr. The ports of other local services (4000, 4001, 5001, 8080, 1906-1908, 50051, 8181, 8081, 11434, 23001, 28000; the list in `listen.go` is checked against the contract schema) are rejected. A non-loopback address is refused unless a verifier is configured. Tests bind port 0.
+- **Requests.** Every route passes the same chain: Host must be loopback on a loopback listener (DNS rebinding, 403), an `Origin` must be the listener itself or allowlisted (403), cross-site browser fetches are refused unless the origin is allowlisted, the body is capped, and the bearer token is verified (401 without one). TLS is left to a reverse proxy.
+- **`AuthVerifier`** (`auth.go`) returns an `Identity` and an expiry; `TokenVerifier` adapts it to the SDK's `auth.TokenVerifier` and puts the identity in `TokenInfo.Extra` (and its ID in `UserID`, so the SDK refuses another principal's use of a session). A verifier may also return RFC 9728 protected-resource metadata; the server then serves it at `/.well-known/oauth-protected-resource` and advertises it in 401 responses. The static verifier has none. An Ory Hydra verifier is a second implementation of this interface; no route or tool handler changes.
+- **Static bearer tokens** come from an environment variable or an absolute file path (`SecretRef`), are kept as SHA-256 digests and compared in constant time against every credential. They are never literals: not on the command line, and not in the config file (the schema rejects them, and error messages redact them). `--auth-token-env NAME` / `--auth-token-file PATH` define the operator principal (read every group, write every group; destructive only if `destructive` is in `--tools`). `--mcp-config FILE` (or `IPFS_MCP_CONFIG`; the flag wins; the root `--config`, which names the Kubo repo config, is not read) defines named principals validated against `mcp/contract/config`.
+- **Principals** are read-only until a group is granted by name: `groups` (read-class tools, default `["*"]`), `write_groups` and `destructive_groups` (both default empty). Scopes follow: `ipfs:read`, `ipfs:write`, `ipfs:admin`. `tools/list` shows only what the principal may call and a call outside its grants is `permission_denied` before any handler runs. A grant of `destructive_groups` makes the server register destructive tools; without one they stay off. With no credential at all, a loopback listener serves the read-only tools to an anonymous principal.
+- **Confirmation** works as on stdio. The session ID is the MCP session, so a confirm token from one HTTP session is refused in another and for another principal.
+- **Routes.** `/mcp` is served here. `HTTPServer.Mount` (the `RouteMounter` interface) adds more behind the same chain; later changes register with `RegisterRouteProvider` for `/agui`, `/a2a` and the public `/.well-known/agent-card.json`. Principal kinds are scoped per route (`human-mcp`, `ui`, `uar` on `/mcp`; `ui` on `/agui`; `a2a` on `/a2a`), so one protocol's token does not open another's route.
+- **`ipfs mcp --print-rpc-allowed-paths`** prints an `API.Authorizations` entry whose `AllowedPaths` are the full RPC paths (from the contract's `rpc` lists, plus `version` and `commands`) of the tools selected by `--tools`, `--read-only` and config `tools.disabled`. Kubo matches `AllowedPaths` by string prefix, so a shorter path grants more than it appears to. Use the entry's secret with `--api-auth`.
+
+## Confirmation gate
+
+Every tool of class `write` or `destructive` passes the gate in `registry.go` before its handler runs (ADR-0003). Nothing runs silently, on any transport.
+
+1. **Elicitation.** If the client advertised it, the first handler call returns an input-required result (SEP-2322 multi round trip) holding the elicitation request, and a signed request state. The SDK obtains the answer and calls the handler again. Only `accept` with `confirm: true` runs the call. Works on every protocol version.
+2. **External resolution.** For a client that cannot elicit, the call becomes a pending confirmation in the `Broker` (pending, then approved, denied or expired; approved then executed exactly once). `Options.Resolvers` are the human-presence mechanisms (`Resolver` interface) that call back with the decision; later changes add the native prompt, the Desktop window and the AG-UI interrupt. The result is `confirmation_required` with the confirmation ID, summary and resolver names. A repeat of the identical call from the same session and principal reports `confirmation_pending` and never approves; once approved it runs exactly once.
+3. **No resolver.** The call is refused with `confirmation_unavailable`.
+
+Two signed handles exist, and they are kept apart (domain separation):
+
+| Handle | Used for | Accepted when |
+| --- | --- | --- |
+| `confirm_token` (`use: confirm_token`) | the repeat call after external resolution | the confirmation was opened by the `external` mechanism and is already `approved` |
+| `requestState` (`use: request_state`) | the elicitation retry (`InputRetry`) | the session advertised elicitation, the confirmation was opened by the `elicitation` mechanism and is still `pending`, and the answer is `accept` with `confirm: true` |
+
+Both are HMAC-SHA256 over session, principal, tool, canonical arguments (RFC 8785), expiry and a single-use nonce, 120 seconds. Each use has its own key (derived from one per-process random key) and its claims carry a `use` field the verifier checks, so a confirm token is never a request state and a request state is never a confirm token: a session that holds a confirm token cannot present it as a request state next to a forged `inputResponses` answer to approve its own call. Neither handle is consent. The confirm token is issued only to principals that can use it (not `a2a` or `uar`); pending, denied, expired and executed confirmations reject it. Each pending confirmation records the mechanism that opened it, and `Broker.Resolve` refuses the `elicitation` resolver for a confirmation opened any other way. Principals reach the gate through `WithPrincipal`; stdio runs as `LocalPrincipal`.
+
+A destructive call from the `ui` principal sets `requires_native_prompt` in `ConfirmationRequired`; `agui-interrupt` is then not listed in `resolvers` (the chat may deny, never approve). With no other resolver configured the call is refused with `confirmation_unavailable`.
+
+Destructive tools (`pin_update`, `pin_rm`, `mfs_rm`, `key_rm`, `repo_gc`) are registered only when `destructive` is named in `--tools`; once enabled they are still confirmed. `ipfs_node_status` reports one left out as `destructive_disabled` (precedence: `read_only`, `group_disabled`, `destructive_disabled`).
+
+## Principal enforcement, egress and check-uar
+
+Change `mcp-agent-principal-enforcement` (ADR-0004). It lives in `ipfs mcp` only: no daemon, `config/` or `/api/v0` change, and nothing is contacted unless the config names it.
+
+| Piece | File | Behavior | Off switch |
+| --- | --- | --- | --- |
+| Configured principals | `config.go`, `principals.go`, `access.go` | Kinds `human-mcp`, `ui`, `a2a`, `uar`; read-only until groups are granted by name. A token that maps to no principal is 401. The name `operator` is reserved; `uar` needs a `uar` block; `check: assert` is valid only for `uar`. | Remove the principal or its credential. |
+| Egress acknowledgement | `egress.go` | A configured principal needs `egress_ack` for every `contentEgress` tool; an empty list refuses with `egress_not_acknowledged` (`details.reason`: `no_egress_ack`). For `ui` and `a2a` the hosts of the `llm`, `embeddings.embedder` and `embeddings.remote` sections must also be covered (`backend_host_not_acknowledged`, `details.missing_hosts`). `"local"` covers loopback hosts only; a named host covers any port unless the entry has one. The refusal comes before argument validation and before any daemon call. | An `egress_ack` that names the hosts. |
+| `check-uar` | `uarcheck.go`, `policy.go` | See below. | No `uar` block: no connection. |
+| Shell-capable refusal | `policy.go` | With the `cli` resolver on, every HTTP identity with write or destructive grants needs `shell_capable: false`; otherwise those grants are withdrawn (`permission_denied`, `details.reason` `shell_capable_unasserted`). The `--auth-token-*` operator identity has no such assertion and no exemption, so it loses writes under `--confirm=cli` too; the refusal and the startup message name the supported path, a `human-mcp` principal with `write_groups` and `shell_capable: false`. Stdio is untouched. | `--confirm` without `cli`. |
+| Stdio guard | `egress.go` | A session whose MCP `clientInfo` name or title says UAR (word `uar`, or `universal agent runtime`) and is not a configured `uar` principal is refused `contentEgress` tools (`details.reason` `client_identifies_as_uar`). `clientInfo` is self-reported: a misconfiguration guard, not a security boundary. | None; use a configured `uar` principal. |
+
+`requires_native_prompt` is satisfied only by presence resolvers (`gate.go`, `IsPresenceResolver`); `cli` never satisfies it.
+
+**check-uar.** `Server` runs `UARChecker` for each `uar` principal at startup (printed to stderr), at every session `initialize` (always fresh) and, for open sessions, once the verdict is older than the contract's `recheckInterval` (`mcp/contract/agentic/uar-preflight.json`, 30 seconds). The same engine backs `ipfs mcp check-uar [<url>] [--principal NAME]`, which exits non-zero unless the verdict is `ok`. It contacts only the card URL the operator passes or configures and the settings path pinned in `uar-preflight.json` under the same base; redirects and proxies are not followed. The minimum version, settings path and recheck interval are read through `contract.LoadUARPreflight()`; the server holds no copy (ADR-0007). Tests inject a path with `WithSettingsPath`, never as a default. A settings response is validated against `agentic/uar-effective-settings.schema.json`; one that does not validate (including the per-key record array UAR serves today) is unreadable. Findings:
+
+- `refuse` disables that principal only (initialize fails with a JSON-RPC error, an open session gets `permission_denied` with `details.reason` `uar_check_failed`): the card is unreadable, the version is not a published release (`x.y.z` only, no pre-release or build suffix), is below the minimum (`uar.min_version`, else the contract's `minVersion`; with neither set the check refuses `min_version_not_set`), an unauthenticated settings request is not 401/403, a chat model or embedder is remote (not `local`, `disabled` or loopback) and not in `egress_ack`, or the settings are unreadable and the principal is not `check: assert`. While the contract's `settingsPath` is `null` nothing is read or probed: `check: verify` refuses with `settings_unreadable` and `auth_probe_inconclusive`; `check: assert` reports both as info and the version check still runs.
+- `read_only` withdraws write and destructive grants: governance not enabled, `terminal_exec` enabled or a non-empty `native_tools.shell_tools`, any MCP server besides this `ipfs mcp` (`/mcp` on its bound address), or the tool inventory not exposed by the settings API.
+- `check: assert` waives only what the settings API does not expose (and prints the assertion at startup for each `uar` principal); whatever it returns is still verified. It never waives the card, version or auth probe.
+- The admin credential comes from the env var or file named in `uar.admin_credential`, is sent only over https or to a loopback host, and is never printed or logged.
+
+The verdicts promised in `mcp/contract/fixtures/uar/README.md` are asserted in `uarsettings_test.go`; the fixtures in `testdata/uar/` are synthetic. A different shape reads as unreadable settings and fails closed. The admin credential is `Authorization: Bearer`, which is the CONFORMANCE item 8 acceptance check, not what UAR serves today (`x-uar-admin-key`).
+
+**MCP App views.** `tools.app_views` (default `true`; `--no-app-views`) false registers no `ui://` resource and puts no `_meta.ui` on any tool; tools are otherwise unchanged. With views on, a view is served only while at least one of its linked tools is registered.
+
+## Agent backend and tool loop
+
+Change `mcp-llm-proxy-loop` (ADR-0004, tasks 1.1 to 1.6). Everything here is compiled out by the `noagent` build tag (`make build GOTAGS=noagent`) and by `nomcp`; in a `noagent` build the `--llm-*` flags do not exist and an `llm` section in `--mcp-config` is refused.
+
+| Piece | File | Behavior | Off switch |
+| --- | --- | --- | --- |
+| Backend configuration | `agent_settings.go`, `principals.go` | `--llm-base-url`, `--llm-model`, `--llm-api-key-env NAME`, `--llm-api-key-file /abs/path`, or `llm` in `--mcp-config` (flags win). No default endpoint or model; naming only one of them is an error. A literal key is rejected: the config schema accepts only `{"env": ...}` or `{"file": ...}`, the env flag must look like a variable name, and no error echoes a key. The base URL may not carry credentials, a query or a fragment, and a key is never sent over plain `http` to a non-loopback host. | Leave `llm` and the flags unset: no client exists, nothing is dialed, no agent surface is mounted. |
+| Chat-completions client | `llm_client.go` | Standard library only. `stream: true` with `include_usage`, SSE parsing with split tool-call deltas assembled by index (and by id when a server sends no index), a non-streaming fallback, no redirects, response and line caps, per-request timeout (`llm.timeout`). Errors keep the status and a 200-character excerpt of the backend message, never the request. | Same. |
+| Egress | `agent.go` | A `contentEgress` tool result reaches the model only if the backend host is covered by the calling identity's `egress_ack`. This applies to every identity, configured or not, because the loop forwards the result itself. Otherwise the tool is not run and the model receives the contract `ToolError` with `Content not sent: <host> is not in egress_ack.` | An `egress_ack` that names the backend host (or `local` for loopback). |
+| Bounded loop | `agent.go` | `agent.loop` limits (steps 8, tokens 32768, wall clock 120s by default). Tools are the registered contract tools the identity may call; no shell, filesystem or network tool exists. At most 8 tool calls run per model reply. Tool results are capped at 64 KiB, and results that can carry third-party text are wrapped in `<untrusted-content>` with a system prompt that calls them data. Sessions are in memory only (64 sessions, 30 minute idle, owned by one principal). Logs carry outcome and counts, never content. | Limits always apply; the loop runs only when `llm` is configured. |
+| Confirmation | `agent.go`, `gate.go` | Write and destructive calls go through the same handler and confirmation gate as MCP `tools/call`. A call that needs a person ends the run with an `interrupt` (`Interrupt`, id `int-<confirmation id>`). `Resume` with `ResumeEntry` answers it. The loop never approves: a deny or cancel is recorded with the broker, and an approve only retries the call, which runs once if a human-presence resolver already approved it (a transport records that with `Server.ResolveConfirmation`). A denied, expired or unknown confirmation yields a denied result and never reaches RPC. The `confirm_token` property is removed from the schemas the model sees and ignored if sent. | `--confirm` resolvers off: writes are refused with `confirmation_unavailable`. |
+
+Use: `srv.EnableAgent(settings)` (nil settings leave the agent off), then `srv.Agent().Run(ctx, identity, RunInput{...}, emit)`. The AG-UI and A2A endpoints adapt `Event` and `RunResult`; the loop owns no transport.
+
+The loop announces a model reply once, as `EventReply` carrying all its tool calls in order, followed by one `EventToolCall` each, before any call runs. A call that waits behind an interrupt is therefore announced in the run that received the reply and never again. `Agent.OpenInterrupt(identity, sessionID)` returns a session's open interrupt to its owner only (`ErrSessionNotFound` for anyone else); a transport calls it, and matches the interrupt ID the client names, before it records any decision. `Server.AwaitConfirmation(ctx, id)` blocks until a confirmation is no longer pending and decides nothing.
+
+## AG-UI endpoint
+
+Change `mcp-agui-endpoint` (ADR-0004 and ADR-0005, with their Round 4 and Round 6 amendments). `POST /agui` on the `--http` listener takes a `RunAgentInput` and answers with AG-UI events over SSE (`data: <json>`). Hand-written types over `net/http`; events validate against the published `@ag-ui/core` 1.0.2 schemas (`agui/SOURCES.md`). It is compiled out by `noagent` and `nomcp`.
+
+| Piece | Behavior | Off switch |
+| --- | --- | --- |
+| Mounting | `--agui` (or `agent.agui` in `--mcp-config`) and a configured model backend and `--http`. Anything less: `/agui` answers 404 and no model is called. `--agui` without a backend or without `--http` prints that it is ignored. | Leave `--agui` unset (default), or build with `GOTAGS=noagent`. |
+| Auth | The listener's bearer verifier, path-scoped to principals of kind `ui`. Other kinds get 403, a missing or unknown token 401. | Same. |
+| Origins | Strictly `agent.origin_allowlist` (default empty): a request with any other `Origin`, including the listener's own and `http.allowed_origins`, gets 403 with no CORS headers. A listed origin gets the origin echoed (never `*`), `Access-Control-Allow-Methods: POST, OPTIONS`, `Access-Control-Allow-Headers: authorization, content-type`, `Vary: Origin`, and no credentials header. Requests without `Origin` (not browsers) need only the token. | Empty list. |
+| Threads | `threadId` is the loop's session ID. A new user message on an unknown thread creates the session for the calling principal; another principal's thread is 404. The server keeps the history (30 minutes idle, 64 sessions, 256 messages). Only the last input message is read and it must be a `user` message; client-supplied assistant and tool messages are ignored, so a client cannot forge tool results. Client `tools`, `context` and `state` are ignored. | |
+| Events | `RUN_STARTED`; text as `TEXT_MESSAGE_START/CONTENT/END`; at the end of each reply that asks for tools, `TOOL_CALL_START/ARGS/END` for every call in order, then `MESSAGES_SNAPSHOT` (the assistant message the calls name as parent); `TOOL_CALL_RESULT` per result; `RUN_FINISHED` with `outcome` `success` or `interrupt`. A limit (`max_steps`, `max_tokens`, `wall_clock`) is `RUN_ERROR` with the reason as `code`; a backend failure after the run began is `RUN_ERROR` with the HTTP status only, never the backend's text. Before the first event nothing is written, so a refusal is an HTTP status: 422 bad input, 413 too large, 404 unknown or foreign thread, 403 policy refusal, 409 busy, open interrupt or full session, 503 with `Retry-After` for too many sessions. | |
+| Interrupts | A write or destructive call ends the run with exactly one interrupt (`reason: tool_call`, `metadata["ipfs-mcp"]`). A write from the `ui` principal is approved by `resume: [{interruptId, status: "resolved", payload: {approved: true}}]`, which records `agui-interrupt` with `ResolveConfirmation` after the owner check (`Agent.OpenInterrupt`) and then resumes; `{approved: false}` and `cancelled` deny; expiry is denial and is reported as `confirmation_expired`. A destructive call (`requires_native_prompt`) is never approved by the chat: `{approved: true}` is 422 and resolves nothing; `{wait: true}` observes until the system prompt decides (`AwaitConfirmation`) and reports the result, `confirmation_declined` or `confirmation_expired` on the original tool call. A resume names exactly one entry, for the thread's open interrupt; any other interrupt is 422 and resolves nothing. | The chat resolver exists only while `/agui` is mounted. |
+
+The chat resolver (`agui-interrupt`) is registered with the gate when `/agui` is mounted and applies only to calls the agent loop makes for a `ui` principal (`resolverFits`): a `human-mcp` or `a2a` principal, or a `ui` principal on an MCP session, is never offered it and never waits on a chat that is not there.
+
+## Embeddings store (SurrealDB)
+
+Package `mcp/server/embeddings`, built with and without `noagent` (it does not use the agent code); `nomcp` removes it with the rest. Off unless the `embeddings` section of `--mcp-config` exists: then no `surreal` process starts, no store or embedder is contacted, and no `ipfs_index_*` tool is listed. The index tools, the auto-index trigger and pin-aware deletion are in the next section.
+
+- **Client.** The standard library over SurrealDB's HTTP API (`POST /rpc`, `query`). No SurrealDB module is linked. `SOURCES.md` cites every statement.
+- **Schema.** Table `ipfs_chunk` (`cid`, `path`, `mime`, `chunk_index`, `model`, `dims`, `vector`), an index on `cid`, and an HNSW cosine index of the configured dimension. The chunk text is not stored. A database whose index has another dimension is refused (`ErrDimensionMismatch`).
+- **Embedded mode** (`mode: embedded`). `ipfs mcp` runs `surreal start --bind 127.0.0.1:<ephemeral> surrealkv://<data_dir>/db` from `embedded.surreal_binary`, an absolute path that is never looked up on `PATH` and never downloaded, after a `surreal version` check against `embedded.min_version` (default 3.0.0). The port is chosen by the OS and never one of the reserved ports. The root password is random per start, passed to the child in its environment (not its arguments) and kept in `<data_dir>/credentials.json` (0600); a restart on an existing store signs in with the stored password and replaces it. The child gets a minimal environment and its output is never forwarded (stdout is the MCP channel).
+- **Crash cleanup.** `Close` stops the child (SIGTERM, then SIGKILL after 10 s). If `ipfs mcp` is killed, a small `sh` watchdog (unix) stops the child within a second, signalling only a pid whose command line still names the store's data path. `<data_dir>/supervisor.json` records the child so the next start stops an orphan the watchdog missed. On Windows there is no watchdog; the next start cannot verify a recorded pid, so the operator stops a leftover `surreal`.
+- **Remote mode** (`mode: remote`). `remote.endpoint`, `namespace` and `database` have no defaults. `remote.credential` is an env or file reference whose value is `user:password` (HTTP Basic) or a bearer token; absent means an unauthenticated connection. The namespace and database are created if the credential may; otherwise they must exist.
+- **Embedder.** `embedder.base_url`, `model` and `dimensions` have no defaults; `api_key` is an env or file reference. `POST {base_url}/embeddings` with `{model, input}`; a vector of another length is an error. Redirects are not followed. Backend error text is clipped and never includes the request.
+- **Egress.** Embedding runs only if the identity that triggered it has an `egress_ack` covering the embedder host (`EgressCovers`, using `AckCovers`), and the remote store host when remote. This is the loop's rule and applies to every identity, configured or not. The operator identity (stdio, `--auth-token-*`) has no `egress_ack`, so it never triggers embedding; that is intended. The check runs before any request is built, and a refusal names the host.
+- **Use.** `Server.EnableEmbeddings`, `Server.Embeddings()` (`Index`, `Search`, `Store()`), `Server.CloseEmbeddings`. `ipfs mcp` calls them from `cmd/ipfs/kubo/mcp_embeddings.go`.
+
+## Search index (`mcp-embedding-index-lifecycle`)
+
+Built with and without `noagent`. Off unless the `embeddings` section exists: then the four `ipfs_index_*` tools are not listed (`ipfs_node_status` reports them `not_configured`), nothing is indexed and no embedder is contacted. `ipfs mcp` opens the embeddings service before it enables the agent loop, because both read the tool set once.
+
+- **Policy** (`embeddings.policy`). `auto` (default `false`) indexes text after a successful `ipfs_add`; `mime_allowlist` (default `text/plain`, `text/markdown`; an empty list indexes nothing), `max_bytes` (default 1 MiB) and `chunk_chars` (default 2000) bound what is indexed. The type comes from the file name (`.md`, `.markdown`, `.txt`) or is sniffed from the bytes; content that is not UTF-8 text, contains a NUL byte or is larger than `max_bytes` is left out. Content outside the policy is skipped without a warning.
+- **Chunking.** `embeddings.Chunk` cuts at a paragraph break, else a line break, else a space in the second half of the piece, else hard at `chunk_chars` characters. It is a pure function, which is how search finds the text of a hit: the store keeps vectors, not text, so a hit is re-read from the node (`cat` of the row's content path, at most `max_bytes`) and cut again with the same size. Changing `chunk_chars` after indexing needs `ipfs_index_cid` with `force` to repair the index; a hit whose chunk cannot be found is dropped from the result.
+- **Trigger.** `ipfs_add` on every transport (stdio, HTTP, AG-UI chat, A2A, the agent loop, UAR in topology B) calls the trigger after the add succeeded, with the bytes it already has. The CID is the one `ipfs_add` returned (the wrapping directory when a `filename` is given; the row's `path` is then `/ipfs/<cid>/<filename>`). A failure, including an unreachable embedder or store, is a warning in the add's `warnings`; the add never fails. Indexing runs inline with a 45 s limit. It adds, pins and announces nothing and reads nothing from the node. Adds made by the WebMCP browser tools are not indexed automatically.
+- **Egress.** The calling identity's `egress_ack` must cover the embedder host and, for a remote store, its host, for the trigger, `ipfs_index_cid` and `ipfs_index_search`. The operator identity (stdio, `--auth-token-*`) covers nothing: an add from it succeeds with a warning that names the host and sends nothing, and the explicit tools answer `egress_not_acknowledged`. Use an HTTP principal with `egress_ack` for indexing.
+- **Tools.** `ipfs_index_status` (read; contacts no embedder); `ipfs_index_search` (read, contentEgress, untrusted content; `cid` restricts to one CID with a per-CID distance query, otherwise the HNSW index); `ipfs_index_cid` (write class; reads one file with `files/stat` and `cat`, skips with `not_a_file` for a directory, `mime_not_allowed` for non-text, `too_large`, `empty` for blank content, or `already_indexed` unless `force`; `ipfs_index_search` reads hits back with `cat` offline); `ipfs_index_reconcile` (write class, destructiveHint; a `dry_run` reports the CIDs it would delete). Embedder and store failures are `index_unavailable` (retryable), a missing acknowledgement is `egress_not_acknowledged` naming the hosts.
+- **Pin-aware deletion.** A CID's vectors are deleted only when `pin ls --type=all /ipfs/<cid>` says no direct, recursive or indirect pin covers it, and never when that check or the store fails: the vectors stay and a warning is returned in the output's `warnings` field (`pin_rm`, `pin_update`, `repo_gc` and `ipfs_index_reconcile`). It runs after `pin_rm` (the unpinned CIDs), after `pin_update` with `unpin` (the old CID), and after `repo_gc`, which compares every removed block key, not only the 100-item sample, with the indexed CIDs by multihash (garbage collection reports raw-codec keys, the index holds the dag-pb CID). A recursive `pin_rm` of a directory does not reach files inside it that were indexed separately; `ipfs_index_reconcile` does.
+- **Reconciliation** (G12-4). Content unpinned outside `ipfs mcp` (the CLI, another client) is not seen: Kubo has no pin event source and a daemon-wide hook is refused under User Agency. `ipfs_index_reconcile` walks the indexed CIDs in order, one page per call (`limit`, `cursor`), checks each with the same pin check and deletes those no pin covers. The cursor is the last CID of the page, so deleting while paging is safe.
+- **Tests.** Unit tests (fake daemon, in-memory store, fake embedder) in `mcp/server/index*_test.go` and `mcp/server/embeddings/policy_test.go`; `test/cli/mcp_embedding_index_test.go` runs a real daemon, the real `ipfs mcp` binary and the real `surreal` binary, with a deterministic fake embedder; `mcp_embedding_index_ollama_test.go` uses a private Ollama with `bge-m3`.
+
+## Tests
+
+```bash
+go test ./mcp/server/...                                # unit tests, fake Daemon
+make build && go test ./test/cli/... -run TestMCP -v   # real daemon, byte-exact stdout
+```

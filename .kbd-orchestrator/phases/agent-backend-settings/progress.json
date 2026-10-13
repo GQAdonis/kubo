@@ -1,0 +1,384 @@
+{
+  "schemaVersion": "2",
+  "generatedBy": "kbd-runtime",
+  "projectionContractVersion": 2,
+  "sourceRevision": 1346,
+  "derivedRevision": 1346,
+  "frontier": {
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1346
+  },
+  "conflictCount": 0,
+  "phase": "agent-backend-settings",
+  "phaseId": "agent-backend-settings",
+  "parentPhase": null,
+  "last_updated": "2026-10-13T14:30:11.813470Z",
+  "last_updated_by": "kbd-runtime",
+  "changes_total": 28,
+  "changes_completed": 2,
+  "implementation_total": 28,
+  "implementation_completed": 2,
+  "completion": {
+    "primaryCounter": "implementation",
+    "implementation": {
+      "completed": 2,
+      "total": 28,
+      "status": "IN_PROGRESS"
+    },
+    "evidence": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    },
+    "certification": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    },
+    "publication": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    }
+  },
+  "completionScopes": {
+    "completion": "phase",
+    "runCompletion": "run"
+  },
+  "runCompletion": {
+    "scope": "run",
+    "runId": "ipfs-mcp-server-20261009T081630Z",
+    "primaryCounter": "implementation",
+    "implementation": {
+      "completed": 33,
+      "total": 65,
+      "status": "IN_PROGRESS"
+    },
+    "evidence": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    },
+    "certification": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    },
+    "publication": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    }
+  },
+  "changes": [
+    {
+      "id": "team-ownership-agent-backend",
+      "title": "team-ownership-agent-backend",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 3,
+      "tasks_done": 3,
+      "last_task_completed": "After OG-11, verify the applied grants. Acceptance: `jq '.roles[] | {id, owns}'` shows the patch's paths; a grep of `.claude/agents`, `.codex/agents`, `.kimi-code/agents`, `.opencode/agents` finds the",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "agent-settings-contract",
+      "title": "agent-settings-contract",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "Draft the D12 AGENTS.md clarification (round-2 S5) for OG-5. Acceptance: the draft changes only the off-switch paragraph's reading for `ipfs mcp` settings and removes no Stability or User Agency sente",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "uar-conformance-release",
+      "title": "uar-conformance-release",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 3,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Draft the request as a follow-up to `Prometheus-AGS/universal-agent-runtime#379`: commit the working tree and release `v1.1.0` with an OCI digest; bind an external MCP server to an agent with a run-ti",
+      "blockers": []
+    },
+    {
+      "id": "promethity-design-scope",
+      "title": "promethity-design-scope",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 3,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Extend `DESIGN.md` scope to the Web UI fork and Desktop windows; record D7, D16, the Latin-only font fallback (R8) and the Explore seam (D9). Acceptance: each decision appears with its D-number.",
+      "blockers": []
+    },
+    {
+      "id": "mcp-agent-hot-reload",
+      "title": "mcp-agent-hot-reload",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 6,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Hold `LLMClient`, `backendHost`, limits and system prompt in one snapshot behind `atomic.Pointer`, read once per run; AG-UI and A2A read the same pointer; `sessions` and `buckets` survive swaps. Accep",
+      "blockers": []
+    },
+    {
+      "id": "mcp-agui-a2ui-registry",
+      "title": "mcp-agui-a2ui-registry",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Serve the embedded catalog (`mcp/ui/catalog/ipfs-mcp.catalog.json`) at the contract route and advertise it in the run stream. Acceptance: route and event in the contract; no catalog copy outside the g",
+      "blockers": []
+    },
+    {
+      "id": "lke-origin-isolation",
+      "title": "lke-origin-isolation",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 11,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Add an HTTPS listener and certificate for the console host to Gateway `ipfs-gateway-gw` (today one listener for `ipfs.prometheusags.ai` with cert `ipfs-tls`, manifest 502-524). Reuse HTTPRoute `ipfs-w",
+      "blockers": []
+    },
+    {
+      "id": "webui-promethity-foundation",
+      "title": "webui-promethity-foundation",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "`tokens.css` light and dark; a contrast unit test recomputing pairings from shipped CSS. Acceptance: the test covers every DESIGN.md pairing including the form edge.",
+      "blockers": []
+    },
+    {
+      "id": "webui-promethity-assets",
+      "title": "webui-promethity-assets",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 2,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Favicon set, `manifest.json` (192, 512, maskable; colours), `index.html` (two `theme-color` metas, title, description, generator). Acceptance: every icon path in the manifest exists.",
+      "blockers": []
+    },
+    {
+      "id": "mcp-agent-settings-api",
+      "title": "mcp-agent-settings-api",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Principal kind `admin`: settings scope only, refused on `/mcp`, `/agui`, `/a2a`; a configured principal whose token environment variable or file is absent is disabled with a warning, not fatal. Accept",
+      "blockers": []
+    },
+    {
+      "id": "webui-shell-redesign",
+      "title": "webui-shell-redesign",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 3,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "`App.js` shell (surface rail, ground top bar, no inline hex) and `NavBar` (active `accent-text` + 600, no bars). Acceptance: no hex literal in `App.js` or `NavBar.css`.",
+      "blockers": []
+    },
+    {
+      "id": "webui-dataviz-reskin",
+      "title": "webui-dataviz-reskin",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 2,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "`tokens.js` resolving CSS variables at render and on theme change; Chart.js series from it. Acceptance: no hex in the three chart files.",
+      "blockers": []
+    },
+    {
+      "id": "webui-settings-primitives",
+      "title": "webui-settings-primitives",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Field, Switch (`role=switch`), SegmentedControl (radio group). Acceptance: each wires label, help and error via `aria-describedby`.",
+      "blockers": []
+    },
+    {
+      "id": "webui-titles-and-copy",
+      "title": "webui-titles-and-copy",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Title helper from `brand.js` in the five `| IPFS` sites plus `src/files/FilesPage.js:327`. Acceptance: grep finds no hard-coded `IPFS` product suffix in titles.",
+      "blockers": []
+    },
+    {
+      "id": "desktop-display-branding",
+      "title": "desktop-display-branding",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 2,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Tray, dock and build icons from the p-icon set. Acceptance: icon files replaced at existing paths.",
+      "blockers": []
+    },
+    {
+      "id": "desktop-mcp-sidecar",
+      "title": "desktop-mcp-sidecar",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Supervise `ipfs mcp --http=127.0.0.1:<port> --agui --confirm=native,desktop --settings-dir=<userData>/mcp`, tied to the daemon lifecycle, restart with backoff, stderr to the log; stop by tracked PID o",
+      "blockers": []
+    },
+    {
+      "id": "webui-agent-settings-page",
+      "title": "webui-agent-settings-page",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Lazy `#/settings/agent` route before `/settings*`; provider with injected `SettingsClient` (HTTP to the console origin; Desktop bridge per the contract). Acceptance: `routes.js` does not import the pa",
+      "blockers": []
+    },
+    {
+      "id": "agent-chat-island-integration",
+      "title": "agent-chat-island-integration",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "`theme` attribute from the shell theme. Acceptance: the launcher passes the resolved theme.",
+      "blockers": []
+    },
+    {
+      "id": "desktop-agent-settings-bridge",
+      "title": "desktop-agent-settings-bridge",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Write bridge `agentSettings.*` answered only for the trusted main frame; setters in the main process. Acceptance: channels reuse `isTrusted`.",
+      "blockers": []
+    },
+    {
+      "id": "webui-route-polish",
+      "title": "webui-route-polish",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Files, Pins, Peers, Diagnostics on tokens (W9). Acceptance: grep of `src/files/**`, `src/pins/**`, `src/peers/**`, `src/diagnostics/**` finds no hex literal, `b--` class or shadow class outside the al",
+      "blockers": []
+    },
+    {
+      "id": "agent-features-default-on",
+      "title": "agent-features-default-on",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Web UI: chat `enabled` and WebMCP `enabled` default true; WebMCP `writes` stays per-load and off; absent-keys-only migration (D18) through app boot; disabled-state tests; fork docs. Acceptance: a test",
+      "blockers": []
+    },
+    {
+      "id": "agent-backend-uar",
+      "title": "agent-backend-uar",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 6,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Mark the two superseded changes and write ADR-0010. Acceptance: both old `tasks.md` carry a superseded note; the ADR lists the release gate.",
+      "blockers": []
+    },
+    {
+      "id": "settings-security-review",
+      "title": "settings-security-review",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 3,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Review: the settings API, `admin` principal, test-connection (SSRF), egress extension, overlay and secret storage, admin-token storage in the page, the Desktop bridge, the cloud console design (ADR-00",
+      "blockers": []
+    },
+    {
+      "id": "kubo-candidate-image",
+      "title": "kubo-candidate-image",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 5,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Pre-image verification on the branch head (exception 5): `make build`, `go test ./mcp/...`, `TestDefaultMatchesExpectedProfile`, `test/cli/gateway_test.go`, `TestTelemetry`. Acceptance: outputs saved ",
+      "blockers": []
+    },
+    {
+      "id": "lke-agent-settings",
+      "title": "lke-agent-settings",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 9,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Sidecar and config: `--agui`, `--settings-dir=/mcp-settings`, `admin` and `ui` principals reading their tokens from the out-of-band Secrets created at OG-14, `agent.origin_allowlist` = console origin,",
+      "blockers": []
+    },
+    {
+      "id": "promethity-delivery-candidate",
+      "title": "promethity-delivery-candidate",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 4,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Production Web UI build and its CID. Acceptance: CID recorded with the build commit.",
+      "blockers": []
+    },
+    {
+      "id": "phase-integration-gate",
+      "title": "phase-integration-gate",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 10,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "New dated evidence folder with README; gate plan lists every acceptance check. Acceptance: README maps each check to an output file.",
+      "blockers": []
+    },
+    {
+      "id": "promethity-delivery",
+      "title": "promethity-delivery",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Prepare the CAR of the new Web UI and the re-pin steps for OG-9. Acceptance: CAR root equals the gated CID.",
+      "blockers": []
+    }
+  ],
+  "children": {},
+  "migrationStatus": null
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_mkdir output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    },
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    }
+  },
+  "required": [
+    "path",
+    "cid"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pin_ls output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "pins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cid",
+          "type"
+        ],
+        "properties": {
+          "cid": {
+            "$ref": "../common.json#/$defs/Cid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "recursive",
+              "indirect"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    }
+  },
+  "required": [
+    "pins",
+    "page"
+  ]
+}

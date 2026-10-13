@@ -1,0 +1,55 @@
+{
+  "mode": "artifact",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan declares mcp-tool-contract can run in Round 1 before the ownership grant, but several of its tasks still list no PR-1 prerequisite even though the change depends on team-ownership-grant and writes a new governed path.",
+      "evidence": "Change 1 says \"Depends on: team-ownership-grant (task 1.5 runs `go get` + `make mod_tidy` on the root `go.mod`, which needs the grant)\" and Scope is \"`mcp/contract/**`, owned path not yet created\", but TASK MODEL ASSIGNMENTS rows for mcp-tool-contract tasks 1.1-1.4 and 1.6 have \"Prerequisites | none\". Execution order then puts \"Round 1 (parallel): mcp-tool-contract\" immediately after Round 0, but the per-task rows would allow most contract work to start without PR-1.",
+      "suggested_fix": "Set PR-1 as a prerequisite for every mcp-tool-contract task that writes `mcp/contract/**` or depends on the contract path grant, and make the round/order text explicitly block all Round 1 work on successful completion of Round 0."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan references and intends to use a missing `dispatch-judge.sh` route as a blocking phase-boundary gate without any task to create or locate it.",
+      "evidence": "Phase-boundary-review task 1.4 requires \"Cross-family adversarial judge over the phase-boundary diff ... `adversarial-review` `dispatch-judge.sh` in diff mode\" and PR-3 says \"RESOLVED for the `adversarial-review` `dispatch-judge.sh` mechanism\", but cited_paths reports \"MISSING  dispatch-judge.sh\". No change in the plan creates the script or replaces the route.",
+      "suggested_fix": "Add an early prerequisite/task to verify the actual path and executable availability of the judge dispatch script, or change the phase-boundary gate to invoke an existing checked-in command/path."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "Several changes write paths outside the grants established by team-ownership-grant, so downstream tasks will be blocked by the plan's own ownership gate.",
+      "evidence": "team-ownership-grant grants mcp-server-engineer only `cmd/ipfs/kubo/mcp*.go`, `test/cli/mcp_*_test.go`, root `go.mod`/`go.sum`; architect only root `go.mod`/`go.sum`; ui-ux-engineer `mcp/webmcp/**`; skills-plugin-specialist `mcp/release/**`. Later scopes include `mcp/server/**` for mcp-server-core-stdio, pinning, HTTP, and tool groups; `mcp/ui/**`; `mcp/app/**`; `mcp/skills/**`; `.claude-plugin/**`, `.agents/plugins/**`, `mcp/plugin/**`; and `docs/mcp/**`, but none of these are granted in the Round 0 path grant table.",
+      "suggested_fix": "Expand the Round 0 path-grant table to cover every planned new path and role assignment, including `mcp/server/**`, `mcp/ui/**`, `mcp/app/**`, `mcp/skills/**`, plugin paths, and `docs/mcp/**`."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan's acceptance criteria for the WebMCP host spike are not concrete enough to decide the G8 gate consistently.",
+      "evidence": "G8 GATING says positive requires \"Positive for at least one host\" and the spike must prove \"whether a registered tool is visible to and callable by the host's agent\", but it does not define the exact passing transcript/result, required screenshot fields, or what counts as a successful call versus fallback MCP/App support. The fallback item (d) is listed as evidence but not separated from the go/no-go criterion.",
+      "suggested_fix": "Define explicit pass/fail criteria: e.g. page shows `document.modelContext` present, registers `echo`, host agent invokes it, transcript includes returned nonce, and fallback MCP/App evidence does not count as WebMCP GO."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The release-binaries change includes a publish/tag operator task even though the plan scope explicitly cuts tags and release publishing unless separately requested.",
+      "evidence": "Scope cuts say \"GitHub Actions release workflow, tags, `version.go`, `bin/mkreleaselog` ... Publishing and tagging are operator-only (prerequisite PR-7).\" Change 17 includes \"Publish and tag\" as mcp-release-binaries task 1.4 with prerequisite PR-7, and Commands to Run includes `/opsx:new mcp-release-binaries`, meaning the release change may include an out-of-scope publish/tag task by default.",
+      "suggested_fix": "Remove publish/tag from this phase's task list, or make it a separate conditional change emitted only after an explicit operator request."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

@@ -1,0 +1,641 @@
+{
+  "schemaVersion": "1",
+  "generatedBy": "kbd-runtime",
+  "projectionContractVersion": 2,
+  "sourceRevision": 1346,
+  "derivedRevision": 1346,
+  "frontier": {
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1346
+  },
+  "conflictCount": 0,
+  "updatedAt": "2026-10-13T14:30:11.813470Z",
+  "cursor": [
+    "agent-backend-settings",
+    "execute",
+    "uar-conformance-release",
+    "1.1"
+  ],
+  "root": {
+    "type": "phase",
+    "id": "b7047aa1-816d-44d2-8455-63814b788cec",
+    "status": "ready",
+    "progress": {
+      "done": 33,
+      "total": 65
+    },
+    "children": [
+      {
+        "type": "phase",
+        "id": "agent-backend-settings",
+        "canonicalId": "agent-backend-settings",
+        "status": "IN_PROGRESS",
+        "progress": {
+          "done": 2,
+          "total": 28
+        },
+        "children": [
+          {
+            "type": "change",
+            "id": "team-ownership-agent-backend",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 3,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-settings-contract",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 6,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "uar-conformance-release",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "promethity-design-scope",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agent-hot-reload",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agui-a2ui-registry",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "lke-origin-isolation",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 11
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-promethity-foundation",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-promethity-assets",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agent-settings-api",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-shell-redesign",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-dataviz-reskin",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-settings-primitives",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-titles-and-copy",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-display-branding",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-mcp-sidecar",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-agent-settings-page",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-chat-island-integration",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-agent-settings-bridge",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-route-polish",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-features-default-on",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-backend-uar",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "settings-security-review",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "kubo-candidate-image",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "lke-agent-settings",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 9
+            }
+          },
+          {
+            "type": "change",
+            "id": "promethity-delivery-candidate",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "phase-integration-gate",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 10
+            }
+          },
+          {
+            "type": "change",
+            "id": "promethity-delivery",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          }
+        ],
+        "annotations": []
+      },
+      {
+        "type": "phase",
+        "id": "ipfs-mcp-server",
+        "canonicalId": "ipfs-mcp-server",
+        "status": "PENDING",
+        "progress": {
+          "done": 31,
+          "total": 37
+        },
+        "children": [
+          {
+            "type": "change",
+            "id": "mcp-ci-workflow",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-trusted-peers",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 4,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "team-ownership-grant",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 6,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-tool-contract",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 9,
+              "total": 9
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-architecture-adrs",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 6,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "webmcp-host-spike",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-server-core-stdio",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 7,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-ui-component-library",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 8,
+              "total": 8
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-pinning-with-confirmation",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-http-transport-auth",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 7,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "uar-conformance-request",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 2,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-chat-island",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 4,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agent-principal-enforcement",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "native-confirmation-prompt",
+            "status": "PENDING",
+            "progress": {
+              "done": 7,
+              "total": 8
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-tools-content",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 3,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-tools-mfs",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 2,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-tools-ipns-keys",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 2,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-tools-dag-car",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 2,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-tools-routing-diag",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 2,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "webmcp-tool-package",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 3,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-llm-proxy-loop",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 6,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "uar-integration-spike",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-app-views",
+            "status": "PENDING",
+            "progress": {
+              "done": 3,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "ipfs-agent-skills",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 4,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-webmcp-integration",
+            "status": "PENDING",
+            "progress": {
+              "done": 4,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agui-endpoint",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 7,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-a2a-endpoint",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 7,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-agent-chat",
+            "status": "PENDING",
+            "progress": {
+              "done": 10,
+              "total": 12
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-embeddings-surrealdb",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "agentic-uar-integration",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 4,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-release-binaries",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 3,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-cid-delivery",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 3,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-agent-chat",
+            "status": "PENDING",
+            "progress": {
+              "done": 3,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-embedding-index-lifecycle",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-plugin-marketplaces",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 5,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-user-docs",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 6,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "phase-boundary-review",
+            "status": "PENDING",
+            "progress": {
+              "done": 7,
+              "total": 8
+            }
+          }
+        ],
+        "annotations": []
+      }
+    ],
+    "annotations": []
+  }
+}

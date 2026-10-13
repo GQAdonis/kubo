@@ -1,0 +1,21 @@
+{
+  "confirmation_id": "cf_Zr4Yt1nB6kq0HdUe",
+  "state": "pending",
+  "summary": {
+    "tool": "pin_add",
+    "class": "write",
+    "text": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)",
+    "targets": [
+      {
+        "kind": "cid",
+        "value": "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+      }
+    ]
+  },
+  "expires_at": "2026-10-09T12:02:00Z",
+  "resolvers": [
+    "desktop",
+    "macos-localauth"
+  ],
+  "principal_kind": "a2a"
+}

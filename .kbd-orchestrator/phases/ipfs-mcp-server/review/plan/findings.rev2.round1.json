@@ -1,0 +1,63 @@
+{
+  "mode": "artifact",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan adds config-file based MCP configuration but explicitly claims it will not add a docs/config.md key and then only makes documentation conditional, risking undocumented new config options in violation of constraints.",
+      "evidence": "Section 1 says, \"Nothing in this plan adds a daemon listener, a `config/` or `docs/config.md` key,\" but later change 1 adds \"the `ipfs mcp` config schema with principal kinds, LLM backend, agent, confirmation, embeddings, default address and reserved-port rule\" and change 9 adds \"configured principals from `--config`\". The constraints require \"New or changed config options are documented in docs/config.md\" and \"Every new feature or flipped default has an off switch, a docs/config.md (or mcp docs) entry...\"; mcp-user-docs task 1.3 only says \"Confirm `docs/config.md` untouched or entries added for any new key\" rather than requiring documentation for the new MCP config.",
+      "suggested_fix": "Remove the false claim that no config/docs config key is added, and add explicit acceptance criteria requiring every `ipfs mcp --config` option/off switch to be documented either in docs/config.md or the MCP docs, with tests for disabled configurations."
+    },
+    {
+      "severity": "CRITICAL",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The documented execution order allows Web UI chat integration to run without its stated dependency on the AG-UI endpoint.",
+      "evidence": "Change 30 says \"webui-agent-chat ... depends on N4, N12, webui-webmcp-integration\", where N12 is `mcp-agui-endpoint`. But in the TASK MODEL ASSIGNMENTS rows, `webui-agent-chat` tasks 1.1 and 1.2 list prerequisites only as \"PR-1; PR-6\", and task 1.3 lists \"PR-1; PR-9; PR-12\"; none require N12 or an available `/agui` endpoint. Round 7 can therefore schedule Web UI chat work by the per-task prerequisites even if N12 failed/deferred.",
+      "suggested_fix": "Add explicit prerequisites for `mcp-agui-endpoint` completion and `agent-chat-island` completion to every `webui-agent-chat` task that implements or tests chat, and state what happens if N12 is deferred."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan inconsistently describes the number of partially registered tasks, which can make runtime reconciliation wrong.",
+      "evidence": "The goals scope note says \"The partial registration of 8 changes / 47 tasks made before the operator interrupted is reconciled by plan revision 2.\" The plan says \"Tasks: 161 (36 registered in the runtime, 125 to register)\" and Section 6 says \"Registered at revision 49 ... 8 changes, 36 tasks (not 47; `prometheus kbd audit` shows 36 `TaskRegistered` events).\" The plan relies on the 36 count for task totals but the phase goals still record 47.",
+      "suggested_fix": "Update the carried scope note or add an explicit reconciliation instruction that supersedes the 47-task statement, including how to handle any runtime state that still reflects 47."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The phase-boundary review change is included in the task registration total even though the plan also says it is never registered.",
+      "evidence": "Section 6 lists order 35 `phase-boundary-review` with 8 tasks and says \"Subtotal: 108 tasks. Total to register: 17 + 108 = 125; with the 36 registered, 161,\" but the same row labels it \"phase-boundary-review ... (never registered)\" and change 34 says \"not registered\". If it is never registered, the registration subtotal should exclude its 8 tasks.",
+      "suggested_fix": "Separate planned-but-unregistered boundary review tasks from the runtime registration count, or remove the \"never registered\" label and require registration."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan references a missing cross-family judge script path while treating the route as available.",
+      "evidence": "The cited paths report says \"MISSING  dispatch-judge.sh\". The plan says EV-10: \"`dispatch-judge.sh` present and executable at the installed skill-pack path\" and phase-boundary-review task 1.6 requires \"`adversarial-review` `dispatch-judge.sh` diff mode via liter-llm\". The plan adds task 1.1 to verify it at the boundary, but no early task creates or records the actual path, so the blocking G7 route can still fail only at the end.",
+      "suggested_fix": "Add an early Round 0 or Round 1 task to record the absolute executable path and fail before implementation starts if it is unavailable, or change the plan to use a checked-in command."
+    },
+    {
+      "severity": "WARNING",
+      "file": "plan.md",
+      "line": 0,
+      "claim": "The plan\u2019s acceptance criteria for `native-confirmation-prompt` do not define how the scripted-click HG-1 check proves that same-user background processes cannot approve writes.",
+      "evidence": "D3 requires \"a native OS prompt with a presence factor a same-user background process cannot simulate\" and falsifier HG-1 is \"A same-user process approves a pending write\". But `native-confirmation-prompt` task 1.5 only says \"Operator checks real prompt and a scripted click\", without specifying pass/fail conditions for same-user automation, accessibility automation, AppleScript, xdotool, or polkit-agent spoofing.",
+      "suggested_fix": "Define concrete HG-1 acceptance tests per supported platform, including which automation attempts are run, which must fail, and what platform mechanisms are accepted as an unsimulatable presence factor."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

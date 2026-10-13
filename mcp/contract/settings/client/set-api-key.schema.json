@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.setApiKey / ipfsDesktop.agentSettings.setApiKey",
+  "description": "Messages of the SettingsClient.setApiKey() method (agent-settings-contract task 1.5). This is the single secret write path of the client contract: set() carries no key field, so every key replace goes through here and every clear through clearApiKey. On the Desktop bridge (IPC channel ipfsDesktop.agentSettings.setApiKey) the main process stores the key write-only into safeStorage (the Keychain) and applies it to the sidecar (desktop-agent-settings-bridge 1.2); the renderer never sees it again. On HTTP it maps to PUT on the settings route with backend.api_key, refused with secrets_not_accepted when agent.settings.accept_secrets is false (on LKE the key is set out-of-band as a Kubernetes Secret, ADR-0009 section 5, and the UI replaces the field with 'Set on the server (Kubernetes Secret)', webui-agent-settings-page 1.2). Key material never appears in any response, log or event.",
+  "$defs": {
+    "SetApiKeyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "api_key"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The current revision as returned by get() or a previous mutation. Maps to the HTTP If-Match header; a stale value is rejected with revision_conflict (412)."
+        },
+        "api_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "The new key. Write-only: it is never returned by get(), status() or any event, and never echoed in an error."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Which backend kind the key is for. Absent means the kind of the backend currently selected in the caller (first run) or configured (thereafter). Lets the first-run form stage a key before the backend itself is applied with set()."
+        }
+      }
+    },
+    "SetApiKeyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "api_key"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The new revision after the apply."
+        },
+        "api_key": { "$ref": "#/$defs/ApiKeyStatus" }
+      },
+      "description": "Reports key presence and provenance only. The stored key itself is never returned."
+    },
+    "ApiKeyStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["set"],
+      "properties": {
+        "set": {
+          "type": "boolean",
+          "description": "Whether a key is configured. True after a successful setApiKey."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["settings_api", "environment", "file"],
+          "description": "Where the configured key comes from (settings_api after this call). Present exactly when set is true."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "set": { "const": true } },
+            "required": ["set"]
+          },
+          "then": { "required": ["source"] },
+          "else": { "not": { "required": ["source"] } }
+        }
+      ],
+      "description": "Mirrors ../settings-read.schema.json ApiKeyStatus. There is no field that can carry key material."
+    }
+  }
+}

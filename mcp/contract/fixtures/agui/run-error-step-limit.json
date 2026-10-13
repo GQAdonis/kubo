@@ -1,0 +1,28 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Loop limit after RUN_STARTED: with agent.loop.max_steps 1 the model's first reply calls pin_ls, the call runs and is reported, and the loop stops before a second model round trip. The run ends with RUN_ERROR code max_steps and no RUN_FINISHED; AG-UI has no limit outcome. Replay with LoopLimits{MaxSteps: 1}.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-limit-1",
+    "runId": "run-1",
+    "messages": [{ "id": "msg-u1", "role": "user", "content": "Which recursive pins do I have?" }],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    { "type": "RUN_STARTED", "threadId": "thread-limit-1", "runId": "run-1" },
+    { "type": "TOOL_CALL_START", "toolCallId": "tc-1", "toolCallName": "pin_ls", "parentMessageId": "msg-a1" },
+    { "type": "TOOL_CALL_ARGS", "toolCallId": "tc-1", "delta": "{\"type\":\"recursive\",\"limit\":20}" },
+    { "type": "TOOL_CALL_END", "toolCallId": "tc-1" },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        { "id": "msg-u1", "role": "user", "content": "Which recursive pins do I have?" },
+        { "id": "msg-a1", "role": "assistant", "toolCalls": [{ "id": "tc-1", "type": "function", "function": { "name": "pin_ls", "arguments": "{\"type\":\"recursive\",\"limit\":20}" } }] }
+      ]
+    },
+    { "type": "TOOL_CALL_RESULT", "messageId": "msg-t1", "toolCallId": "tc-1", "role": "tool", "content": "{\"pins\":[{\"cid\":\"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\",\"type\":\"recursive\",\"name\":\"wiki\"}],\"page\":{\"has_more\":false}}" },
+    { "type": "RUN_ERROR", "message": "The run stopped: it reached the step limit.", "code": "max_steps" }
+  ]
+}

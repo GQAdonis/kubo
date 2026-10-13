@@ -1,0 +1,1 @@
+01 Site tools panel: the address bar shows a tune/settings icon left of the URL; clicking it opened no visible panel during this run, so no Site tools list screenshot was captured. The agent's own step list shows "Discover echo site tool" and "Listed website tools", and evidence.json inPageGetTools lists echo.

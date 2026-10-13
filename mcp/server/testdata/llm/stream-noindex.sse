@@ -1,0 +1,9 @@
+data: {"choices":[{"delta":{"tool_calls":[{"id":"call_1","function":{"name":"ipfs_","arguments":""}}]}}]}
+
+data: {"choices":[{"delta":{"tool_calls":[{"function":{"name":"node_info","arguments":"{"}}]}}]}
+
+data: {"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"}"}}]}}]}
+
+data: {"choices":[{"delta":{"tool_calls":[{"id":"call_2","function":{"name":"key_list"}}]}}]}
+
+data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}

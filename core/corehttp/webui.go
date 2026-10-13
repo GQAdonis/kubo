@@ -11,12 +11,19 @@ import (
 	core "github.com/ipfs/kubo/core"
 )
 
-// WebUI version confirmed to work with this Kubo version
-const WebUIPath = "/ipfs/bafybeiciqeyipumpmhxzlxnbqdbbv6u5uij4hy4wax64dmj7kvrhusiq6y" // v4.13.0
+// WebUI version confirmed to work with this Kubo version.
+//
+// Fork only: this is the GQAdonis/ipfs-webui build at commit 2be6b78c
+// (branch feat/ipfs-mcp-server, WebMCP integration), built with `npm run build`
+// and merkleized with `ipfs add --cid-version 1 -Q -r -n ./build`, the recipe
+// of upstream's release workflow. The previous upstream build (v4.13.0) stays
+// in WebUIPaths.
+const WebUIPath = "/ipfs/bafybeiblix77cfttmrmz5h54qacay5f4z5bgajc736ufiyoy5cus54stki"
 
 // WebUIPaths is a list of all past webUI paths.
 var WebUIPaths = []string{
 	WebUIPath,
+	"/ipfs/bafybeiciqeyipumpmhxzlxnbqdbbv6u5uij4hy4wax64dmj7kvrhusiq6y", // v4.13.0
 	"/ipfs/bafybeihxglpcfyarpm7apn7xpezbuoqgk3l5chyk7w4gvrjwk45rqohlmm", // v4.12.0
 	"/ipfs/bafybeiddnr2jz65byk67sjt6jsu6g7tueddr7odhzzpzli3rgudlbnc6iq", // v4.11.1
 	"/ipfs/bafybeidfgbcqy435sdbhhejifdxq4o64tlsezajc272zpyxcsmz47uyc64", // v4.11.0

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pin_verify output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cid",
+          "ok"
+        ],
+        "properties": {
+          "cid": {
+            "$ref": "../common.json#/$defs/Cid"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "bad_nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cid",
+                "error"
+              ],
+              "properties": {
+                "cid": {
+                  "$ref": "../common.json#/$defs/Cid"
+                },
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    }
+  },
+  "required": [
+    "results",
+    "page"
+  ]
+}

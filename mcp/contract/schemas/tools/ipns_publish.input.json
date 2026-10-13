@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipns_publish input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath"
+    },
+    "key": {
+      "$ref": "../common.json#/$defs/KeyName",
+      "default": "self"
+    },
+    "lifetime": {
+      "$ref": "../common.json#/$defs/Duration",
+      "default": "48h"
+    },
+    "ttl": {
+      "$ref": "../common.json#/$defs/Duration"
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  },
+  "required": [
+    "path"
+  ]
+}

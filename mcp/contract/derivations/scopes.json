@@ -1,0 +1,11 @@
+{
+  "$schema": "./derivation-rules.schema.json",
+  "source": "openspec/changes/mcp-http-transport-auth design: scopes map to tool groups and confirmation classes.",
+  "description": "OAuth-style scope required to call a tool over Streamable HTTP, derived from the confirmation class. A principal's group grants (config principals[].groups, write_groups, destructive_groups) further restrict which tools a scope reaches.",
+  "rules": {
+    "scope": "map:confirmation:none=ipfs:read,write=ipfs:write,destructive=ipfs:admin"
+  },
+  "notes": {
+    "scope": "ipfs:admin implies ipfs:write implies ipfs:read."
+  }
+}

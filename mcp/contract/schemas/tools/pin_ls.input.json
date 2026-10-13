@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pin_ls input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "all",
+        "direct",
+        "recursive",
+        "indirect"
+      ],
+      "default": "all"
+    },
+    "path": {
+      "$ref": "../common.json#/$defs/ContentPath",
+      "description": "Only report whether this CID or path is pinned."
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 255,
+      "description": "Only pins whose name contains this text."
+    },
+    "cursor": {
+      "$ref": "../common.json#/$defs/Cursor"
+    },
+    "limit": {
+      "$ref": "../common.json#/$defs/Limit"
+    }
+  }
+}

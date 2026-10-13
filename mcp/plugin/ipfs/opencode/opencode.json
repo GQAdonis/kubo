@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "ipfs": {
+      "type": "local",
+      "command": ["ipfs", "mcp"],
+      "enabled": true
+    }
+  },
+  "skills": {
+    "paths": ["REPLACE_WITH_ABSOLUTE_PATH_TO/mcp/plugin/ipfs/skills"]
+  }
+}

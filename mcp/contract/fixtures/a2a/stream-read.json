@@ -1,0 +1,28 @@
+{
+  "$schema": "../a2a.schema.json",
+  "description": "Streaming read with SendStreamingMessage, in the order A2A 1.0.0 section 3.1.2 requires: the stream begins with the Task (submitted), then status and artifact updates, and closes after the terminal status update. No Task follows the first event.",
+  "provenance": "authored-from-spec",
+  "principalKind": "a2a",
+  "exchanges": [
+    {
+      "request": {
+        "jsonrpc": "2.0", "id": 6, "method": "SendStreamingMessage",
+        "params": { "message": { "messageId": "m-6", "role": "ROLE_USER", "parts": [{ "data": { "tool": "ipfs_node_info", "arguments": {} }, "mediaType": "application/json" }] } }
+      },
+      "stream": [
+        { "jsonrpc": "2.0", "id": 6, "result": { "task": { "id": "task-6", "contextId": "ctx-6", "status": { "state": "TASK_STATE_SUBMITTED" } } } },
+        { "jsonrpc": "2.0", "id": 6, "result": { "statusUpdate": { "taskId": "task-6", "contextId": "ctx-6", "status": { "state": "TASK_STATE_WORKING" } } } },
+        {
+          "jsonrpc": "2.0", "id": 6,
+          "result": {
+            "artifactUpdate": {
+              "taskId": "task-6", "contextId": "ctx-6", "lastChunk": true,
+              "artifact": { "artifactId": "art-6", "name": "ipfs_node_info", "parts": [{ "data": { "peer_id": "12D3KooWDpJ7As7BWAwRMfu1VU2WCqNjvq387JEYKDBj4kx6nXTN", "version": "0.44.0", "addresses": [] }, "mediaType": "application/json" }] }
+            }
+          }
+        },
+        { "jsonrpc": "2.0", "id": 6, "result": { "statusUpdate": { "taskId": "task-6", "contextId": "ctx-6", "status": { "state": "TASK_STATE_COMPLETED" } } } }
+      ]
+    }
+  ]
+}

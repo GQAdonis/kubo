@@ -1,0 +1,133 @@
+{
+  "description": "Input to docs/mcp/config_reference.py. Maps every key of mcp/contract/config/ipfs-mcp-config.schema.json, every option of `ipfs mcp` and its subcommands, every IPFS_MCP_* environment variable and every build tag to the Go tests that run it in its off (or default) state. Defaults, off switches, flags and owners come from the schema and are not repeated here. A `note` records where this build differs from the schema description. The checker fails when a key, option or test named here does not exist, or when the schema or `--help` has one that is not listed.",
+  "keys": {
+    "$schema": { "tests": ["TestConfigExamplesValidate"] },
+    "http": { "tests": ["TestHTTPDefaultsMatchTheContract", "TestMCP"] },
+    "http.enabled": {
+      "tests": ["TestHTTPDefaultsMatchTheContract", "TestMCP", "TestHTTPFlagFalseOverridesConfigEnabled"],
+      "note": "`--http=false` overrides `http.enabled: true`: the flag wins in either direction, and the file decides only when the flag is not given."
+    },
+    "http.listen": { "tests": ["TestParseListenForms", "TestHTTPListenerRefusals", "TestReservedPortsMatchTheContractSchema"] },
+    "http.allowed_origins": { "tests": ["TestHTTPRequestHardening", "TestHTTPAllowedOriginGetsCORSHeaders"] },
+    "http.max_body_bytes": { "tests": ["TestHTTPRequestHardening", "TestMountedRouteBodyLimitApplies"] },
+    "http.session_timeout": { "tests": ["TestSessionTimeoutIsConfigurable", "TestIdleSessionsExpire"] },
+    "tools": { "tests": ["TestDefaultToolsList", "TestToolSelection"] },
+    "tools.groups": { "tests": ["TestSelectionDisabledGroupAndReadOnly", "TestHTTPScopesNarrowTheToolList", "TestRepoGcIsOffByDefault"] },
+    "tools.read_only": { "tests": ["TestReadOnlyModeHidesRoutingWritesAndGc", "TestRPCAllowedPathsReadOnlyListsOnlyReadCommands"] },
+    "tools.disabled": { "tests": ["TestSelectionDisabledGroupAndReadOnly", "TestHTTPDisabledToolIsNotOffered"] },
+    "tools.app_views": { "tests": ["TestAppViewsOffSwitch", "TestAppViewsConfigKey", "TestMCPAppViewsOff"] },
+    "trusted_peers": {"tests": ["TestConfigExamplesValidate", "TestConfigInvalidExamplesFail", "TestPeerSuppliedFieldsAreMarked", "TestTrustedPeersMarkEntries", "TestTrustedPeersValidation", "TestNodeInfoIsNotPeerSupplied", "TestMCPTrustedPeers"]},
+    "principals": {
+      "tests": ["TestHTTPAnonymousLoopbackIsReadOnly", "TestMCPPrincipalUnconfiguredGetsNothing", "TestAnonymousListenerRefusesForwardedRequests"],
+      "note": "The anonymous listener refuses (403) any request that carries `Forwarded`, `X-Forwarded-For` or `X-Real-IP`: a proxied request did not come from this machine, so behind a reverse proxy a credential (an operator bearer token or configured principals) is required."
+    },
+    "principals[].name": { "tests": ["TestUnknownTokenGetsNothing", "TestPrincipalConfigRules"] },
+    "principals[].kind": { "tests": ["TestHTTPPrincipalKindsAreScopedToRoutes", "TestA2AEndpointRejectsOtherPrincipalKinds", "TestAdminTokenIsRefusedOnToolRoutes"] },
+    "principals[].credential": { "tests": ["TestAbsentSecretDisablesOnlyTheDependentFeature", "TestParseConfigRejectsLiteralSecretsAndReservedPorts"] },
+    "principals[].groups": { "tests": ["TestHTTPScopesNarrowTheToolList", "TestHTTPToolOutsideGrantsIsRefusedWithoutRunning"] },
+    "principals[].write_groups": { "tests": ["TestConfigPrincipalsAreReadOnlyUnlessGranted", "TestReadOnlyPrincipalListsNoWriteTool"] },
+    "principals[].destructive_groups": { "tests": ["TestConfigPrincipalsAreReadOnlyUnlessGranted", "TestKeyRmIsOffByDefault"] },
+    "principals[].egress_ack": { "tests": ["TestEveryContentEgressToolIsRefusedWithoutAck", "TestMCPPrincipalEgressAckIsRequiredForContentTools"] },
+    "principals[].shell_capable": { "tests": ["TestShellCapableNotRequiredWithoutCLIConfirmation", "TestMCPPrincipalShellCapableIsRequiredUnderConfirmCLI"] },
+    "principals[].check": { "tests": ["TestUARUnreadableSettingsFailClosedUnlessAsserted", "TestMCPPrincipalUARVerifyIsRefusedWhileNoSettingsEndpointIsPinned"] },
+    "principals[].uar": { "tests": ["TestNoUARContactWithoutAUARPrincipal"] },
+    "principals[].uar.card_url": { "tests": ["TestNoUARContactWithoutAUARPrincipal", "TestCheckUARDoesNotFollowRedirects"] },
+    "principals[].uar.admin_credential": { "tests": ["TestCheckUARNeverSendsTheAdminCredentialInCleartext"] },
+    "principals[].uar.min_version": { "tests": ["TestUARVersionGate", "TestUARPrincipalExampleRefusesWhileNoMinVersionIsPinned"] },
+    "llm": { "tests": ["TestAgentOffWhenUnconfigured", "TestAgentHasNoDefaultEndpointOrModel"] },
+    "llm.base_url": { "tests": ["TestAgentHasNoDefaultEndpointOrModel", "TestBackendURLValidation"] },
+    "llm.model": { "tests": ["TestAgentHasNoDefaultEndpointOrModel"] },
+    "llm.api_key": { "tests": ["TestKeyOnlyFromEnvOrFile", "TestLiteralKeyInConfigIsRejectedAndNeverEchoed", "TestKeyNotSentOverPlainHTTPToRemoteHost", "TestAbsentSecretDisablesOnlyTheDependentFeature"] },
+    "llm.timeout": { "tests": ["TestChatTimeoutBoundsTheWholeStream"] },
+    "agent": { "tests": ["TestAGUIIsNotMountedUnlessEnabled", "TestA2ADisabledServesNothing"] },
+    "agent.agui": { "tests": ["TestAGUIIsNotMountedUnlessEnabled", "TestAGUIWithoutBackendAnswersBackendNotConfigured"] },
+    "agent.a2ui": { "tests": ["TestNoA2UISurfaceEventsWhenDisabled"] },
+    "agent.settings": { "tests": ["TestSettingsRouteRequiresAdminPrincipal"] },
+    "agent.settings.enabled": { "tests": ["TestSettingsRouteRequiresAdminPrincipal", "TestSettingsRouteDisabledAnswers404"] },
+    "agent.settings.accept_secrets": { "tests": ["TestSettingsWriteWithSecretRefusedWhenAcceptSecretsFalse"] },
+    "agent.settings.dir": { "tests": ["TestSettingsOverlayPrecedence", "TestSettingsOverlayFilesAre0600", "TestAbsentLLMKeyFileYieldsApiKeySetFalse"] },
+    "agent.a2a": { "tests": ["TestA2ADisabledServesNothing"] },
+    "agent.origin_allowlist": { "tests": ["TestAGUIOriginPolicyIsStrictlyTheAllowlist", "TestEnableAGUIRejectsBadOrigins"] },
+    "agent.loop": { "tests": ["TestLoopLimitDefaults"] },
+    "agent.loop.max_steps": { "tests": ["TestLoopStopsAtTheStepLimit"] },
+    "agent.loop.max_tokens": { "tests": ["TestLoopStopsAtTheTokenBudget"] },
+    "agent.loop.wall_clock": { "tests": ["TestLoopStopsAtTheWallClock"] },
+    "confirmation": { "tests": ["TestConfiguredDefaultsToNativeOnly", "TestNoModesBuildsNoResolver"] },
+    "confirmation.modes": { "tests": ["TestConfigConfirmationModes", "TestNoModesBuildsNoResolver", "TestNonElicitingClientWithoutResolverIsRefused", "TestConfiguredDefaultsToNativeOnly"] },
+    "confirmation.resolvers": {
+      "tests": ["TestConfirmationKeyDefaults", "TestResolversNarrowTheModes", "TestConfirmationResolversNarrowEverySource", "TestResolversDoNotAffectCLI", "TestNarrowingToNothingEmitsTheStartupWarning", "TestEmptyResolversRunNoPresenceOrDesktopResolver", "TestConfirmationResolversRejectUnknownNames", "TestConfigExamplesValidate", "TestMCPConfirmationConfigKeys"]
+    },
+    "confirmation.cli": {
+      "tests": ["TestConfirmationKeyDefaults", "TestConfirmationCLIKeyEnablesCLIMode", "TestConfirmationCLIKeyLosesToFlagAndEnvironment", "TestConfirmationCLIContradiction", "TestChannelCLIModeIsRefusedUnlessEnabled", "TestCLIResolverIsNotOfferedToTheStdioPrincipal", "TestCLIResolverCannotResolveAStdioConfirmationEvenIfAsked", "TestElicitationStillWorksForStdioWhenCLIIsTheOnlyResolver", "TestMCPConfirmationConfigKeys"]
+    },
+    "confirmation.ttl": {
+      "tests": ["TestConfirmationKeyDefaults", "TestConfirmationTTLBounds", "TestBrokerConfiguredTTLExpiryIsDenial", "TestConfirmationTTLIsReadFromTheConfigFile", "TestConfirmationTTLDurationReportsInvalidValues", "TestBrokerKeepsExpiredRecordsForTheDefaultGrace", "TestExpiredConfirmationIsDenial", "TestBrokerExpiryIsDenial", "TestMCPConfirmationConfigKeys"]
+    },
+    "embeddings": { "tests": ["TestEmbeddingsOffByDefault", "TestIndexToolsAreOffUntilEmbeddingsAreConfigured", "TestMCPEmbeddingsStoreDisabled", "TestMCPEmbeddingIndexOffByDefault"] },
+    "embeddings.mode": { "tests": ["TestEmbeddingsModeWithoutItsBlockIsRefused"] },
+    "embeddings.embedded": { "tests": ["TestMCPEmbeddingsStoreEmbedded"] },
+    "embeddings.embedded.surreal_binary": { "tests": ["TestEmbeddingsEmbeddedSettingsRefuseRelativeBinary", "TestStartSupervisorRefusals"] },
+    "embeddings.embedded.data_dir": { "tests": ["TestCredentialsFileIsPrivate", "TestReapStaleStopsOnlyTheRecordedStore"] },
+    "embeddings.embedded.min_version": { "tests": ["TestParseVersion", "TestStartSupervisorRefusals"] },
+    "embeddings.remote": { "tests": ["TestMCPEmbeddingsStoreRemote"] },
+    "embeddings.remote.endpoint": { "tests": ["TestSettingsValidate", "TestServiceHostsOmitsLocalStore"] },
+    "embeddings.remote.namespace": { "tests": ["TestSettingsValidate"] },
+    "embeddings.remote.database": { "tests": ["TestSettingsValidate"] },
+    "embeddings.remote.credential": { "tests": ["TestParseCredential", "TestBearerCredential"] },
+    "embeddings.embedder": { "tests": ["TestEmbedRefusesUnacknowledgedHostWithoutSending", "TestNewEmbedderRejectsBadSettings"] },
+    "embeddings.embedder.base_url": {
+      "tests": ["TestEmbedRefusesUnacknowledgedHostWithoutSending", "TestEmbedDoesNotFollowRedirects", "TestEmbedderKeyNeedsHTTPSOffLoopback"],
+      "note": "When `embeddings.embedder.api_key` is set and the host is not loopback, the URL must use https; plain http is rejected at validation."
+    },
+    "embeddings.embedder.model": { "tests": ["TestNewEmbedderRejectsBadSettings"] },
+    "embeddings.embedder.dimensions": { "tests": ["TestBootstrapSendsSchemaAndChecksDimension"] },
+    "embeddings.embedder.api_key": { "tests": ["TestEmbedOrdersByIndexAndSendsKey"] },
+    "embeddings.policy": { "tests": ["TestPolicyDefaults", "TestEmbeddingsPolicyFromConfig"] },
+    "embeddings.policy.auto": { "tests": ["TestAddIsNotIndexedWhenAutoIsOff", "TestMCPEmbeddingIndexAutoOffStillIndexesExplicitly"] },
+    "embeddings.policy.mime_allowlist": { "tests": ["TestEmptyAllowlistIndexesNothing", "TestAddOutsidePolicyIsNotIndexed"] },
+    "embeddings.policy.max_bytes": { "tests": ["TestPolicyValidate", "TestAddOutsidePolicyIsNotIndexed"] },
+    "embeddings.policy.chunk_chars": { "tests": ["TestPolicyValidate", "TestChunk"] }
+  },
+  "options": {
+    "ipfs mcp": {
+      "--tools": { "key": "tools.groups", "tests": ["TestSelectionDisabledGroupAndReadOnly", "TestFlagsOverrideConfigFile"] },
+      "--read-only": { "key": "tools.read_only", "tests": ["TestReadOnlyModeHidesRoutingWritesAndGc"] },
+      "--http": { "key": "http.enabled", "tests": ["TestHTTPDefaultsMatchTheContract", "TestMCP"] },
+      "--mcp-config": { "doc": "Path of the `ipfs mcp` JSON config file described on this page. Also `IPFS_MCP_CONFIG`; the flag wins. Not the Kubo repo config: the root `--config` flag keeps its Kubo meaning. Default: none, and then no file is read and every key takes its default. Off: leave it and `IPFS_MCP_CONFIG` unset.", "tests": ["TestParseConfigDefaults", "TestLoadConfigReportsTheFile"] },
+      "--auth-token-env": { "doc": "Name of an environment variable whose value is a bearer token for the operator identity over HTTP (every group readable and writable; destructive only with `destructive` in `--tools`). Default: none. Off: leave unset; a loopback listener then serves read-only tools to local processes, and a non-loopback listener is refused.", "tests": ["TestHTTPAnonymousLoopbackIsReadOnly", "TestOperatorIdentityFollowsTheDestructiveSelector"] },
+      "--auth-token-file": { "doc": "Absolute path of a file holding the operator bearer token; same meaning as `--auth-token-env`. Use one of the two. Default: none. Off: leave unset.", "tests": ["TestHTTPAnonymousLoopbackIsReadOnly", "TestSecretRefReadsEnvAndFiles"] },
+      "--api-auth-env": { "doc": "Name of an environment variable holding the daemon's RPC API secret (an `API.Authorizations` entry, for example `bearer:<secret>`). Use one of `--api-auth-env`, `--api-auth-file` and the global `--api-auth`; the global flag puts the secret in the process list and prints a warning. Default: none. Off: leave unset; requests to the daemon carry no secret.", "tests": ["TestResolveAPIAuth", "TestResolveAPIAuthRefusals"] },
+      "--api-auth-file": { "doc": "Absolute path of a file holding the daemon's RPC API secret; same meaning as `--api-auth-env`. Default: none. Off: leave unset.", "tests": ["TestResolveAPIAuth", "TestResolveAPIAuthRefusals"] },
+      "--no-app-views": { "key": "tools.app_views", "tests": ["TestAppViewsOffSwitch", "TestMCPAppViewsOff"] },
+      "--print-rpc-allowed-paths": { "doc": "Prints an `API.Authorizations` entry whose `AllowedPaths` list only the RPC commands of the enabled tools (honors `--tools`, `--read-only` and `tools.disabled`), then exits without contacting the daemon. Default: false. Nothing to turn off.", "tests": ["TestRPCAllowedPathsFollowTheToolSelection", "TestRPCAuthorizationEntryIsJSONWithoutARealSecret"] },
+      "--confirm": { "key": "confirmation.modes", "tests": ["TestParseModes", "TestNoModesBuildsNoResolver", "TestConfiguredDefaultsToNativeOnly"] },
+      "--llm-base-url": { "key": "llm.base_url", "tests": ["TestAgentHasNoDefaultEndpointOrModel", "TestFlagsOverrideConfigFile"] },
+      "--llm-model": { "key": "llm.model", "tests": ["TestAgentHasNoDefaultEndpointOrModel"] },
+      "--llm-api-key-env": { "key": "llm.api_key", "tests": ["TestLiteralKeyFlagsAreRejectedAndNeverEchoed"] },
+      "--llm-api-key-file": { "key": "llm.api_key", "tests": ["TestKeyOnlyFromEnvOrFile"] },
+      "--agui": { "key": "agent.agui", "tests": ["TestAGUIIsNotMountedUnlessEnabled"] },
+      "--settings-dir": { "key": "agent.settings.dir", "tests": ["TestSettingsOverlayPrecedence"] },
+      "--a2a": { "key": "agent.a2a", "tests": ["TestA2ADisabledServesNothing"] }
+    },
+    "ipfs mcp check-uar": {
+      "--principal": { "doc": "Name of a `uar` principal in the `--mcp-config` file whose address, admin credential, minimum version, `egress_ack` and check mode are used. Default: none.", "tests": ["TestMCPPrincipalCheckUAR"] },
+      "--admin-credential-env": { "doc": "Name of the environment variable holding the UAR admin credential; sent only over https or to a loopback host, never printed. Default: none.", "tests": ["TestCheckUARNeverSendsTheAdminCredentialInCleartext"] },
+      "--min-version": { "doc": "Minimum published UAR release (`x.y.z`). Default: the contract's pinned minimum; with neither, the check refuses `min_version_not_set`.", "tests": ["TestCheckUARVersionMinimumCountsPublishedReleasesOnly"] },
+      "--egress-ack": { "doc": "Comma-separated hosts the UAR instance may forward content to, or `local`. Default: none.", "tests": ["TestCheckUARRemoteProviderNeedsMatchingAck"] },
+      "--check": { "doc": "`verify` (default) or `assert`, as `principals[].check`.", "tests": ["TestCheckUARUnreadableSettingsFailClosedUnlessAsserted"] }
+    },
+    "ipfs mcp confirm": {},
+    "ipfs mcp pair": {}
+  },
+  "env": {
+    "IPFS_MCP_CONFIG": { "doc": "Path of the config file when `--mcp-config` is not given.", "tests": ["TestParseConfigDefaults"] },
+    "IPFS_MCP_HTTP_LISTEN": { "doc": "Listen address when `--http` names none; overrides `http.listen`.", "tests": ["TestParseListenForms"] },
+    "IPFS_MCP_CONFIRM": { "doc": "Confirmation modes when `--confirm` is not given; `none` turns the out-of-band resolvers off. Overrides `confirmation.modes`.", "tests": ["TestParseModes", "TestNoModesBuildsNoResolver"] },
+    "IPFS_MCP_CONFIRM_DIR": { "doc": "Directory of the per-process confirmation sockets used by `ipfs mcp confirm` and the Desktop channel. Default: `$XDG_RUNTIME_DIR/ipfs-mcp`, else `<tmp>/ipfs-mcp-<uid>`.", "tests": ["TestSocketIsPrivate"] },
+    "IPFS_MCP_PAIRING_FILE": { "doc": "File holding the hash of the Desktop pairing key written by `ipfs mcp pair`. Default: `$IPFS_PATH/mcp-confirm-pairing.json`.", "tests": ["TestPairingStoresOnlyAHash", "TestDesktopModeWithoutPairingBuildsNoResolver"] }
+  },
+  "buildTags": {
+    "nomcp": { "doc": "`make build GOTAGS=nomcp` compiles `ipfs mcp` out; the command then only reports that it is not included.", "tests": ["TestMCPNoMCPBuild"] },
+    "noagent": { "doc": "`make build GOTAGS=noagent` compiles out the agent loop, `/agui` and `/a2a`; the `--llm-*`, `--agui` and `--a2a` flags do not exist and an `llm` section is refused. Embeddings stay available.", "tests": ["TestAgentOffWhenUnconfigured"] }
+  }
+}

@@ -1,0 +1,21 @@
+# allowed_signers for kubo-mcp release signatures (OpenSSH allowed_signers format).
+#
+# verify.sh checks mcp/release/dist/SHA256SUMS.sig against the keys listed here
+# with `ssh-keygen -Y verify -n kubo-mcp-release`. One key per line:
+#
+#   <identity> namespaces="kubo-mcp-release" <keytype> <base64-public-key>
+#
+# Trust: a copy of this file that arrives in the same download as the archives
+# proves nothing, because whoever replaced the archives could replace this file.
+# Obtain the public key independently (the repository at a commit you trust,
+# or from the maintainer) and pass it with `verify.sh --allowed-signers FILE`.
+#
+# Rotating keys: add the new key line first, release with the new key, then
+# remove the old line once releases signed by it are no longer supported. To
+# revoke a compromised key, delete its line and publish a new release; archives
+# signed only by that key stop verifying. The first key line's identity is the
+# default signer; override it with KUBO_MCP_SIGNER.
+#
+# Release key created 2026-10-11, fingerprint
+# SHA256:R3LaYr91QVNgSdTfwWESKqbkjZrhwW7aZM07wkGQkL4
+kubo-mcp-release namespaces="kubo-mcp-release" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEzVtJ8BQPQa37dQ01twkku+w7wYXttF8Jk7GCZfA4TI

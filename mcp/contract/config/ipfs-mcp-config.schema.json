@@ -1,0 +1,950 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp configuration file (--mcp-config)",
+  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint. An absent Secret file or token environment variable named by any SecretRef is never fatal: startup proceeds with a warning and only the dependent feature is disabled (the principal whose credential reference does not resolve authenticates nothing; the agent backend whose key reference does not resolve answers backend_not_configured) until the reference resolves (CRITICAL-2, ADR-0009 section 1).",
+  "flag": "--mcp-config",
+  "env": "IPFS_MCP_CONFIG",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "default": null,
+      "offSwitch": "Editor hint only; ignored.",
+      "ownerChange": "mcp-tool-contract"
+    },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "offSwitch": "false (default): no listener is opened; stdio only.",
+          "ownerChange": "mcp-http-transport-auth",
+          "flag": "--http"
+        },
+        "listen": {
+          "$ref": "#/$defs/ListenAddress",
+          "default": "127.0.0.1:5050",
+          "offSwitch": "Used only when http.enabled is true. Reserved ports of other local services are rejected.",
+          "ownerChange": "mcp-http-transport-auth",
+          "flag": "--http=<addr>",
+          "env": "IPFS_MCP_HTTP_LISTEN"
+        },
+        "allowed_origins": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Origin"
+          },
+          "default": [],
+          "offSwitch": "Empty (default): every cross-origin request to /mcp is rejected.",
+          "ownerChange": "mcp-http-transport-auth"
+        },
+        "max_body_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 67108864,
+          "default": 4194304,
+          "offSwitch": "Always enforced; lower it to reject larger requests.",
+          "ownerChange": "mcp-http-transport-auth"
+        },
+        "session_timeout": {
+          "$ref": "#/$defs/Duration",
+          "default": "30m",
+          "offSwitch": "Idle sessions end after this duration.",
+          "ownerChange": "mcp-http-transport-auth"
+        }
+      },
+      "default": {},
+      "offSwitch": "Omit the section or leave http.enabled false.",
+      "ownerChange": "mcp-http-transport-auth"
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/GroupOrSelector"
+          },
+          "default": [
+            "node",
+            "content",
+            "pin",
+            "mfs",
+            "names",
+            "dag",
+            "routing",
+            "diag",
+            "index"
+          ],
+          "offSwitch": "Remove a group to disable it. Destructive-class tools are excluded by default; add the selector destructive to enable them (still confirmed per call).",
+          "ownerChange": "mcp-server-core-stdio",
+          "flag": "--tools"
+        },
+        "read_only": {
+          "type": "boolean",
+          "default": false,
+          "offSwitch": "true: only confirmation-class none tools are offered.",
+          "ownerChange": "mcp-server-core-stdio",
+          "flag": "--read-only"
+        },
+        "disabled": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/ToolName"
+          },
+          "default": [],
+          "offSwitch": "List a tool name to disable that tool.",
+          "ownerChange": "mcp-server-core-stdio"
+        },
+        "app_views": {
+          "type": "boolean",
+          "default": true,
+          "offSwitch": "false: no ui:// resource is registered and no tool carries _meta.ui; every tool is still offered and returns the same result. With true, a view is served only while at least one of its linked tools is registered (ADR-0007 section 5).",
+          "ownerChange": "mcp-app-views",
+          "flag": "--no-app-views"
+        }
+      },
+      "default": {},
+      "offSwitch": "Omit for the default tool set (all groups, no destructive tools).",
+      "ownerChange": "mcp-server-core-stdio"
+    },
+    "trusted_peers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/PeerId"
+      },
+      "default": [],
+      "description": "Peer IDs whose peer-supplied data (addresses, and any other peer-reported string a tool returns) is returned as trusted: the untrusted marker on their entries in swarm_peers, routing_findpeer and routing_findprovs results is false. Trust is by peer ID because libp2p authenticates peer IDs; agent versions are self-reported and are never a trust signal. Entries for every other peer are marked untrusted, and the result carries the untrusted-content meta flag. The node's own data (ipfs_node_info) is not peer-supplied. A listed peer's addresses returned by routing (routing_findpeer, routing_findprovs) may still have been relayed by other DHT nodes. Not used by WebMCP, where every peer-supplied entry is untrusted.",
+      "offSwitch": "Empty list (the default): every peer-supplied address is marked untrusted.",
+      "ownerChange": "mcp-trusted-peers"
+    },
+    "principals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+            "default": null,
+            "offSwitch": "Remove the principal entry: its credential then authenticates nothing.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "human-mcp",
+              "ui",
+              "a2a",
+              "uar",
+              "admin"
+            ],
+            "default": null,
+            "description": "admin (ADR-0009 section 3) is scoped to the runtime settings route only: settings read and write, no tool access. An admin token is refused on /mcp, /agui and /a2a, and a tool principal's token is refused on the settings route (path-scoped authorization). The tool-group keys (groups, write_groups, destructive_groups, egress_ack, shell_capable, check, uar) grant an admin principal nothing and are ignored for it. The settings route is mounted only when an admin principal is configured and agent.settings.enabled is not false.",
+            "offSwitch": "Remove the principal entry.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "credential": {
+            "$ref": "#/$defs/SecretRef",
+            "default": null,
+            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled, with a warning at start: startup proceeds and the principal authenticates nothing until the reference resolves (CRITICAL-2).",
+            "ownerChange": "mcp-http-transport-auth"
+          },
+          "groups": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/GroupOrAll"
+            },
+            "default": [
+              "*"
+            ],
+            "offSwitch": "List fewer groups; an empty list grants no tool. Read-class tools only.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "write_groups": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/Group"
+            },
+            "default": [],
+            "offSwitch": "Empty (default): the principal is read-only.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "destructive_groups": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/Group"
+            },
+            "default": [],
+            "offSwitch": "Empty (default): no destructive-class tool (pin_rm, mfs_rm, key_rm, repo_gc) is offered to the principal (ADR-0003 section 2).",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "egress_ack": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/Host"
+            },
+            "default": [],
+            "offSwitch": "Empty (default): every contentEgress tool is refused to this principal with egress_not_acknowledged.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "shell_capable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null,
+            "offSwitch": "Operator assertion. Under confirmation.cli a write principal needs false, otherwise its write and destructive grants are refused.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "check": {
+            "type": "string",
+            "enum": [
+              "verify",
+              "assert"
+            ],
+            "default": "verify",
+            "offSwitch": "verify (default) fails closed when UAR settings are unreadable; assert records the operator's own verification. Only used for kind uar.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "uar": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "card_url": {
+                "type": "string",
+                "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+                "maxLength": 2048,
+                "default": null,
+                "offSwitch": "Remove the uar block: no check-uar connection is made.",
+                "ownerChange": "mcp-agent-principal-enforcement"
+              },
+              "admin_credential": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/SecretRef"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "offSwitch": "null (default): settings cannot be read, so check verify fails closed.",
+                "ownerChange": "mcp-agent-principal-enforcement"
+              },
+              "min_version": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                "default": null,
+                "offSwitch": "null (default): the version pinned by the shipped UAR profile applies.",
+                "ownerChange": "agentic-uar-integration"
+              }
+            },
+            "required": [
+              "card_url"
+            ],
+            "default": null,
+            "offSwitch": "null (default); required only for kind uar.",
+            "ownerChange": "mcp-agent-principal-enforcement"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "credential"
+        ]
+      },
+      "default": [],
+      "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no credential configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused.",
+      "ownerChange": "mcp-agent-principal-enforcement"
+    },
+    "llm": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+          "maxLength": 2048,
+          "default": null,
+          "offSwitch": "Remove the llm section: no agent surface is mounted and no model call is made.",
+          "ownerChange": "mcp-llm-proxy-loop",
+          "flag": "--llm-base-url"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "default": null,
+          "offSwitch": "Remove the llm section.",
+          "ownerChange": "mcp-llm-proxy-loop",
+          "flag": "--llm-model"
+        },
+        "api_key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecretRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "offSwitch": "null (default): requests carry no key (local servers). An api_key reference whose environment variable or file is absent is never fatal: startup proceeds with a warning, only the dependent agent backend is disabled, and /agui answers 503 backend_not_configured until the reference resolves (CRITICAL-2).",
+          "ownerChange": "mcp-llm-proxy-loop",
+          "flag": "--llm-api-key-env, --llm-api-key-file"
+        },
+        "timeout": {
+          "$ref": "#/$defs/Duration",
+          "default": "60s",
+          "offSwitch": "Per-request limit; always enforced.",
+          "ownerChange": "mcp-llm-proxy-loop"
+        }
+      },
+      "required": [
+        "base_url",
+        "model"
+      ],
+      "default": null,
+      "offSwitch": "null (default): no LLM backend and no model call is ever made. /agui stays mounted whenever agent.agui is true and answers every run request 503 backend_not_configured until a backend is configured (flag, this section, or a settings write applied without restart); /a2a requires this section and is not mounted without it. The backend can appear and change at runtime through the settings API; a run in flight finishes on the backend it started with (ADR-0009 section 1).",
+      "ownerChange": "mcp-llm-proxy-loop"
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agui": {
+          "type": "boolean",
+          "default": false,
+          "description": "true mounts /agui whether or not an llm backend is configured: with no backend the route answers every run request 503 backend_not_configured (the settings page's empty state) until a backend is configured, which can happen at runtime through the settings API without a restart. Stock `ipfs mcp` keeps this flag off; Desktop's sidecar and the LKE manifest pass --agui (ADR-0009 section 8).",
+          "offSwitch": "false (default): /agui is not mounted (404).",
+          "ownerChange": "mcp-agui-endpoint",
+          "flag": "--agui"
+        },
+        "a2ui": {
+          "type": "boolean",
+          "default": true,
+          "description": "Server-emitted A2UI surface messages on /agui (catalog discovery plus server-built surfaces, D15). Defaults on wherever /agui is on; it is a separate off switch so surfaces can be stopped without unmounting /agui.",
+          "offSwitch": "false: no A2UI surface message is emitted on /agui; the run stream is otherwise unchanged and the client-side ToolCallCard fallback renders. No effect when agent.agui is false.",
+          "ownerChange": "agent-settings-contract"
+        },
+        "a2a": {
+          "type": "boolean",
+          "default": false,
+          "offSwitch": "false (default): /a2a and the agent card are not mounted (404).",
+          "ownerChange": "mcp-a2a-endpoint",
+          "flag": "--a2a"
+        },
+        "origin_allowlist": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Origin"
+          },
+          "default": [],
+          "description": "Page origins allowed to call /agui from a browser. For a listed Origin, ipfs mcp answers the preflight (OPTIONS) and the POST with Access-Control-Allow-Origin echoing that origin (never *), Access-Control-Allow-Methods: POST, OPTIONS, Access-Control-Allow-Headers: authorization, content-type, Access-Control-Expose-Headers: Retry-After (so the browser chat can read when to retry a 503 resource_exhausted), and Vary: Origin. It never sends Access-Control-Allow-Credentials: the only credential is the bearer in the Authorization header, and cookies are not read. A request whose Origin is not listed gets 403 with no CORS headers. The allowlist grants no access by itself: the request still needs a ui principal's bearer.",
+          "offSwitch": "Empty (default): every request to /agui that carries an Origin header is rejected with 403 and no CORS headers. Add webui://localhost, http://127.0.0.1:5001 or http://localhost:5001 to allow the Web UI chat.",
+          "ownerChange": "mcp-agui-endpoint",
+          "cors": {
+            "allowMethods": ["POST", "OPTIONS"],
+            "allowHeaders": ["authorization", "content-type"],
+            "exposeHeaders": ["Retry-After"],
+            "allowCredentials": false,
+            "vary": "Origin"
+          }
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Master switch for the runtime settings route. The route is mounted only when an admin principal is configured and this key is not false (ADR-0009 section 3).",
+              "offSwitch": "false: the settings route is not mounted even with an admin principal configured; every request to it gets 404, nothing is written and nothing is dialed.",
+              "ownerChange": "agent-settings-contract"
+            },
+            "accept_secrets": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the settings API accepts write-only secret fields (the LLM api_key). On LKE this is false: the cloud key lives in an out-of-band Kubernetes Secret mounted as a file referenced by llm.api_key, and the page renders the key field as set on the server (ADR-0009 section 5).",
+              "offSwitch": "false: a settings write carrying a secret field is refused with secrets_not_accepted (403); a key is then set only by llm.api_key in this file or by the --llm-api-key-env/--llm-api-key-file flags.",
+              "ownerChange": "agent-settings-contract"
+            },
+            "dir": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/AbsolutePath"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Directory holding the settings overlay, written with mode 0600 and applied atomically (write-then-rename). Effective settings resolve flags > overlay > this config file (ADR-0009 section 7). A write-only key stored through the settings API becomes a 0600 file here referenced as a SecretRef file.",
+              "offSwitch": "null (default): no overlay is read or written; the effective settings come from the flags and this file only, and nothing is persisted across restarts.",
+              "ownerChange": "agent-settings-contract",
+              "flag": "--settings-dir"
+            }
+          },
+          "default": {},
+          "offSwitch": "Omit the section; without an admin principal the settings route is not mounted regardless of these keys.",
+          "ownerChange": "agent-settings-contract"
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_steps": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64,
+              "default": 8,
+              "offSwitch": "Always enforced; lower it to stop runs sooner.",
+              "ownerChange": "mcp-llm-proxy-loop"
+            },
+            "max_tokens": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 1048576,
+              "default": 32768,
+              "offSwitch": "Always enforced.",
+              "ownerChange": "mcp-llm-proxy-loop"
+            },
+            "wall_clock": {
+              "$ref": "#/$defs/Duration",
+              "default": "120s",
+              "offSwitch": "Always enforced.",
+              "ownerChange": "mcp-llm-proxy-loop"
+            }
+          },
+          "default": {},
+          "offSwitch": "Limits always apply; the loop runs only when llm is configured.",
+          "ownerChange": "mcp-llm-proxy-loop"
+        }
+      },
+      "default": {},
+      "offSwitch": "Leave agui and a2a false (default).",
+      "ownerChange": "mcp-llm-proxy-loop"
+    },
+    "confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "modes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "native",
+              "desktop",
+              "cli"
+            ]
+          },
+          "default": [
+            "native"
+          ],
+          "description": "The out-of-band human gate for clients that cannot elicit. native is the OS presence prompt (macos-localauth on macOS, linux-polkit on Linux); desktop is a paired IPFS Desktop window and is opt-in since 2026-10-12 (the default is native only): it resolves write-class confirmations only, after Touch ID in the Desktop window, is never a presence resolver, and has no Windows support this phase; cli is `ipfs mcp confirm` on a TTY, is enabled only by naming it (here, in --confirm or IPFS_MCP_CONFIRM) or by confirmation.cli, and never approves calls from the stdio session. A mechanism the host cannot offer is skipped. Precedence: --confirm, then IPFS_MCP_CONFIRM, then this key, then the default.",
+          "offSwitch": "Leaving desktop out (the default) keeps the paired Desktop channel off. Empty list, --confirm=none or IPFS_MCP_CONFIRM=none: no out-of-band resolver runs. Per-call confirmation still applies: elicitation is used when the client supports it, otherwise write and destructive calls are refused with confirmation_unavailable.",
+          "ownerChange": "native-confirmation-prompt",
+          "flag": "--confirm",
+          "env": "IPFS_MCP_CONFIRM"
+        },
+        "resolvers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "desktop",
+              "macos-localauth",
+              "linux-polkit"
+            ]
+          },
+          "default": [
+            "desktop",
+            "macos-localauth",
+            "linux-polkit"
+          ],
+          "description": "Narrows the resolvers that the effective modes enable. It is applied after the modes are resolved, whatever their source (--confirm, IPFS_MCP_CONFIRM, confirmation.modes or the default), so it can only make the gate stricter: a resolver runs only when its mode is enabled, the host offers it and it is listed here. Absent means all three. [] means none of desktop, macos-localauth and linux-polkit runs. cli is not in this list and is not narrowed by it; it is enabled only through modes or confirmation.cli. When the list removes every resolver the modes asked for, ipfs mcp prints a warning at start. Only macos-localauth and linux-polkit are presence resolvers and satisfy requires_native_prompt (destructive calls from the ui and a2a principals); desktop does not until a Desktop confirmation window consumes the pairing key, and cli and agui-interrupt never do.",
+          "offSwitch": "Remove a resolver to stop using it; [] stops desktop, macos-localauth and linux-polkit. With no resolver available, writes from non-eliciting principals are refused (confirmation_unavailable). Elicitation is always used for human-mcp principals whose client supports it.",
+          "ownerChange": "native-confirmation-prompt"
+        },
+        "cli": {
+          "type": "boolean",
+          "default": false,
+          "description": "true enables the cli mode (ipfs mcp confirm) as if cli were listed in confirmation.modes; with confirmation.modes absent, it adds cli to the default modes (native). The principals[].shell_capable rule and the TTY requirement still apply, and cli never satisfies requires_native_prompt. cli never approves a confirmation opened by the stdio session (the local principal), because a stdio host cannot assert that it has no shell: a non-eliciting stdio client whose only resolver is cli gets confirmation_unavailable, and ipfs mcp warns at start. --confirm and IPFS_MCP_CONFIRM still win: when either is given, this key adds nothing. Setting false while confirmation.modes lists cli is a validation error.",
+          "offSwitch": "false (default): ipfs mcp confirm is refused unless cli is named in --confirm, IPFS_MCP_CONFIRM or confirmation.modes. true is for headless servers only and needs a TTY.",
+          "ownerChange": "native-confirmation-prompt",
+          "flag": "--confirm=cli"
+        },
+        "ttl": {
+          "$ref": "#/$defs/Duration",
+          "default": "120s",
+          "description": "How long a confirmation stays open. It governs pending confirmations, confirmation tokens, and the expiry of the confirm channel and of ipfs mcp confirm. At least 1s, at most 10m; a value outside these bounds is a validation error (token expiry is kept in whole seconds). Expiry is denial.",
+          "offSwitch": "Cannot be turned off: pending confirmations and tokens always expire, after this duration (default 120s, at least 1s, at most 10m); expiry is denial.",
+          "ownerChange": "native-confirmation-prompt"
+        }
+      },
+      "default": {},
+      "offSwitch": "Per-call confirmation of write and destructive tools cannot be turned off; it can only become stricter. The out-of-band human gate can: confirmation.modes [] or IPFS_MCP_CONFIRM=none, after which only eliciting clients can confirm.",
+      "ownerChange": "native-confirmation-prompt"
+    },
+    "embeddings": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "embedded",
+            "remote"
+          ],
+          "default": null,
+          "offSwitch": "Remove the embeddings section.",
+          "ownerChange": "mcp-embeddings-surrealdb"
+        },
+        "embedded": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "surreal_binary": {
+              "$ref": "#/$defs/AbsolutePath",
+              "default": null,
+              "offSwitch": "Remove the embedded block: no process is started.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "data_dir": {
+              "$ref": "#/$defs/AbsolutePath",
+              "default": null,
+              "offSwitch": "Remove the embedded block.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "min_version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "default": "3.0.0",
+              "offSwitch": "Always checked; an older binary is refused.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            }
+          },
+          "required": [
+            "surreal_binary",
+            "data_dir"
+          ],
+          "default": null,
+          "offSwitch": "null (default) unless mode is embedded.",
+          "ownerChange": "mcp-embeddings-surrealdb"
+        },
+        "remote": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+              "maxLength": 2048,
+              "default": null,
+              "offSwitch": "Remove the remote block: no connection is made.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null,
+              "offSwitch": "Remove the remote block.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "database": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null,
+              "offSwitch": "Remove the remote block.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "credential": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SecretRef"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Env or file reference to the SurrealDB credential. A value of the form user:password (the user part non-empty; the password is everything after the first colon) is sent as HTTP Basic authentication for a root or system user; any other value is sent as a bearer token (Authorization: Bearer). The value is never logged.",
+              "offSwitch": "null (default): unauthenticated connection.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            }
+          },
+          "required": [
+            "endpoint",
+            "namespace",
+            "database"
+          ],
+          "default": null,
+          "offSwitch": "null (default) unless mode is remote.",
+          "ownerChange": "mcp-embeddings-surrealdb"
+        },
+        "embedder": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base_url": {
+              "type": "string",
+              "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+              "maxLength": 2048,
+              "default": null,
+              "offSwitch": "Remove the embeddings section: no embedder request is made. The host must also be in the calling principal's egress_ack.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "default": null,
+              "offSwitch": "Remove the embeddings section.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "dimensions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8192,
+              "default": null,
+              "offSwitch": "Remove the embeddings section.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SecretRef"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Env or file reference to the embedder API key, sent as a bearer token (Authorization: Bearer). The value is never logged.",
+              "offSwitch": "null (default): requests carry no key.",
+              "ownerChange": "mcp-embeddings-surrealdb"
+            }
+          },
+          "required": [
+            "base_url",
+            "model",
+            "dimensions"
+          ],
+          "default": null,
+          "offSwitch": "Remove the embeddings section.",
+          "ownerChange": "mcp-embeddings-surrealdb"
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "auto": {
+              "type": "boolean",
+              "default": false,
+              "offSwitch": "false (default): nothing is indexed after ipfs_add; only ipfs_index_cid indexes.",
+              "ownerChange": "mcp-embedding-index-lifecycle"
+            },
+            "mime_allowlist": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z]+/[a-z0-9.+-]+$"
+              },
+              "default": [
+                "text/plain",
+                "text/markdown"
+              ],
+              "offSwitch": "Empty list: nothing is indexed.",
+              "ownerChange": "mcp-embedding-index-lifecycle"
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104857600,
+              "default": 1048576,
+              "offSwitch": "Larger content is skipped.",
+              "ownerChange": "mcp-embedding-index-lifecycle"
+            },
+            "chunk_chars": {
+              "type": "integer",
+              "minimum": 200,
+              "maximum": 20000,
+              "default": 2000,
+              "offSwitch": "Always applies to indexed content.",
+              "ownerChange": "mcp-embedding-index-lifecycle"
+            }
+          },
+          "default": {},
+          "offSwitch": "Leave auto false (default).",
+          "ownerChange": "mcp-embedding-index-lifecycle"
+        }
+      },
+      "required": [
+        "mode",
+        "embedder"
+      ],
+      "default": null,
+      "offSwitch": "null (default): no SurrealDB process or connection, no embedder call, and the index tools report not configured.",
+      "ownerChange": "mcp-embeddings-surrealdb"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "embeddings": {
+            "type": "object",
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "const": "embedded"
+              }
+            }
+          }
+        },
+        "required": [
+          "embeddings"
+        ]
+      },
+      "then": {
+        "properties": {
+          "embeddings": {
+            "required": [
+              "embedded"
+            ],
+            "properties": {
+              "embedded": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "embeddings": {
+            "type": "object",
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "const": "remote"
+              }
+            }
+          }
+        },
+        "required": [
+          "embeddings"
+        ]
+      },
+      "then": {
+        "properties": {
+          "embeddings": {
+            "required": [
+              "remote"
+            ],
+            "properties": {
+              "remote": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "agent": {
+            "properties": {
+              "a2a": {
+                "const": true
+              }
+            },
+            "required": [
+              "a2a"
+            ]
+          }
+        },
+        "required": [
+          "agent"
+        ]
+      },
+      "then": {
+        "required": [
+          "llm"
+        ],
+        "properties": {
+          "llm": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "SecretRef": {
+      "description": "A credential reference. Literal secret values are not accepted anywhere.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "env"
+          ],
+          "properties": {
+            "env": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "file"
+          ],
+          "properties": {
+            "file": {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          }
+        }
+      ]
+    },
+    "AbsolutePath": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 4096,
+      "pattern": "^(/|[A-Za-z]:\\\\)[^\\x00]*$",
+      "description": "An absolute filesystem path. Relative paths and PATH lookups are rejected."
+    },
+    "Duration": {
+      "type": "string",
+      "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$"
+    },
+    "Group": {
+      "type": "string",
+      "enum": [
+        "node",
+        "content",
+        "pin",
+        "mfs",
+        "names",
+        "dag",
+        "routing",
+        "diag",
+        "index"
+      ]
+    },
+    "GroupOrAll": {
+      "type": "string",
+      "enum": [
+        "node",
+        "content",
+        "pin",
+        "mfs",
+        "names",
+        "dag",
+        "routing",
+        "diag",
+        "index",
+        "*"
+      ]
+    },
+    "GroupOrSelector": {
+      "type": "string",
+      "enum": [
+        "node",
+        "content",
+        "pin",
+        "mfs",
+        "names",
+        "dag",
+        "routing",
+        "diag",
+        "index",
+        "destructive"
+      ]
+    },
+    "PeerId": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 128,
+      "pattern": "^(12D3KooW[1-9A-HJ-NP-Za-km-z]{44}|Qm[1-9A-HJ-NP-Za-km-z]{44}|[bk][a-z2-7]{20,})$",
+      "description": "A libp2p peer ID (base58btc 12D3KooW... or Qm..., or a CIDv1 libp2p-key), the same form as the tool contract's PeerId."
+    },
+    "ToolName": {
+      "type": "string",
+      "pattern": "^(ipfs|pin|ipns|key|mfs|dag|car|routing|swarm|stats|repo)_[a-z0-9_]+$"
+    },
+    "Host": {
+      "type": "string",
+      "pattern": "^([a-z0-9.-]+|\\[[0-9a-f:]+\\])(:[0-9]{1,5})?$",
+      "maxLength": 260,
+      "description": "A model or embedder host name (optionally with port) the principal's content may be sent to."
+    },
+    "Origin": {
+      "type": "string",
+      "pattern": "^(https?|webui)://[^/\\s]+$",
+      "maxLength": 260
+    },
+    "ListenAddress": {
+      "type": "string",
+      "description": "host:port or a /ip4|/ip6|/dns*/.../tcp/<port> multiaddr. Ports reserved for other local services are rejected: 4000, 4001, 5001, 8080, 1906, 1907, 1908, 50051, 8181, 8081, 11434, 23001, 28000.",
+      "anyOf": [
+        {
+          "pattern": "^(\\[[0-9a-fA-F:]+\\]|[0-9.]+|localhost):[0-9]{1,5}$"
+        },
+        {
+          "pattern": "^/(ip4|ip6|dns|dns4|dns6)/[^/]+/tcp/[0-9]{1,5}$"
+        }
+      ],
+      "not": {
+        "pattern": "(:|/tcp/)(4000|4001|5001|8080|1906|1907|1908|50051|8181|8081|11434|23001|28000)$"
+      }
+    }
+  }
+}

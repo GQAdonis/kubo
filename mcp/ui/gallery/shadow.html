@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat island in a hostile host page</title>
+    <style>
+      /* A host page that styles aggressively, the way a Tachyons page can: the island must not care. */
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #fff;
+        color: #c00;
+        font: italic 28px/3 'Times New Roman', serif;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        text-align: right;
+      }
+      button,
+      a,
+      p,
+      li,
+      h3,
+      h4,
+      table,
+      td,
+      th,
+      code {
+        background: lime !important;
+        color: red !important;
+        border: 4px dashed red !important;
+        font-family: 'Comic Sans MS', cursive !important;
+      }
+      #outside {
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="outside">Host page text, styled by the host</p>
+    <div id="island-host"></div>
+    <script type="module" src="./shadow.tsx"></script>
+  </body>
+</html>

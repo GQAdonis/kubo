@@ -1,0 +1,47 @@
+# Authoritative architecture decisions and dependency pins.
+# Agents must not contradict this file. Agents may update it when the operator
+# directs a pin or decision change; record each change with its date.
+# Go dependency pins for kubo itself live in the three go.mod files (root,
+# docs/examples/kubo-as-a-library, test/dependencies) and change only via
+# `go get` + `make mod_tidy`; this file never overrides go.mod.
+
+[meta]
+created = "2026-10-09"
+updated = "2026-10-12"
+
+[pins]
+# Verified against the Go module proxy and the npm registry on 2026-10-09.
+"go" = "1.26.5"                                       # go.mod directive
+"github.com/modelcontextprotocol/go-sdk" = "1.8.0"    # MCP spec 2026-07-28
+"@modelcontextprotocol/ext-apps" = "2.0.3"            # MCP Apps (SEP-1865)
+"@modelcontextprotocol/server" = "2.3.1"              # ext-apps peer dependency
+"@modelcontextprotocol/core" = "2.3.1"                # ext-apps peer dependency (added 2026-10-09, npm-verified)
+"@modelcontextprotocol/client" = "2.3.1"              # ext-apps peer dependency (added 2026-10-09, npm-verified)
+"zod-v3" = "npm:zod@3.25.76"                          # @a2ui/web_core 0.12.0 runs on Zod 3 (added 2026-10-09)
+"@a2ui/react" = "0.12.0"                              # A2UI v0.9 renderer
+"@a2ui/web_core" = "0.12.0"
+"react" = "19.3.0"
+"react-dom" = "19.3.0"
+"zod" = "4.6.5"
+"typescript" = "7.0.2"
+"vite" = "8.3.4"
+# mcp/webmcp, added 2026-10-12 by operator direction; verified on the npm registry 2026-10-12.
+"kubo-rpc-client" = "6.1.0"                           # dev dependency; peer range ^6.1.0 (Web UI fork major)
+"multiformats" = "13.4.0"                             # runtime dependency; matches the Web UI fork
+"ajv" = "8.20.0"                                      # contract output-schema checks in tests
+"ajv-formats" = "3.0.1"
+"vitest" = "5.0.3"                                    # same as mcp/ui
+"@types/node" = "26.6.4"                              # same as mcp/ui
+
+[decisions]
+pins-go = "Kubo Go dependency pins live in go.mod and change only via go get + make mod_tidy; this file records MCP-related pins and decisions only"
+fork-only = "2026-10-09: GQAdonis/kubo is fork-only for now; upstream conversation happens after a working result"
+mcp-placement = "2026-10-09: F4 - `ipfs mcp` CLI command in the root module, RPC-only to a running daemon (stock or fork), stdio default plus opt-in Streamable HTTP; decided by the adversarially reviewed ipfs-mcp-server assessment"
+mcp-root-deps = "2026-10-09: modelcontextprotocol/go-sdk and its modules in the root go.mod are accepted"
+mcp-stock-kubo = "2026-10-09: no separate binary; the fork's ipfs binary serves MCP against any compatible daemon, with minimum-version detection and per-tool degradation"
+mcp-http-auth = "2026-10-09: static bearer token for Streamable HTTP now, behind a replaceable verifier designed for Ory Kratos (identity) + Ory Hydra (OAuth2) later"
+mcp-http-scope = "2026-10-09: Streamable HTTP exposes the full tool set, including writes and destructive tools"
+mcp-confirmation = "2026-10-09: every write and destructive tool requires confirmation on every transport (elicitation where supported, defined fallback otherwise; never silent)"
+distribution = "2026-10-09: release binaries; plugin marketplaces for Claude Code, Codex and OpenCode (Kimi plugin packaging out of scope this phase)"
+webmcp-hosts = "2026-10-09: Codex desktop and Kimi desktop are the first WebMCP targets, gated on a host-support spike"
+agents-md-commit = "2026-10-09: AGENTS.md is committed together with the implementation (fork-only waiver of the upstream separate-PR rule)"

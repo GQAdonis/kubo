@@ -1,0 +1,78 @@
+{
+  "name": "@gqadonis/ipfs-mcp-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure presentational React 19 IPFS components and an A2UI v0.9 catalog, bound to the mcp/contract tool output schemas.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./a2ui": {
+      "types": "./dist/types/a2ui/index.d.ts",
+      "default": "./dist/a2ui.js"
+    },
+    "./host": {
+      "types": "./dist/types/host/index.d.ts",
+      "default": "./dist/host.js"
+    },
+    "./styles.css": "./dist/ipfs-ui.css",
+    "./catalog.json": "./catalog/ipfs-mcp.catalog.json"
+  },
+  "files": [
+    "dist",
+    "catalog",
+    "SOURCES.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "gen:contract": "node scripts/gen-contract.mjs",
+    "gen:catalog": "node scripts/gen-catalog.mjs",
+    "gen": "pnpm gen:contract && pnpm gen:catalog",
+    "gen:check": "node scripts/gen-contract.mjs --check && node scripts/gen-catalog.mjs --check",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:lib": "vite build",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build": "pnpm clean && pnpm build:lib && pnpm build:types",
+    "test": "vitest run",
+    "test:a11y": "vitest run tests/a11y",
+    "test:scan": "node scripts/scan-external-urls.mjs",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
+    "check": "pnpm gen:check && pnpm typecheck && pnpm test && pnpm build && pnpm test:scan"
+  },
+  "dependencies": {
+    "@a2ui/react": "0.12.0",
+    "@a2ui/web_core": "0.12.0",
+    "lucide-react": "1.53.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5",
+    "zod-v3": "npm:zod@3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "axe-core": "4.14.0",
+    "jsdom": "30.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}

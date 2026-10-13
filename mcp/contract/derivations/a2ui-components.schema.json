@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "A2UI component binding references",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalogId", "description", "components", "chatRules"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "catalogId": {
+      "type": "string",
+      "pattern": "^https://[^\\s]+\\.catalog\\.json$",
+      "description": "Canonical A2UI v0.9 catalog ID: a URI identifier (never fetched), equal to the published manifest's $id. Servers advertise it in supportedCatalogIds."
+    },
+    "catalogAliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "description": "Short names for the same catalog (docs, logs, config). Never sent as an A2UI catalogId."
+    },
+    "description": { "type": "string" },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "description"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+          "kind": { "type": "string", "enum": ["view", "chat"] },
+          "description": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "chatRules": {
+      "type": "object",
+      "additionalProperties": { "$ref": "derivation-rules.schema.json#/$defs/Rule" }
+    }
+  }
+}

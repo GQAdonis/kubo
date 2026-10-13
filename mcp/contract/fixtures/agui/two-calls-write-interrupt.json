@@ -1,0 +1,124 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "One model reply with two confirmable calls (pin_add, then repo_gc). The run announces both calls, then ends at the first one that needs confirmation with exactly one interrupt; repo_gc waits in the session queue and nothing has run. A run carries at most one interrupt (ADR-0004 Round 6 amendment), so a resume never mixes a write approval with a native-prompt {wait: true}.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-two-1",
+    "runId": "run-1",
+    "messages": [
+      {
+        "id": "msg-u1",
+        "role": "user",
+        "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku, then free some space."
+      }
+    ],
+    "tools": [],
+    "context": []
+  },
+  "events": [
+    {
+      "type": "RUN_STARTED",
+      "threadId": "thread-two-1",
+      "runId": "run-1"
+    },
+    {
+      "type": "TOOL_CALL_START",
+      "toolCallId": "tc-7",
+      "toolCallName": "pin_add",
+      "parentMessageId": "msg-a1"
+    },
+    {
+      "type": "TOOL_CALL_ARGS",
+      "toolCallId": "tc-7",
+      "delta": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}"
+    },
+    {
+      "type": "TOOL_CALL_END",
+      "toolCallId": "tc-7"
+    },
+    {
+      "type": "TOOL_CALL_START",
+      "toolCallId": "tc-8",
+      "toolCallName": "repo_gc",
+      "parentMessageId": "msg-a1"
+    },
+    {
+      "type": "TOOL_CALL_ARGS",
+      "toolCallId": "tc-8",
+      "delta": "{}"
+    },
+    {
+      "type": "TOOL_CALL_END",
+      "toolCallId": "tc-8"
+    },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        {
+          "id": "msg-u1",
+          "role": "user",
+          "content": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku, then free some space."
+        },
+        {
+          "id": "msg-a1",
+          "role": "assistant",
+          "toolCalls": [
+            {
+              "id": "tc-7",
+              "type": "function",
+              "function": {
+                "name": "pin_add",
+                "arguments": "{\"path\":\"bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\",\"recursive\":true}"
+              }
+            },
+            {
+              "id": "tc-8",
+              "type": "function",
+              "function": {
+                "name": "repo_gc",
+                "arguments": "{}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "thread-two-1",
+      "runId": "run-1",
+      "outcome": {
+        "type": "interrupt",
+        "interrupts": [
+          {
+            "id": "int-cf_Tw0CallsWr1teAbCd",
+            "reason": "tool_call",
+            "message": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)",
+            "toolCallId": "tc-7",
+            "responseSchema": {
+              "type": "object",
+              "properties": {
+                "approved": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "approved"
+              ]
+            },
+            "expiresAt": "2026-10-09T12:02:00Z",
+            "metadata": {
+              "ipfs-mcp": {
+                "confirmation_id": "cf_Tw0CallsWr1teAbCd",
+                "tool": "pin_add",
+                "class": "write",
+                "requires_native_prompt": false
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

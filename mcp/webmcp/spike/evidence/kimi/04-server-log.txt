@@ -1,0 +1,21 @@
+127.0.0.1 - - [12/Oct/2026 08:19:23] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /probe.css HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /probe.js HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /fonts/hanken-grotesk-latin-400-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /fonts/jetbrains-mono-latin-600-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /fonts/syne-latin-700-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /fonts/jetbrains-mono-latin-400-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:28:03] "GET /fonts/hanken-grotesk-latin-600-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /probe.css HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /probe.js HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /fonts/hanken-grotesk-latin-400-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /fonts/jetbrains-mono-latin-600-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /fonts/syne-latin-700-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /fonts/jetbrains-mono-latin-400-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:32:55] "GET /fonts/hanken-grotesk-latin-600-normal.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Oct/2026 08:34:25] code 404, message File not found
+127.0.0.1 - - [12/Oct/2026 08:34:25] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [12/Oct/2026 08:34:26] code 404, message File not found
+127.0.0.1 - - [12/Oct/2026 08:34:26] "GET /favicon.ico HTTP/1.1" 404 -

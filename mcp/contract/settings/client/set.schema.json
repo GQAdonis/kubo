@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsClient.set / ipfsDesktop.agentSettings.set",
+  "description": "Messages of the SettingsClient.set() method (agent-settings-contract task 1.5). On the Desktop bridge this is the IPC channel ipfsDesktop.agentSettings.set; on HTTP it is PUT on the settings route with revision presented as If-Match (mcp-agent-settings-api 1.2). Partial update: only present fields change. This method carries no secret material by design: api_key is refused here so that the single secret write path is setApiKey/clearApiKey (on Desktop, safeStorage; see set-api-key.schema.json). A write that changes the model host to one not already in the calling principal's egress_ack must carry egress_confirmation naming exactly that host (D4); on Desktop the bridge additionally requires Touch ID for that change (desktop-agent-settings-bridge 1.4). The response on success is the applied read shape with the new revision, identical to GetResponse in get.schema.json; failures reject with the settings error shape (../settings-error.schema.json).",
+  "$defs": {
+    "SetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision"],
+      "minProperties": 2,
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The current revision as returned by get() or a previous mutation. Maps to the HTTP If-Match header; a missing or stale value is rejected with revision_conflict (412)."
+        },
+        "backend": { "$ref": "#/$defs/BackendSet" },
+        "system_prompt": {
+          "type": "string",
+          "maxLength": 32768,
+          "description": "Replacement for the custom part of the system prompt. The fixed safety prefix is always prepended by the server and cannot be removed, emptied or overridden by this value."
+        },
+        "egress_confirmation": { "$ref": "#/$defs/EgressConfirmation" }
+      },
+      "description": "Partial update. minProperties 2 means at least one field besides revision must be present."
+    },
+    "SetResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "backend", "system_prompt"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "The new revision after the apply."
+        },
+        "backend": {
+          "anyOf": [
+            { "$ref": "#/$defs/BackendRead" },
+            { "type": "null" }
+          ]
+        },
+        "system_prompt": { "$ref": "#/$defs/SystemPromptRead" }
+      },
+      "description": "The applied state, identical in shape to GetResponse (get.schema.json). The apply is synchronous and restart-free (ADR-0009 section 1); there is no job id and no restartRequired field."
+    },
+    "BackendSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"],
+          "description": "Switch the backend kind (openai: OpenAI-compatible endpoint; uar: Universal Agent Runtime, D14)."
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+          "maxLength": 2048,
+          "description": "New backend base URL. Never carries credentials. A change to a host not already acknowledged needs egress_confirmation."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "description": "Like the server BackendWrite (../settings-write.schema.json) but with no api_key field: secrets go through setApiKey/clearApiKey only, so the Desktop bridge has exactly one secret write path into safeStorage."
+    },
+    "BackendRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["openai", "uar"]
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+          "maxLength": 2048
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "api_key": { "$ref": "#/$defs/ApiKeyStatus" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "openai" } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["base_url", "model", "api_key"] }
+        }
+      ]
+    },
+    "ApiKeyStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["set"],
+      "properties": {
+        "set": { "type": "boolean" },
+        "source": {
+          "type": "string",
+          "enum": ["settings_api", "environment", "file"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "set": { "const": true } },
+            "required": ["set"]
+          },
+          "then": { "required": ["source"] },
+          "else": { "not": { "required": ["source"] } }
+        }
+      ],
+      "description": "Key presence and provenance only, mirroring ../settings-read.schema.json. Never carries key material."
+    },
+    "SystemPromptRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["safety_prefix", "custom"],
+      "properties": {
+        "safety_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The fixed, non-removable safety prefix (mcp-agent-hot-reload 1.4)."
+        },
+        "custom": {
+          "type": "string",
+          "description": "The operator-configured part of the system prompt."
+        }
+      }
+    },
+    "EgressConfirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "pattern": "^([a-z0-9.-]+|\\[[0-9a-f:]+\\])(:[0-9]{1,5})?$",
+          "maxLength": 260,
+          "description": "The exact newly chosen model host the caller confirms it may send node content to (D4). It must equal the host of the base_url in the same write; any other egress change is rejected with egress_confirmation_required."
+        }
+      },
+      "description": "Required exactly when the write changes the model host to one not already in the calling principal's egress_ack. Extends egress_ack for this host only. Mirrors ../settings-write.schema.json."
+    }
+  }
+}

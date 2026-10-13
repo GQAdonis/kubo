@@ -1,0 +1,14 @@
+{
+  "method": "elicitation/create",
+  "params": {
+    "mode": "form",
+    "message": "Remove the pin on /ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi (recursive=true)? Unpinned content can be garbage collected.",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "confirm": { "type": "boolean", "title": "Remove pin" }
+      },
+      "required": ["confirm"]
+    }
+  }
+}

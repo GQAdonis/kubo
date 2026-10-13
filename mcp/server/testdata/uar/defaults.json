@@ -1,0 +1,9 @@
+{
+  "revision": "defaults-1",
+  "llm": {"model": "openai/gpt-4o", "provider_host": "api.openai.com"},
+  "knowledge_base_embedder": {"model": "text-embedding-3-small", "provider_host": "api.openai.com"},
+  "memory_embedder": {"model": "text-embedding-3-small", "provider_host": "api.openai.com"},
+  "governance": {"enabled": false},
+  "native_tools": {"terminal_exec_enabled": false},
+  "mcp_servers": []
+}

@@ -1,0 +1,20 @@
+{
+  "name": "kubo-ipfs",
+  "interface": {
+    "displayName": "Kubo IPFS"
+  },
+  "plugins": [
+    {
+      "name": "ipfs",
+      "source": {
+        "source": "local",
+        "path": "./mcp/plugin/ipfs"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

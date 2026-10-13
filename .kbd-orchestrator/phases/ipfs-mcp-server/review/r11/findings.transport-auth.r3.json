@@ -1,0 +1,29 @@
+{
+  "mode": "diff",
+  "verdict": "BLOCK",
+  "judge_model": "gpt-6.1-sol",
+  "producer_model": "claude-opus-5-5",
+  "isolation_mode": "rest-gateway:http://localhost:4000/v1",
+  "cross_model_check": "unverified-producer-unknown",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "file": "mcp/server/policy.go",
+      "claim": "UAR diagnostics still persist authenticated principal identities, contrary to the blocking no-tracking constraint.",
+      "evidence": "uarGuard.report calls g.log.Warn(\"uar preflight\", \"principal\", id.ID, ...) on initial checks and verdict or revision changes. Server.StartupReport also includes id.ID in its output, which cmd/ipfs/kubo/mcp_http.go writes to stderr. The no-tracking constraint prohibits code that 'collects, logs or reports who runs a node' and explicitly applies to mcp/server logging. Removing destination URLs does not remove these identity records.",
+      "suggested_fix": "Keep persistent diagnostics limited to non-identifying reason codes and verdicts; omit principal IDs from logger and startup output. Provide principal-specific details only through an explicit operator-requested diagnostic response."
+    },
+    {
+      "severity": "WARNING",
+      "file": "mcp/server/http.go",
+      "claim": "HTTP request bodies have a size limit but no read deadline, allowing slow uploads to retain connections and handler goroutines indefinitely.",
+      "evidence": "HTTPServer.Serve configures ReadHeaderTimeout and IdleTimeout but no body-read timeout, while protect only wraps r.Body in http.MaxBytesReader. ReadHeaderTimeout stops applying once headers have arrived, and IdleTimeout does not bound reads of an active request body. An authenticated remote caller can therefore send a permitted-size MCP body arbitrarily slowly.",
+      "suggested_fix": "Apply a bounded request-body read deadline, for example through http.ResponseController.SetReadDeadline before parsing, and clear it after the body is consumed so long-lived MCP, AG-UI, and A2A response streams remain supported. Add a slow-body test."
+    }
+  ],
+  "judge_identity": {
+    "providerConnectionId": "openai-proxy-8181",
+    "providerId": "openai",
+    "modelId": "gpt-6.1-sol"
+  }
+}

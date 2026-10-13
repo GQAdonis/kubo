@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Derivation rule file",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "description", "rules"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "source": { "type": "string", "minLength": 10 },
+    "description": { "type": "string", "minLength": 10 },
+    "rules": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/Rule" }
+    },
+    "notes": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "$defs": {
+    "Field": {
+      "type": "string",
+      "enum": ["annotations.readOnlyHint", "confirmation", "returnsUntrustedContent", "contentEgress", "peerSupplied", "group.diagnostic"]
+    },
+    "Rule": {
+      "type": "string",
+      "pattern": "^(always|copy:(annotations\\.readOnlyHint|returnsUntrustedContent|contentEgress|peerSupplied|group\\.diagnostic)|any:(returnsUntrustedContent|contentEgress|peerSupplied)(,(returnsUntrustedContent|contentEgress|peerSupplied))+|not-equal:confirmation:(none|write|destructive)|in:confirmation:(none|write|destructive)(,(none|write|destructive))*|map:confirmation:none=[a-z:]+,write=[a-z:]+,destructive=[a-z:]+)$"
+    }
+  }
+}

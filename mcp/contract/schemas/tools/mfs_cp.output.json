@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mfs_cp output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "$ref": "../common.json#/$defs/MfsCopySource",
+      "description": "The source as given: an MFS path or an /ipfs/<cid>[/path] content path."
+    },
+    "destination": {
+      "$ref": "../common.json#/$defs/MfsPath"
+    },
+    "cid": {
+      "$ref": "../common.json#/$defs/Cid"
+    }
+  },
+  "required": [
+    "source",
+    "destination",
+    "cid"
+  ]
+}

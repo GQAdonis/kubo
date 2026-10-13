@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "swarm_peers output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "peers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "addr"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "../common.json#/$defs/PeerId"
+          },
+          "addr": {
+            "$ref": "../common.json#/$defs/Multiaddr",
+            "description": "Supplied by the peer (or by the routing system on its behalf); trusted only when this entry's untrusted is false."
+          },
+          "untrusted": {
+            "$ref": "../common.json#/$defs/PeerSuppliedUntrusted"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "inbound",
+              "outbound",
+              "unknown"
+            ]
+          },
+          "latency": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "page": {
+      "$ref": "../common.json#/$defs/PageInfo"
+    }
+  },
+  "required": [
+    "peers",
+    "page"
+  ]
+}
