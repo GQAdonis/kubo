@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1133,
-  "derivedRevision": 1133,
+  "sourceRevision": 1135,
+  "derivedRevision": 1135,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1133
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1135
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -25,15 +25,15 @@
   "currentTask": null,
   "status": "ready",
   "lifecycle": "ready",
-  "stageId": null,
-  "stageStatus": null,
+  "stageId": "assess",
+  "stageStatus": "COMPLETE",
   "completionMetric": "implementation",
   "implementationCompleted": 31,
   "implementationTotal": 37,
   "planRevision": 1,
-  "revision": 1133,
+  "revision": 1135,
   "exactNextCommand": "/kbd-assess agent-backend-settings",
   "nextChange": null,
   "nextTask": null,
-  "updatedAt": "2026-10-13T09:45:20.351954Z"
+  "updatedAt": "2026-10-13T10:12:02.462057Z"
 }

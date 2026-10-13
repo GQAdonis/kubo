@@ -1,1 +1,1 @@
-{"totalRuns":2,"failedRuns":0,"lastRun":{"ts":"2026-10-13T09:45:21Z","kind":"phase","edge":"before","name":"agent-backend-settings","hookId":"kbd-memory-log","layer":"builtin","mode":"augment","status":0},"lastFailure":null}
+{"totalRuns":9,"failedRuns":0,"lastRun":{"ts":"2026-10-13T10:12:04Z","kind":"assess","edge":"after","name":"agent-backend-settings","hookId":"legacy-assessment-complete","layer":"builtin","mode":"augment","status":0},"lastFailure":null}

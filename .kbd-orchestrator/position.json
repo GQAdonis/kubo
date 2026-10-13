@@ -2,15 +2,16 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1133,
-  "derivedRevision": 1133,
+  "sourceRevision": 1135,
+  "derivedRevision": 1135,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1133
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1135
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-13T09:45:20.351954Z",
+  "updatedAt": "2026-10-13T10:12:02.462057Z",
   "cursor": [
-    "agent-backend-settings"
+    "agent-backend-settings",
+    "assess"
   ],
   "root": {
     "type": "phase",
