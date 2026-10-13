@@ -1,0 +1,20 @@
+HG-1 UI attempt: Darwin 25.6.0 2026-10-13T08:12:26Z
+session: n/a
+WARNING: close or minimize your other applications now, and keep your hands off
+the Touch ID sensor and the keyboard until this finishes. Synthetic input is sent
+only to the authentication prompt, but a real prompt is on screen for ~1 minute
+and anything you type or touch could answer it.
+target CID: bafkreiapkririyehuwey4n4wjwuu376ntkiuup5qvkmr7jalgelzhnurh4 (not pinned)
+waiting for the server to open a confirmation...
+confirmation pending; looking for the authentication window for up to 15s (auth processes: coreautha LocalAuthenticationRemoteService SecurityAgent)
+auth window found: yes (coreautha)
+frontmost process: stable
+[osascript] click button 1 of window 1 of process coreautha
+click not delivered: 48:102: execution error: System Events got an error: Can’t get window 1 of process "coreautha". Invalid index. (-1719)
+frontmost is 'stable', not an auth agent: no key sent
+check 1 passed: bafkreiapkririyehuwey4n4wjwuu376ntkiuup5qvkmr7jalgelzhnurh4 is not pinned after the synthetic input
+auth window still present after the attempts: no
+Now CANCEL the prompt yourself (or wait 20 s). Do not approve it.
+FAIL: bafkreiapkririyehuwey4n4wjwuu376ntkiuup5qvkmr7jalgelzhnurh4 is pinned
+
+LEAD NOTE (2026-10-13): the operator confirms they touched the Touch ID sensor during the wait, so the pin was a human approval, not a bypass. Not a valid HG-1 result (the run requires hands off). Observed: System Events reported an auth window count for coreautha but could not address it ("Can't get window 1 of process coreautha", -1719), so the synthetic click never reached the sheet, and no key was sent because the frontmost process was not an auth agent.
