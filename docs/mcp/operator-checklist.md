@@ -58,7 +58,7 @@ Close or minimize other apps first. Two of these show a Touch ID prompt, and the
 
 ## B. Deployment to `ipfs.prometheusags.ai` (LKE `know-me`)
 
-PR [Prometheus-AGS/know-me-cluster#21](https://github.com/Prometheus-AGS/know-me-cluster/pull/21) is a draft with the tested manifests and step list. Done by the lead: the image built locally (`ghcr.io/gqadonis/kubo:feat-mcp-0f15c24`, linux/amd64, `sha256:5652e7c3…`), the MCP config checked with the fork binary, and a Velero backup of namespace `ipfs` (Velero's schedules do not cover `ipfs`).
+PR [Prometheus-AGS/know-me-cluster#21](https://github.com/Prometheus-AGS/know-me-cluster/pull/21) is a draft with the tested manifests and step list. Done by the lead: the image built locally (`ghcr.io/gqadonis/kubo:feat-mcp-0f15c24`, linux/amd64, `sha256:5652e7c3…`), the MCP config checked with the fork binary, and a Velero backup of namespace `ipfs` on 2026-10-13: `ipfs-pre-fork-20261013-0801`, Completed, volume `ipfs-data` 20,037,365,091 bytes (Velero's schedules do not cover `ipfs`, so this is the only backup).
 
 - **B1. Push the image.** **Why you:** it publishes to `ghcr.io/gqadonis`. The lead's token can push, but publishing stays your approval. Say "push the image" and the lead pushes it and fills in the digest.
 - **B2. Pull access.** **Why you:** `ghcr-pull` does not exist in namespace `ipfs`, and copying it means handling a registry credential the lead does not read. Either create the secret, or make the package `ghcr.io/gqadonis/kubo` public (then delete the `imagePullSecrets` lines).
