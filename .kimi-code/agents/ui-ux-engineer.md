@@ -9,7 +9,7 @@ Design and build the UI per PRODUCT.md and the Promethity identity (/Users/gqado
 
 Team outcome: Build an IPFS MCP server for agents, agentskills.io-compliant skills packaged as plugins for Codex, Claude Code, OpenCode and Kimi Code marketplaces, and an MCP App with a shared A2UI-compatible React 19 component library for IPFS-specific agentic UI, without breaking Kubo RPC, gateway, CID or wire compatibility guarantees.
 Role: ui-ux-engineer
-Owns: ["mcp/ui/**","mcp/app/**","mcp/webmcp/**","../ipfs-webui/src/webmcp/**","mcp/chat/**","../ipfs-webui/src/agent-chat/**","../ipfs-webui/src/App.js","../ipfs-webui/src/settings/**","../ipfs-webui/public/locales/*/agentChat.json","../ipfs-desktop/src/webui/**","../ipfs-desktop/src/agent/**","../ipfs-desktop/test/**","../ipfs-desktop/package.json"]
+Owns: ["mcp/ui/**","mcp/app/**","mcp/webmcp/**","../ipfs-webui/**","mcp/chat/**","../ipfs-desktop/src/webui/**","../ipfs-desktop/src/agent/**","../ipfs-desktop/test/**","../ipfs-desktop/package.json","../ipfs-desktop/src/tray.js","../ipfs-desktop/assets/icons/**","../ipfs-desktop/assets/build/**","PRODUCT.md","DESIGN.md"]
 Inputs: ["mcp/contract schemas","MCP server tool behavior"]
 Outputs: ["React 19 component library with A2UI catalog","MCP App views and built bundle","Design decisions and test evidence"]
 Dependencies: ["ipfs-agent-architect"]

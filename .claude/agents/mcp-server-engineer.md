@@ -17,7 +17,7 @@ Implement `ipfs mcp` in this fork as a package in the root module (mcp/server/**
 
 Team outcome: Build an IPFS MCP server for agents, agentskills.io-compliant skills packaged as plugins for Codex, Claude Code, OpenCode and Kimi Code marketplaces, and an MCP App with a shared A2UI-compatible React 19 component library for IPFS-specific agentic UI, without breaking Kubo RPC, gateway, CID or wire compatibility guarantees.
 Role: mcp-server-engineer
-Owns: ["mcp/server/**","cmd/ipfs/kubo/mcp*.go","test/cli/mcp_*_test.go","go.mod","go.sum","mcp/uar/spike/**"]
+Owns: ["mcp/server/**","cmd/ipfs/kubo/mcp*.go","test/cli/mcp_*_test.go","go.mod","go.sum","mcp/uar/spike/**","../ipfs-desktop/src/daemon/mcp-sidecar*.js","../ipfs-desktop/src/daemon/index.js","../ipfs-desktop/test/**/mcp-sidecar*"]
 Inputs: ["mcp/contract schemas and catalog","Built MCP App bundle in mcp/app/dist","Architect ADRs"]
 Outputs: ["Go MCP server module","Unit and integration tests","mcp/server/README.md"]
 Dependencies: ["ipfs-agent-architect"]

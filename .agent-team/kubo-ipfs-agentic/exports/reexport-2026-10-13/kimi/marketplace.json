@@ -1,0 +1,10 @@
+{
+  "version": "2",
+  "plugins": [
+    {
+      "id": "kubo-ipfs-agentic",
+      "displayName": "kubo-ipfs-agentic",
+      "source": "./plugins/kubo-ipfs-agentic"
+    }
+  ]
+}

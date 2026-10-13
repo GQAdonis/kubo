@@ -1,0 +1,89 @@
+{
+  "target": "kimi",
+  "verification": {
+    "level": "source-verified",
+    "source": "https://github.com/MoonshotAI/kimi-code/blob/main/docs/en/customization/agents.md",
+    "version": "main documentation inspected 2026-09-24",
+    "live": "unverified"
+  },
+  "capabilities": {
+    "agent-definition": "emitted",
+    "role-model": "not-emitted",
+    "team-options": "preserved-only",
+    "agent-plugin": "emitted",
+    "agent-marketplace": "emitted",
+    "static-team-roster": "not-emitted",
+    "model-policy-resolution": "not-emitted"
+  },
+  "diagnostics": [
+    "Source-verified serialization only; installed native validation and live execution are unverified.",
+    "Only explicit model IDs are translated. Resolve tier, skill, capability and price policies with agent-team-models before native invocation.",
+    "Role overrides are preserved without native schema certification. Skill IDs refer to separately installed skills; prompt mentions do not install or authorize them."
+  ],
+  "instructions": [
+    "Review staged artifacts before installation. Export grants no execution or registration authority.",
+    "Choose project .kimi-code/agents or the staged Kimi v2 marketplace/plugin. Literal ${base_prompt} in supplied prompts remains unchanged."
+  ],
+  "files": [
+    {
+      "file": ".kimi-code/agents/ipfs-agent-architect.md",
+      "sha256": "9bd599e62a3fe6cf56fc12ac4744c2c4022d1af9ff927f62c64111d33dccf769"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/ipfs-agent-architect.md",
+      "sha256": "9bd599e62a3fe6cf56fc12ac4744c2c4022d1af9ff927f62c64111d33dccf769"
+    },
+    {
+      "file": ".kimi-code/agents/mcp-server-engineer.md",
+      "sha256": "1f1ee8a6b2bf7ea7b031b5e2ce5cbe223da19022876a84e7e271454d7286c44d"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/mcp-server-engineer.md",
+      "sha256": "1f1ee8a6b2bf7ea7b031b5e2ce5cbe223da19022876a84e7e271454d7286c44d"
+    },
+    {
+      "file": ".kimi-code/agents/skills-plugin-specialist.md",
+      "sha256": "c2a00ed3cbcada3f4b598bda225da03ba06a3f50f734858d2b2268f4573afec8"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/skills-plugin-specialist.md",
+      "sha256": "c2a00ed3cbcada3f4b598bda225da03ba06a3f50f734858d2b2268f4573afec8"
+    },
+    {
+      "file": ".kimi-code/agents/ui-ux-engineer.md",
+      "sha256": "c28337105c0b8a68f4d8c3d467c3ac7285c81d19cca439591d0138226ccc5596"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/ui-ux-engineer.md",
+      "sha256": "c28337105c0b8a68f4d8c3d467c3ac7285c81d19cca439591d0138226ccc5596"
+    },
+    {
+      "file": ".kimi-code/agents/security-reviewer.md",
+      "sha256": "7e2258901d6946b09f070c49d45956c23470b6b48c4d03b42608fc79a53b8159"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/security-reviewer.md",
+      "sha256": "7e2258901d6946b09f070c49d45956c23470b6b48c4d03b42608fc79a53b8159"
+    },
+    {
+      "file": ".kimi-code/agents/reviewer.md",
+      "sha256": "62a8ebd2a7619b7e8f5187c8d62324c62e37b1cf9b09adc56e2e63753cd3a5e9"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/reviewer.md",
+      "sha256": "62a8ebd2a7619b7e8f5187c8d62324c62e37b1cf9b09adc56e2e63753cd3a5e9"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/kimi.plugin.json",
+      "sha256": "311c3d737880578facddc4e80dbd2f9fdb9b130e66ccd56546996b650bf4e44a"
+    },
+    {
+      "file": "marketplace.json",
+      "sha256": "f8dae8a951c69ec5c8cb1cf5b1e789eb05de8ed4418042d6932da61ac1bda6cf"
+    },
+    {
+      "file": "export-receipt.json",
+      "sha256": "281f897fdbd385ada86754e88b1f4f4289e89649479e38265e1896b7174a798d"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "target": "claude",
+  "verification": {
+    "level": "source-verified",
+    "source": "https://code.claude.com/docs/en/sub-agents",
+    "version": "documentation inspected 2026-09-24",
+    "live": "unverified"
+  },
+  "capabilities": {
+    "agent-definition": "emitted",
+    "role-model": "emitted",
+    "team-options": "emitted",
+    "agent-plugin": "emitted",
+    "agent-marketplace": "emitted",
+    "static-team-roster": "not-emitted",
+    "model-policy-resolution": "not-emitted"
+  },
+  "diagnostics": [
+    "Source-verified serialization only; installed native validation and live execution are unverified.",
+    "Only explicit model IDs are translated. Resolve tier, skill, capability and price policies with agent-team-models before native invocation.",
+    "These are native subagents; installing them does not create an experimental Claude agent team or enable that feature.",
+    "Role overrides are preserved without native schema certification. Skill IDs refer to separately installed skills; prompt mentions do not install or authorize them."
+  ],
+  "instructions": [
+    "Review staged artifacts before installation. Export grants no execution or registration authority.",
+    "Choose project .claude/agents or the staged local marketplace/plugin. Do not install both copies. Settings options are a proposed project .claude/settings.json."
+  ],
+  "files": [
+    {
+      "file": ".claude/agents/ipfs-agent-architect.md",
+      "sha256": "b13f018f1ec511d02f6ba025ee2ee2f1457015fe1aea4b16b3525583396bad86"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/ipfs-agent-architect.md",
+      "sha256": "b13f018f1ec511d02f6ba025ee2ee2f1457015fe1aea4b16b3525583396bad86"
+    },
+    {
+      "file": ".claude/agents/mcp-server-engineer.md",
+      "sha256": "2fda6de052569e1429177acdf3da488d1778dfcd74568f8e4c370d6586648cd7"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/mcp-server-engineer.md",
+      "sha256": "2fda6de052569e1429177acdf3da488d1778dfcd74568f8e4c370d6586648cd7"
+    },
+    {
+      "file": ".claude/agents/skills-plugin-specialist.md",
+      "sha256": "860a2f80641e7c4a6be47266558a61b04262a6bb5e2d1d200668f04cc84ee8a2"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/skills-plugin-specialist.md",
+      "sha256": "860a2f80641e7c4a6be47266558a61b04262a6bb5e2d1d200668f04cc84ee8a2"
+    },
+    {
+      "file": ".claude/agents/ui-ux-engineer.md",
+      "sha256": "e38803a10e9bbf1976653c160afaa6f3926f977ec55c2eeb18e1e251cdc88229"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/ui-ux-engineer.md",
+      "sha256": "e38803a10e9bbf1976653c160afaa6f3926f977ec55c2eeb18e1e251cdc88229"
+    },
+    {
+      "file": ".claude/agents/security-reviewer.md",
+      "sha256": "58670c33c1bdaae9d2a4b3403d982f671f2d61d913944875b4b19391b155f101"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/security-reviewer.md",
+      "sha256": "58670c33c1bdaae9d2a4b3403d982f671f2d61d913944875b4b19391b155f101"
+    },
+    {
+      "file": ".claude/agents/reviewer.md",
+      "sha256": "227fe539c835f291732de5648a10cf93764eb02388ecf1579adce7d95da5ee0f"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/agents/reviewer.md",
+      "sha256": "227fe539c835f291732de5648a10cf93764eb02388ecf1579adce7d95da5ee0f"
+    },
+    {
+      "file": "plugins/kubo-ipfs-agentic/.claude-plugin/plugin.json",
+      "sha256": "71b7c7afcc29b5ef49f7d9239911d254c58fe2822957ca5cf112aecef583ba8e"
+    },
+    {
+      "file": ".claude-plugin/marketplace.json",
+      "sha256": "e4e6e02049b975ebc22950270b64bce891494c559bc3f28cdc89822b9dc73a9e"
+    },
+    {
+      "file": "export-receipt.json",
+      "sha256": "a45eb79f0dd1110827487c7a68dc5e316507ce4ac1a8b4400774fa112ba28dc8"
+    }
+  ]
+}

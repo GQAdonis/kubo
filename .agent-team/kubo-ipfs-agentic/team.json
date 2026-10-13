@@ -24,7 +24,10 @@
         "docs/mcp/**",
         "go.mod",
         "go.sum",
-        "mcp/uar/**"
+        "mcp/uar/**",
+        "docs/config.md",
+        "docs/changelogs/v0.44.md",
+        "../../travis/personal/know-me-cluster/namespaces/ipfs/**"
       ],
       "inputs": [
         "User goals",
@@ -68,7 +71,10 @@
         "test/cli/mcp_*_test.go",
         "go.mod",
         "go.sum",
-        "mcp/uar/spike/**"
+        "mcp/uar/spike/**",
+        "../ipfs-desktop/src/daemon/mcp-sidecar*.js",
+        "../ipfs-desktop/src/daemon/index.js",
+        "../ipfs-desktop/test/**/mcp-sidecar*"
       ],
       "inputs": [
         "mcp/contract schemas and catalog",
@@ -157,16 +163,16 @@
         "mcp/ui/**",
         "mcp/app/**",
         "mcp/webmcp/**",
-        "../ipfs-webui/src/webmcp/**",
+        "../ipfs-webui/**",
         "mcp/chat/**",
-        "../ipfs-webui/src/agent-chat/**",
-        "../ipfs-webui/src/App.js",
-        "../ipfs-webui/src/settings/**",
-        "../ipfs-webui/public/locales/*/agentChat.json",
         "../ipfs-desktop/src/webui/**",
         "../ipfs-desktop/src/agent/**",
         "../ipfs-desktop/test/**",
         "../ipfs-desktop/package.json",
+        "../ipfs-desktop/src/tray.js",
+        "../ipfs-desktop/assets/icons/**",
+        "../ipfs-desktop/assets/build/**",
+        "PRODUCT.md",
         "DESIGN.md"
       ],
       "inputs": [
