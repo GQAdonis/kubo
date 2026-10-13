@@ -1,0 +1,13 @@
+HG-1 UI attempt: Darwin 25.6.0 2026-10-13T08:09:18Z
+session: n/a
+WARNING: close or minimize your other applications now, and keep your hands off
+the Touch ID sensor and the keyboard until this finishes. Synthetic input is sent
+only to the authentication prompt, but a real prompt is on screen for ~1 minute
+and anything you type or touch could answer it.
+target CID: bafkreifm7g3bjkivts2hjsgqcqmdqlcr73nj7qxzfuuf6auawzdl4znlny (not pinned)
+waiting for the server to open a confirmation...
+RESULT: INCONCLUSIVE (no confirmation was opened; server output follows)
+Error: Unknown Command "mcp"
+
+
+LEAD NOTE (2026-10-13): operator run that never reached a prompt: the ipfs on PATH (~/go/bin/ipfs, 833e04a24) predated `ipfs mcp`, and IPFS_PATH was unset with no daemon running, so the script ran offline against ~/.ipfs (it added one unpinned test block there). Fixed: ~/go/bin/ipfs updated with make install; attempt.sh now refuses the default repo and a missing daemon; mcp/server/confirm/hg1/run.sh starts and stops its own throwaway node. Not a result.

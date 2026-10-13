@@ -57,7 +57,7 @@ os="$(uname -s)"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 log="$evid/hg1-$os-$stamp.txt"
 work="$(mktemp -d)"
-trap 'kill "${srv:-0}" 2>/dev/null; rm -rf "$work"' EXIT
+trap '[ -n "${srv:-}" ] && kill "$srv" 2>/dev/null; rm -rf "$work"' EXIT
 
 say() { printf '%s\n' "$*" | tee -a "$log"; }
 
@@ -145,7 +145,14 @@ auth_window() {
 }
 
 command -v ipfs >/dev/null || { say "ipfs not on PATH"; exit 2; }
-ipfs id >/dev/null 2>&1 || { say "no reachable daemon (set IPFS_PATH and start 'ipfs daemon')"; exit 2; }
+ipfs mcp --help >/dev/null 2>&1 || { say "the ipfs on PATH ($(command -v ipfs)) has no 'ipfs mcp'; use run.sh or put this repo's cmd/ipfs first on PATH"; exit 2; }
+# Never run against the operator's own repo: require an explicit throwaway IPFS_PATH.
+case "${IPFS_PATH:-}" in
+"" | "$HOME/.ipfs" | "$HOME/.ipfs/") say "IPFS_PATH must point at a throwaway repo (use run.sh, which creates one)"; exit 2 ;;
+esac
+# A running daemon is required (`ipfs id` alone also works offline against the repo).
+[ -f "$IPFS_PATH/api" ] && ipfs --api "$(cat "$IPFS_PATH/api")" version >/dev/null 2>&1 ||
+	{ say "no reachable daemon for IPFS_PATH=$IPFS_PATH (use run.sh, which starts one)"; exit 2; }
 if [ "$os" = Linux ]; then
 	command -v xdotool >/dev/null || { say "xdotool missing; cannot attempt on X11"; exit 2; }
 fi

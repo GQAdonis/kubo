@@ -10,8 +10,8 @@ Close or minimize other apps first. Two of these show a Touch ID prompt, and the
 
 - **Why you:** the check is that only a real finger on the sensor approves. An automated run cannot touch the sensor, and the lead's unattended run on 2026-10-13 saw no prompt on screen, so it proved nothing (annotated in `mcp/server/confirm/evidence/hg1-Darwin-20261013T074515Z.txt`).
 - **Steps:**
-  1. Start a throwaway node: `export IPFS_PATH="$(mktemp -d)"; ipfs init --profile test; ipfs config Addresses.API /ip4/127.0.0.1/tcp/5193; ipfs config Addresses.Gateway /ip4/127.0.0.1/tcp/8293; ipfs daemon --offline &`
-  2. With `ipfs` from this repo on `PATH`, run `mcp/server/confirm/hg1/attempt.sh`.
+  1. Nothing to set up: `mcp/server/confirm/hg1/run.sh` builds nothing, starts its own throwaway node on ports 5193/8293 and stops it afterwards (run `make build` first if you changed code).
+  2. Run `mcp/server/confirm/hg1/run.sh` from the repo root.
   3. When the Touch ID prompt appears, do not touch the sensor or keyboard. The script tries to click and type into it.
   4. The script prints `PASS`, `INCONCLUSIVE` or `FAIL` and writes `mcp/server/confirm/evidence/hg1-Darwin-<time>.txt`. If it reports `INCONCLUSIVE` because no auth window was found, the log names the frontmost process; rerun with `HG1_AUTH_PROCESSES=<that name>`.
   5. The first run may ask you to allow your terminal under Privacy & Security > Accessibility. Allow it: the point is that even a process allowed to click cannot pass Touch ID.
