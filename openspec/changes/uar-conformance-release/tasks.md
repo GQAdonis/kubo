@@ -5,6 +5,6 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 Draft the request as a follow-up to `Prometheus-AGS/universal-agent-runtime#379`: commit the working tree and release `v1.1.0` with an OCI digest; bind an external MCP server to an agent with a run-time credential; remote skill upload; elicitation for globally registered servers (and `shared_transports_enabled`); an AG-UI agent path and interrupt shapes; verify #379 items 2, 3, 7. Acceptance: `mcp/uar/requests/2026-10-13-v1.1.md` with one falsifiable check per item.
-- [ ] 1.2 After the operator files it (OG-3), record the URL and poll with read-only `gh issue view` until it is visible. Acceptance: URL in the request file; `gh issue view` output saved.
+- [x] 1.1 Draft the request as a follow-up to `Prometheus-AGS/universal-agent-runtime#379`: commit the working tree and release `v1.1.0` with an OCI digest; bind an external MCP server to an agent with a run-time credential; remote skill upload; elicitation for globally registered servers (and `shared_transports_enabled`); an AG-UI agent path and interrupt shapes; verify #379 items 2, 3, 7. Acceptance: `mcp/uar/requests/2026-10-13-v1.1.md` with one falsifiable check per item.
+- [x] 1.2 After the operator files it (OG-3), record the URL and poll with read-only `gh issue view` until it is visible. Acceptance: URL in the request file; `gh issue view` output saved.
 - [ ] 1.3 When OG-4 confirms a release, record tag and digest. Acceptance: tag and digest present; the change stays open until then.

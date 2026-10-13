@@ -78,10 +78,22 @@ export function runErrorCopy(code: RunErrorCode | undefined): RunErrorCopy {
   return code ? RUN_ERROR_COPY[code] : UNKNOWN_RUN_ERROR;
 }
 
+/**
+ * One A2UI v0.9 message the server streamed as an AG-UI CUSTOM event named `a2ui`
+ * (mcp-agui-a2ui-registry): createSurface, updateComponents, updateDataModel or deleteSurface.
+ */
+export type A2uiStreamMessage = Record<string, unknown>;
+
 export interface ChatState {
   readonly messages: readonly ChatMessage[];
   readonly toolCalls: readonly ChatToolCall[];
   readonly interrupts: readonly ChatInterrupt[];
+  /**
+   * Server-built A2UI surfaces by surfaceId, each message in arrival order. Empty when the server
+   * emits no CUSTOM `a2ui` events (`agent.a2ui` off, or an older `ipfs mcp`): the chat then draws
+   * every tool call with its local ToolCallCard fallback.
+   */
+  readonly a2uiSurfaces: Readonly<Record<string, readonly A2uiStreamMessage[]>>;
   readonly run: {
     readonly status: RunStatus;
     readonly threadId?: string;
@@ -97,6 +109,7 @@ export const EMPTY_CHAT_STATE: ChatState = {
   messages: [],
   toolCalls: [],
   interrupts: [],
+  a2uiSurfaces: {},
   run: { status: 'idle' },
 };
 
@@ -221,9 +234,35 @@ export function foldAgui(state: ChatState, event: AguiEvent): ChatState {
       const snap = Array.isArray(event['messages']) ? (event['messages'] as AguiMessage[]) : [];
       return { ...state, messages: mergeSnapshot(state.messages, snap), toolCalls: mergeSnapshotCalls(state.toolCalls, snap) };
     }
+    case 'CUSTOM': {
+      // Server-built A2UI surfaces (mcp-agui-a2ui-registry): one A2UI v0.9 message per CUSTOM event
+      // named `a2ui`, collected by surfaceId. Any other CUSTOM event, and a malformed value, is
+      // ignored: the local ToolCallCard fallback draws the same call.
+      if (str(event['name']) !== 'a2ui') return state;
+      const v = event['value'];
+      if (typeof v !== 'object' || v === null || Array.isArray(v)) return state;
+      const m = v as A2uiStreamMessage;
+      if (m['version'] !== 'v0.9') return state;
+      const surfaceId = a2uiSurfaceId(m);
+      if (surfaceId === undefined) return state;
+      const prior = state.a2uiSurfaces[surfaceId] ?? [];
+      return { ...state, a2uiSurfaces: { ...state.a2uiSurfaces, [surfaceId]: [...prior, m] } };
+    }
     default:
       return state;
   }
+}
+
+/** The surfaceId an A2UI message addresses, from whichever operation it carries. */
+function a2uiSurfaceId(m: A2uiStreamMessage): string | undefined {
+  for (const key of ['createSurface', 'updateComponents', 'updateDataModel', 'deleteSurface'] as const) {
+    const body = m[key];
+    if (typeof body === 'object' && body !== null && !Array.isArray(body)) {
+      const id = str((body as Record<string, unknown>)['surfaceId']);
+      if (id !== undefined && id !== '') return id;
+    }
+  }
+  return undefined;
 }
 
 /** The tool result that ends an interrupt: declined and expired are denials, anything else means the call ran. */

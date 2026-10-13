@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AG-UI fixture",
-  "description": "A RunAgentInput and the event sequence ipfs mcp emits for it on POST /agui. Event and field names follow the AG-UI core events and the interrupt-aware run lifecycle (https://docs.ag-ui.com/concepts/events, https://docs.ag-ui.com/concepts/interrupts, fetched 2026-10-09). Only the subset ipfs mcp emits is modeled; mcp-agui-endpoint 1.1 re-validates against the published @ag-ui/core schemas. Rules ipfs mcp follows and clients may rely on: (a) No default client endpoint: a client is configured with the /agui URL explicitly; 127.0.0.1:5050 is only the server's default listen address when HTTP is enabled, and clients may show it as a suggestion, never connect to it unconfigured. (b) The client sends the full message history, but ipfs mcp keeps the conversation per threadId in memory (idle TTL 30 minutes, at most 64 threads) and takes only the last input message, which must be a user message; client-supplied assistant and tool messages are ignored. After eviction or a restart the thread starts over. (c) Every parentMessageId of a TOOL_CALL_START names an assistant message that is in the input, or that the run introduces (TEXT_MESSAGE_START or a MESSAGES_SNAPSHOT carrying it with its toolCalls) before the first TOOL_CALL_RESULT, RUN_FINISHED or RUN_ERROR that follows; the client records that message with its toolCalls and sends it back in later history. (d) A resumed call is reported with TOOL_CALL_RESULT on the original toolCallId and is never re-emitted with TOOL_CALL_START; a declined or expired call is reported the same way with a ToolError (confirmation_declined, confirmation_expired), so every interrupt ends in a TOOL_CALL_RESULT. (e) Browser access to /agui needs the page origin in config agent.origin_allowlist (CORS). (f) A failure after RUN_STARTED ends the stream with RUN_ERROR carrying a RunErrorCode and no RUN_FINISHED; a failure before it is an HTTP error with a ToolError body and no stream (run-error-*.json).",
+  "description": "A RunAgentInput and the event sequence ipfs mcp emits for it on POST /agui. Event and field names follow the AG-UI core events and the interrupt-aware run lifecycle (https://docs.ag-ui.com/concepts/events, https://docs.ag-ui.com/concepts/interrupts, fetched 2026-10-09). Only the subset ipfs mcp emits is modeled; mcp-agui-endpoint 1.1 re-validates against the published @ag-ui/core schemas. Rules ipfs mcp follows and clients may rely on: (a) No default client endpoint: a client is configured with the /agui URL explicitly; 127.0.0.1:5050 is only the server's default listen address when HTTP is enabled, and clients may show it as a suggestion, never connect to it unconfigured. (b) The client sends the full message history, but ipfs mcp keeps the conversation per threadId in memory (idle TTL 30 minutes, at most 64 threads) and takes only the last input message, which must be a user message; client-supplied assistant and tool messages are ignored. After eviction or a restart the thread starts over. (c) Every parentMessageId of a TOOL_CALL_START names an assistant message that is in the input, or that the run introduces (TEXT_MESSAGE_START or a MESSAGES_SNAPSHOT carrying it with its toolCalls) before the first TOOL_CALL_RESULT, RUN_FINISHED or RUN_ERROR that follows; the client records that message with its toolCalls and sends it back in later history. (d) A resumed call is reported with TOOL_CALL_RESULT on the original toolCallId and is never re-emitted with TOOL_CALL_START; a declined or expired call is reported the same way with a ToolError (confirmation_declined, confirmation_expired), so every interrupt ends in a TOOL_CALL_RESULT. (e) Browser access to /agui needs the page origin in config agent.origin_allowlist (CORS). (f) A failure after RUN_STARTED ends the stream with RUN_ERROR carrying a RunErrorCode and no RUN_FINISHED; a failure before it is an HTTP error with a ToolError body and no stream (run-error-*.json). (g) When agent.a2ui is on, the run advertises the A2UI catalog with exactly one CUSTOM event named a2ui.catalog immediately after RUN_STARTED (value {\"catalogId\": ..., \"catalogUrl\": \"/agui/catalog\"}) and server-built A2UI v0.9 surfaces arrive as CUSTOM events named a2ui, one A2UI message per event; the route and both names are named in derivations/a2ui-components.json (serve, aguiEvents). With agent.a2ui off the stream carries no CUSTOM event. A client that ignores CUSTOM events loses nothing: the island's local ToolCallCard fallback renders the same calls.",
   "type": "object",
   "additionalProperties": false,
   "required": ["description", "provenance", "principalKind", "input", "events"],
@@ -147,7 +147,7 @@
             "RUN_STARTED", "RUN_FINISHED", "RUN_ERROR",
             "TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END",
             "TOOL_CALL_START", "TOOL_CALL_ARGS", "TOOL_CALL_END", "TOOL_CALL_RESULT",
-            "MESSAGES_SNAPSHOT", "STATE_SNAPSHOT"
+            "MESSAGES_SNAPSHOT", "STATE_SNAPSHOT", "CUSTOM"
           ]
         },
         "timestamp": { "type": "integer" }
@@ -193,7 +193,20 @@
         { "if": { "properties": { "type": { "const": "TOOL_CALL_END" } } }, "then": { "required": ["toolCallId"] } },
         { "if": { "properties": { "type": { "const": "TOOL_CALL_RESULT" } } }, "then": { "required": ["messageId", "toolCallId", "content"], "properties": { "content": { "type": "string" } } } },
         { "if": { "properties": { "type": { "const": "MESSAGES_SNAPSHOT" } } }, "then": { "required": ["messages"], "properties": { "messages": { "type": "array", "items": { "$ref": "#/$defs/Message" } } } } },
-        { "if": { "properties": { "type": { "const": "STATE_SNAPSHOT" } } }, "then": { "required": ["snapshot"] } }
+        { "if": { "properties": { "type": { "const": "STATE_SNAPSHOT" } } }, "then": { "required": ["snapshot"] } },
+        {
+          "if": { "properties": { "type": { "const": "CUSTOM" } } },
+          "then": {
+            "required": ["name", "value"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": ["a2ui", "a2ui.catalog"],
+                "description": "The only CUSTOM events ipfs mcp emits, named in derivations/a2ui-components.json aguiEvents. a2ui carries one A2UI v0.9 surface message in value; a2ui.catalog is the per-run catalog advertisement (value {\"catalogId\": ..., \"catalogUrl\": ...}) emitted once after RUN_STARTED, and only when agent.a2ui is on. agent.a2ui: false means the stream carries no CUSTOM event at all."
+              }
+            }
+          }
+        }
       ]
     }
   }

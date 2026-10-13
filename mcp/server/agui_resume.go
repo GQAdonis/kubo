@@ -19,7 +19,7 @@ const aguiKeepalive = 15 * time.Second
 // ID comes from the server's own state, never from the request.
 func (h *aguiHandler) resume(ctx context.Context, st *aguiStream, id Identity, in *aguiInput) {
 	entry := in.Resume[0]
-	open, err := h.agent.OpenInterrupt(id, in.ThreadID)
+	open, err := h.srv.Agent().OpenInterrupt(id, in.ThreadID)
 	if err != nil {
 		h.reject(st.w, err)
 		return
@@ -63,7 +63,7 @@ func (h *aguiHandler) approve(ctx context.Context, st *aguiStream, id Identity, 
 		h.reject(st.w, err)
 		return
 	}
-	_, err = h.agent.Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
+	_, err = h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
 		{InterruptID: open.ID, Status: ResumeResolved, Approved: true},
 	}}, st.handle)
 	h.finish(st, err)
@@ -79,7 +79,7 @@ func (h *aguiHandler) deny(ctx context.Context, st *aguiStream, id Identity, in 
 		st.finishSuccess()
 		return
 	}
-	_, err := h.agent.Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
+	_, err := h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
 		{InterruptID: open.ID, Status: entry.Status, Approved: false},
 	}}, st.handle)
 	h.finish(st, err)
@@ -117,7 +117,7 @@ func (h *aguiHandler) wait(ctx context.Context, st *aguiStream, id Identity, in 
 	if !h.drop(in.ThreadID, w) {
 		return
 	}
-	_, err := h.agent.Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
+	_, err := h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
 		{InterruptID: open.ID, Status: ResumeResolved, Approved: true},
 	}}, st.handle)
 	h.finish(st, err)

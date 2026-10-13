@@ -3,7 +3,7 @@
   "title": "A2UI component binding references",
   "type": "object",
   "additionalProperties": false,
-  "required": ["catalogId", "description", "components", "chatRules"],
+  "required": ["catalogId", "serve", "aguiEvents", "description", "components", "chatRules"],
   "properties": {
     "$schema": { "type": "string" },
     "catalogId": {
@@ -16,6 +16,36 @@
       "uniqueItems": true,
       "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
       "description": "Short names for the same catalog (docs, logs, config). Never sent as an A2UI catalogId."
+    },
+    "serve": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "description"],
+      "properties": {
+        "route": {
+          "type": "string",
+          "pattern": "^/agui/[a-z][a-z0-9-]*$",
+          "description": "GET route that serves the embedded catalog, directly under the AG-UI mount so it inherits the /agui protection chain (Host, Origin with the agent.origin_allowlist strict CORS answer, body limit, bearer auth, principal kind ui) and answers 404 when AG-UI is off."
+        },
+        "description": { "type": "string", "minLength": 10 }
+      }
+    },
+    "aguiEvents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "catalog", "description"],
+      "properties": {
+        "surface": {
+          "const": "a2ui",
+          "description": "Name of the AG-UI CUSTOM events that carry server-built A2UI v0.9 surface messages. Pinned by const because it must equal aguiA2UIEventName in mcp/server/agui_a2ui.go."
+        },
+        "catalog": {
+          "type": "string",
+          "pattern": "^a2ui\\.[a-z][a-z0-9-]*$",
+          "description": "Name of the one-per-run CUSTOM event advertising the catalog, emitted after RUN_STARTED when agent.a2ui is on; value is {\"catalogId\": ..., \"catalogUrl\": <serve.route>}."
+        },
+        "description": { "type": "string", "minLength": 10 }
+      }
     },
     "description": { "type": "string" },
     "components": {

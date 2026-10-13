@@ -2,6 +2,15 @@
   "$schema": "./a2ui-components.schema.json",
   "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
   "catalogAliases": ["ipfs-mcp"],
+  "serve": {
+    "route": "/agui/catalog",
+    "description": "Catalog discovery (change mcp-agui-a2ui-registry 1.1, decision D15). GET on this route returns the embedded mcp/ui/catalog/ipfs-mcp.catalog.json byte for byte as application/json; the catalog is embedded from that generated file and no copy of it exists anywhere else in the tree. The route lives under the AG-UI mount, so it exists only when /agui is mounted (--agui on, otherwise 404) and passes the same protection chain as /agui: Host check, Origin policy with the strict CORS answer scoped to agent.origin_allowlist, request body limit, bearer authentication, and the /agui default principal kind ui (an a2a or admin token gets 403). The catalogId above stays the A2UI identifier used in createSurface.catalogId; this route is only how an AG-UI client fetches the document. D15 scopes this phase to catalog discovery plus server-built surfaces, so the route serves the one published catalog and nothing model-composed."
+  },
+  "aguiEvents": {
+    "surface": "a2ui",
+    "catalog": "a2ui.catalog",
+    "description": "CUSTOM event names in the AG-UI run stream (D15, resolving assessment-backend Q6: the advertisement is a CUSTOM event, not a RUN_STARTED field, so RUN_STARTED keeps the AG-UI lifecycle shape and agent.a2ui: false silences every A2UI event without touching the run lifecycle). surface carries one A2UI v0.9 message per event (createSurface, updateComponents, updateDataModel) built from a tool result by the chatRules; it must stay equal to aguiA2UIEventName in mcp/server/agui_a2ui.go. catalog is the catalog advertisement: exactly one CUSTOM event per run, emitted immediately after RUN_STARTED and only when agent.a2ui is on, with value {\"catalogId\": <catalogId>, \"catalogUrl\": <serve.route>}. A client that ignores both loses nothing: the island keeps its local ToolCallCard fallback."
+  },
   "description": "A2UI component binding references. Catalog tools name a view component in ui.a2uiComponent; mcp/ui implements each component against the bound tools' output schemas and publishes the A2UI v0.9 catalog manifest. catalogId is the canonical A2UI catalog ID: a URI used only as an identifier, never fetched; it equals the manifest $id, and servers list it in supportedCatalogIds and use it in createSurface.catalogId. catalogAliases are short names for docs, logs and configuration; they are never sent as an A2UI catalogId. Chat components wrap every tool call in the agent chat; which chat elements apply to a tool is derived by the chatRules, never authored per tool.",
   "components": [
     { "name": "ContentCard", "kind": "view", "description": "File bytes, directory listing or search hit for a CID or path, with untrusted-content framing." },

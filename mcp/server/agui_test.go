@@ -25,14 +25,25 @@ func TestAGUIIsNotMountedUnlessEnabled(t *testing.T) {
 	assert.Empty(t, e.s.PendingConfirmations())
 }
 
-func TestEnableAGUIWithoutABackendFails(t *testing.T) {
-	d := catFake(t, nil)
-	s := mustNew(t, d, Options{Transport: "http"})
-	require.Error(t, s.EnableAGUI(AGUISettings{}), "no agent, no endpoint")
-	hs, err := NewHTTPServer(s, HTTPOptions{Listen: "127.0.0.1:0"})
-	require.NoError(t, err)
-	assert.Nil(t, s.aguiExt)
-	assert.NotNil(t, hs)
+func TestAGUIWithoutABackendAnswers503(t *testing.T) {
+	e := newAGUIEnv(t, aguiEnvOpts{noBackend: true})
+	require.Nil(t, e.s.Agent(), "no backend, no agent loop")
+	require.NotNil(t, e.s.aguiExt, "EnableAGUI works without a backend")
+
+	body := aguiBody("t-nobackend", "r1", []any{userMsg("m1", "hello")})
+	r := e.post(aguiTokChat, body, nil)
+	assert.Equal(t, http.StatusServiceUnavailable, r.Status, r.Body)
+	assert.Equal(t, CodeBackendNotConfigured, r.errCode(t))
+	assert.Empty(t, r.Events, "no SSE stream was started")
+
+	resume := e.post(aguiTokChat, aguiBody("t-nobackend", "r2", nil,
+		resumeEntry("int-a", "cancelled", nil)), nil)
+	assert.Equal(t, http.StatusServiceUnavailable, resume.Status, "a resume cannot run without a backend either")
+
+	// The mount still enforces the route's auth and principal kind.
+	assert.Equal(t, http.StatusUnauthorized, e.post("", body, nil).Status)
+	assert.Equal(t, http.StatusForbidden, e.post(aguiTokHuman, body, nil).Status)
+	assert.Zero(t, e.model.hits(), "no model endpoint exists and none is contacted")
 }
 
 func TestEnableAGUIRejectsBadOrigins(t *testing.T) {
@@ -349,11 +360,11 @@ func TestAGUIRunErrors(t *testing.T) {
 		e := newAGUIEnv(t, aguiEnvOpts{}) // no scripted step: the model server answers 500 with a message
 		r := e.post(aguiTokChat, aguiBody("thread-fail", "r1", []any{userMsg("m1", "go")}), nil)
 		require.Equal(t, http.StatusOK, r.Status, "the stream had begun")
-		require.Equal(t, []string{"RUN_STARTED", "RUN_ERROR"}, r.types())
-		msg := r.Events[1]["message"].(string)
+		require.Equal(t, []string{"RUN_STARTED", "CUSTOM", "RUN_ERROR"}, r.types())
+		msg := r.Events[2]["message"].(string)
 		assert.Contains(t, msg, "HTTP 500")
 		assert.NotContains(t, msg, "no scripted step left")
-		assert.Equal(t, "backend_error", r.Events[1]["code"])
+		assert.Equal(t, "backend_error", r.Events[2]["code"])
 	})
 }
 

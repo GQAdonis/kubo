@@ -67,6 +67,19 @@ type agentSession struct {
 	// yet, in order. The first one may be waiting on interrupt.
 	queue     []queuedCall
 	interrupt *Interrupt
+	// snap retains the backend snapshot of the run that opened interrupt, with
+	// one snapshot reference held, so a resume after a backend swap still talks
+	// to the backend the run started with. nil whenever interrupt is nil.
+	snap *agentSnapshot
+}
+
+// dropSnapshot releases the session's retained snapshot, if any. Callers hold
+// a.mu, or the session is being discarded.
+func (s *agentSession) dropSnapshot() {
+	if s.snap != nil {
+		s.snap.release()
+		s.snap = nil
+	}
 }
 
 type queuedCall struct {
@@ -132,6 +145,7 @@ func (a *Agent) acquire(sessionID, principal string, create bool) (*agentSession
 	now := a.now()
 	for id, s := range a.sessions {
 		if !s.busy && now.Sub(s.touched) > sessionIdleTTL {
+			s.dropSnapshot()
 			delete(a.sessions, id)
 		}
 	}
@@ -229,6 +243,7 @@ func (a *Agent) evictOldestIdle(principal string) bool {
 	if oldest == "" {
 		return false
 	}
+	a.sessions[oldest].dropSnapshot()
 	delete(a.sessions, oldest)
 	return true
 }

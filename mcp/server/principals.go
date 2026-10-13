@@ -33,6 +33,9 @@ type LLMConfig struct {
 type AgentConfig struct {
 	// AGUI is agent.agui: serve POST /agui (off by default).
 	AGUI bool `json:"agui"`
+	// A2UI is agent.a2ui: emit A2UI surface messages on /agui (on by default
+	// wherever /agui is on; nil means the default).
+	A2UI *bool `json:"a2ui"`
 	// A2A is agent.a2a: serve POST /a2a and the agent card (off by default).
 	A2A bool `json:"a2a"`
 	// OriginAllowlist is agent.origin_allowlist: page origins allowed to call
@@ -40,6 +43,10 @@ type AgentConfig struct {
 	OriginAllowlist []string   `json:"origin_allowlist"`
 	Loop            LoopConfig `json:"loop"`
 }
+
+// A2UIEnabled reports whether /agui emits server-built A2UI surfaces
+// (agent.a2ui, default true). It has no effect when agent.agui is false.
+func (c AgentConfig) A2UIEnabled() bool { return c.A2UI == nil || *c.A2UI }
 
 // LoopConfig is agent.loop: the limits every run enforces. Zero values take the
 // contract defaults.

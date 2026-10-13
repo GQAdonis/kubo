@@ -83,6 +83,11 @@ type AgentSettings struct {
 	Timeout time.Duration
 	Limits  LoopLimits
 
+	// SystemPrompt is the operator-configured part of the system prompt (the
+	// settings write's system_prompt). It only ever extends the fixed safety
+	// prefix, never replaces it; empty keeps the default instructions.
+	SystemPrompt string
+
 	// HTTPClient replaces the default client; tests use it to observe dialing.
 	HTTPClient *http.Client
 }

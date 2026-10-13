@@ -2,7 +2,9 @@
 
 <!-- impeccable:design-schema 1 -->
 
-Scope: the agent-facing surfaces in `mcp/ui` (React 19 component library and A2UI catalog) and `mcp/app` (MCP App views). Derived from `PRODUCT.md` and the Promethity identity v1 at `/Users/gqadonis/Projects/promethity/branding` (`design-system/README.md`, `tokens.json`, `tokens.css`, `components/bundle.css`, `fonts/`). This file adds no aesthetic of its own: where it differs from the brand it only narrows a brand rule for product UI, and says so.
+Scope: the agent-facing surfaces in `mcp/ui` (React 19 component library and A2UI catalog) and `mcp/app` (MCP App views), plus the Promethity rebrand of the Web UI fork (`../ipfs-webui`, GQAdonis/ipfs-webui) and the visible surfaces of the IPFS Desktop fork windows (`../ipfs-desktop`, tribe-health/ipfs-desktop). Derived from `PRODUCT.md` and the Promethity identity v1 at `/Users/gqadonis/Projects/promethity/branding` (`design-system/README.md`, `tokens.json`, `tokens.css`, `components/bundle.css`, `fonts/`). This file adds no aesthetic of its own: where it differs from the brand it only narrows a brand rule for product UI, and says so.
+
+Decisions recorded for the wider scope (plan `agent-backend-settings`, change `promethity-design-scope`): D7 (form-control edge) in Color, D16 (theme default and toggle) in Mode and direction, the Latin-only font fallback (R8) in Typography, and D9 (the Explore seam) under Craft decisions.
 
 ## Mode and direction
 
@@ -10,6 +12,7 @@ Scope: the agent-facing surfaces in `mcp/ui` (React 19 component library and A2U
 - **Dials:** variance 3, motion 2, density 7 (the `prometheus-ui-ux` Operate defaults 3-4, 2-3, 6-8).
 - **World:** a dark, well-built room with one warm light. Ground is char, surfaces step up by fill alone, and the ember accent appears once per view, on the decision that matters. "Fire you can hold": the interface holds the agent's intent in view until a person decides.
 - **Dark first.** Dark is the primary theme. Light ships and is verified, because host apps run both. The theme follows the host (`prefers-color-scheme` or the MCP Apps `hostContext.theme`), never the category of the content.
+- **D16 (theme default and toggle).** In the Web UI fork the theme follows the system (`prefers-color-scheme`), defaults to dark when the system states no preference, and carries an explicit toggle (System / Dark / Light). The choice persists as a versioned, non-secret `localStorage` key.
 - **Register:** control first, verifiable second. Full CIDs, peer ids, exact byte counts and exact states. Nothing is summarized away; truncated text always offers the full value.
 
 ## Color
@@ -35,7 +38,8 @@ Rules:
 - Accent covers about two percent of a view. In practice it is the one primary button (for example Approve in a confirmation) plus the focus ring. Result and read views often carry no accent fill at all.
 - `ok`, `warn`, `err`, `info` mean permitted, waiting, denied, logged. They never replace `accent` and never appear without a word beside them.
 - No gradients, no glow, no purple, no blue cast in neutrals. `glow` is not used in these views.
-- No borders, no rules, no shadows. The only outline in the system is the focus ring.
+- No borders, no rules, no shadows. The only outline in the system is the focus ring, with one recorded exception:
+- **D7 (form-control edge).** Form controls — inputs, selects, checkbox/radio/switch glyphs and segmented controls — draw a 1px inset edge in `text-muted`. Borderless controls identified by fill alone fail WCAG 2.2 1.4.11 (non-text contrast 3:1): `control` on `surface` measures 1.30:1 dark and 1.31:1 light. All other surfaces stay borderless. This exception is a deliberate narrowing of the brand's borderless rule, in the same class as the entries under "Craft decisions that narrow the brand".
 
 Contrast measured from the token values (WCAG 2.2 relative luminance), the floor each pairing must hold:
 
@@ -47,8 +51,9 @@ Contrast measured from the token values (WCAG 2.2 relative luminance), the floor
 | `accent-text` on `surface` / `raised` / `accent-tint` | 5.6 / 5.0 / 4.7 | 6.3 / 5.4 / 5.4 |
 | state color on its own tint (ok / warn / err / info) | 6.2 / 7.4 / 5.1 / 6.2 | 5.4 / 4.9 / 5.3 / 5.7 |
 | focus ring (`accent`) on `ground` / `surface` / `raised` / `control` | 6.1 / 5.6 / 5.0 / 4.3 | 4.6 / 4.9 / 4.2 / 3.8 |
+| form-control edge (`text-muted`, D7) on `ground` / `surface` / `raised` / `control` | 6.9 / 6.4 / 5.7 / 4.9 | 6.4 / 6.8 / 5.8 / 5.2 |
 
-All text pairings are at least 4.5:1 and every focus-ring pairing is at least 3.7:1, the brand floor. A unit test recomputes this table from the shipped CSS tokens on every run.
+All text pairings are at least 4.5:1 and every focus-ring pairing is at least 3.7:1, the brand floor. The D7 form-control edge holds at least 4.9:1 on `control` and 6.4:1 on the surfaces, above the WCAG 2.2 1.4.11 non-text floor of 3:1. A unit test recomputes this table from the shipped CSS tokens on every run.
 
 ## Typography
 
@@ -62,6 +67,8 @@ Four families, all bundled woff2 from the branding directory. No remote fonts.
 Product narrowing of the brand scale (Operate: fixed rem, tight steps, no fluid type): `h3` 22px, `h4` 17px for titles; body 15px/1.55, small 14px, label 14.5px/600; code 13px/1.7. Running text stays under 66ch; data and tables may run wider.
 
 Fallbacks are deliberate, because a deny-by-default MCP App CSP can refuse font loading: Syne falls back to `Avenir Next`, `Segoe UI`, system-ui; Hanken to `Helvetica Neue`, Arial, system-ui; JetBrains Mono to `ui-monospace`, Menlo, Consolas. Bundled faces are registered from embedded bytes through the `FontFace` API, which does not depend on `font-src`; if that is unavailable the fallbacks carry the layout without shifting it.
+
+**Latin-only font fallback (R8).** The bundled woff2 faces cover Latin subsets only, while the Web UI fork ships 31 locales (Cyrillic, Arabic, Urdu, Hindi, CJK, Greek among them). Decision: non-Latin scripts fall back to the declared system stacks, and the `@font-face` rules carry `unicode-range` so the fallback applies per script rather than per page. This is accepted as the steady state; bundling full-script faces is out of scope. Hanken Grotesk 700, absent from the branding folder, ships from the copy in `mcp/ui/fonts`.
 
 ## Layout and shape
 
@@ -123,6 +130,8 @@ Statement, mechanism, stakes. Present tense for system state. Sentence case head
 Examples: "Denied. Unpinning requires confirmation." "Waiting for the system prompt. Approval happens there, not in this panel." "No pins match. Pin content with an agent, then it appears here."
 
 ## Craft decisions that narrow the brand
+
+- **D9 (the Explore seam).** The Web UI `/explore` route renders the external `ipld-explorer-components` package, which the fork does not own. The seam is token-level theming only: the route's wrapper sets the Promethity token CSS variables on its container and the package's internal layout stays upstream. No fork of `ipld-explorer-components`, no version change, no patches under `node_modules`.
 
 - The brand's mono uppercase eyebrow is used for table column headers (as the Table component does) and nowhere above headings; product views let the heading carry itself.
 - Modals are avoided. The confirmation dialog is an inline, non-modal alert region that takes focus on mount so the safe action is under the cursor first; the host decides if it floats.

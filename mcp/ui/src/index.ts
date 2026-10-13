@@ -55,6 +55,7 @@ export {
   toWire,
 } from './chat/agui';
 export type {
+  A2uiStreamMessage,
   AguiEvent,
   ChatInterrupt,
   ChatMessage,

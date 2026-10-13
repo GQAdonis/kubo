@@ -183,3 +183,7 @@ Nothing in this request needs UAR to trust Kubo or to change for Kubo alone; eac
 ## Contact and status
 
 The operator files this request with the UAR team and records the link and date on the "Filed:" line at the top. Status changes (accepted, declined, released in a tag) are recorded by the operator in this file. The gate evaluation at the end of Round 4 is recorded in `mcp/uar/spike/REPORT.md`.
+
+### Status re-check 2026-10-13
+
+The operator reported that the current UAR code base fixes this issue. A read-only audit of the UAR working tree at `b4244aea` found items 1, 4, 5, 6 and 8 done, items 3 and 7 mostly done, item 2 partial, and item 9 done in code but not released. All of it is uncommitted; `Cargo.toml` is `1.0.0` and no tag above `v1.0.0` exists. Under the gate rule above no item counts as delivered yet. Per-item evidence and the remaining gaps are in [`2026-10-13-v1.1.md`](2026-10-13-v1.1.md), the follow-up request (OpenSpec change `uar-conformance-release`, phase `agent-backend-settings`).

@@ -54,7 +54,10 @@ type aguiEnvOpts struct {
 	listenerOrg []string
 	maxBody     int64
 	noAGUI      bool
+	noBackend   bool
 	noPresence  bool
+	// a2ui is AGUISettings.A2UI (nil: the default, on).
+	a2ui *bool
 }
 
 func aguiIdentity(id, kind string, write, destructive, ack []string) Identity {
@@ -86,12 +89,14 @@ func newAGUIEnv(t *testing.T, opts aguiEnvOpts, steps ...func(modelRequest) []st
 		// Notice a clock that moved within milliseconds, not a second.
 		awaitRecheck: 10 * time.Millisecond,
 	})
-	require.NoError(t, e.s.EnableAgent(&AgentSettings{
-		BaseURL: e.model.baseURL(), Model: "test-model", Timeout: 5 * time.Second, Limits: opts.limits,
-	}))
-	e.s.Agent().now = e.clock.Now
+	if !opts.noBackend {
+		require.NoError(t, e.s.EnableAgent(&AgentSettings{
+			BaseURL: e.model.baseURL(), Model: "test-model", Timeout: 5 * time.Second, Limits: opts.limits,
+		}))
+		e.s.Agent().now = e.clock.Now
+	}
 	if !opts.noAGUI {
-		require.NoError(t, e.s.EnableAGUI(AGUISettings{OriginAllowlist: opts.origins}))
+		require.NoError(t, e.s.EnableAGUI(AGUISettings{OriginAllowlist: opts.origins, A2UI: opts.a2ui}))
 	}
 	v, err := NewStaticVerifier([]StaticCredential{
 		{Identity: aguiIdentity("chat", KindUI, []string{"pin"}, []string{"pin", "diag"}, []string{"local"}), Token: aguiTokChat},

@@ -1,6 +1,30 @@
-# Progress report: KBD phase `ipfs-mcp-server`
+# Progress report: KBD phases `ipfs-mcp-server` and `agent-backend-settings`
 
-Last updated: 2026-10-11
+Last updated: 2026-10-13 (section 0 covers the current phase; sections 1-6 cover `ipfs-mcp-server` as of their own dates)
+
+## 0. Current phase: `agent-backend-settings`
+
+Goals ([`goals.md`](../../.kbd-orchestrator/phases/agent-backend-settings/goals.md)): runtime agent-backend settings in IPFS Desktop and the cloud Web UI without a manual restart; two backends (UAR, and an OpenAI-compatible endpoint behind `ipfs mcp`'s AG-UI proxy); agent features on by default with off switches; the Promethity rebrand of the fork Web UI. Plan: [`plan.md`](../../.kbd-orchestrator/phases/agent-backend-settings/plan.md) (28 changes, 11 rounds). Execution record: [`execution.md`](../../.kbd-orchestrator/phases/agent-backend-settings/execution.md).
+
+How the work runs: builders are Kimi Code 2.1.1 sessions (`kimi-code/k3`) launched one task at a time by `driver/kimi-task.mjs` with no push, GitHub, cluster or registry credentials; the driver rejects a task on an outward action, a moved remote ref, or (since Round 2) a reported "not met" acceptance. Reviewers are Claude Code subagents (Claude Opus) in a fresh context. The lead (Claude Code) dispatches, checks acceptance, records tasks and does git.
+
+Position on 2026-10-13: stage Execute, Rounds 1 and 2 done on the builder side; 5 of 28 changes complete in the runtime.
+
+| Round | Change | State | What it delivered |
+|---|---|---|---|
+| 1 | `team-ownership-agent-backend` | Done 3/3 | Role ownership extended to the phase's paths (OG-11) and verified |
+| 1 | `agent-settings-contract` | Done 6/6 | [ADR-0009](0009-runtime-settings-and-hot-reload.md); settings schemas `mcp/contract/settings/`; config keys with off switches (`admin` principal, `agent.settings.*`, `--settings-dir`, `agent.a2ui`; an absent secret disables only its feature); [config reference](config-reference.md) and the `docs/config.md` pointer; Desktop IPC schemas; AGENTS.md clarification draft for OG-5 |
+| 1 | `uar-conformance-release` | 2/3 | v1.1 follow-up posted on [UAR #379](https://github.com/Prometheus-AGS/universal-agent-runtime/issues/379#issuecomment-6148655634). A read-only audit found #379 items 1, 4, 5, 6, 8 done in UAR's working tree, 3 and 7 mostly, 2 partial, 9 unreleased, none committed; 1.3 waits for a published `v1.1.0` (OG-4) |
+| 2 | `promethity-design-scope` | Done 3/3 | `DESIGN.md` and `PRODUCT.md` scope and decisions D6-D9, D11, D16; the identity applies to the whole Web UI fork; `ipfs-webui/docs/PROMETHITY-FORK.md` |
+| 2 | `mcp-agent-hot-reload` | Done 6/6 | One agent snapshot behind `atomic.Pointer` shared by AG-UI and A2A; resumed interrupts keep their snapshot; `/agui` mounted without a backend answers 503 `backend_not_configured`; fixed safety prefix on the system prompt; `ApplyAgentSettings` with the startup validation; tests |
+| 2 | `mcp-agui-a2ui-registry` | Done 5/5 | `GET /agui/catalog` serves the embedded A2UI catalog; `a2ui.catalog` advertisement and `a2ui` surface events named in the contract; island renders server surfaces with the local fallback; opt-in liter-llm real-service test; `agent.a2ui` off switch |
+| 2 | `lke-origin-isolation` | 6/11 | know-me-cluster branch `feat/ipfs-console-origin-isolation`: console host `console.prometheusags.ai` (listener, certificate, routes; console `/ipfs` to port 5001), basic-auth SecurityPolicy adopted into git for both hosts, API CORS reduced to the console origin, rollback and restart runbook, offline render, post-merge check script. Security read (1.6): see the change log. 1.8-1.11 follow OG-6 and OG-15 |
+
+Not verified yet: no Go or CLI test from Rounds 1-2 has been run; the plan runs them once at `phase-integration-gate` (Round 10). Two existing tests encode the old semantics until their changes land (`TestEnableAGUIWithoutABackendFails`, `TestConfigCredentialsFailWhenASecretIsMissing`). R7 liter-llm compatibility is unverified until the opt-in test runs against a real endpoint.
+
+Problems found and fixed this round: `mcp-agui-a2ui-registry` 1.1 was closed by the driver although its session reported "blocked" (ownership gap: contract route and catalog embed); repaired by three role sessions, and the driver now rejects a reported "not met". A `helm` rule matched the path `helm-values/` in a read-only grep; cluster-tool rules now match only in command position.
+
+Operator gates: answered OG-1, OG-2 (`console.prometheusags.ai`, DNS resolves), OG-3 (comment on #379), OG-11. Waiting: OG-6 (merge the cluster PR, Argo sync, planned restart, credentialed checks), OG-4 (UAR release), OG-5 (AGENTS.md clarification PR).
 
 This document records what the `ipfs-mcp-server` phase has delivered in this Kubo fork, why each decision was made, what is verified, and what is still open. It is a summary for readers who were not in the sessions. The detailed, append-only log stays in [`execution.md`](../../.kbd-orchestrator/phases/ipfs-mcp-server/execution.md); the plan is [`plan.md`](../../.kbd-orchestrator/phases/ipfs-mcp-server/plan.md).
 

@@ -40,11 +40,11 @@ const (
 
 // aguiConfig is the --mcp-config of the AG-UI tests: two chat principals (one
 // may remove pins, which only the system prompt could approve), a human-mcp
-// reader and an A2A peer. Credentials are env references.
+// reader and an A2A peer. Credentials are env references. An empty llmBase
+// leaves the llm section out, so no backend is configured.
 func aguiConfig(t *testing.T, llmBase string, agui bool) string {
 	t.Helper()
 	cfg := map[string]any{
-		"llm": map[string]any{"base_url": llmBase, "model": "m"},
 		"agent": map[string]any{
 			"agui":             agui,
 			"origin_allowlist": []string{aguiOriginWeb},
@@ -57,6 +57,9 @@ func aguiConfig(t *testing.T, llmBase string, agui bool) string {
 			map[string]any{"name": "reader", "kind": "human-mcp", "credential": map[string]any{"env": "CLI_MCP_READER_TOKEN"}},
 			map[string]any{"name": "peer", "kind": "a2a", "credential": map[string]any{"env": "CLI_MCP_PEER_TOKEN"}, "groups": []string{"node", "pin"}},
 		},
+	}
+	if llmBase != "" {
+		cfg["llm"] = map[string]any{"base_url": llmBase, "model": "m"}
 	}
 	if !agui {
 		delete(cfg["agent"].(map[string]any), "agui")
@@ -244,14 +247,27 @@ func TestMCPAGUI(t *testing.T) {
 		assertOnlyDaemonTraffic(t, p, node)
 	})
 
-	t.Run("disabled: --agui without a backend serves no /agui", func(t *testing.T) {
+	t.Run("help documents the disabled and no-backend states", func(t *testing.T) {
+		t.Parallel()
+		help, _, code := runMCP(t, harness.NewT(t).IPFSBin, t.TempDir(), "--help")
+		assert.Zero(t, code)
+		assert.Contains(t, help, "path answers 404")
+		assert.Contains(t, help, "503 backend_not_configured")
+	})
+
+	t.Run("enabled without a backend: /agui answers 503 backend_not_configured", func(t *testing.T) {
 		t.Parallel()
 		node := agentLLMNode(t)
-		p := startMCPHTTPArgs(t, node, aguiEnvVars(), "--agui")
-		for _, tok := range []string{aguiChatToken, mcpHTTPReaderToken, ""} {
-			assert.Equal(t, http.StatusNotFound, p.status(mcpHTTPRequest{path: "/agui", token: tok, body: "{}"}), "token %q", tok)
-		}
-		assert.Contains(t, p.stderr.String(), "--agui is ignored: no model backend")
+		p := startMCPHTTPArgs(t, node, aguiEnvVars(), "--mcp-config", aguiConfig(t, "", true))
+		r := aguiPost(t, p, aguiChatToken, aguiInput("t-nobackend", "r1", "hello"), nil)
+		assert.Equal(t, http.StatusServiceUnavailable, r.Status, r.Body)
+		assert.Contains(t, r.Body, "backend_not_configured")
+		assert.Empty(t, r.Events, "no SSE stream was started")
+		assert.Equal(t, http.StatusForbidden, p.status(mcpHTTPRequest{path: "/agui", token: mcpHTTPReaderToken, body: "{}"}),
+			"the mount still scopes /agui to the ui principal")
+		assert.Equal(t, http.StatusUnauthorized, p.status(mcpHTTPRequest{path: "/agui", body: "{}"}))
+		assert.Contains(t, p.stderr.String(), "AG-UI endpoint enabled at /agui")
+		assert.Contains(t, p.stderr.String(), "/agui answers 503 backend_not_configured")
 		assertOnlyDaemonTraffic(t, p, node)
 	})
 

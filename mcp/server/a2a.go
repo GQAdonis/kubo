@@ -46,7 +46,9 @@ func mountA2A(s *Server, m RouteMounter) error {
 	ctx, stop := context.WithCancel(context.Background())
 	store := newA2AStore(time.Now)
 	store.parent = ctx
-	h := &a2aHandler{srv: s, agent: s.Agent(), store: store, log: s.log, stopTasks: stop}
+	// The handler keeps no agent: each task resolves the current one, so a
+	// backend swap needs no remount.
+	h := &a2aHandler{srv: s, store: store, log: s.log, stopTasks: stop}
 	s.onShutdown(h.shutdown)
 	// The route's default principal kind is a2a: a token of any other kind is
 	// refused before the handler runs.
@@ -79,7 +81,6 @@ func a2aPeers(m RouteMounter) []Identity {
 // a2aHandler serves POST /a2a, the A2A 1.0 JSON-RPC binding.
 type a2aHandler struct {
 	srv   *Server
-	agent *Agent
 	store *a2aStore
 	log   *slog.Logger
 

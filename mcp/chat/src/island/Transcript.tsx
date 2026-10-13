@@ -1,15 +1,18 @@
 import { useLayoutEffect, useRef } from 'react';
-import { ChatMessageItem, type UiTheme } from '@gqadonis/ipfs-mcp-ui';
+import { ChatMessageItem, type A2uiStreamMessage, type UiTheme } from '@gqadonis/ipfs-mcp-ui';
 import { InterruptItem } from './InterruptItem';
 import { ToolCallSurface } from './ToolCallSurface';
 import type { TimelineItem } from './timeline';
 
 // The conversation, as a live log. Message text is plain text: ChatMessageItem never interprets model
-// output as markup, so a message cannot inject UI. Tool calls are drawn by the A2UI catalog.
+// output as markup, so a message cannot inject UI. Tool calls are drawn by the A2UI catalog, from the
+// server's surface when the stream carried one and from the island's local fallback otherwise.
 
 export interface TranscriptProps {
   readonly items: readonly TimelineItem[];
   readonly theme: UiTheme;
+  /** Server-built A2UI surfaces by surfaceId (`call-<toolCallId>`), from CUSTOM `a2ui` events. */
+  readonly surfaces: Readonly<Record<string, readonly A2uiStreamMessage[]>>;
   readonly nowIso: string;
   readonly running: boolean;
   /** Interrupts whose system prompt the session is watching. */
@@ -19,7 +22,7 @@ export interface TranscriptProps {
   readonly onWatchAgain?: ((interruptId: string) => void) | undefined;
 }
 
-export function Transcript({ items, theme, nowIso, running, observing, onAnswer, onWatchAgain }: TranscriptProps) {
+export function Transcript({ items, theme, surfaces, nowIso, running, observing, onAnswer, onWatchAgain }: TranscriptProps) {
   const log = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
 
@@ -52,7 +55,7 @@ export function Transcript({ items, theme, nowIso, running, observing, onAnswer,
               <ChatMessageItem message={item.message} />
             ) : (
               <div className="flex flex-col gap-s3">
-                <ToolCallSurface call={item.call} theme={theme} />
+                <ToolCallSurface call={item.call} theme={theme} serverMessages={surfaces[`call-${item.call.id}`]} />
                 {item.interrupt ? (
                   <InterruptItem
                     item={item.interrupt}
