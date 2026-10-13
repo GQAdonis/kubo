@@ -2,38 +2,38 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1129,
-  "derivedRevision": 1129,
+  "sourceRevision": 1133,
+  "derivedRevision": 1133,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1129
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1133
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
   "runId": "ipfs-mcp-server-20261009T081630Z",
   "path": [
-    "ipfs-mcp-server"
+    "agent-backend-settings"
   ],
   "phaseIds": [
-    "ipfs-mcp-server"
+    "agent-backend-settings"
   ],
-  "activePhaseId": "ipfs-mcp-server",
-  "activePhase": "ipfs-mcp-server",
-  "phase": "ipfs-mcp-server",
+  "activePhaseId": "agent-backend-settings",
+  "activePhase": "agent-backend-settings",
+  "phase": "agent-backend-settings",
   "parentPhase": null,
   "childPointer": null,
-  "change": "native-confirmation-prompt",
-  "currentTask": "5",
+  "change": null,
+  "currentTask": null,
   "status": "ready",
   "lifecycle": "ready",
-  "stageId": "execute",
-  "stageStatus": "IN_PROGRESS",
+  "stageId": null,
+  "stageStatus": null,
   "completionMetric": "implementation",
   "implementationCompleted": 31,
   "implementationTotal": 37,
   "planRevision": 1,
-  "revision": 1129,
-  "exactNextCommand": "/kbd-assess ipfs-mcp-server",
-  "nextChange": "native-confirmation-prompt",
-  "nextTask": "5",
-  "updatedAt": "2026-10-13T01:33:45.020209Z"
+  "revision": 1133,
+  "exactNextCommand": "/kbd-assess agent-backend-settings",
+  "nextChange": null,
+  "nextTask": null,
+  "updatedAt": "2026-10-13T09:45:20.351954Z"
 }

@@ -2,18 +2,15 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1129,
-  "derivedRevision": 1129,
+  "sourceRevision": 1133,
+  "derivedRevision": 1133,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1129
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1133
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-13T01:33:45.020209Z",
+  "updatedAt": "2026-10-13T09:45:20.351954Z",
   "cursor": [
-    "ipfs-mcp-server",
-    "execute",
-    "native-confirmation-prompt",
-    "5"
+    "agent-backend-settings"
   ],
   "root": {
     "type": "phase",
@@ -24,6 +21,18 @@
       "total": 37
     },
     "children": [
+      {
+        "type": "phase",
+        "id": "agent-backend-settings",
+        "canonicalId": "agent-backend-settings",
+        "status": "IN_PROGRESS",
+        "progress": {
+          "done": 0,
+          "total": 0
+        },
+        "children": [],
+        "annotations": []
+      },
       {
         "type": "phase",
         "id": "ipfs-mcp-server",
