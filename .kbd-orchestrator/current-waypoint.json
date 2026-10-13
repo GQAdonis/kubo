@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1135,
-  "derivedRevision": 1135,
+  "sourceRevision": 1304,
+  "derivedRevision": 1304,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1135
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1304
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -21,19 +21,19 @@
   "phase": "agent-backend-settings",
   "parentPhase": null,
   "childPointer": null,
-  "change": null,
-  "currentTask": null,
+  "change": "team-ownership-agent-backend",
+  "currentTask": "1.1",
   "status": "ready",
   "lifecycle": "ready",
-  "stageId": "assess",
+  "stageId": "plan",
   "stageStatus": "COMPLETE",
   "completionMetric": "implementation",
   "implementationCompleted": 31,
-  "implementationTotal": 37,
+  "implementationTotal": 65,
   "planRevision": 1,
-  "revision": 1135,
+  "revision": 1304,
   "exactNextCommand": "/kbd-assess agent-backend-settings",
-  "nextChange": null,
-  "nextTask": null,
-  "updatedAt": "2026-10-13T10:12:02.462057Z"
+  "nextChange": "team-ownership-agent-backend",
+  "nextTask": "1.1",
+  "updatedAt": "2026-10-13T11:36:01.984667Z"
 }

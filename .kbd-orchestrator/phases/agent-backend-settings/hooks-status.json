@@ -1,1 +1,1 @@
-{"totalRuns":9,"failedRuns":0,"lastRun":{"ts":"2026-10-13T10:12:04Z","kind":"assess","edge":"after","name":"agent-backend-settings","hookId":"legacy-assessment-complete","layer":"builtin","mode":"augment","status":0},"lastFailure":null}
+{"totalRuns":16,"failedRuns":0,"lastRun":{"ts":"2026-10-13T11:36:08Z","kind":"plan","edge":"after","name":"agent-backend-settings","hookId":"legacy-plan-complete","layer":"builtin","mode":"augment","status":0},"lastFailure":null}

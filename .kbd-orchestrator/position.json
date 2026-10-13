@@ -2,16 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1135,
-  "derivedRevision": 1135,
+  "sourceRevision": 1304,
+  "derivedRevision": 1304,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1135
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1304
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-13T10:12:02.462057Z",
+  "updatedAt": "2026-10-13T11:36:01.984667Z",
   "cursor": [
     "agent-backend-settings",
-    "assess"
+    "plan",
+    "team-ownership-agent-backend",
+    "1.1"
   ],
   "root": {
     "type": "phase",
@@ -19,7 +21,7 @@
     "status": "ready",
     "progress": {
       "done": 31,
-      "total": 37
+      "total": 65
     },
     "children": [
       {
@@ -29,9 +31,262 @@
         "status": "IN_PROGRESS",
         "progress": {
           "done": 0,
-          "total": 0
+          "total": 28
         },
-        "children": [],
+        "children": [
+          {
+            "type": "change",
+            "id": "team-ownership-agent-backend",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-settings-contract",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "uar-conformance-release",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "promethity-design-scope",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agent-hot-reload",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agui-a2ui-registry",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "lke-origin-isolation",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 11
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-promethity-foundation",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-promethity-assets",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-agent-settings-api",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-shell-redesign",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-dataviz-reskin",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-settings-primitives",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-titles-and-copy",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-display-branding",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 2
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-mcp-sidecar",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-agent-settings-page",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-chat-island-integration",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-agent-settings-bridge",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-route-polish",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-features-default-on",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "agent-backend-uar",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "settings-security-review",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "kubo-candidate-image",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 5
+            }
+          },
+          {
+            "type": "change",
+            "id": "lke-agent-settings",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 9
+            }
+          },
+          {
+            "type": "change",
+            "id": "promethity-delivery-candidate",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 4
+            }
+          },
+          {
+            "type": "change",
+            "id": "phase-integration-gate",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 10
+            }
+          },
+          {
+            "type": "change",
+            "id": "promethity-delivery",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          }
+        ],
         "annotations": []
       },
       {
