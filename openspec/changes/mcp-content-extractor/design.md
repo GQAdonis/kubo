@@ -2,6 +2,10 @@
 
 Phase `agent-backend-settings`. ADR-0011 V1, V2, V7 hold the decisions; this file records the Round 4 correction decisions and the docs follow-ups.
 
+## xberg source (2026-10-14)
+
+The operator chose the fork `Know-Me-Tools/xberg` (git `git@github.com:Know-Me-Tools/xberg.git`) so xberg can be adapted for our needs; see the ADR-0011 amendment of 2026-10-14. Its `main` and `v1.3.10` are the same commit as upstream (`d926382a`), so the behavior verified in `evidence/2026-10-14-task-1.1/` holds until the fork diverges, and the upstream `v1.3.10` release binary is a build of that commit. Fork-built artifacts are not yet published (open operator item).
+
 ## Allowlist gating and skip reasons
 
 - An extractor is configured and a type is not allowlisted: content of a listed kind with a binary signature is skipped `kind_not_enabled`; UTF-8 text with no binary signature (JSON, CSV, XML, HTML) stays on the native path and is skipped `mime_not_allowed`. Rejecting such text would de-index content when an extractor is added.
