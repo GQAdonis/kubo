@@ -7,7 +7,7 @@
 
 [meta]
 created = "2026-10-09"
-updated = "2026-10-12"
+updated = "2026-10-14"
 
 [pins]
 # Verified against the Go module proxy and the npm registry on 2026-10-09.
@@ -45,3 +45,13 @@ mcp-confirmation = "2026-10-09: every write and destructive tool requires confir
 distribution = "2026-10-09: release binaries; plugin marketplaces for Claude Code, Codex and OpenCode (Kimi plugin packaging out of scope this phase)"
 webmcp-hosts = "2026-10-09: Codex desktop and Kimi desktop are the first WebMCP targets, gated on a host-support spike"
 agents-md-commit = "2026-10-09: AGENTS.md is committed together with the implementation (fork-only waiver of the upstream separate-PR rule)"
+
+[sources]
+# External runtime sources (not Go or npm dependencies; no go.mod entry). Added 2026-10-14 by operator direction.
+[sources.xberg]
+repo = "https://github.com/Know-Me-Tools/xberg"                  # fork of xberg-io/xberg
+git = "git@github.com:Know-Me-Tools/xberg.git"
+version = "v1.3.10"
+commit = "d926382a0c124dcac4562c7c61a5086d71a3aa68"             # fork main and tag v1.3.10 == upstream
+binary = "upstream xberg-io/xberg v1.3.10 release binaries are builds of the same commit; sha256 verified in openspec/changes/mcp-content-extractor/evidence/2026-10-14-task-1.1/README.md; fork releases and ghcr image not yet published (open operator item)"
+decided = "2026-10-14"

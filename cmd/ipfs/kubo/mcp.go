@@ -147,7 +147,7 @@ Extractor. Without an embeddings.extractor block only plain text and Markdown
 are indexed and no extractor process or request exists. With one, the types
 you add to embeddings.policy.mime_allowlist (PDF and Office documents, source
 code, JSON or CSV data, and images or video when OCR or transcription is on)
-are turned into Markdown by xberg (https://github.com/xberg-io/xberg), a
+are turned into Markdown by xberg (https://github.com/Know-Me-Tools/xberg), a
 separate service that ipfs mcp calls over HTTP and never links; text stays on
 the native path. "mode": "embedded" runs the binary at the absolute path in
 extractor.embedded.xberg_binary (never looked up on PATH, never downloaded) on

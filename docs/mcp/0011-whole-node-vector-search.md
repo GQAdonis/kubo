@@ -9,6 +9,16 @@
 
 This ADR extends ADR-0006 (embeddings in SurrealDB) and does not reopen it: `ipfs mcp` stays the only component that embeds and stores, the store stays SurrealDB through the standard library, the embedder stays an operator-configured OpenAI-compatible endpoint with no default, and a daemon-wide indexing hook stays refused.
 
+## Amendment 2026-10-14: xberg source is the Know-Me-Tools fork
+
+Operator decision, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Tools/xberg) using the git address: git@github.com:Know-Me-Tools/xberg.git to ensure that we can adapt xberg for our needs." This supersedes the ADR's "upstream `xberg-io/xberg`, not the Prometheus-AGS fork" for the source of xberg; the extraction design, pins by version and digest, and every off switch are unchanged.
+
+- **Source:** `Know-Me-Tools/xberg` (git `git@github.com:Know-Me-Tools/xberg.git`). Reason: the operator wants to adapt xberg for our needs (a candidate first adaptation is an auth option or Unix-socket binding, which would close the accepted loopback residual).
+- **Identical today:** the fork's `main` and tag `v1.3.10` are the same commit as upstream (`d926382a`; full SHA pinned in `versions.toml`). Until the fork diverges, the upstream `v1.3.10` release binaries and the upstream `ghcr.io/xberg-io/xberg:v1.3.10` image are builds of the same commit, so the binary verified in `openspec/changes/mcp-content-extractor/evidence/2026-10-14-task-1.1/` stays valid. That evidence is a historical record and is not rewritten.
+- **Open operator item:** the fork has no GitHub releases and no container image, so binaries and a `ghcr` image built from the fork are not yet published, and where they will be published is undecided. The fork also inherits upstream's enabled publish workflows; whether to disable or adapt them is for the operator, and nothing here touches the fork repository.
+- **LKE image reference:** once a fork-built image exists, the `ipfs-xberg` image becomes that fork-built image pinned by digest (never a floating tag). Until then it stays the upstream `v1.3.10` image of the same commit, pinned by digest at the time `lke-vector-search` runs.
+- **Desktop binary:** the operator-installed `xberg` is the verified upstream `v1.3.10` macOS arm64 CLI until a fork release exists; after the fork diverges, the fork build replaces it and its checksum is re-verified by the owning task.
+
 ## Date
 
 2026-10-14
@@ -222,5 +232,6 @@ The whole feature remains off without an `embeddings` section, as in ADR-0006. E
 - `.kbd-orchestrator/phases/agent-backend-settings/research-vector-search.md`
 - `.kbd-orchestrator/phases/agent-backend-settings/execution.md`, "Operator direction 2026-10-14"
 - `.kbd-orchestrator/phases/agent-backend-settings/plan-revision-4-proposal.md`
-- https://github.com/xberg-io/xberg/releases/tag/v1.3.10
+- https://github.com/xberg-io/xberg/releases/tag/v1.3.10 (upstream release; the fork's `v1.3.10` is the same commit)
+- https://github.com/Know-Me-Tools/xberg (the fork, git `git@github.com:Know-Me-Tools/xberg.git`), amendment 2026-10-14
 - https://github.com/GQAdonis/liter-llm
