@@ -13,8 +13,9 @@ import (
 )
 
 // Options of the agent backend. None has a default: without a base URL and a
-// model (here or in the llm section of --mcp-config) the agent is off, no
-// model call is ever made and no agent surface is mounted.
+// model (here or in the llm section of --mcp-config) the agent is off and no
+// model call is ever made; an enabled /agui stays mounted and answers 503
+// backend_not_configured until a backend is configured.
 const (
 	mcpLLMBaseURLOptionName = "llm-base-url"
 	mcpLLMModelOptionName   = "llm-model"
@@ -38,12 +39,16 @@ make build GOTAGS=noagent
 
 AG-UI. --agui (or "agui": true under "agent" in the config file) also
 serves POST /agui on the --http listener, for chat UIs such as the Web UI
-chat. It is off by default and mounted only with --http and a model
-backend; otherwise /agui answers 404. It accepts only a bearer token of a
+chat. It is off by default and mounted only with --http; without --agui the
+path answers 404. With no model backend the mounted endpoint answers every
+run request 503 backend_not_configured until one is configured, which the
+settings API can do without a restart. It accepts only a bearer token of a
 principal of kind ui. A write the chat asks for ends the run with an
 interrupt, and only a user gesture in the chat approves it; a destructive
 call also needs the system prompt. A browser page may call it only from an
-origin listed in "origin_allowlist" under "agent" (none by default).
+origin listed in "origin_allowlist" under "agent" (none by default). Tool
+results are also streamed as A2UI surface messages; set "a2ui": false under
+"agent" to turn those off (the run stream is otherwise unchanged).
 
 A2A. --a2a (or "a2a": true under "agent" in the config file) also serves the
 A2A 1.0 JSON-RPC endpoint POST /a2a and the agent card at
@@ -65,7 +70,7 @@ func init() {
 		cmds.StringOption(mcpLLMKeyEnvOptionName, "NAME of the environment variable that holds the model server's API key. A literal key is rejected."),
 		cmds.StringOption(mcpLLMKeyFileOptionName, "Absolute path of a file that holds the model server's API key."),
 		cmds.BoolOption(mcpA2AOptionName, "Serve the A2A endpoint POST /a2a and the agent card on the --http listener (also agent.a2a in --mcp-config). Needs a model backend. Off by default.").WithDefault(false),
-		cmds.BoolOption(mcpAGUIOptionName, "Serve the AG-UI endpoint POST /agui on the --http listener (also agent.agui in --mcp-config). Needs a model backend. Off by default.").WithDefault(false),
+		cmds.BoolOption(mcpAGUIOptionName, "Serve the AG-UI endpoint POST /agui on the --http listener (also agent.agui in --mcp-config). With no model backend it answers 503 backend_not_configured. Off by default.").WithDefault(false),
 	)
 }
 
@@ -107,23 +112,24 @@ func validateAgent(s *mcpSettings) error {
 	return nil
 }
 
-// enableMCPAgent attaches the agent loop when a backend is configured. With
-// none it does nothing: no client is built and nothing is dialed.
+// enableMCPAgent attaches the agent loop when a backend is configured and
+// mounts the enabled agent surfaces on the --http listener. With no backend
+// nothing is built or dialed; an enabled /agui is still mounted and answers
+// 503 backend_not_configured, while /a2a needs a backend and stays unmounted.
 func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
 	wantAGUI := s.agent.agui || s.cfg.Agent.AGUI
 	wantA2A := s.agent.a2a || s.cfg.Agent.A2A
 	if s.resolved == nil {
-		for flag, want := range map[string]bool{"agui": wantAGUI, "a2a": wantA2A} {
-			if want {
-				fmt.Fprintf(os.Stderr, "ipfs mcp: --%s is ignored: no model backend is configured (--llm-base-url and --llm-model), so its routes are not served\n", flag)
-			}
+		if wantA2A {
+			fmt.Fprintln(os.Stderr, "ipfs mcp: --a2a is ignored: no model backend is configured (--llm-base-url and --llm-model), so its routes are not served")
+			wantA2A = false
 		}
-		return nil
+	} else {
+		if err := srv.EnableAgent(s.resolved); err != nil {
+			return fmt.Errorf("agent backend: %w", err)
+		}
+		fmt.Fprintln(os.Stderr, "ipfs mcp: agent loop enabled: "+s.resolved.Describe())
 	}
-	if err := srv.EnableAgent(s.resolved); err != nil {
-		return fmt.Errorf("agent backend: %w", err)
-	}
-	fmt.Fprintln(os.Stderr, "ipfs mcp: agent loop enabled: "+s.resolved.Describe())
 	if s.http == nil {
 		for flag, want := range map[string]bool{"agui": wantAGUI, "a2a": wantA2A} {
 			if want {
@@ -133,10 +139,16 @@ func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
 		return nil
 	}
 	if wantAGUI {
-		if err := srv.EnableAGUI(mcpserver.AGUISettings{OriginAllowlist: s.cfg.Agent.OriginAllowlist}); err != nil {
+		if err := srv.EnableAGUI(mcpserver.AGUISettings{OriginAllowlist: s.cfg.Agent.OriginAllowlist, A2UI: s.cfg.Agent.A2UI}); err != nil {
 			return fmt.Errorf("agui: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "ipfs mcp: AG-UI endpoint enabled at %s (%d browser origins allowed)\n", mcpserver.RouteAGUI, len(s.cfg.Agent.OriginAllowlist))
+		if !s.cfg.Agent.A2UIEnabled() {
+			fmt.Fprintln(os.Stderr, "ipfs mcp: agent.a2ui is false, so /agui emits no A2UI surface messages")
+		}
+		if s.resolved == nil {
+			fmt.Fprintln(os.Stderr, "ipfs mcp: no model backend is configured (--llm-base-url and --llm-model), so /agui answers 503 backend_not_configured until one is")
+		}
 	}
 	if wantA2A {
 		if err := srv.EnableA2A(); err != nil {

@@ -264,9 +264,10 @@ func TestEgressGuardAlsoAppliesToIdentitiesWithoutPrincipalConfig(t *testing.T) 
 
 func TestEgressRefusalTextMatchesTheContract(t *testing.T) {
 	e := newAgentEnv(t, agentEnvOpts{})
-	got := e.a.egressRefusalFor(uiID(nil), catalogTool(t, "ipfs_cat"))
+	run := &runCtx{snap: e.a.snap.Load()}
+	got := e.a.egressRefusalFor(run, uiID(nil), catalogTool(t, "ipfs_cat"))
 	assert.JSONEq(t, fmt.Sprintf(`{"error":{"code":"egress_not_acknowledged","message":"Content not sent: %s is not in egress_ack.","retryable":false,"tool":"ipfs_cat"}}`, e.model.host()), got)
-	assert.Empty(t, e.a.egressRefusalFor(uiID(nil), catalogTool(t, "ipfs_node_info")), "tools that return no node content are not gated")
+	assert.Empty(t, e.a.egressRefusalFor(run, uiID(nil), catalogTool(t, "ipfs_node_info")), "tools that return no node content are not gated")
 }
 
 func TestFrameNeutralisesAClosingTagAndBoundsSize(t *testing.T) {

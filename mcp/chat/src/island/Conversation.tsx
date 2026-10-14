@@ -150,7 +150,7 @@ export function Conversation({ client, readiness, theme, ids, now = Date.now }: 
             </p>
           </div>
         ) : (
-          <Transcript items={items} theme={theme} nowIso={nowIso} running={running} observing={observing} onAnswer={answer} onWatchAgain={watchAgain} />
+          <Transcript items={items} theme={theme} surfaces={chat.a2uiSurfaces} nowIso={nowIso} running={running} observing={observing} onAnswer={answer} onWatchAgain={watchAgain} />
         )}
         {notice ? <RunNotice model={notice} nowMs={nowMs} onRetry={() => void session.retry()} /> : null}
       </SidebarContent>

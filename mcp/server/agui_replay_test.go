@@ -190,6 +190,9 @@ func TestAGUIFixturesReplay(t *testing.T) {
 
 				diffs := replayDiff(t, f.Events, got)
 				assert.Empty(t, diffs, "replaying %s (step %d)\nactual types: %v", f.File, i+1, typesOf(got))
+				// Every A2UI surface emitted during the replay names only
+				// catalog components (mcp-agui-a2ui-registry 1.2).
+				assertSurfaceMessages(t, customSurfaceMessages(t, got))
 				lastInterrupt = ""
 				if fin := got[len(got)-1]; fin["type"] == "RUN_FINISHED" {
 					if out := fin["outcome"].(map[string]any); out["type"] == "interrupt" {
@@ -245,6 +248,18 @@ func newNormalizer() *normalizer {
 		intr: idMapper{"int#", map[string]string{}},
 		conf: idMapper{"cf#", map[string]string{}},
 	}
+}
+
+// dropCustomEvents removes the CUSTOM events (server-built A2UI surfaces)
+// from a stream; the fixture comparison covers the authored event types only.
+func dropCustomEvents(in []aguiEvent) []aguiEvent {
+	out := in[:0]
+	for _, e := range in {
+		if e["type"] != "CUSTOM" {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 // mergeText joins consecutive TEXT_MESSAGE_CONTENT deltas of one message.
@@ -330,6 +345,11 @@ func shapeSubset(path string, exp, act any) error {
 // differences, empty when they match.
 func replayDiff(t *testing.T, exp, act []aguiEvent) []string {
 	t.Helper()
+	// CUSTOM events carry the server-built A2UI surfaces (change
+	// mcp-agui-a2ui-registry); the authored fixtures predate them and the
+	// fixture schema's event enum has no CUSTOM, so they are checked by the
+	// A2UI tests and dropped here.
+	act = dropCustomEvents(act)
 	exp, act = mergeText(exp), mergeText(act)
 	var diffs []string
 	if len(exp) != len(act) {

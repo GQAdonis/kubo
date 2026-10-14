@@ -90,9 +90,17 @@ type Server struct {
 	unavailable []Unavailable
 	enabled     []string
 
-	// agentExt is the agent loop, set by EnableAgent. It is typed any so this
-	// file builds with the noagent tag, which leaves the agent code out.
+	// agentMu guards agentExt and agentChange: ApplyAgentSettings can install
+	// the agent loop while the server is serving, so that write must not race
+	// the request handlers reading Agent.
+	agentMu sync.RWMutex
+	// agentExt is the agent loop, set by EnableAgent or ApplyAgentSettings. It
+	// is typed any so this file builds with the noagent tag, which leaves the
+	// agent code out.
 	agentExt any
+	// agentChange, when set by OnAgentChange, runs once after every successful
+	// ApplyAgentSettings (agent.go).
+	agentChange func()
 	// aguiExt is the AG-UI endpoint's settings, set by EnableAGUI (agui.go).
 	aguiExt any
 	// a2aExt is the A2A endpoint's marker, set by EnableA2A (a2a.go).

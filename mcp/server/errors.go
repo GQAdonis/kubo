@@ -41,6 +41,13 @@ const (
 	fallbackErrorMessage = "unknown error"
 )
 
+// CodeBackendNotConfigured is the settings error schema's code for "no backend
+// is configured" (mcp/contract/settings/settings-error.schema.json), which the
+// schema also assigns to /agui when the route is mounted without a backend. It
+// is deliberately not in the shared ErrorCode list above: the agent surfaces,
+// not the tools, produce it.
+const CodeBackendNotConfigured = "backend_not_configured"
+
 // ErrDaemonUnreachable is wrapped by every error caused by failing to reach
 // the daemon's RPC API.
 var ErrDaemonUnreachable = errors.New("ipfs daemon API is not reachable")

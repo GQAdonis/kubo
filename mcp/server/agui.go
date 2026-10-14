@@ -15,33 +15,37 @@ import (
 )
 
 // AGUISettings configure the AG-UI endpoint (POST /agui on the --http
-// listener). The endpoint is off unless Server.EnableAGUI is called, and then
-// only when an agent backend is configured; without it the path answers 404.
+// listener). The endpoint is off unless Server.EnableAGUI is called; once
+// enabled it is mounted with or without an agent backend, and with none it
+// answers every run request 503 backend_not_configured.
 type AGUISettings struct {
 	// OriginAllowlist is agent.origin_allowlist: the page origins that may call
 	// /agui from a browser. Empty (the default) rejects every request that
 	// carries an Origin header.
 	OriginAllowlist []string
+	// A2UI is agent.a2ui: emit server-built A2UI surface messages as CUSTOM
+	// events. Nil means the default, on; false emits none, and the run stream
+	// is otherwise unchanged (the client's ToolCallCard fallback renders).
+	A2UI *bool
 }
 
 // aguiConfig is AGUISettings after validation.
 type aguiConfig struct {
 	origins []string
+	a2ui    bool
 }
 
-// EnableAGUI turns the AG-UI endpoint on. It needs the agent loop (an LLM
-// backend): without one it fails rather than mount an endpoint that could not
-// answer. Call it after EnableAgent and before NewHTTPServer; the endpoint is
-// mounted by NewHTTPServer and is therefore never served over stdio.
+// EnableAGUI turns the AG-UI endpoint on. It does not need the agent loop:
+// with no LLM backend the mounted route answers 503 backend_not_configured
+// until one is configured, so a chat UI can show its empty state instead of a
+// dead link. Call it before NewHTTPServer; the endpoint is mounted by
+// NewHTTPServer and is therefore never served over stdio.
 func (s *Server) EnableAGUI(set AGUISettings) error {
-	if s.Agent() == nil {
-		return errors.New("the AG-UI endpoint needs an LLM backend (--llm-base-url and --llm-model)")
-	}
 	origins, err := normalizeOrigins(set.OriginAllowlist)
 	if err != nil {
 		return fmt.Errorf("agent.origin_allowlist: %w", err)
 	}
-	s.aguiExt = &aguiConfig{origins: origins}
+	s.aguiExt = &aguiConfig{origins: origins, a2ui: set.A2UI == nil || *set.A2UI}
 	return nil
 }
 
@@ -55,19 +59,42 @@ var aguiCORS = CORSPolicy{
 	Expose: []string{"Retry-After"},
 }
 
-// mountAGUI mounts /agui when EnableAGUI was called. A server without it
-// mounts nothing, so the path is a plain 404.
+// mountAGUI mounts /agui when EnableAGUI was called, with or without an agent
+// backend: with none the handler answers 503 backend_not_configured. A server
+// without EnableAGUI mounts nothing, so the path is a plain 404.
 func mountAGUI(s *Server, m RouteMounter) error {
 	cfg, _ := s.aguiExt.(*aguiConfig)
-	agent := s.Agent()
-	if cfg == nil || agent == nil {
+	if cfg == nil {
 		return nil
 	}
 	s.gate.addResolver(aguiResolver{})
-	h := &aguiHandler{srv: s, agent: agent, log: s.log, watches: map[string]*aguiWatch{}}
+	// The handler keeps no agent: each request resolves the current one, so a
+	// backend swap needs no remount. With agent.a2ui off no emitter is built
+	// and the stream carries no A2UI CUSTOM events.
+	var a2ui *a2uiEmitter
+	if cfg.a2ui {
+		var err error
+		a2ui, err = newA2UIEmitter(s.cat)
+		if err != nil {
+			return err
+		}
+	}
+	h := &aguiHandler{srv: s, log: s.log, watches: map[string]*aguiWatch{}, a2ui: a2ui}
 	cors := aguiCORS
 	// Path-scoped authentication: the route's default principal kind is ui.
-	return m.Mount(RouteAGUI, h, MountOptions{AllowedOrigins: cfg.origins, CORS: &cors})
+	if err := m.Mount(RouteAGUI, h, MountOptions{AllowedOrigins: cfg.origins, CORS: &cors}); err != nil {
+		return err
+	}
+	if a2ui != nil {
+		// Catalog discovery mounts with the same protections as /agui and
+		// shares the agent.a2ui off switch: with a2ui off the path is a plain
+		// 404 and the run stream carries no advertisement.
+		catalogCORS := aguiCatalogCORS
+		if err := m.Mount(RouteAGUICatalog, aguiCatalogHandler{}, MountOptions{AllowedOrigins: cfg.origins, CORS: &catalogCORS}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // aguiResolver is the chat's place in the confirmation gate. It asks nobody: the
@@ -85,9 +112,10 @@ func (aguiResolver) Request(context.Context, Pending, ResolveFunc) error { retur
 
 // aguiHandler serves POST /agui.
 type aguiHandler struct {
-	srv   *Server
-	agent *Agent
-	log   *slog.Logger
+	srv *Server
+	log *slog.Logger
+	// a2ui builds the A2UI surface messages each stream emits per tool result.
+	a2ui *a2uiEmitter
 
 	mu      sync.Mutex
 	watches map[string]*aguiWatch
@@ -120,12 +148,17 @@ func (h *aguiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeAGUIError(w, http.StatusForbidden, CodePermissionDenied, "this endpoint serves the chat principal only", false)
 		return
 	}
+	if h.srv.Agent() == nil {
+		// Mounted without a backend: the chat's empty state. Nothing is dialed.
+		writeAGUIError(w, http.StatusServiceUnavailable, CodeBackendNotConfigured, "no model backend is configured", false)
+		return
+	}
 	in, err := readAGUIInput(r.Body)
 	if err != nil {
 		h.reject(w, err)
 		return
 	}
-	st := newAGUIStream(w, in)
+	st := newAGUIStream(w, in, h.a2ui, id.EgressAck)
 	if in.Resume != nil {
 		h.resume(r.Context(), st, id, in)
 		return
@@ -140,7 +173,7 @@ func (h *aguiHandler) message(ctx context.Context, st *aguiStream, id Identity, 
 		h.reject(st.w, err)
 		return
 	}
-	_, err = h.agent.Run(ctx, id, RunInput{SessionID: in.ThreadID, Message: text}, st.handle)
+	_, err = h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Message: text}, st.handle)
 	h.finish(st, err)
 }
 

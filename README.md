@@ -19,8 +19,48 @@
 <hr />
 
 <p align="center">
-<b><a href="#what-is-kubo">What is Kubo?</a></b> | <b><a href="#quick-taste">Quick Taste</a></b> | <b><a href="#install">Install</a></b> | <b><a href="#documentation">Documentation</a></b> | <b><a href="#development">Development</a></b> | <b><a href="#getting-help">Getting Help</a></b>
+<b><a href="#this-fork-kubo-with-an-ipfs-agent">This Fork</a></b> | <b><a href="#what-is-kubo">What is Kubo?</a></b> | <b><a href="#quick-taste">Quick Taste</a></b> | <b><a href="#install">Install</a></b> | <b><a href="#documentation">Documentation</a></b> | <b><a href="#development">Development</a></b> | <b><a href="#getting-help">Getting Help</a></b>
 </p>
+
+## This fork: Kubo with an IPFS agent
+
+This is a fork of [ipfs/kubo](https://github.com/ipfs/kubo) (GQAdonis/kubo) that lets AI agents use an IPFS node. It adds the `ipfs mcp` command, agent endpoints, agent skills and plugins, and a chat in the Web UI and IPFS Desktop. Everything below this section is upstream Kubo's README and still applies.
+
+The fork keeps Kubo's compatibility rules ([AGENTS.md](AGENTS.md)): `/api/v0`, the HTTP Gateway, the default CID recipe and wire behavior are unchanged. `ipfs mcp` is a client of a running daemon's RPC API: it never opens the repo, adds no Kubo repo config key, and every agent feature has a documented off switch. It sends nothing anywhere unless the operator configures a backend.
+
+### What is built
+
+| Area | What it does | Where |
+|---|---|---|
+| `ipfs mcp` server | [Model Context Protocol](https://modelcontextprotocol.io/specification) server over stdio and Streamable HTTP: 41 tools for content, pins, MFS, IPNS and keys, DAG and CAR, routing and diagnostics; bearer-token principals with least-privilege scopes; loopback by default with Origin checks | [`mcp/server/`](mcp/server/), [user guide](docs/mcp/user-guide.md) |
+| Confirmation | Pins and other writes wait for an out-of-band confirmation (Touch ID or password on macOS, IPFS Desktop window, CLI) | [ADR-0003](docs/mcp/0003-confirmation-and-auth.md) |
+| Tool contract | One JSON Schema contract that generates the MCP tools, the WebMCP tool package and the docs | [`mcp/contract/`](mcp/contract/) |
+| Agent endpoints | AG-UI and A2A endpoints with a bounded agent loop over any OpenAI-compatible LLM server (no default endpoint) | [agentic guide](docs/mcp/agentic.md), [ADR-0004](docs/mcp/0004-agentic-endpoints-and-llm.md) |
+| Semantic search | Optional embeddings into SurrealDB, embedded or remote | [embeddings guide](docs/mcp/embeddings.md) |
+| UI | React 19 component library (an A2UI catalog), MCP App views, and an agent chat island | [`mcp/ui/`](mcp/ui/), [`mcp/app/`](mcp/app/), [`mcp/chat/`](mcp/chat/) |
+| WebMCP | The Web UI exposes IPFS tools to browser agents through WebMCP | [`mcp/webmcp/`](mcp/webmcp/), [ADR-0002](docs/mcp/0002-webmcp-web-ui.md) |
+| Skills and plugins | 8 IPFS agent skills, packaged as plugins and marketplaces for Claude Code, Codex and OpenCode (Kimi Code reads the skills directly) | [`mcp/skills/`](mcp/skills/), [`mcp/plugin/`](mcp/plugin/) |
+| Releases | Signed release archives built from this repository | [`mcp/release/`](mcp/release/) |
+
+Build tags: `GOTAGS=nomcp` removes `ipfs mcp` entirely; `GOTAGS=noagent` keeps MCP and removes the agent loop, AG-UI and A2A.
+
+### In progress: runtime agent settings and Promethity
+
+The current phase (`agent-backend-settings`) adds a settings UI in IPFS Desktop and the cloud Web UI so the agent backend can be changed without editing config files or restarting. It supports two backends: an OpenAI-compatible endpoint, and the [Universal Agent Runtime](https://github.com/Prometheus-AGS/universal-agent-runtime) (UAR). It also rebrands the fork's Web UI to Promethity, keeping IPFS attribution and license notices.
+
+Done so far: the settings contract ([ADR-0009](docs/mcp/0009-runtime-settings-and-hot-reload.md)), the settings and Desktop IPC schemas under [`mcp/contract/settings/`](mcp/contract/settings/), and the new config keys with their off switches in the [configuration reference](docs/mcp/config-reference.md). Not yet usable: hot reload, the settings API and pages, the Desktop sidecar and the UAR backend.
+
+Status, decisions and open items: [progress report](docs/mcp/progress-report.md). Plans: [`.kbd-orchestrator/phases/`](.kbd-orchestrator/phases/). Related forks: [GQAdonis/ipfs-webui](https://github.com/GQAdonis/ipfs-webui) and [tribe-health/ipfs-desktop](https://github.com/tribe-health/ipfs-desktop), branch `feat/ipfs-mcp-server`.
+
+### Try it
+
+```console
+$ make build                 # builds cmd/ipfs/ipfs
+$ ./cmd/ipfs/ipfs daemon &
+$ ./cmd/ipfs/ipfs mcp --help
+```
+
+Client setup, HTTP serving, principals and off switches are in the [user guide](docs/mcp/user-guide.md).
 
 ## What is Kubo?
 

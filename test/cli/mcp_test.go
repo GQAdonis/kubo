@@ -654,4 +654,18 @@ func TestMCPNoAgentBuild(t *testing.T) {
 	assert.NotZero(t, code)
 	assert.Empty(t, stdout)
 	assert.Contains(t, stderr, "no agent support")
+
+	// The agent routes are not built: against a running daemon the HTTP
+	// listener answers /agui, /a2a and the agent card 404 while /mcp still
+	// works.
+	node := harness.NewT(t).NewNode().Init("--profile=test").StartDaemon()
+	defer node.StopDaemon()
+	httpCfg := filepath.Join(t.TempDir(), "mcp-http.json")
+	require.NoError(t, os.WriteFile(httpCfg, []byte(mcpHTTPConfig), 0o600))
+	p := startMCPHTTPBin(t, bin, node, nil, "--mcp-config", httpCfg)
+	assert.Equal(t, http.StatusNotFound, p.status(mcpHTTPRequest{path: "/agui", token: mcpHTTPReaderToken, body: "{}"}))
+	assert.Equal(t, http.StatusNotFound, p.status(mcpHTTPRequest{path: "/a2a", token: mcpHTTPPeerToken, body: "{}"}))
+	assert.Equal(t, http.StatusNotFound, p.status(mcpHTTPRequest{method: http.MethodGet, path: "/.well-known/agent-card.json"}))
+	assert.Equal(t, http.StatusOK, p.status(mcpHTTPRequest{token: mcpHTTPReaderToken, body: mcpHTTPInitialize}),
+		"the MCP route itself is still served; stderr: %s", p.stderr.String())
 }

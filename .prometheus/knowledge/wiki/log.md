@@ -1,6 +1,7 @@
 # Update Log
 
 ## 2026-10-13
+* **Creation**: [Agent Backend Settings LKE Origin Isolation 1.6 Completion](/agent-backend-settings-lke-origin-isolation-1-6-completion.md)
 * **Creation**: [IPFS MCP Native Confirmation Prompt 1.8 Task Completion](/ipfs-mcp-native-confirmation-prompt-1-8-task-completion.md)
 
 ## 2026-10-12

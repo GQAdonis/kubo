@@ -6,6 +6,7 @@ okf_version: "0.2"
 
 ## Reference
 
+* [Agent Backend Settings LKE Origin Isolation 1.6 Completion](/agent-backend-settings-lke-origin-isolation-1-6-completion.md)
 * [IPFS MCP Native Confirmation Prompt 1.8 Task Completion](/ipfs-mcp-native-confirmation-prompt-1-8-task-completion.md)
 * [IPFS MCP Plugin Marketplaces Task 5 Completion](/ipfs-mcp-plugin-marketplaces-task-5-completion.md)
 * [IPFS MCP Server CI Workflow 1.3 Task Completion](/ipfs-mcp-server-ci-workflow-1-3-task-completion.md)

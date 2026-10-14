@@ -2,7 +2,9 @@
 
 <!-- impeccable:product-schema 1 -->
 
-Scope: the agent-facing surfaces of the GQAdonis/kubo fork — the `ipfs mcp` MCP App views (`mcp/app`), the shared React 19 / A2UI component library (`mcp/ui`), the WebMCP tools in the GQAdonis/ipfs-webui fork, and the agent skills that drive them. Kubo itself (daemon, CLI, RPC, gateway) is the substrate, not this product's surface.
+Scope: the agent-facing surfaces of the GQAdonis/kubo fork — the `ipfs mcp` MCP App views (`mcp/app`), the shared React 19 / A2UI component library (`mcp/ui`), the WebMCP tools in the GQAdonis/ipfs-webui fork, and the agent skills that drive them — plus the Promethity rebrand of the whole Web UI fork (`../ipfs-webui`, GQAdonis/ipfs-webui) and the visible branding of the IPFS Desktop fork windows (`../ipfs-desktop`, tribe-health/ipfs-desktop). Kubo itself (daemon, CLI, RPC, gateway) is the substrate, not this product's surface.
+
+Decisions recorded for the wider scope (plan `agent-backend-settings`, change `promethity-design-scope`): D6 (product name) and D8 (attribution and non-affiliation) in Brand, D11 (Desktop display branding) under Constraints.
 
 ## Platform
 
@@ -30,6 +32,10 @@ Control first, backed by own-node verifiability. Every write and destructive act
 
 Promethity identity v1 (October 2026), applied in full: fonts, styles, tokens, icons and components. Source of truth: `/Users/gqadonis/Projects/promethity/branding` (`design-system/README.md` holds the rules; `design-system/tokens.json`/`tokens.css`, component CSS, font files, `logo/`). Tagline: "Fire you can hold."
 
+**D6 (product name).** The user-facing product carries the name "Promethity": in Web UI titles and copy, in the Desktop visible display name, and in host tool lists and plugin marketplaces. The name lives in one constant (`src/promethity/brand.js` in the Web UI fork); it is never hard-coded per site.
+
+**D8 (attribution and non-affiliation).** The Web UI fork's About page and footer carry the line "Built on the IPFS Web UI (MIT, Protocol Labs)" plus a one-line statement that Promethity is not affiliated with or endorsed by Protocol Labs or the IPFS project. The upstream `LICENSE` (MIT) is kept verbatim, with the fork notice beside it.
+
 Brand commitments this product must honor, mapped to its mechanisms:
 
 | Brand line | Mechanism in this product |
@@ -49,10 +55,11 @@ From the Promethity content fundamentals: name the mechanism, never claim a virt
 - **Confirmation is a product requirement, not decoration.** Writes and destructive actions require confirmation on every transport (operator decision, 2026-10-09). In the Web UI fork, the in-page WebMCP approval is an intent and accident check that a page-driving host agent can answer, not a security boundary; approval with an OS presence factor through `ipfs mcp` is a later opt-in (operator decision, 2026-10-12).
 - **Accessibility:** WCAG 2.2 AA (the phase goal) in both light and dark themes; the brand's own standard is WCAG AA with a focus ring that holds at least 3.7:1.
 - **One component set, two adapters.** The same React 19 components serve MCP App views and the A2UI v0.9 catalog, built from the shared tool contract in `mcp/contract`.
-- **The ipfs-webui fork is a separate repository (React 16).** WebMCP work there follows this product context, and its visual changes stay limited to what the WebMCP feature needs.
+- **The ipfs-webui fork is a separate repository (React 16).** WebMCP work there follows this product context. The fork also carries the full Promethity rebrand (goal 5); its structural edits stay minimal and are enumerated in `../ipfs-webui/docs/PROMETHITY-FORK.md` so upstream merges stay possible.
+- **D11 (Desktop display branding).** The Desktop fork changes icons, window titles and the visible display name only. `productName` stays "IPFS Desktop" and the bundle id stays `io.ipfs.desktop`, so userData paths, Keychain entries and update channels are untouched.
 
 ## Open decisions
 
 - Whether a persistent local action log exists, where it is stored, and its default (on or off). Must satisfy the no-tracking constraint above.
-- How far the Promethity identity is applied inside the ipfs-webui fork beyond the WebMCP surfaces.
-- Whether the user-facing product carries the Promethity name or an IPFS-family name in host tool lists and plugin marketplaces.
+- ~~How far the Promethity identity is applied inside the ipfs-webui fork beyond the WebMCP surfaces.~~ Answered (2026-10-13, change `promethity-design-scope`): in full. The identity — tokens, fonts, icons, components and voice — applies to every route of the Web UI fork and to the visible surfaces of the Desktop windows, with three recorded seams: the `/explore` route gets token-level theming only because it renders the external `ipld-explorer-components` package (D9, DESIGN.md); non-Latin scripts fall back to system font stacks because the bundled faces are Latin-only (R8, DESIGN.md); and Desktop branding stops at icons, window titles and the display name (D11 above).
+- ~~Whether the user-facing product carries the Promethity name or an IPFS-family name in host tool lists and plugin marketplaces.~~ Answered by D6 (Brand): the product carries the Promethity name.

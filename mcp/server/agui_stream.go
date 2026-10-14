@@ -17,6 +17,11 @@ type aguiStream struct {
 	w  http.ResponseWriter
 	rc *http.ResponseController
 
+	// a2ui builds the A2UI surface of each tool result (nil: emit none);
+	// egressAck is the principal's egress_ack, named on egress-rule results.
+	a2ui      *a2uiEmitter
+	egressAck []string
+
 	threadID, runID string
 
 	// started is true once the SSE headers went out. runStarted is true once
@@ -35,12 +40,12 @@ type aguiStream struct {
 	text   strings.Builder
 }
 
-func newAGUIStream(w http.ResponseWriter, in *aguiInput) *aguiStream {
+func newAGUIStream(w http.ResponseWriter, in *aguiInput, a2ui *a2uiEmitter, egressAck []string) *aguiStream {
 	history := make([]any, 0, len(in.Messages)+4)
 	for _, m := range in.Messages {
 		history = append(history, m)
 	}
-	return &aguiStream{w: w, rc: http.NewResponseController(w), threadID: in.ThreadID, runID: in.RunID, history: history}
+	return &aguiStream{w: w, rc: http.NewResponseController(w), a2ui: a2ui, egressAck: egressAck, threadID: in.ThreadID, runID: in.RunID, history: history}
 }
 
 // send writes one event. A write error means the client went away; the run's
@@ -71,13 +76,17 @@ func (s *aguiStream) keepalive() {
 	}
 }
 
-// begin sends RUN_STARTED once.
+// begin sends RUN_STARTED once, then the one-per-run A2UI catalog
+// advertisement when agent.a2ui is on (the emitter is nil when it is off).
 func (s *aguiStream) begin() {
 	if s.runStarted {
 		return
 	}
 	s.runStarted = true
 	s.send(evRunStarted(s.threadID, s.runID))
+	if s.a2ui != nil {
+		s.send(s.a2ui.catalogAdvertisement())
+	}
 }
 
 // finishSuccess ends a run that did nothing but observe or record a decision.
@@ -160,6 +169,11 @@ func (s *aguiStream) onToolResult(ev Event) {
 	s.send(aguiEvent{"type": "TOOL_CALL_RESULT", "messageId": id, "toolCallId": ev.ToolCallID, "role": "tool", "content": ev.Content})
 	s.history = append(s.history, map[string]any{"id": id, "role": "tool", "toolCallId": ev.ToolCallID, "content": ev.Content})
 	s.dirty = true
+	if s.a2ui != nil {
+		for _, e := range s.a2ui.surfaceEvents(ev, s.egressAck) {
+			s.send(e)
+		}
+	}
 }
 
 // snapshot sends MESSAGES_SNAPSHOT when the messages changed since the last one.

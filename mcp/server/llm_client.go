@@ -142,6 +142,11 @@ func NewLLMClient(set AgentSettings) (*LLMClient, error) {
 	return c, nil
 }
 
+// dropKey discards the key material of a swapped-out client. It runs only when
+// the last snapshot reference to the client has left, so no Chat is running or
+// can start on it; the client is never used again afterwards.
+func (c *LLMClient) dropKey() { c.key = "" }
+
 type chatRequest struct {
 	Model         string         `json:"model"`
 	Messages      []ChatMessage  `json:"messages"`

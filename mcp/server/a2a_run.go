@@ -21,7 +21,7 @@ func (h *a2aHandler) drive(t *a2aTask, id Identity, w a2aWork) {
 		t.setStatus(a2aWorking, "", nil, nil)
 		waiting = h.callTool(t, id, w)
 	} else {
-		res, err := h.agent.Run(t.ctx, id, RunInput{SessionID: t.contextID, Message: w.text, ContinueOnly: w.continueOnly}, h.emitter(t))
+		res, err := h.srv.Agent().Run(t.ctx, id, RunInput{SessionID: t.contextID, Message: w.text, ContinueOnly: w.continueOnly}, h.emitter(t))
 		waiting = h.settleRun(t, res, err)
 	}
 	if waiting {
@@ -181,7 +181,7 @@ func (h *a2aHandler) awaitApproval(t *a2aTask, id Identity, w a2aWork) {
 		}
 		var again bool
 		if p.text {
-			res, rerr := h.agent.Run(t.ctx, id, RunInput{SessionID: t.contextID, Resume: []ResumeEntry{
+			res, rerr := h.srv.Agent().Run(t.ctx, id, RunInput{SessionID: t.contextID, Resume: []ResumeEntry{
 				{InterruptID: p.interruptID, Status: ResumeResolved, Approved: true},
 			}}, h.emitter(t))
 			again = h.settleRun(t, res, rerr)

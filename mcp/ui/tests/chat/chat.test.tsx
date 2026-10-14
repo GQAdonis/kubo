@@ -159,6 +159,23 @@ describe('AG-UI fixtures (mcp/contract/fixtures/agui)', () => {
     expect(third.messages.at(-1)?.content).toBe('Pinned it, and garbage collection removed 42 blocks.');
     expect(third.run.status).toBe('finished');
   });
+
+  it('collects CUSTOM a2ui messages by surfaceId, in arrival order, and ignores the rest', () => {
+    const s = foldAguiEvents([
+      { type: 'CUSTOM', name: 'a2ui', value: { version: 'v0.9', createSurface: { surfaceId: 'call-tc-1', catalogId: 'https://example.test/catalog' } } },
+      { type: 'CUSTOM', name: 'a2ui', value: { version: 'v0.9', updateComponents: { surfaceId: 'call-tc-1', components: [] } } },
+      { type: 'CUSTOM', name: 'a2ui', value: { version: 'v0.9', updateDataModel: { surfaceId: 'call-tc-2', path: '/call', value: {} } } },
+      // Not collected: another CUSTOM name, a wrong version, a non-object value, and a message
+      // addressing no surface. The fallback draws the call instead.
+      { type: 'CUSTOM', name: 'metrics', value: { version: 'v0.9', createSurface: { surfaceId: 'call-tc-9' } } },
+      { type: 'CUSTOM', name: 'a2ui', value: { version: 'v0.8', createSurface: { surfaceId: 'call-tc-9' } } },
+      { type: 'CUSTOM', name: 'a2ui', value: 'a2ui' },
+      { type: 'CUSTOM', name: 'a2ui', value: { version: 'v0.9' } },
+    ]);
+    expect(Object.keys(s.a2uiSurfaces).sort()).toEqual(['call-tc-1', 'call-tc-2']);
+    expect(s.a2uiSurfaces['call-tc-1']?.map((m) => Object.keys(m).filter((k) => k !== 'version'))).toEqual([['createSurface'], ['updateComponents']]);
+    expect(s.a2uiSurfaces['call-tc-2']).toHaveLength(1);
+  });
 });
 
 describe('MessageStream', () => {

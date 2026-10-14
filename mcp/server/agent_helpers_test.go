@@ -195,6 +195,7 @@ type agentEnvOpts struct {
 	noResolve bool
 	files     map[string][]byte
 	key       *SecretRef
+	prompt    string
 }
 
 func newAgentEnv(t *testing.T, opts agentEnvOpts, steps ...func(modelRequest) []string) *agentEnv {
@@ -213,7 +214,8 @@ func newAgentEnv(t *testing.T, opts agentEnvOpts, steps ...func(modelRequest) []
 		Tools: []string{"node", "content", "pin", "destructive"}, Resolvers: resolvers, Logger: log, now: e.clock.Now,
 	})
 	require.NoError(t, e.s.EnableAgent(&AgentSettings{
-		BaseURL: e.model.baseURL(), Model: "test-model", APIKey: opts.key, Timeout: 5 * time.Second, Limits: opts.limits,
+		BaseURL: e.model.baseURL(), Model: "test-model", APIKey: opts.key, Timeout: 5 * time.Second,
+		Limits: opts.limits, SystemPrompt: opts.prompt,
 	}))
 	e.a = e.s.Agent()
 	require.NotNil(t, e.a)

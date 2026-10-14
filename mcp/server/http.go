@@ -22,10 +22,14 @@ import (
 // Routes on the HTTP listener. Only /mcp is served by this package; the AG-UI
 // and A2A handlers mount themselves on the other paths through RouteMounter.
 const (
-	RouteMCP       = "/mcp"
-	RouteAGUI      = "/agui"
-	RouteA2A       = "/a2a"
-	RouteAgentCard = "/.well-known/agent-card.json"
+	RouteMCP  = "/mcp"
+	RouteAGUI = "/agui"
+	// RouteAGUICatalog is the A2UI catalog discovery route, named by the
+	// contract (derivations/a2ui-components.json serve.route). It mounts with
+	// /agui and only when agent.a2ui is on.
+	RouteAGUICatalog = "/agui/catalog"
+	RouteA2A         = "/a2a"
+	RouteAgentCard   = "/.well-known/agent-card.json"
 )
 
 // Defaults of the listener, matching the contract's config schema.
@@ -242,7 +246,7 @@ func defaultKinds(route string) []string {
 	switch route {
 	case RouteMCP:
 		return []string{KindHumanMCP, KindUI, KindUAR}
-	case RouteAGUI:
+	case RouteAGUI, RouteAGUICatalog:
 		return []string{KindUI}
 	case RouteA2A:
 		return []string{KindA2A}
