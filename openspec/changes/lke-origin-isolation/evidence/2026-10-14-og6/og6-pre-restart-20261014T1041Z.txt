@@ -1,0 +1,7 @@
+# OG-6 pre-restart snapshot 2026-10-14T10:41:33Z
+argo sync=Synced rev=be262b7dbfe95287e94893b918f5db0bdc8c50cc health=Healthy
+[]
+sts currentRevision=ipfs-6d9d447f44 updateRevision=ipfs-6d9d447f44 ready=1/1
+pod phase=Running start=2026-10-13T12:54:22Z restarts=0 2
+ipfs-data-ipfs-0   Bound   pvc-f042ac4e986a45ad   100Gi   RWO   linode-block-storage-retain   <unset>   33d
+Access-Control-Allow-Origin '[\"https://console.prometheusags.ai\"]

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_bulk_start output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier of the started or resumed run, persisted with the run state in the vector store."
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "running"
+      ],
+      "description": "A successful start or resume always leaves the run running; any other state is an error, not a result."
+    },
+    "resumed": {
+      "type": "boolean",
+      "description": "True when this call resumed a paused run rather than starting a new one."
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pins",
+          "mfs"
+        ]
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "The sources in effect for the run (input, else the configured embeddings.bulk.sources)."
+    },
+    "mfs_root": {
+      "type": "string",
+      "description": "The MFS root in effect when sources includes mfs."
+    },
+    "caps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_files",
+        "max_bytes",
+        "files_per_minute"
+      ],
+      "properties": {
+        "max_files": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "files_per_minute": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "The effective caps after clamping the input to the configured embeddings.bulk caps."
+    },
+    "egress_hosts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Every non-loopback host the run may contact (embedder, remote store, remote extractor, describer), each covered by the calling principal's egress_ack. Absent when every stage is loopback or embedded."
+    }
+  },
+  "required": [
+    "run_id",
+    "state",
+    "resumed",
+    "sources",
+    "caps"
+  ]
+}

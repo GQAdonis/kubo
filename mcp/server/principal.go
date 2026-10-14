@@ -12,6 +12,10 @@ const (
 	KindA2A = "a2a"
 	// KindUAR is the Universal Agent Runtime.
 	KindUAR = "uar"
+	// KindAdmin is the runtime-settings administrator (ADR-0009 section 3). Its
+	// scope is the settings route only: it has no tool access, so no route
+	// serves it by default; the settings route mounts with Kinds [KindAdmin].
+	KindAdmin = "admin"
 )
 
 // Principal is who is calling. Stdio sessions run as the local human-mcp

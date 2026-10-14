@@ -89,8 +89,8 @@ func TestPrincipalKindsAreConfigurable(t *testing.T) {
 	t.Setenv("P_K2", "kind-token-0000000002")
 	t.Setenv("P_K3", "kind-token-0000000003")
 	t.Setenv("P_K4", "kind-token-0000000004")
-	creds, err := cfg.Credentials()
-	require.NoError(t, err)
+	creds, warnings := cfg.Credentials()
+	require.Empty(t, warnings)
 	var kinds []string
 	for _, c := range creds {
 		kinds = append(kinds, c.Identity.Kind)

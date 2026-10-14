@@ -42,6 +42,32 @@ type AgentConfig struct {
 	// /agui from a browser (empty by default: none).
 	OriginAllowlist []string   `json:"origin_allowlist"`
 	Loop            LoopConfig `json:"loop"`
+	// Settings is agent.settings: the runtime settings API switches.
+	Settings SettingsConfig `json:"settings"`
+}
+
+// SettingsConfig is agent.settings. The settings route mounts only when an
+// admin principal is configured and Enabled is not false (ADR-0009 section 3).
+type SettingsConfig struct {
+	// Enabled is agent.settings.enabled (nil means the default, true).
+	Enabled *bool `json:"enabled"`
+	// AcceptSecrets is agent.settings.accept_secrets: whether a settings write
+	// may carry the write-only key field (nil means the default, true).
+	AcceptSecrets *bool `json:"accept_secrets"`
+	// Dir is agent.settings.dir: where the settings overlay lives (empty: no
+	// overlay is read or written).
+	Dir string `json:"dir"`
+}
+
+// SettingsEnabled reports whether the settings route may mount
+// (agent.settings.enabled, default true). An admin principal is still
+// required.
+func (c AgentConfig) SettingsEnabled() bool { return c.Settings.Enabled == nil || *c.Settings.Enabled }
+
+// SettingsAcceptSecrets reports whether the settings API accepts write-only
+// secret fields (agent.settings.accept_secrets, default true).
+func (c AgentConfig) SettingsAcceptSecrets() bool {
+	return c.Settings.AcceptSecrets == nil || *c.Settings.AcceptSecrets
 }
 
 // A2UIEnabled reports whether /agui emits server-built A2UI surfaces
@@ -125,6 +151,12 @@ func usesBackend(kind string) bool { return kind == KindUI || kind == KindA2A }
 // grants, egress acknowledgement and assertions.
 func (c *Config) configuredIdentity(p PrincipalConfig) Identity {
 	id := NewIdentity(Principal{ID: p.Name, Kind: p.Kind}, p.Groups, p.WriteGroups, p.DestructiveGroups)
+	if p.Kind == KindAdmin {
+		// The tool-group keys grant an admin principal nothing (contract config
+		// schema): its scope is the settings route only.
+		id.Groups, id.WriteGroups, id.DestructiveGroups = nil, nil, nil
+		id.Scopes = []string{ScopeRead}
+	}
 	id.Configured = true
 	id.EgressAck = slices.Clone(p.EgressAck)
 	id.ShellCapable = p.ShellCapable

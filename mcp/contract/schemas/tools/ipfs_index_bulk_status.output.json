@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_bulk_status output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "True when an embeddings section is configured and embeddings.bulk.enabled is not false; the bulk tools are listed only then."
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "state",
+        "started_by",
+        "sources",
+        "caps",
+        "files_seen",
+        "files_indexed",
+        "files_skipped",
+        "chunks_indexed",
+        "bytes_read"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "running",
+            "paused",
+            "completed",
+            "cancelled",
+            "failed"
+          ],
+          "description": "running: indexing now. paused: ipfs mcp restarted mid-run; the run indexes nothing until resumed through ipfs_index_bulk_start with resume true and a new confirmation. completed, cancelled, failed: terminal."
+        },
+        "started_by": {
+          "type": "string",
+          "description": "Name of the principal that started the run (or last resumed it)."
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "pins",
+              "mfs"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "mfs_root": {
+          "type": "string",
+          "description": "The MFS root in effect when sources includes mfs."
+        },
+        "caps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_files",
+            "max_bytes",
+            "files_per_minute"
+          ],
+          "properties": {
+            "max_files": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "files_per_minute": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "description": "The effective caps the run was started with, already clamped to the configured embeddings.bulk caps."
+        },
+        "files_seen": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files_indexed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files_skipped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "chunks_indexed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes_read": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Content bytes read from the node so far; every read was offline."
+        },
+        "skipped_by_reason": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "mime_not_allowed",
+              "too_large",
+              "already_indexed",
+              "not_a_file",
+              "empty",
+              "not_local",
+              "kind_not_enabled",
+              "extractor_unavailable",
+              "extraction_failed",
+              "describer_not_configured"
+            ]
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Count of skipped files per reason; keys are the skipped_reason values of ipfs_index_cid. Absent when nothing was skipped."
+        },
+        "last_error": {
+          "type": "string",
+          "description": "The error that failed the run; present only when state is failed."
+        }
+      },
+      "description": "The current or last bulk run, read from its persisted state in the vector store. Absent when no run exists."
+    }
+  },
+  "required": [
+    "enabled"
+  ]
+}

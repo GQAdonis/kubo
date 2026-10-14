@@ -255,15 +255,17 @@ func (c *Config) SessionTimeoutDuration() (time.Duration, error) {
 }
 
 // Credentials reads every principal's secret and returns the static
-// credentials for them. An unset variable or missing file is an error, so a
-// principal never silently has no way to authenticate.
-func (c *Config) Credentials() ([]StaticCredential, error) {
-	creds := make([]StaticCredential, 0, len(c.Principals))
-	var errs []error
+// credentials of the principals whose reference resolves, plus one warning per
+// principal it disables. An absent credential — an unset or empty environment
+// variable, a missing, unreadable or empty file — disables only that
+// principal, with a warning, and never stops startup (ADR-0009 section 3,
+// CRITICAL-2): the principal authenticates nothing until the reference
+// resolves. A warning names the principal and the reference, never a secret.
+func (c *Config) Credentials() (creds []StaticCredential, warnings []string) {
 	for _, p := range c.Principals {
 		token, err := p.Credential.Read()
 		if err != nil {
-			errs = append(errs, fmt.Errorf("principal %s: %w", p.Name, err))
+			warnings = append(warnings, fmt.Sprintf("principal %s (%s) is disabled: %v; it authenticates nothing until the reference resolves", p.Name, p.Kind, err))
 			continue
 		}
 		creds = append(creds, StaticCredential{
@@ -271,10 +273,7 @@ func (c *Config) Credentials() ([]StaticCredential, error) {
 			Token:    token,
 		})
 	}
-	if err := errors.Join(errs...); err != nil {
-		return nil, err
-	}
-	return creds, nil
+	return creds, warnings
 }
 
 // OperatorIdentity is the identity of a token given with --auth-token-env or
@@ -303,7 +302,10 @@ const OperatorPrincipalID = "operator"
 
 // GrantsDestructive reports whether any principal is granted a destructive
 // group, which is when the HTTP server must register destructive tools so the
-// grant has something to apply to (ADR-0003 section 2).
+// grant has something to apply to (ADR-0003 section 2). An admin principal's
+// tool-group keys are ignored, so they never register the tools.
 func (c *Config) GrantsDestructive() bool {
-	return slices.ContainsFunc(c.Principals, func(p PrincipalConfig) bool { return len(p.DestructiveGroups) > 0 })
+	return slices.ContainsFunc(c.Principals, func(p PrincipalConfig) bool {
+		return p.Kind != KindAdmin && len(p.DestructiveGroups) > 0
+	})
 }

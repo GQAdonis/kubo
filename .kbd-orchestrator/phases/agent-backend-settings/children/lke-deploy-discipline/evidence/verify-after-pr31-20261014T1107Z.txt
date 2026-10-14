@@ -1,0 +1,26 @@
+# verify namespace=ipfs
+# 2026-10-14T11:07:08Z context=know-me (read-only)
+## Gateways and listeners
+PASS listener: ipfs-gateway-gw/https Programmed=True(Programmed) ResolvedRefs=True(ResolvedRefs)
+PASS listener: ipfs-gateway-gw/https-console Programmed=True(Programmed) ResolvedRefs=True(ResolvedRefs)
+INFO lb: ipfs-gateway-gw address=['45.56.67.67'] Service=envoy-ipfs-ipfs-gateway-gw-a8eb8933 ports=[443]
+## Routes
+PASS route: ipfs -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+PASS route: ipfs-mcp -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+INFO route: ipfs-webui: stale status entry for ipfs-gateway-gw/https (not in spec)
+PASS route: ipfs-webui -> ipfs-gateway-gw/https-console Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+PASS route: ipfs-webui-legacy -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+## Security policies
+PASS securitypolicy: ipfs-webui-auth on ipfs-gateway-gw/https-console Accepted=True(Accepted)
+PASS securitypolicy: ipfs-webui-auth on ipfs-gateway-gw/https Accepted=True(Accepted)
+## Certificates and leftover ACME objects
+## Workloads
+PASS statefulset: ipfs ready 1/1
+PASS pvc: ipfs-data-ipfs-0 Bound
+## External checks from this machine
+PASS dns-address: console.prometheusags.ai A=['45.56.67.67'] gateway=['ipfs-gateway-gw']
+PASS fetch: POST https://console.prometheusags.ai/api/v0/version -> 401 (expected 401; curl exit 0)
+PASS dns-address: ipfs.prometheusags.ai A=['45.56.67.67'] gateway=['ipfs-gateway-gw']
+PASS fetch: POST https://ipfs.prometheusags.ai/api/v0/version -> 401 (expected 401; curl exit 0)
+# result: PASS (0 failing checks)
+evidence: /Users/gqadonis/Projects/travis/personal/know-me-cluster/.lke-evidence/ipfs/verify-20261014T110715Z.txt

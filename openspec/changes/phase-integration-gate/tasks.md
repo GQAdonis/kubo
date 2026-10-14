@@ -15,3 +15,11 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 - [ ] 1.8 One batched correction by the owning roles. Acceptance: each finding linked to a commit or rebuttal.
 - [ ] 1.9 Confirmation by both reviewers. Acceptance: no open CRITICAL.
 - [ ] 1.10 Close carry-over in the old phase and reconcile runtime tasks by begin/end (gotcha 2026-10-10); record goal 2 status for OG-10. Acceptance: `prometheus kbd status --json` shows no pending task the evidence covers.
+
+## Plan revision 4 amendment (OG-16, 2026-10-14)
+
+- Dependencies add the eight goal-6 changes (`vector-search-contract`, `mcp-content-extractor`, `mcp-media-describer`, `mcp-whole-node-indexing`, `webui-vector-search`, `desktop-search-sidecar`, `vector-search-security-review`, `lke-vector-search`; the last only if OG-21 passed, otherwise carried open like `agent-backend-uar` under D13).
+- Task 1.2 adds `go test ./mcp/...` for the new packages and the `test/cli` tests `TestMCPExtractorDisabled`, `TestMCPDescriberDisabled`, `TestMCPBulkIndexNoInjection`, `TestMCPBulkIndexDisabled`, `TestMCPIndexSearchRouteDisabled`.
+- Task 1.4 adds the Web UI `search.test.js` e2e and axe run; task 1.3 adds the Desktop search on and off checks.
+- Task 1.5 adds the xberg real-service test (PR-13), and the describer test only if OG-17 allowed one (PR-15).
+- Tasks 1.6 and 1.7: reviewer and security-reviewer scopes add ADR-0011 and the eight changes; the disabled-state evidence lists every new off switch.

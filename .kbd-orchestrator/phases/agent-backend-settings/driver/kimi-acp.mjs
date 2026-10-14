@@ -27,7 +27,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  KUBO, LOG_DIR, MODEL, acceptanceNotMet, buildPrompt, forbiddenRules, hardenedEnv,
+  KUBO, LOG_DIR, MODEL, acceptanceNotMet, beginTask, buildPrompt, forbiddenRules, hardenedEnv,
   kbdApply, parseArgs, readTasks, remoteRefs, usage,
 } from './common.mjs';
 
@@ -90,8 +90,9 @@ async function run(o, tasks, idx, title, prompt) {
   const before = Object.fromEntries(repos.map((d) => [d, remoteRefs(d)]));
 
   if (o.kbd) {
-    const b = kbdApply('begin-task', o, idx + 1, tasks.length, title);
+    const b = beginTask(o, idx + 1, tasks.length, title);
     if (!b.ok) { console.error(`kbd-apply begin-task failed:\n${b.out}`); return 6; }
+    if (b.resumed) console.log(`task ${o.change}/${o.task} was already started; resuming it`);
   }
   console.log(`${TOOL}: ${o.selfTest ? 'self-test' : `${o.change}/${o.task} as ${o.role}`} in ${o.cwd}; log ${logPath}`);
 
@@ -111,6 +112,7 @@ async function run(o, tasks, idx, title, prompt) {
   const moved = repos.filter((d) => before[d] !== null && remoteRefs(d) !== before[d]);
   const status = spawnSync('git', ['-C', o.cwd, 'status', '--porcelain'], { encoding: 'utf8' }).stdout.trim();
   console.log(`--- final message ---\n${session.lastTurnText}\n--- changed files in ${o.cwd} ---\n${status || '(none)'}`);
+  console.log(`thought chunks (not logged): ${session.thoughtChunks}`);
   if (session.denied.length) console.log(`denied before running: ${JSON.stringify(session.denied, null, 2)}`);
 
   if (rc === 0 && session.executedForbidden.length) {
@@ -179,6 +181,7 @@ class AcpSession {
     this.lastTurnText = '';
     this.denied = [];
     this.deniedIds = new Set();
+    this.thoughtChunks = 0;
     this.executedForbidden = [];
     this.commands = new Map();
     this.child = spawn('kimi', ['acp'], { cwd, env: hardenedEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
@@ -234,6 +237,9 @@ class AcpSession {
       if (!line) continue;
       let m;
       try { m = JSON.parse(line); } catch { this.log('in-raw', line); continue; }
+      // Thought chunks are most of the traffic (30k in one 30-minute session,
+      // 26 MB of log); they are counted, not logged.
+      if (m.params?.update?.sessionUpdate === 'agent_thought_chunk') { this.thoughtChunks++; continue; }
       this.log('in', m);
       this.dispatch(m);
     }

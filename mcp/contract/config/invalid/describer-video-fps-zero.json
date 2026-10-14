@@ -1,0 +1,24 @@
+{
+  "embeddings": {
+    "mode": "remote",
+    "remote": {
+      "endpoint": "https://surreal.internal.example:8000",
+      "namespace": "ipfs",
+      "database": "index"
+    },
+    "embedder": {
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "bge-m3",
+      "dimensions": 1024
+    },
+    "describer": {
+      "base_url": "http://127.0.0.1:1234/v1",
+      "model": "vision-local",
+      "kinds": [
+        "image",
+        "video"
+      ],
+      "video_fps": 0
+    }
+  }
+}

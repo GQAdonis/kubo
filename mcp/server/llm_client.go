@@ -125,11 +125,13 @@ func NewLLMClient(set AgentSettings) (*LLMClient, error) {
 		c.timeout = DefaultLLMTimeout
 	}
 	if set.APIKey != nil {
-		k, err := set.APIKey.Read()
-		if err != nil {
-			return nil, fmt.Errorf("llm api key: %w", err)
+		// CRITICAL-2: an absent key file or unset variable disables only the
+		// key, never startup or a settings apply. The client sends no
+		// Authorization header until the reference resolves; the startup
+		// warning and the settings read shape (api_key.set=false) report it.
+		if k, err := set.APIKey.Read(); err == nil {
+			c.key = secret(k)
 		}
-		c.key = secret(k)
 	}
 	if c.hc == nil {
 		c.hc = &http.Client{}

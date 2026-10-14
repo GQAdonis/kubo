@@ -19,7 +19,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  KUBO, LOG_DIR, MODEL, acceptanceNotMet, buildPrompt, forbiddenRules, hardenedEnv,
+  KUBO, LOG_DIR, MODEL, acceptanceNotMet, beginTask, buildPrompt, forbiddenRules, hardenedEnv,
   kbdApply, parseArgs, readTasks, remoteRefs, usage,
 } from './common.mjs';
 
@@ -67,8 +67,9 @@ async function main() {
   const before = Object.fromEntries(repos.map((d) => [d, remoteRefs(d)]));
 
   if (o.kbd) {
-    const b = kbdApply('begin-task', o, idx + 1, tasks.length, title);
+    const b = beginTask(o, idx + 1, tasks.length, title);
     if (!b.ok) { console.error(`kbd-apply begin-task failed:\n${b.out}`); return 6; }
+    if (b.resumed) console.log(`task ${o.change}/${o.task} was already started; resuming it`);
   }
 
   console.log(`${TOOL}: ${o.change}/${o.task} as ${o.role} in ${o.cwd}; log ${logPath}`);

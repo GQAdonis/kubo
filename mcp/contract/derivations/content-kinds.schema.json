@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Content kinds and extraction stages",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "description", "kinds", "mimeTypes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "source": { "type": "string", "minLength": 10 },
+    "description": { "type": "string", "minLength": 10 },
+    "kinds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "document", "code", "data", "image", "video"],
+      "properties": {
+        "text": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["description", "stages"],
+          "properties": {
+            "description": { "type": "string", "minLength": 10 },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/NativeStage" },
+              "description": "The text kind is always handled natively, exactly as G12: bytes are chunked and embedded directly."
+            }
+          }
+        },
+        "document": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["description", "stages"],
+          "properties": {
+            "description": { "type": "string", "minLength": 10 },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "oneOf": [
+                  { "$ref": "#/$defs/ExtractorStage" },
+                  { "$ref": "#/$defs/OcrStage" }
+                ]
+              },
+              "contains": { "$ref": "#/$defs/ExtractorStage" },
+              "description": "Extraction always applies; OCR covers scanned pages only and only when embeddings.extractor.ocr is on."
+            }
+          }
+        },
+        "code": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["description", "stages"],
+          "properties": {
+            "description": { "type": "string", "minLength": 10 },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/ExtractorStage" }
+            }
+          }
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["description", "stages"],
+          "properties": {
+            "description": { "type": "string", "minLength": 10 },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/ExtractorStage" }
+            }
+          }
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["description", "stages"],
+          "properties": {
+            "description": { "type": "string", "minLength": 10 },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "oneOf": [
+                  { "$ref": "#/$defs/OcrStage" },
+                  { "$ref": "#/$defs/DescriberStage" }
+                ]
+              },
+              "description": "Pipeline order: OCR (when on) before the describer. Either stage may run alone; both run when both are configured."
+            }
+          }
+        },
+        "video": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["description", "stages"],
+          "properties": {
+            "description": { "type": "string", "minLength": 10 },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "oneOf": [
+                  { "$ref": "#/$defs/TranscribeStage" },
+                  { "$ref": "#/$defs/DescriberStage" }
+                ]
+              },
+              "description": "Pipeline order: audio-track transcription (when on) before the describer (video only when the operator lists it in embeddings.describer.kinds)."
+            }
+          }
+        }
+      }
+    },
+    "mimeTypes": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z]+/[a-z0-9.+-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/KindName" },
+      "description": "The contract map from MIME type to kind (ADR-0011 V2). A MIME type is a JSON object key, so it appears exactly once: 'every listed MIME type maps to exactly one kind' holds structurally, not by convention. A kind's MIME types are read by inverting this map; they are never duplicated into the kind entries."
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "KindName": {
+      "type": "string",
+      "enum": ["text", "document", "code", "data", "image", "video"]
+    },
+    "NativeStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "source"],
+      "properties": {
+        "stage": { "const": "native" },
+        "source": { "const": "text" }
+      }
+    },
+    "ExtractorStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "source"],
+      "properties": {
+        "stage": { "const": "extractor" },
+        "source": { "const": "extracted" }
+      }
+    },
+    "OcrStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "source"],
+      "properties": {
+        "stage": { "const": "extractor.ocr" },
+        "source": { "const": "ocr" }
+      }
+    },
+    "TranscribeStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "source"],
+      "properties": {
+        "stage": { "const": "extractor.transcribe" },
+        "source": { "const": "transcript" }
+      }
+    },
+    "DescriberStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "source"],
+      "properties": {
+        "stage": { "const": "describer" },
+        "source": { "const": "description" }
+      }
+    }
+  }
+}

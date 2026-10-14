@@ -21,9 +21,14 @@
         "too_large",
         "already_indexed",
         "not_a_file",
-        "empty"
+        "empty",
+        "not_local",
+        "kind_not_enabled",
+        "extractor_unavailable",
+        "extraction_failed",
+        "describer_not_configured"
       ],
-      "description": "Why nothing was indexed; absent when chunks were stored. mime_not_allowed: the content is not UTF-8 text, contains a NUL byte, or its type is not in embeddings.policy.mime_allowlist. too_large: larger than embeddings.policy.max_bytes. already_indexed: the CID has index entries and force was false. not_a_file: the CID is a UnixFS directory or another non-file node. empty: the file is empty or only whitespace, so there is no chunk to embed. chunks_indexed is 0 whenever skipped_reason is present."
+      "description": "Why nothing was indexed; absent when chunks were stored. mime_not_allowed: the content is not UTF-8 text, contains a NUL byte, or its type is not in embeddings.policy.mime_allowlist. too_large: larger than embeddings.policy.max_bytes. already_indexed: the CID has index entries and force was false. not_a_file: the CID is a UnixFS directory or another non-file node. empty: the file is empty or only whitespace, so there is no chunk to embed. not_local: the read was offline and the file's blocks are not on the node; indexing never fetches from the network (ADR-0011 V4). kind_not_enabled: every stage of the content's kind is off (for example an image with extractor OCR off and no describer covering images). extractor_unavailable: the kind needs the extractor and none is configured or it is unreachable. extraction_failed: the extractor could not produce text (for example a missing model with downloads disabled). describer_not_configured: the kind is covered only by the describer and no embeddings.describer block exists or its kinds list does not name the kind. chunks_indexed is 0 whenever skipped_reason is present."
     }
   },
   "required": [

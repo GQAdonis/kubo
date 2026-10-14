@@ -113,6 +113,16 @@ export function kbdApply(verb, o, idx, total, title) {
   return { ok: r.status === 0, out: `${r.stdout ?? ''}${r.stderr ?? ''}`.trim() };
 }
 
+// beginTask opens the task boundary. A task whose start is already recorded
+// (an earlier session timed out or was rejected before end-task) is resumed,
+// not refused: the runtime keeps one open start receipt per task.
+export function beginTask(o, idx, total, title) {
+  const b = kbdApply('begin-task', o, idx, total, title);
+  if (b.ok) return { ok: true, resumed: false, out: b.out };
+  if (/already has an outstanding start receipt/.test(b.out)) return { ok: true, resumed: true, out: b.out };
+  return { ok: false, resumed: false, out: b.out };
+}
+
 export function buildPrompt(o, title) {
   return [
     `You are the ${o.role} role of the kubo-ipfs-agentic team, executing one KBD task.`,
@@ -128,13 +138,14 @@ export function buildPrompt(o, title) {
   ].filter(Boolean).join('\n');
 }
 
-// The prompt asks for an "Acceptance result" section; a verdict of not met,
-// blocked or partially met in the last such section keeps the task open.
+// The prompt asks for an "Acceptance result" section (sessions also title it
+// "Acceptance check"); a verdict of not met, blocked or partially met in the
+// last such section keeps the task open.
 // Checked against all 20 session logs of 2026-10-13: only
 // mcp-agui-a2ui-registry 1.1 matches.
 export function acceptanceNotMet(text) {
   const t = text ?? '';
-  const i = t.search(/acceptance result[^\n]*$(?![\s\S]*acceptance result)/im);
+  const i = t.search(/acceptance (?:result|check)[^\n]*$(?![\s\S]*acceptance (?:result|check))/im);
   if (i < 0) return false;
   const section = t.slice(i, i + 500).split(/\n#{1,4} /)[0];
   return /\bnot met\b|\bpartially met\b|\bunmet\b|\*\*\s*blocked|^\W*blocked\b/im.test(section);

@@ -287,6 +287,27 @@
       "untrustedContentHint": false,
       "debugging": false,
       "exposed": true
+    },
+    "ipfs_index_bulk_start": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_index_bulk_status": {
+      "readOnlyHint": true,
+      "consequentialHint": false,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
+    },
+    "ipfs_index_bulk_cancel": {
+      "readOnlyHint": false,
+      "consequentialHint": true,
+      "untrustedContentHint": false,
+      "debugging": false,
+      "exposed": true
     }
   }
 }

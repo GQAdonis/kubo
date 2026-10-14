@@ -1,0 +1,117 @@
+{
+  "$schema": "./index.schema.json",
+  "source": "ADR-0011 (docs/mcp/0011-whole-node-vector-search.md) decision V5, accepted 2026-10-14; the admin refusal is ADR-0009 (docs/mcp/0009-runtime-settings-and-hot-reload.md) section 3; principals and egress_ack are ADR-0004.",
+  "description": "Route descriptor for the whole-node vector search HTTP surface of ipfs mcp: POST /index/search and GET /index/status on the --http listener (ADR-0011 V5). The routes are a thin HTTP projection of the index tools for browser and MCP-adjacent clients that are not full MCP sessions (the Web UI search box); every request and response shape is the referenced tool schema, so there is no second copy of the shapes. Authorization is the tool's: the same principal kinds, the same index group grant and the same egress_ack check as a tools/call of ipfs_index_search or ipfs_index_status. On LKE the console routes for /index/* are bearer-only and outside the basic-auth SecurityPolicy, exactly like /agui (ADR-0009 section 4); on Desktop the Web UI reaches these routes through the same endpoint and token source as the agent chat.",
+  "mount": {
+    "conditions": [
+      "the ipfs mcp HTTP listener is on (--http); stdio-only operation has no HTTP surface at all",
+      "an embeddings section exists in the ipfs mcp config (embeddings is null by default: no store, no embedder, and the index tools report not_configured)",
+      "embeddings.search_route.enabled is not false (default true)"
+    ],
+    "absentBehavior": "When any condition is unmet the routes are not mounted: both paths answer 404 and nothing is read or dialed (ADR-0011 V5, falsifier V-3). The 404 is the not_configured state of errors.mapping; its body is not a contract error object, so clients distinguish 'feature off' from a wrong path only through GET /index/status answering at all (the Web UI gates its search nav entry on exactly this)."
+  },
+  "authorization": {
+    "principalKinds": ["ui", "human-mcp"],
+    "group": "index",
+    "refusedKinds": ["admin", "a2a", "uar"],
+    "description": "Bearer authentication only (the Authorization header); cookies are never read. A missing or unknown bearer gets 401; a principal whose credential reference does not resolve authenticates nothing, so its requests get 401 (CRITICAL-2, ADR-0009 section 1). A valid bearer of a refused kind gets 403: admin is scoped to the runtime settings route only, with no tool access (ADR-0009 section 3), so an admin token is refused here exactly as it is on /mcp and /agui (ADR-0011 falsifier V-5); a2a and uar are agent kinds with no search surface. A ui or human-mcp principal whose groups do not grant the index group gets 403 (falsifier V-5). The anonymous loopback principal of an unauthenticated loopback listener is not a listed kind and gets 403 where a verifier exists; a loopback listener with no credential configured at all keeps its listener-wide read-only anonymous behavior unchanged by this descriptor."
+  },
+  "egress": {
+    "rule": "Identical to the tool's rule. POST /index/search embeds the query: before any request is built, the calling principal's egress_ack must cover the embedder host and, in remote store mode, the store host; a loopback host is covered by 'local'. A missing acknowledgement refuses the call with egress_not_acknowledged (403), nothing is sent, and details name the missing hosts (ADR-0011 V7). GET /index/status contacts no embedder and carries no content egress, exactly like ipfs_index_status (contentEgress false).",
+    "configKey": "principals[].egress_ack"
+  },
+  "cors": {
+    "configKey": "agent.origin_allowlist",
+    "allowMethods": ["GET", "POST", "OPTIONS"],
+    "allowHeaders": ["authorization", "content-type"],
+    "exposeHeaders": ["Retry-After"],
+    "allowCredentials": false,
+    "unlistedOrigin": "403 with no CORS headers",
+    "description": "The strict per-mount CORS policy of the listener (MountOptions.CORS), scoped to the mount's own origin_allowlist and nothing else: a listed Origin gets Access-Control-Allow-Origin echoing that origin (never *), the methods and headers above, and Vary: Origin. Access-Control-Allow-Credentials is never sent: the only credential is the bearer. On LKE the allowlist is exactly the console origin (ADR-0009 section 4). The allowlist grants no access by itself: the request still needs a ui or human-mcp bearer with the index group."
+  },
+  "listenerChecks": "Both routes pass through the same listener-wide protection chain as /mcp and /agui: the Host header check and cross-site fetch-metadata rejection (403), the origin policy above, and the listener request body limit (http.max_body_bytes, default 4 MiB). No route option here can weaken that chain.",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/index/search",
+      "tool": "ipfs_index_search",
+      "request": {
+        "contentType": "application/json",
+        "schema": "schemas/tools/ipfs_index_search.input.json",
+        "description": "The request body is exactly the tool's input schema; there are no HTTP-only fields. A body that fails it is invalid_argument (400)."
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "schema": "schemas/tools/ipfs_index_search.output.json",
+        "description": "The body is exactly the tool's output schema. Hit text (results[].text) is data: clients render it as plain text, never as HTML or Markdown, and a hit with source 'description' is untrusted model output labelled by described_by (ADR-0011 V2, V5)."
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/index/status",
+      "tools": ["ipfs_index_status", "ipfs_index_bulk_status"],
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "schema": "schemas/tools/ipfs_index_status.output.json",
+        "additionalPropertiesFrom": {
+          "bulk_run": {
+            "$ref": "schemas/tools/ipfs_index_bulk_status.output.json#/properties/run",
+            "presence": "optional",
+            "description": "The bulk run summary: the run object of the ipfs_index_bulk_status output (ADR-0011 V5: 'ipfs_index_status output plus the bulk run summary'). Present when a bulk run exists; absent when no run has ever been started or embeddings.bulk.enabled is false."
+          }
+        },
+        "composition": "The body is the referenced ipfs_index_status output object plus the one added property above; no field of either tool output is restated in this descriptor."
+      }
+    }
+  ],
+  "errors": {
+    "shape": "schemas/common.json#/$defs/ToolError",
+    "httpLevel": "401, 403 and 404 answers from the authentication, authorization, origin and mount layers are HTTP-level: plain text or empty bodies, not the ToolError shape. The ToolError shape applies to the codes a mounted route produces while serving (invalid_argument, egress_not_acknowledged, index_unavailable, internal).",
+    "mapping": [
+      {
+        "code": "not_configured",
+        "status": 404,
+        "when": "A mount condition is unmet: no --http listener, no embeddings section, or embeddings.search_route.enabled false. The route is not mounted, nothing is read or dialed, and the body is not a contract error object (the reason name matches the ipfs_node_status unavailable_tools reason for the index tools).",
+        "retryable": false
+      },
+      {
+        "code": "unauthenticated",
+        "status": 401,
+        "when": "No Authorization bearer, an unknown token, or a token whose principal's credential reference does not resolve (that principal authenticates nothing until it resolves, CRITICAL-2).",
+        "retryable": false
+      },
+      {
+        "code": "permission_denied",
+        "status": 403,
+        "when": "Authorization failures with a valid bearer or a browser origin: a refused principal kind (admin, a2a, uar; ADR-0009 section 3), a ui or human-mcp principal without the index group (falsifier V-5), an Origin outside agent.origin_allowlist, and the listener's Host header and cross-site fetch-metadata rejections.",
+        "retryable": false
+      },
+      {
+        "code": "egress_not_acknowledged",
+        "status": 403,
+        "when": "POST /index/search only: the calling principal's egress_ack does not cover the embedder host or the remote store host. Nothing is sent to any host; details name the missing hosts.",
+        "retryable": false
+      },
+      {
+        "code": "invalid_argument",
+        "status": 400,
+        "when": "The request body fails the referenced input schema (unknown field, wrong type, query over 2000 characters, top_k outside 1-50).",
+        "retryable": false
+      },
+      {
+        "code": "index_unavailable",
+        "status": 503,
+        "when": "The embedder or the vector store is unreachable or fails after answering. Retryable; the response may carry Retry-After, which browsers on an allowlisted origin can read through Access-Control-Expose-Headers.",
+        "retryable": true
+      },
+      {
+        "code": "internal",
+        "status": 500,
+        "when": "Any other failure while serving a mounted route. A client treats an unknown code from the shared ErrorCode list (schemas/common.json) as internal and uses retryable alone to decide whether to retry.",
+        "retryable": false
+      }
+    ]
+  }
+}

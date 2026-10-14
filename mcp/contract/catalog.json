@@ -80,7 +80,7 @@
     {
       "name": "index",
       "title": "Search index",
-      "description": "Embedding index over content added through ipfs mcp (off unless embeddings are configured).",
+      "description": "Embedding index over content added through ipfs mcp or covered by an operator-started bulk run over pins and MFS (off unless embeddings are configured).",
       "diagnostic": false
     }
   ],
@@ -1239,7 +1239,7 @@
       "name": "ipfs_index_search",
       "group": "index",
       "title": "Search index",
-      "description": "Semantic search over content indexed by ipfs mcp (requires embeddings configuration). Returns matching chunks with their CIDs; chunk text is read back from the node. Untrusted content. The query goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "description": "Semantic search over content indexed by ipfs mcp (requires embeddings configuration). Returns matching chunks with their CIDs, kind and source; chunk text is read back from the node for native text and stored beside the vector for extracted, OCR, transcript and description sources. Untrusted content; descriptions are untrusted model output named by described_by. The query goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -1355,6 +1355,98 @@
         "example": "Clean up index entries for unpinned content."
       },
       "confirmationSummary": "Delete index entries of unpinned CIDs (dry run={dry_run})"
+    },
+    {
+      "name": "ipfs_index_bulk_start",
+      "group": "index",
+      "title": "Start bulk index",
+      "description": "Start (or, with resume, resume) the one operator-started bulk indexing run over the node's recursive and direct pins and the MFS tree under mfs_root (requires embeddings configuration and embeddings.bulk.enabled not false; one run at a time). Every read is offline: a file with missing blocks is skipped not_local and the run never fetches, adds, pins or announces anything. Extracted and described text goes to the configured extractor and describer and every chunk to the configured embedder and store, so the caller's egress_ack must cover each configured remote host (egress_not_acknowledged otherwise); the confirmation names the sources, the caps and every host. Caps are clamped to the embeddings.bulk config caps. A run interrupted by a restart comes back paused and never resumes by itself. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": true,
+      "rpc": [
+        "cat",
+        "files/ls",
+        "files/stat",
+        "ls",
+        "pin/ls"
+      ],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_index_bulk_start.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_bulk_start.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "Index all my pinned files for search."
+      },
+      "confirmationSummary": "Bulk-index {sources} under MFS root {mfs_root} (resume={resume}, at most {max_files} files and {max_bytes} bytes at {files_per_minute} files/min)"
+    },
+    {
+      "name": "ipfs_index_bulk_status",
+      "group": "index",
+      "title": "Bulk index status",
+      "description": "Report whether bulk indexing is enabled and the state of the current or last run: running, paused, completed, cancelled or failed, the principal that started it, the effective sources and caps, counts of files seen, indexed and skipped per reason, and chunks and bytes indexed. Reads only the persisted run state in the vector store; contacts no daemon endpoint, extractor or embedder. An unreachable vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "none",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_index_bulk_status.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_bulk_status.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "How far is the bulk indexing run?"
+      }
+    },
+    {
+      "name": "ipfs_index_bulk_cancel",
+      "group": "index",
+      "title": "Cancel bulk index",
+      "description": "Cancel the active or paused bulk indexing run and report the counts gathered so far. Files already indexed stay indexed, so a later run skips them as already_indexed. Write class: confirmed on every transport. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "confirmation": "write",
+      "returnsUntrustedContent": false,
+      "contentEgress": false,
+      "rpc": [],
+      "minKuboVersion": "0.29.0",
+      "paginated": false,
+      "inputSchema": "schemas/tools/ipfs_index_bulk_cancel.input.json",
+      "outputSchema": "schemas/tools/ipfs_index_bulk_cancel.output.json",
+      "ui": {
+        "a2uiComponent": "NodeStatusPanel",
+        "appView": "node-status"
+      },
+      "a2a": {
+        "skill": "ipfs-search",
+        "example": "Stop the indexing run."
+      },
+      "confirmationSummary": "Cancel the running bulk indexing run"
     }
   ]
 }

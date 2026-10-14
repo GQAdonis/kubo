@@ -14,7 +14,8 @@ import (
 )
 
 // planTools is every tool named by the plan's tool changes (mcp-server-core-stdio,
-// mcp-pinning-with-confirmation, mcp-tools-*, mcp-embedding-index-lifecycle).
+// mcp-pinning-with-confirmation, mcp-tools-*, mcp-embedding-index-lifecycle,
+// mcp-whole-node-indexing).
 var planTools = []string{
 	"ipfs_node_info", "ipfs_node_status",
 	"ipfs_add", "ipfs_cat", "ipfs_get", "ipfs_ls",
@@ -25,6 +26,7 @@ var planTools = []string{
 	"routing_findprovs", "routing_findpeer", "routing_provide",
 	"swarm_peers", "stats_bw", "repo_stat", "repo_gc",
 	"ipfs_index_search", "ipfs_index_cid", "ipfs_index_status", "ipfs_index_reconcile",
+	"ipfs_index_bulk_start", "ipfs_index_bulk_status", "ipfs_index_bulk_cancel",
 }
 
 // destructiveTools are the tools that can remove an operator-held object (a
@@ -371,7 +373,7 @@ func checkToolSchema(t *testing.T, p string) map[string]any {
 
 func TestAllSchemasAgainstMetaSchema(t *testing.T) {
 	var docs []string
-	for _, dir := range []string{"schemas", "confirmation", "resources", "derivations", "agentic", "fixtures", "config", "settings"} {
+	for _, dir := range []string{"schemas", "confirmation", "resources", "derivations", "agentic", "fixtures", "config", "settings", "routes"} {
 		for _, p := range jsonFiles(t, dir) {
 			if strings.HasSuffix(p, ".schema.json") || p == "schemas/common.json" {
 				docs = append(docs, p)
@@ -391,7 +393,7 @@ func TestAllSchemasAgainstMetaSchema(t *testing.T) {
 // schema with a relative "$schema".
 func TestSelfDescribedDocuments(t *testing.T) {
 	var all []string
-	for _, dir := range []string{"resources", "derivations", "agentic", "fixtures", "config/examples"} {
+	for _, dir := range []string{"resources", "derivations", "agentic", "fixtures", "config/examples", "routes"} {
 		all = append(all, jsonFiles(t, dir)...)
 	}
 	all = append(all, "catalog.json")

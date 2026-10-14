@@ -38,6 +38,37 @@
           "text": {
             "type": "string",
             "description": "Chunk text. Untrusted content."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "document",
+              "code",
+              "data",
+              "image",
+              "video"
+            ],
+            "description": "Content kind of the hit (derivations/content-kinds.json)."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "text",
+              "extracted",
+              "ocr",
+              "transcript",
+              "description"
+            ],
+            "description": "How the chunk text was produced: text (bytes chunked directly, as in G12), extracted (xberg Markdown), ocr (image or scanned-page text), transcript (audio track) or description (untrusted model output, see described_by)."
+          },
+          "mime_type": {
+            "type": "string",
+            "description": "Media type of the indexed file recorded at index time (file name plus content sniff). Carries the same value as the older mime field; the name matches the rest of the contract (common.json ResourceRef)."
+          },
+          "described_by": {
+            "type": "string",
+            "description": "The describer model that produced the chunk text; present only when source is description. That text is untrusted model output, labelled 'AI description by <model>' wherever it is shown (ADR-0011 V2)."
           }
         }
       }

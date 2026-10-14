@@ -1,6 +1,6 @@
 // Package contract embeds the IPFS MCP tool contract (catalog, JSON Schemas,
-// derivation rules, fixtures and the ipfs mcp config schema) and exposes the
-// catalog to Go consumers such as mcp/server.
+// derivation rules, route descriptors, fixtures and the ipfs mcp config
+// schema) and exposes the catalog to Go consumers such as mcp/server.
 //
 // The JSON files in this directory are the single source of truth. This
 // package only loads them, enforces the cross-field rules that JSON Schema
@@ -17,7 +17,7 @@ import (
 	"slices"
 )
 
-//go:embed catalog.json catalog.schema.json schemas confirmation resources derivations agentic fixtures config settings
+//go:embed catalog.json catalog.schema.json schemas confirmation resources derivations agentic fixtures config settings routes
 var files embed.FS
 
 // FS returns the embedded contract files, rooted at mcp/contract.

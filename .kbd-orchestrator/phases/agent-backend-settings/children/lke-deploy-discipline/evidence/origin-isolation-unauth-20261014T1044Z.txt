@@ -1,0 +1,8 @@
+== unauthenticated checks (https://console.prometheusags.ai and https://ipfs.prometheusags.ai) ==
+PASS: unauthenticated POST console /api/v0/version is challenged (HTTP 401)
+  response body: User authentication failed. Missing username and password.
+PASS: unauthenticated POST legacy-host /api/v0/version is challenged (HTTP 401)
+  response body: User authentication failed. Missing username and password.
+PASS: unauthenticated GET legacy-host /webui/ is challenged (HTTP 401)
+  response body: User authentication failed. Missing username and password.
+RESULT: PASS

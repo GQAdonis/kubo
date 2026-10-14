@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_bulk_cancel output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "cancelled"
+      ],
+      "description": "A successful cancel always leaves the run cancelled."
+    },
+    "files_indexed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Files indexed before the cancel; they stay indexed, so a later run skips them as already_indexed."
+    },
+    "files_skipped": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "chunks_indexed": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "run_id",
+    "state",
+    "files_indexed",
+    "files_skipped",
+    "chunks_indexed"
+  ]
+}

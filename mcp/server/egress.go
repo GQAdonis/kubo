@@ -39,6 +39,14 @@ func normalizeHost(h string) (host, port string) {
 	return h, port
 }
 
+// sameHostPort reports whether two hosts (each host or host:port) name the
+// same endpoint after normalization. An empty or unparsable side never matches.
+func sameHostPort(a, b string) bool {
+	ah, ap := normalizeHost(a)
+	bh, bp := normalizeHost(b)
+	return ah != "" && ah == bh && ap == bp
+}
+
 // IsLocalHost reports whether an endpoint host names this machine: localhost, a
 // *.localhost name or a loopback address. The egress_ack sentinel "local" is not
 // a host name (a machine called "local" is not loopback); AckCovers handles it.

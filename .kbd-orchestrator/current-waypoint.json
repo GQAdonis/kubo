@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1446,
-  "derivedRevision": 1446,
+  "sourceRevision": 1632,
+  "derivedRevision": 1632,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1446
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1632
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -25,15 +25,15 @@
   "currentTask": "1.3",
   "status": "ready",
   "lifecycle": "ready",
-  "stageId": "execute",
-  "stageStatus": "IN_PROGRESS",
+  "stageId": null,
+  "stageStatus": null,
   "completionMetric": "implementation",
-  "implementationCompleted": 36,
-  "implementationTotal": 65,
-  "planRevision": 1,
-  "revision": 1446,
-  "exactNextCommand": "/kbd-assess agent-backend-settings",
+  "implementationCompleted": 43,
+  "implementationTotal": 76,
+  "planRevision": 2,
+  "revision": 1632,
+  "exactNextCommand": null,
   "nextChange": "uar-conformance-release",
   "nextTask": "1.3",
-  "updatedAt": "2026-10-13T22:23:29.831311Z"
+  "updatedAt": "2026-10-14T14:51:21.516019Z"
 }

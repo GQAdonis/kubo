@@ -617,8 +617,9 @@ func TestMCPNoMCPBuild(t *testing.T) {
 }
 
 // TestMCPNoAgentBuild builds the binary with the noagent tag and checks the
-// disabled state: the --llm-*, --agui and --a2a flags do not exist, and a
-// config file with an llm section is refused instead of silently ignored.
+// disabled state: the --llm-*, --agui and --a2a flags do not exist, a config
+// file with an llm section is refused instead of silently ignored, and the
+// settings route is gone even with an admin principal configured.
 func TestMCPNoAgentBuild(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the ipfs binary")
@@ -668,4 +669,16 @@ func TestMCPNoAgentBuild(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, p.status(mcpHTTPRequest{method: http.MethodGet, path: "/.well-known/agent-card.json"}))
 	assert.Equal(t, http.StatusOK, p.status(mcpHTTPRequest{token: mcpHTTPReaderToken, body: mcpHTTPInitialize}),
 		"the MCP route itself is still served; stderr: %s", p.stderr.String())
+
+	// The settings route is agent code too (mcp-agent-settings-api 1.7): even
+	// with an admin principal configured and agent.settings.enabled at its
+	// default, a noagent build has no /agent/settings subtree.
+	settingsCfg := principalConfig(t, `{"principals":[
+	  {"name":"reader","kind":"human-mcp","credential":{"env":"CLI_MCP_READER_TOKEN"}},
+	  {"name":"settings-admin","kind":"admin","credential":{"env":"CLI_MCP_SETTINGS_TOKEN"}}
+	]}`)
+	sp := startMCPHTTPBin(t, bin, node, []string{"CLI_MCP_SETTINGS_TOKEN=" + mcpHTTPSettingsToken}, "--mcp-config", settingsCfg)
+	for _, path := range []string{"/agent/settings", "/agent/settings/test-connection", "/agent/settings/models", "/agent/settings/events"} {
+		assert.Equal(t, http.StatusNotFound, sp.status(mcpHTTPRequest{method: http.MethodGet, path: path, token: mcpHTTPSettingsToken}), path)
+	}
 }

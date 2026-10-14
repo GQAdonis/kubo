@@ -103,6 +103,10 @@ type Server struct {
 	agentChange func()
 	// aguiExt is the AG-UI endpoint's settings, set by EnableAGUI (agui.go).
 	aguiExt any
+	// settingsExt is the runtime settings API state, set by
+	// EnableAgentSettings (settings.go); typed any so this file builds with
+	// the noagent tag.
+	settingsExt any
 	// a2aExt is the A2A endpoint's marker, set by EnableA2A (a2a.go).
 	a2aExt any
 	// embeddingsExt is the embeddings service, set by EnableEmbeddings

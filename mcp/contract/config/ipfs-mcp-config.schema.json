@@ -714,6 +714,374 @@
           "default": {},
           "offSwitch": "Leave auto false (default).",
           "ownerChange": "mcp-embedding-index-lifecycle"
+        },
+        "extractor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "embedded",
+                "remote"
+              ],
+              "default": null,
+              "offSwitch": "Remove the extractor block: no xberg process or request; only natively handled MIME types (the policy.mime_allowlist default, text/plain and text/markdown) are indexed (ADR-0011 V6).",
+              "ownerChange": "vector-search-contract"
+            },
+            "embedded": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "xberg_binary": {
+                  "$ref": "#/$defs/AbsolutePath",
+                  "default": null,
+                  "description": "Absolute path to an operator-supplied xberg binary, supervised by ipfs mcp as `xberg serve` on 127.0.0.1 with an ephemeral port; it stops when ipfs mcp exits. Kubo never downloads or bundles xberg (ADR-0011 V1).",
+                  "offSwitch": "Remove the embedded block: no xberg process is started.",
+                  "ownerChange": "vector-search-contract"
+                },
+                "cache_dir": {
+                  "$ref": "#/$defs/AbsolutePath",
+                  "default": null,
+                  "description": "Model cache directory the operator names; pre-warm it when allow_model_downloads is false.",
+                  "offSwitch": "Remove the embedded block.",
+                  "ownerChange": "vector-search-contract"
+                },
+                "min_version": {
+                  "type": "string",
+                  "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                  "default": "1.3.10",
+                  "offSwitch": "Always checked; an older binary is refused.",
+                  "ownerChange": "vector-search-contract"
+                },
+                "allow_model_downloads": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "true lets xberg download layout, OCR and transcription models from the Hugging Face Hub, an endpoint not otherwise configured. false (default) runs with downloads disabled; a file needing a missing model is extraction_failed (ADR-0011 V1).",
+                  "offSwitch": "false (default): no model download is made; pre-warm the cache instead.",
+                  "ownerChange": "vector-search-contract"
+                }
+              },
+              "required": [
+                "xberg_binary",
+                "cache_dir"
+              ],
+              "default": null,
+              "offSwitch": "null (default) unless extractor.mode is embedded.",
+              "ownerChange": "vector-search-contract"
+            },
+            "remote": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "base_url": {
+                  "type": "string",
+                  "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+                  "maxLength": 2048,
+                  "default": null,
+                  "description": "The xberg REST endpoint (POST /extract). There is no default. xberg documents no authentication, so a remote xberg must sit on a private network or behind an authenticating proxy (ADR-0011 V1). The host must also be in the calling principal's egress_ack.",
+                  "offSwitch": "Remove the remote block: no connection is made.",
+                  "ownerChange": "vector-search-contract"
+                },
+                "credential": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/SecretRef"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Credential for an authenticating proxy in front of a remote xberg, sent as a bearer token (Authorization: Bearer). The value is never logged.",
+                  "offSwitch": "null (default): no credential is sent.",
+                  "ownerChange": "vector-search-contract"
+                }
+              },
+              "required": [
+                "base_url"
+              ],
+              "default": null,
+              "offSwitch": "null (default) unless extractor.mode is remote.",
+              "ownerChange": "vector-search-contract"
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 120,
+              "offSwitch": "Per-request limit; always enforced.",
+              "ownerChange": "vector-search-contract"
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104857600,
+              "default": 52428800,
+              "offSwitch": "Files larger than this are skipped too_large before any request is built.",
+              "ownerChange": "vector-search-contract"
+            },
+            "ocr": {
+              "type": "boolean",
+              "default": false,
+              "offSwitch": "false (default): no OCR of images or scanned PDFs.",
+              "ownerChange": "vector-search-contract"
+            },
+            "transcribe": {
+              "type": "boolean",
+              "default": false,
+              "offSwitch": "false (default): no transcription of audio tracks.",
+              "ownerChange": "vector-search-contract"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "embedded"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              },
+              "then": {
+                "required": [
+                  "embedded"
+                ],
+                "properties": {
+                  "embedded": {
+                    "type": "object"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "remote"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              },
+              "then": {
+                "required": [
+                  "remote"
+                ],
+                "properties": {
+                  "remote": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          ],
+          "default": null,
+          "offSwitch": "null (default): no xberg process or request; only text/plain and text/markdown are indexed, as in ADR-0006.",
+          "ownerChange": "vector-search-contract"
+        },
+        "describer": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "base_url": {
+              "type": "string",
+              "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
+              "maxLength": 2048,
+              "default": null,
+              "description": "Any OpenAI-compatible /chat/completions endpoint with image (and, if enabled, video) input. There is no default. Media are sent as base64 data URLs inside the request, never as gateway URLs, so describing a file sends its bytes to this host; the host must also be in the calling principal's egress_ack (ADR-0011 V2, V7).",
+              "offSwitch": "Remove the describer block: no description request is made.",
+              "ownerChange": "vector-search-contract"
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "default": null,
+              "offSwitch": "Remove the describer block.",
+              "ownerChange": "vector-search-contract"
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SecretRef"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Env or file reference to the describer API key, sent as a bearer token (Authorization: Bearer). The value is never logged.",
+              "offSwitch": "null (default): requests carry no key.",
+              "ownerChange": "vector-search-contract"
+            },
+            "kinds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "image",
+                  "video"
+                ]
+              },
+              "default": [
+                "image"
+              ],
+              "offSwitch": "Empty list: nothing is described. Video is described only when listed.",
+              "ownerChange": "vector-search-contract"
+            },
+            "max_output_tokens": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32768,
+              "default": 512,
+              "offSwitch": "Always enforced; bounds the length of one description.",
+              "ownerChange": "vector-search-contract"
+            },
+            "image_max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104857600,
+              "default": 20971520,
+              "offSwitch": "Images larger than this are not described.",
+              "ownerChange": "vector-search-contract"
+            },
+            "video_max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104857600,
+              "default": 52428800,
+              "offSwitch": "Videos larger than this are not described.",
+              "ownerChange": "vector-search-contract"
+            },
+            "video_fps": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 10,
+              "default": 1,
+              "offSwitch": "Always applies to video: frames per second sampled for the video_url part.",
+              "ownerChange": "vector-search-contract"
+            },
+            "max_requests_per_hour": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 120,
+              "offSwitch": "0: the describer is disabled even with base_url and model set.",
+              "ownerChange": "vector-search-contract"
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 180,
+              "offSwitch": "Per-request limit; always enforced.",
+              "ownerChange": "vector-search-contract"
+            }
+          },
+          "required": [
+            "base_url",
+            "model"
+          ],
+          "default": null,
+          "offSwitch": "null (default): no description request; images and videos are skipped describer_not_configured unless OCR or transcription covers them.",
+          "ownerChange": "vector-search-contract"
+        },
+        "bulk": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Inert without an embeddings section, a configured stage and egress_ack coverage; a run always starts from a confirmed operator request, never in the background (ADR-0011 V4).",
+              "offSwitch": "false: ipfs_index_bulk_start, ipfs_index_bulk_status and ipfs_index_bulk_cancel are not listed.",
+              "ownerChange": "vector-search-contract"
+            },
+            "sources": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "pins",
+                  "mfs"
+                ]
+              },
+              "default": [
+                "pins",
+                "mfs"
+              ],
+              "offSwitch": "Empty list: a run indexes nothing.",
+              "ownerChange": "vector-search-contract"
+            },
+            "mfs_root": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024,
+              "pattern": "^/",
+              "default": "/",
+              "offSwitch": "Narrow it to limit the MFS walk to a subtree.",
+              "ownerChange": "vector-search-contract"
+            },
+            "max_files_per_run": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1000,
+              "offSwitch": "Always enforced; a run stops after this many files.",
+              "ownerChange": "vector-search-contract"
+            },
+            "max_bytes_per_run": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1073741824,
+              "offSwitch": "Always enforced; a run stops after this many bytes.",
+              "ownerChange": "vector-search-contract"
+            },
+            "files_per_minute": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 30,
+              "offSwitch": "Always enforced; bounds the indexing rate of a run.",
+              "ownerChange": "vector-search-contract"
+            }
+          },
+          "default": {},
+          "offSwitch": "Omit the section for the default caps; set enabled false to hide the bulk tools.",
+          "ownerChange": "vector-search-contract"
+        },
+        "search_route": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Mounts POST /index/search and GET /index/status on the ipfs mcp HTTP listener for ui and human-mcp principals with the index group (ADR-0011 V5). Inert without --http and an embeddings section.",
+              "offSwitch": "false: /index/search and /index/status answer 404 and nothing is read or dialed.",
+              "ownerChange": "vector-search-contract"
+            }
+          },
+          "default": {},
+          "offSwitch": "Omit the section; set enabled false to unmount the routes.",
+          "ownerChange": "vector-search-contract"
         }
       },
       "required": [

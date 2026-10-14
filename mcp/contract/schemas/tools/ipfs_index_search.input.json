@@ -18,6 +18,39 @@
     "cid": {
       "$ref": "../common.json#/$defs/Cid",
       "description": "Only search chunks of this CID."
+    },
+    "kinds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "text",
+          "document",
+          "code",
+          "data",
+          "image",
+          "video"
+        ]
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "Only return hits of these content kinds (derivations/content-kinds.json). Absent: every kind."
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "text",
+          "extracted",
+          "ocr",
+          "transcript",
+          "description"
+        ]
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "Only return hits whose chunk text came from these sources: text (bytes chunked directly), extracted (xberg), ocr, transcript or description (a model description). Absent: every source."
     }
   },
   "required": [
