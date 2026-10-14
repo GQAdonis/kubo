@@ -24,6 +24,8 @@ type Service struct {
 	// storeHost is the host:port of the store when it is not on this machine.
 	storeHost string
 	policy    Policy
+	// extractor is the xberg client, nil when no extractor is configured.
+	extractor *Extractor
 }
 
 // Options are test seams of Open. The zero value is the production behavior.
@@ -67,6 +69,14 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 		_ = svc.Close()
 		return nil, fmt.Errorf("embeddings store: %w", err)
 	}
+	if s.Extractor != nil {
+		x, err := OpenExtractor(ctx, *s.Extractor, opts.HTTPClient, opts)
+		if err != nil {
+			_ = svc.Close()
+			return nil, fmt.Errorf("embeddings extractor: %w", err)
+		}
+		svc.extractor = x
+	}
 	return svc, nil
 }
 
@@ -86,12 +96,30 @@ func NewService(s Settings, st Store, e *Embedder) *Service {
 // Policy is the effective indexing policy, with defaults filled in.
 func (s *Service) Policy() Policy { return s.policy }
 
-// Close stops the embedded store process, if any.
+// Close stops the embedded store and extractor processes, if any.
 func (s *Service) Close() error {
-	if s == nil || s.sup == nil {
+	if s == nil {
 		return nil
 	}
-	return s.sup.Close()
+	var errs []error
+	if s.extractor != nil {
+		errs = append(errs, s.extractor.Close())
+	}
+	if s.sup != nil {
+		errs = append(errs, s.sup.Close())
+	}
+	return errors.Join(errs...)
+}
+
+// Extractor is the xberg client, or nil when no extractor is configured.
+func (s *Service) Extractor() *Extractor { return s.extractor }
+
+// WithExtractor returns the service with an extractor attached: the seam of
+// callers and tests that build the extractor themselves. The service takes
+// ownership and stops it on Close.
+func (s *Service) WithExtractor(x *Extractor) *Service {
+	s.extractor = x
+	return s
 }
 
 // Mode is the configured mode.
@@ -113,7 +141,15 @@ func (s *Service) Describe() string {
 	if s.sup != nil {
 		where = "embedded store on " + s.sup.Addr()
 	}
-	return fmt.Sprintf("%s, embedder %s model %s (%d dimensions)", where, s.embedder.Host(), s.embedder.Model(), s.embedder.Dimensions())
+	desc := fmt.Sprintf("%s, embedder %s model %s (%d dimensions)", where, s.embedder.Host(), s.embedder.Model(), s.embedder.Dimensions())
+	switch x := s.extractor; {
+	case x == nil:
+	case x.sup != nil:
+		desc += ", extractor xberg on " + x.sup.Addr()
+	default:
+		desc += ", extractor xberg at " + x.host
+	}
+	return desc
 }
 
 // Hosts lists the hosts that content or its vectors reach: the embedder and a
@@ -147,6 +183,11 @@ type Document struct {
 	Path   string
 	MIME   string
 	Chunks []string
+	// Kind and Source record how the chunks were produced. Both empty means a
+	// natively indexed text file. A Source other than "text" stores the chunk
+	// text with the vector.
+	Kind   string
+	Source string
 }
 
 // Index embeds the chunks and replaces everything stored for the CID. Nothing
@@ -171,7 +212,11 @@ func (s *Service) Index(ctx context.Context, covers func(host string) bool, doc 
 			return 0, fmt.Errorf("index %s: %w", doc.CID, err)
 		}
 		for i, v := range vecs {
-			rows = append(rows, Row{CID: doc.CID, Path: doc.Path, MIME: doc.MIME, ChunkIndex: start + i, Model: s.embedder.Model(), Vector: v})
+			row := Row{CID: doc.CID, Path: doc.Path, MIME: doc.MIME, ChunkIndex: start + i, Model: s.embedder.Model(), Vector: v, Kind: doc.Kind, Source: doc.Source}
+			if doc.Source != "" && doc.Source != SourceText {
+				row.Text = doc.Chunks[start+i]
+			}
+			rows = append(rows, row)
 		}
 	}
 	if err := s.store.Replace(ctx, doc.CID, rows); err != nil {

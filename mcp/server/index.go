@@ -29,6 +29,16 @@ const (
 	chunkReadTimeout = 20 * time.Second
 	// defaultTopK is ipfs_index_search's default top_k.
 	defaultTopK = 5
+	// presenceTimeout bounds the offline check that a derived hit's content is
+	// still on the node.
+	presenceTimeout = 10 * time.Second
+	// sniffPrefixBytes is how much of a file larger than the text limit is read
+	// to tell a binary format from text before deciding how much of it to read.
+	sniffPrefixBytes = 1024
+	// maxDerivedChunks bounds the chunks one extracted document may yield: about
+	// four times what a text file at the default policy.max_bytes yields, so one
+	// confirmed ipfs_index_cid cannot cost thousands of embedder requests.
+	maxDerivedChunks = 2000
 )
 
 func indexTools(s *Server) []toolImpl {
@@ -141,6 +151,13 @@ type indexHit struct {
 	ChunkIndex int     `json:"chunk_index"`
 	Score      float64 `json:"score"`
 	Text       string  `json:"text"`
+	// Kind, Source and MIMEType describe how the chunk was produced. Entries
+	// written before derived content existed carry neither in the store; they are
+	// natively indexed text and are reported as such. MIMEType carries the value
+	// of MIME.
+	Kind     string `json:"kind,omitempty"`
+	Source   string `json:"source,omitempty"`
+	MIMEType string `json:"mime_type,omitempty"`
 }
 
 type indexSearchOutput struct {
@@ -178,7 +195,28 @@ func (s *Server) indexSearch(ctx context.Context, raw json.RawMessage) (any, err
 	out := indexSearchOutput{Model: svc.Embedder().Model(), Results: make([]indexHit, 0, len(hits))}
 	pol := svc.Policy()
 	texts := map[string][]string{}
+	present := map[string]bool{}
 	for _, h := range hits {
+		if h.Derived() {
+			// Derived text (extracted, OCR, transcript) is not a slice of the
+			// file's bytes; it was stored with the vector, so nothing is read.
+			// It would outlive the content, though, so a hit is returned only
+			// while the node still holds the file.
+			src := cmpOr(h.Path, "/ipfs/"+h.CID)
+			ok, seen := present[src]
+			if !seen {
+				ok = s.contentPresent(ctx, src)
+				present[src] = ok
+			}
+			if !ok {
+				continue
+			}
+			out.Results = append(out.Results, indexHit{
+				CID: h.CID, Path: h.Path, MIME: h.MIME, ChunkIndex: h.ChunkIndex,
+				Score: 1 - h.Distance, Text: h.Text, Kind: kindOrText(h.Kind), Source: sourceOrText(h.Source), MIMEType: h.MIME,
+			})
+			continue
+		}
 		src := cmpOr(h.Path, "/ipfs/"+h.CID)
 		chunks, ok := texts[src]
 		if !ok {
@@ -194,10 +232,49 @@ func (s *Server) indexSearch(ctx context.Context, raw json.RawMessage) (any, err
 		}
 		out.Results = append(out.Results, indexHit{
 			CID: h.CID, Path: h.Path, MIME: h.MIME, ChunkIndex: h.ChunkIndex,
-			Score: 1 - h.Distance, Text: chunks[h.ChunkIndex],
+			Score: 1 - h.Distance, Text: chunks[h.ChunkIndex], Kind: kindOrText(h.Kind), Source: sourceOrText(h.Source), MIMEType: h.MIME,
 		})
 	}
 	return out, nil
+}
+
+// kindOrText and sourceOrText report a row written before derived content
+// existed (both empty) as the natively indexed text it is.
+func kindOrText(k string) string {
+	if k == "" {
+		return kindText
+	}
+	return k
+}
+
+func sourceOrText(src string) string {
+	if src == "" {
+		return embeddings.SourceText
+	}
+	return src
+}
+
+// contentPresent reports whether the node still holds the file: it reads the
+// first byte with an offline cat, the one RPC command ipfs_index_search is
+// allowed, so nothing is fetched from the network. Content removed outside ipfs
+// mcp (pin rm and repo gc by another client) is gone, and the derived text
+// stored with its vector must go unseen with it. A failure to confirm counts as
+// absent: text is not returned on a guess. The stored rows are left for
+// ipfs_index_reconcile, which removes the vectors of unpinned content; a search
+// stays read-only.
+func (s *Server) contentPresent(ctx context.Context, path string) bool {
+	ctx, cancel := context.WithTimeout(ctx, presenceTimeout)
+	defer cancel()
+	err := s.rawCall(ctx, "cat", []string{path}, map[string]any{"length": int64(1), "offline": true}, nil, func(r io.Reader) error {
+		_, err := readBounded(r, 1)
+		return err
+	})
+	if err != nil {
+		s.log.Warn("index search: derived hit dropped, its content is not on the node; run ipfs_index_reconcile to remove its entries",
+			"path", path, "error", clipMessage(err.Error()))
+		return false
+	}
+	return true
 }
 
 // readChunks reads the content at path from the node and cuts it with the
@@ -260,6 +337,7 @@ func (s *Server) indexCID(ctx context.Context, raw json.RawMessage) (any, error)
 		return nil, indexErr(err)
 	}
 	pol := svc.Policy()
+	ext := svc.Extractor()
 	p := "/ipfs/" + in.CID
 	st, err := s.stat(ctx, p)
 	if err != nil {
@@ -268,7 +346,11 @@ func (s *Server) indexCID(ctx context.Context, raw json.RawMessage) (any, error)
 	if st.Type != "file" {
 		return skipped(in.CID, embeddings.SkipNotAFile), nil
 	}
-	if st.Size > int64(pol.MaxBytes) {
+	limit, err := s.readLimit(ctx, p, st.Size, pol, ext)
+	if err != nil {
+		return nil, err
+	}
+	if st.Size > int64(limit) {
 		return skipped(in.CID, embeddings.SkipTooLarge), nil
 	}
 	if !in.Force {
@@ -281,27 +363,148 @@ func (s *Server) indexCID(ctx context.Context, raw json.RawMessage) (any, error)
 		}
 	}
 	var data []byte
-	err = s.rawCall(ctx, "cat", []string{p}, map[string]any{"length": int64(pol.MaxBytes) + 1}, nil, func(r io.Reader) error {
+	err = s.rawCall(ctx, "cat", []string{p}, map[string]any{"length": int64(limit) + 1}, nil, func(r io.Reader) error {
 		var err error
-		data, err = readBounded(r, int64(pol.MaxBytes)+1)
+		data, err = readBounded(r, int64(limit)+1)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	mime, skip := pol.CheckContent("", data)
-	if skip != "" {
-		return skipped(in.CID, skip), nil
+	var out indexCIDOutput
+	if ext == nil {
+		out, err = s.indexNative(ctx, svc, covers, in.CID, p, data)
+	} else {
+		out, err = s.indexRouted(ctx, svc, ext, covers, in.CID, p, data)
 	}
-	chunks := embeddings.Chunk(string(data), pol.ChunkChars)
-	if len(chunks) == 0 {
-		return skipped(in.CID, embeddings.SkipEmpty), nil // blank content has nothing to embed
-	}
-	n, err := svc.Index(ctx, covers, embeddings.Document{CID: in.CID, Path: p, MIME: mime, Chunks: chunks})
 	if err != nil {
 		return nil, indexErr(err)
 	}
-	return indexCIDOutput{CID: in.CID, ChunksIndexed: n, Model: svc.Embedder().Model()}, nil
+	return out, nil
+}
+
+// readLimit is how many bytes of the file at p may be read. Text keeps the
+// policy's max_bytes whether or not an extractor is configured, as in G12. Only
+// content with a binary signature (a PDF, an Office package, an image, a video),
+// which only the extractor can use, may be larger, up to extractor.max_bytes; it
+// is told apart by a small prefix, so a large log or data dump costs one small
+// read, not tens of megabytes.
+func (s *Server) readLimit(ctx context.Context, p string, size int64, pol embeddings.Policy, ext *embeddings.Extractor) (int, error) {
+	if ext == nil || size <= int64(pol.MaxBytes) || ext.MaxBytes() <= pol.MaxBytes {
+		return pol.MaxBytes, nil
+	}
+	var prefix []byte
+	err := s.rawCall(ctx, "cat", []string{p}, map[string]any{"length": int64(sniffPrefixBytes)}, nil, func(r io.Reader) error {
+		var err error
+		prefix, err = readBounded(r, sniffPrefixBytes)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	if sniffBinary(prefix) != "" {
+		return ext.MaxBytes(), nil
+	}
+	return pol.MaxBytes, nil
+}
+
+// indexNative indexes UTF-8 text the policy allows by chunking its bytes: the
+// G12 path. The chunk text is not stored; a search re-reads it.
+func (s *Server) indexNative(ctx context.Context, svc *embeddings.Service, covers func(string) bool, c, p string, data []byte) (indexCIDOutput, error) {
+	pol := svc.Policy()
+	mime, skip := pol.CheckContent("", data)
+	if skip != "" {
+		return skipped(c, skip), nil
+	}
+	chunks := embeddings.Chunk(string(data), pol.ChunkChars)
+	if len(chunks) == 0 {
+		return skipped(c, embeddings.SkipEmpty), nil // blank content has nothing to embed
+	}
+	n, err := svc.Index(ctx, covers, embeddings.Document{CID: c, Path: p, MIME: mime, Chunks: chunks, Kind: kindText, Source: embeddings.SourceText})
+	if err != nil {
+		return indexCIDOutput{}, err
+	}
+	return indexCIDOutput{CID: c, ChunksIndexed: n, Model: svc.Embedder().Model()}, nil
+}
+
+// indexRouted routes content by kind when an extractor is configured. Text, and
+// bytes of no listed kind, stay on the native path. Documents, code and data go
+// to the extractor, and so do images (when OCR is on) and video (when
+// transcription is on); the returned Markdown is chunked with the same chunker
+// and stored with its source, kind and text.
+func (s *Server) indexRouted(ctx context.Context, svc *embeddings.Service, ext *embeddings.Extractor, covers func(string) bool, c, p string, data []byte) (indexCIDOutput, error) {
+	mime, kind := classifyContent("", data)
+	if kind == "" || kind == kindText {
+		return s.indexNative(ctx, svc, covers, c, p, data)
+	}
+	if !svc.Policy().AllowsMIME(mime) {
+		if looksLikeText(data) && sniffBinary(data) == "" {
+			// Text the allowlist does not list under its refined type (a JSON
+			// or CSV file) is still plain text, as it was before the extractor.
+			// A file with a binary signature is not, even if its bytes happen
+			// to be ASCII.
+			return s.indexNative(ctx, svc, covers, c, p, data)
+		}
+		return skipped(c, embeddings.SkipKindNotEnabled), nil
+	}
+	source, ocr := embeddings.SourceExtracted, false
+	switch kind {
+	case kindImage:
+		if !ext.OCR() {
+			return skipped(c, embeddings.SkipKindNotEnabled), nil
+		}
+		source, ocr = embeddings.SourceOCR, true
+	case kindVideo:
+		if !ext.Transcribe() {
+			return skipped(c, embeddings.SkipKindNotEnabled), nil
+		}
+		source = embeddings.SourceTranscript
+	case kindDocument:
+		ocr = ext.OCR()
+	}
+	res, err := ext.Extract(ctx, covers, embeddings.ExtractRequest{Filename: "content" + extensionFor(mime), MIME: mime, Data: data, OCR: ocr})
+	switch {
+	case err == nil:
+	case errors.Is(err, embeddings.ErrEgressNotAcknowledged):
+		return indexCIDOutput{}, err
+	case errors.Is(err, embeddings.ErrExtractTooLarge), errors.Is(err, embeddings.ErrExtractedTextTooLarge):
+		return skipped(c, embeddings.SkipTooLarge), nil
+	case errors.Is(err, embeddings.ErrExtractorUnavailable):
+		s.log.Warn("index: extractor unavailable", "cid", c, "kind", kind, "error", clipMessage(err.Error()))
+		return skipped(c, embeddings.SkipExtractorUnavailable), nil
+	case errors.Is(err, embeddings.ErrExtractionFailed):
+		s.log.Warn("index: extraction failed", "cid", c, "kind", kind, "error", clipMessage(err.Error()))
+		return skipped(c, embeddings.SkipExtractionFailed), nil
+	default:
+		return indexCIDOutput{}, err
+	}
+	if kind == kindDocument && res.OCRUsed {
+		source = embeddings.SourceOCR
+	}
+	chunks := embeddings.Chunk(res.Markdown, svc.Policy().ChunkChars)
+	if len(chunks) == 0 {
+		return skipped(c, embeddings.SkipEmpty), nil
+	}
+	if len(chunks) > maxDerivedChunks {
+		// Embedding it would cost more requests than the operator confirmed one
+		// document for; nothing is truncated silently.
+		s.log.Warn("index: extracted text yields too many chunks", "cid", c, "kind", kind, "chunks", len(chunks), "limit", maxDerivedChunks)
+		return skipped(c, embeddings.SkipTooLarge), nil
+	}
+	n, err := svc.Index(ctx, covers, embeddings.Document{CID: c, Path: p, MIME: mime, Chunks: chunks, Kind: kind, Source: source})
+	if err != nil {
+		return indexCIDOutput{}, err
+	}
+	return indexCIDOutput{CID: c, ChunksIndexed: n, Model: svc.Embedder().Model()}, nil
+}
+
+// settingHint names the configuration key of a host that blocked a request,
+// when one key holds it, so the remedy points at the right host.
+func settingHint(eg *embeddings.EgressError) string {
+	if eg.Setting == "" {
+		return ""
+	}
+	return "; the missing host is the one in " + eg.Setting + ", so add it to the egress_ack too"
 }
 
 // indexErr maps a failure of the embedder or the vector store to the contract
@@ -315,7 +518,7 @@ func indexErr(err error) error {
 		return &ToolError{
 			Code: CodeEgressNotAcknowledged,
 			Message: "indexing and searching send text to " + strings.Join(eg.Hosts, ", ") + ", which is not in the egress_ack of the calling identity; " +
-				"use a principal whose egress_ack covers the embedder (and a remote store), or \"local\" for loopback",
+				"use a principal whose egress_ack covers the embedder (and a remote store), or \"local\" for loopback" + settingHint(eg),
 			Details: map[string]any{"reason": ReasonBackendHostNotAcked, "missing_hosts": eg.Hosts},
 		}
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):

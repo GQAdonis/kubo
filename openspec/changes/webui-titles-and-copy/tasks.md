@@ -5,7 +5,7 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 Title helper from `brand.js` in the five `| IPFS` sites plus `src/files/FilesPage.js:327`. Acceptance: grep finds no hard-coded `IPFS` product suffix in titles.
-- [ ] 1.2 `en` locale rewrites for product-name uses and banned words (`explore.json:48`, `settings.json:57`). Acceptance: the diff touches `en` only.
-- [ ] 1.3 e2e title assertions updated. Acceptance: assertions use the brand name.
-- [ ] 1.4 Attribution in About and footer (D8); `LICENSE` kept, fork notice beside it. Acceptance: MIT notice text unchanged.
+- [x] 1.1 Title helper from `brand.js` in the five `| IPFS` sites plus `src/files/FilesPage.js:327`. Acceptance: grep finds no hard-coded `IPFS` product suffix in titles.
+- [x] 1.2 `en` locale rewrites for product-name uses and banned words (`explore.json:48`, `settings.json:57`). Acceptance: the diff touches `en` only.
+- [x] 1.3 e2e title assertions updated. Acceptance: assertions use the brand name.
+- [x] 1.4 Attribution in About and footer (D8); `LICENSE` kept, fork notice beside it. Acceptance: MIT notice text unchanged.

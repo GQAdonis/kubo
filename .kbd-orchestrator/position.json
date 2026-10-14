@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1632,
-  "derivedRevision": 1632,
+  "sourceRevision": 1688,
+  "derivedRevision": 1688,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1632
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1688
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-14T14:51:21.516019Z",
+  "updatedAt": "2026-10-14T17:21:06.154048Z",
   "cursor": [
     "agent-backend-settings",
     "uar-conformance-release",
@@ -19,7 +19,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 43,
+      "done": 49,
       "total": 76
     },
     "children": [
@@ -29,7 +29,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 9,
+          "done": 15,
           "total": 36
         },
         "children": [
@@ -168,52 +168,52 @@
             "id": "webui-shell-redesign",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 3
+              "done": 3,
+              "total": 4
             }
           },
           {
             "type": "change",
             "id": "webui-dataviz-reskin",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 2,
               "total": 2
             }
           },
           {
             "type": "change",
             "id": "webui-settings-primitives",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 4,
               "total": 4
             }
           },
           {
             "type": "change",
             "id": "webui-titles-and-copy",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 4,
               "total": 4
             }
           },
           {
             "type": "change",
             "id": "desktop-display-branding",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 2,
               "total": 2
             }
           },
           {
             "type": "change",
             "id": "desktop-mcp-sidecar",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 5,
               "total": 5
             }
           },
@@ -337,9 +337,9 @@
           {
             "type": "change",
             "id": "mcp-content-extractor",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 7,
               "total": 7
             }
           },
@@ -358,7 +358,7 @@
             "status": "PENDING",
             "progress": {
               "done": 0,
-              "total": 7
+              "total": 8
             }
           },
           {

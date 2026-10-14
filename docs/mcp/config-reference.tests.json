@@ -99,6 +99,7 @@
     "embeddings.extractor.remote.credential": { "tests": ["TestConfigExamplesValidate", "TestConfigKeyAnnotations"] },
     "embeddings.extractor.timeout_seconds": { "tests": ["TestConfigKeyAnnotations", "TestMCPExtractorDisabled"] },
     "embeddings.extractor.max_bytes": { "tests": ["TestConfigKeyAnnotations", "TestMCPExtractorDisabled"] },
+    "embeddings.extractor.max_text_bytes": { "tests": ["TestConfigKeyAnnotations", "TestParseConfigAcceptsTheContractExamples", "TestMCPExtractorDisabled"] },
     "embeddings.extractor.ocr": { "tests": ["TestConfigKeyAnnotations", "TestMCPExtractorDisabled"] },
     "embeddings.extractor.transcribe": { "tests": ["TestConfigKeyAnnotations", "TestMCPExtractorDisabled"] },
     "embeddings.describer": { "tests": ["TestMCPDescriberDisabled", "TestConfigInvalidExamplesFail"] },

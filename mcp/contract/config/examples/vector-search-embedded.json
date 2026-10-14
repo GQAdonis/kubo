@@ -22,6 +22,7 @@
         "cache_dir": "/var/lib/ipfs-mcp/xberg-cache",
         "allow_model_downloads": false
       },
+      "max_text_bytes": 4194304,
       "ocr": true,
       "transcribe": true
     },

@@ -31,6 +31,21 @@ Extracted Markdown SHALL be chunked by the existing chunker, embedded by the con
 - **WHEN** a PDF whose MIME type is allowlisted is indexed with an extractor configured
 - **THEN** its entries carry `source: extracted` and a search for a phrase in the PDF returns a hit with that CID and the stored text
 
+### Requirement: Allowlist gating names the skip reason by content shape
+With an extractor configured, content of a listed kind with a binary signature whose MIME type is not in `embeddings.policy.mime_allowlist` SHALL be skipped `kind_not_enabled`. UTF-8 text with no binary signature SHALL stay on the native path and, when its type is not allowlisted, be skipped `mime_not_allowed`, so adding an extractor never de-indexes text that already indexed.
+
+#### Scenario: PDF not allowlisted
+- **WHEN** an extractor is configured and `application/pdf` is not in the allowlist
+- **THEN** the result is `chunks_indexed: 0` with `skipped_reason: kind_not_enabled`
+
+#### Scenario: XML or HTML not allowlisted
+- **WHEN** an extractor is configured and a UTF-8 XML or HTML file's type is not in the allowlist
+- **THEN** the result is `skipped_reason: mime_not_allowed`
+
+#### Scenario: JSON indexed before the type was allowlisted
+- **WHEN** a JSON CID was indexed natively as `kind: text`, `source: text` and `application/json` is later allowlisted
+- **THEN** its entries stay `text`/`text` until `force` or reconcile re-indexes it
+
 ### Requirement: Egress is acknowledged before extraction
 A remote extractor host SHALL be in the calling principal's `egress_ack` (loopback covered by `local`) before any request to it is built.
 

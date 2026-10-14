@@ -59,7 +59,7 @@ func (s *Server) autoIndex(ctx context.Context, rootCID, filename string, data [
 	}
 	ictx, cancel := context.WithTimeout(ctx, autoIndexTimeout)
 	defer cancel()
-	if _, err := svc.Index(ictx, covers, embeddings.Document{CID: rootCID, Path: src, MIME: mime, Chunks: chunks}); err != nil {
+	if _, err := svc.Index(ictx, covers, embeddings.Document{CID: rootCID, Path: src, MIME: mime, Chunks: chunks, Kind: kindText, Source: embeddings.SourceText}); err != nil {
 		s.log.Warn("automatic indexing failed", "cid", rootCID, "error", clipMessage(err.Error()))
 		return []string{"content was added but not indexed: " + clipMessage(err.Error())}
 	}

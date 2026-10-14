@@ -64,6 +64,9 @@ type Settings struct {
 	Embedder EmbedderSettings
 	// Policy says what is indexed (embeddings.policy).
 	Policy Policy
+	// Extractor, if set, turns documents, code and data into Markdown through
+	// xberg (embeddings.extractor). Nil means no extractor process or request.
+	Extractor *ExtractorSettings
 }
 
 // EmbeddedSettings configures the supervised SurrealDB process.
@@ -119,6 +122,9 @@ func (s Settings) Validate() error {
 	}
 	errs = append(errs, s.Embedder.validate()...)
 	errs = append(errs, s.Policy.validate()...)
+	if s.Extractor != nil {
+		errs = append(errs, s.Extractor.Validate())
+	}
 	return errors.Join(errs...)
 }
 

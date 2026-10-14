@@ -5,5 +5,5 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 Tray, dock and build icons from the p-icon set. Acceptance: icon files replaced at existing paths.
-- [ ] 1.2 Window titles and visible display name; `productName` and `io.ipfs.desktop` unchanged. Acceptance: `package.json` productName still "IPFS Desktop"; a test asserts the userData path is unchanged.
+- [x] 1.1 Tray, dock and build icons from the p-icon set. Acceptance: icon files replaced at existing paths.
+- [x] 1.2 Window titles and visible display name; `productName` and `io.ipfs.desktop` unchanged. Acceptance: `package.json` productName still "IPFS Desktop"; a test asserts the userData path is unchanged.

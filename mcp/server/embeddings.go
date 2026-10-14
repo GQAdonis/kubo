@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
@@ -59,10 +60,52 @@ func (c *EmbeddingsConfig) Settings() (embeddings.Settings, error) {
 			ChunkChars:    c.Policy.ChunkChars,
 		}
 	}
+	if c.Extractor != nil {
+		x, err := c.Extractor.settings()
+		if err != nil {
+			errs = append(errs, err)
+		}
+		s.Extractor = x
+	}
 	if err := errors.Join(errs...); err != nil {
 		return embeddings.Settings{}, err
 	}
 	return s, nil
+}
+
+// settings resolves embeddings.extractor: it reads the credential reference now.
+func (c *ExtractorConfig) settings() (*embeddings.ExtractorSettings, error) {
+	x := &embeddings.ExtractorSettings{
+		Mode:         embeddings.Mode(c.Mode),
+		Timeout:      time.Duration(c.TimeoutSeconds) * time.Second,
+		MaxBytes:     c.MaxBytes,
+		MaxTextBytes: c.MaxTextBytes,
+		OCR:          c.OCR,
+		Transcribe:   c.Transcribe,
+	}
+	if c.Embedded != nil {
+		x.Embedded = &embeddings.ExtractorEmbedded{
+			Binary:              c.Embedded.XbergBinary,
+			CacheDir:            c.Embedded.CacheDir,
+			MinVersion:          c.Embedded.MinVersion,
+			AllowModelDownloads: c.Embedded.AllowModelDownloads,
+			AvoidPorts:          ReservedPorts,
+		}
+	}
+	if c.Remote != nil {
+		r := &embeddings.ExtractorRemote{BaseURL: c.Remote.BaseURL}
+		var err error
+		if c.Remote.Credential != nil {
+			v, rerr := c.Remote.Credential.Read()
+			if rerr != nil {
+				err = fmt.Errorf("embeddings.extractor.remote.credential: %w", rerr)
+			}
+			r.Credential = embeddings.Secret(v)
+		}
+		x.Remote = r
+		return x, err
+	}
+	return x, nil
 }
 
 // EnableEmbeddings opens the embeddings feature for the configured section: it

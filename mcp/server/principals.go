@@ -115,6 +115,32 @@ type EmbeddingsConfig struct {
 		MaxBytes      int      `json:"max_bytes"`
 		ChunkChars    int      `json:"chunk_chars"`
 	} `json:"policy"`
+	// Extractor turns documents, code and data into Markdown through xberg; nil
+	// means no extractor process or request exists.
+	Extractor *ExtractorConfig `json:"extractor"`
+}
+
+// ExtractorConfig is embeddings.extractor.
+type ExtractorConfig struct {
+	// Mode is "embedded" or "remote".
+	Mode     string `json:"mode"`
+	Embedded *struct {
+		XbergBinary         string `json:"xberg_binary"`
+		CacheDir            string `json:"cache_dir"`
+		MinVersion          string `json:"min_version"`
+		AllowModelDownloads bool   `json:"allow_model_downloads"`
+	} `json:"embedded"`
+	Remote *struct {
+		BaseURL    string     `json:"base_url"`
+		Credential *SecretRef `json:"credential"`
+	} `json:"remote"`
+	TimeoutSeconds int `json:"timeout_seconds"`
+	MaxBytes       int `json:"max_bytes"`
+	// MaxTextBytes bounds the Markdown taken from one extraction; 0 is the
+	// default (embeddings.DefaultExtractorMaxTextBytes).
+	MaxTextBytes int  `json:"max_text_bytes"`
+	OCR          bool `json:"ocr"`
+	Transcribe   bool `json:"transcribe"`
 }
 
 // BackendHosts returns the hosts ipfs mcp itself would forward node content
@@ -136,6 +162,11 @@ func (c *Config) BackendHosts() []string {
 		}
 		if c.Embeddings.Remote != nil {
 			add(c.Embeddings.Remote.Endpoint)
+		}
+		// An embedded extractor is a child on this machine; only a remote one
+		// is a host content is sent to.
+		if x := c.Embeddings.Extractor; x != nil && x.Remote != nil {
+			add(x.Remote.BaseURL)
 		}
 	}
 	return hosts

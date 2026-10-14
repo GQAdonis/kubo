@@ -267,9 +267,18 @@ func (s *Supervisor) start(ctx context.Context) error {
 
 // pickPort asks the OS for a free loopback port that is not another local
 // service's well-known port.
-func (s *Supervisor) pickPort() (int, error) {
+func (s *Supervisor) pickPort() (int, error) { return pickLoopbackPort(s.cfg.AvoidPorts) }
+
+// pickLoopbackPort asks the OS for a free loopback port that is not in avoid.
+func pickLoopbackPort(avoid []int) (int, error) {
+	return pickPort(avoid, func() (net.Listener, error) { return net.Listen("tcp", "127.0.0.1:0") })
+}
+
+// pickPort takes the port of each listener listen returns, closes the listener
+// and returns the first port not in avoid. listen is a seam of tests.
+func pickPort(avoid []int, listen func() (net.Listener, error)) (int, error) {
 	for range 20 {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := listen()
 		if err != nil {
 			return 0, fmt.Errorf("choose a loopback port: %w", err)
 		}
@@ -277,7 +286,7 @@ func (s *Supervisor) pickPort() (int, error) {
 		if err := l.Close(); err != nil {
 			return 0, fmt.Errorf("choose a loopback port: %w", err)
 		}
-		if !slices.Contains(s.cfg.AvoidPorts, port) {
+		if !slices.Contains(avoid, port) {
 			return port, nil
 		}
 	}
