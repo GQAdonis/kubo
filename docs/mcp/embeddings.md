@@ -235,17 +235,51 @@ The extractor is [xberg](https://github.com/xberg-io/xberg) (MIT), which turns d
 | `embeddings.extractor` | `null` | Absent (default): no xberg process or request; only `text/plain` and `text/markdown` are indexed. Removing the block is the off switch. |
 | `embeddings.extractor.mode` | none | Required when the block exists: `embedded` or `remote`. |
 | `embeddings.extractor.embedded.xberg_binary` | none | Absolute path of an operator-installed `xberg` binary (required in embedded mode; never a `PATH` lookup). Remove the `embedded` block and no process starts. |
-| `embeddings.extractor.embedded.cache_dir` | none | Absolute path of the model cache directory (required in embedded mode). Pre-warm it when downloads are off. |
+| `embeddings.extractor.embedded.cache_dir` | none | Absolute path of the model cache directory (required in embedded mode). It must be owned by the user running `ipfs mcp` and not writable by group or others (`chmod go-w`), or startup is refused; one `ipfs mcp` holds a lock on it, so give each its own. The ownership check and the lock are Unix-only; on Windows neither runs, so give each `ipfs mcp` its own `cache_dir`. xberg gets `XBERG_CACHE_DIR=<cache_dir>` and `HF_HOME=<cache_dir>/huggingface`. Pre-warm it when downloads are off (see [Pre-warming the cache](#pre-warming-the-cache)). |
 | `embeddings.extractor.embedded.min_version` | `"1.3.10"` | Always checked; an older binary is refused. |
 | `embeddings.extractor.embedded.allow_model_downloads` | `false` | `false` (default): xberg runs with model downloads disabled and a file that needs a missing model is `extraction_failed`. `true` lets xberg download layout, OCR and transcription models from the Hugging Face Hub, an endpoint you did not otherwise configure. |
-| `embeddings.extractor.remote.base_url` | none | The xberg REST endpoint (required in remote mode; there is no default). xberg documents no authentication, so a remote xberg must sit on a private network or behind an authenticating proxy; the host must also be in the caller's `egress_ack`. Remove the `remote` block and no connection is made. |
+| `embeddings.extractor.remote.base_url` | none | The xberg REST endpoint (required in remote mode; there is no default). A non-loopback host must use `https`: plain `http` to it is refused at startup because documents and any credential would travel unencrypted. xberg documents no authentication, so a remote xberg must sit on a private network or behind an authenticating proxy; the host must also be in the caller's `egress_ack`. Remove the `remote` block and no connection is made. |
 | `embeddings.extractor.remote.credential` | `null` | Env or file reference sent as a bearer token, for an authenticating proxy only. `null` (default): no credential is sent. |
 | `embeddings.extractor.timeout_seconds` | `120` | Per-request limit; always enforced. |
 | `embeddings.extractor.max_bytes` | `52428800` (50 MiB; at most 100 MiB) | Larger files are skipped `too_large` before any request is built. |
+| `embeddings.extractor.max_text_bytes` | `2097152` (2 MiB; at most 32 MiB) | Upper bound on the Markdown taken from one extraction; longer output is discarded and the file is skipped `too_large` (it is not truncated). Always enforced. It bounds memory and how many chunks one file can produce. |
 | `embeddings.extractor.ocr` | `false` | `false` (default): no OCR of images or scanned PDFs. |
-| `embeddings.extractor.transcribe` | `false` | `false` (default): no transcription of audio tracks. |
+| `embeddings.extractor.transcribe` | `false` | `false` (default): no transcription of audio tracks. xberg 1.3.10 does not support transcription, so `true` produces no transcripts with that version; leave it `false`. |
 
-In embedded mode `ipfs mcp` supervises `xberg serve` on `127.0.0.1` with an ephemeral port; it stops when `ipfs mcp` exits and leftovers are cleaned up the way `surreal` leftovers are. The loopback listener has no authentication: any local process can submit files to it and spend your CPU, which is one reason indexing stays opt-in.
+In embedded mode `ipfs mcp` supervises `xberg serve` on `127.0.0.1` with an ephemeral port; it stops when `ipfs mcp` exits and leftovers are cleaned up the way `surreal` leftovers are. xberg runs with a minimal environment: nothing of your shell reaches it except `HF_ENDPOINT` (your own Hugging Face mirror, if you set one), `TESSDATA_PREFIX` and `ORT_DYLIB_PATH`. `DO_NOT_TRACK=1` is always set for it. With `allow_model_downloads: false` it also runs with `HF_HUB_OFFLINE=1`.
+
+### Turning the extractor off
+
+Omit the `embeddings.extractor` block. No xberg process starts, no request is made, and only the types in `embeddings.policy.mime_allowlist` that `ipfs mcp` handles itself (`text/plain` and `text/markdown` by default) are indexed.
+
+### Pre-warming the cache
+
+With `allow_model_downloads: false`, a file that needs a model that is not in the cache fails as `extraction_failed`. Fill the cache once, with your own xberg binary and the same `cache_dir` you configure:
+
+```bash
+XBERG_CACHE_DIR=<cache_dir> HF_HOME=<cache_dir>/huggingface xberg cache warm
+```
+
+Set `allow_model_downloads: true` instead and xberg fetches models on demand from the Hugging Face Hub, or from the mirror named by `HF_ENDPOINT` in the environment of `ipfs mcp`.
+
+### Skip reasons
+
+- `too_large`: the file is larger than `embeddings.extractor.max_bytes` (content routed to the extractor) or `embeddings.policy.max_bytes` (text), the extractor's output exceeds `embeddings.extractor.max_text_bytes`, or the text would produce more than the 2000-chunk cap. Nothing is stored.
+- `kind_not_enabled`: the content is of a listed kind with a binary signature, for example a PDF, and its type is not in `embeddings.policy.mime_allowlist`, or its stage is off.
+- `mime_not_allowed`: the content is UTF-8 text with no binary signature (JSON, CSV, XML, HTML) and its type is not in `embeddings.policy.mime_allowlist`. Such text stays on the native path, so adding an extractor does not de-index it.
+
+### Data that leaves the machine
+
+A remote store (`embeddings.mode: "remote"`) now receives the extracted plaintext of documents in the chunks it stores, not only the text of plain files. A remote extractor receives the file bytes. In both cases the host must be in the calling principal's `egress_ack`; without it the call fails with `egress_not_acknowledged`.
+
+### Residual risk of the embedded listener
+
+xberg 1.3.10 has no authentication option and no Unix socket support. Its ephemeral port on `127.0.0.1` is therefore reachable by any local process, and by a web page that finds the port, because a simple cross-origin POST is delivered whatever the CORS policy. A caller that reaches the port can make xberg fetch URLs (`urls` on `/extract`; checked on 2026-10-14, xberg refuses literal private, link-local, unique-local and loopback targets by policy, including `169.254.169.254`, but fetches public URLs, and a public hostname that resolves to a private address was not tested), clear xberg's model cache (`DELETE /cache/clear`, which undoes your pre-warming), and spend your CPU on extraction. xberg checks no `Host` header, so after DNS rebinding a page becomes same-origin and can read the responses. `ipfs mcp` itself reaches xberg only through its own authenticated loopback proxy, restricts xberg's CORS origins to xberg's own address, and cannot close the port. The operator accepted this residual on 2026-10-14 ([evidence](../../openspec/changes/mcp-content-extractor/evidence/2026-10-14-ssrf-policy/README.md)). To avoid it, omit the `embeddings.extractor` block or use a `remote` extractor behind an authenticating proxy. Upstream: [xberg-io/xberg](https://github.com/xberg-io/xberg).
+
+
+### Downgrading
+
+An older `ipfs mcp` that does not know about derived rows treats them as native text rows of the same CID; reindex after a downgrade.
 
 ## The describer
 

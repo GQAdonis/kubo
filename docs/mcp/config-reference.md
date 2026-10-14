@@ -145,6 +145,7 @@ Precedence: a command-line option wins over its environment variable, which wins
 | `embeddings.extractor.remote.credential` | SecretRef or null | none | - | null (default): no credential is sent. | `TestConfigExamplesValidate`, `TestConfigKeyAnnotations` |
 | `embeddings.extractor.timeout_seconds` | integer | `120` | - | Per-request limit; always enforced. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
 | `embeddings.extractor.max_bytes` | integer | `52428800` | - | Files larger than this are skipped too_large before any request is built. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.max_text_bytes` | integer | `2097152` | - | Always enforced; it bounds memory and the number of chunks one file can produce. | `TestConfigKeyAnnotations`, `TestParseConfigAcceptsTheContractExamples`, `TestMCPExtractorDisabled` |
 | `embeddings.extractor.ocr` | boolean | `false` | - | false (default): no OCR of images or scanned PDFs. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
 | `embeddings.extractor.transcribe` | boolean | `false` | - | false (default): no transcription of audio tracks. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
 | `embeddings.describer` | object or null | none | - | null (default): no description request; images and videos are skipped describer_not_configured unless OCR or transcription covers them. | `TestMCPDescriberDisabled`, `TestConfigInvalidExamplesFail` |

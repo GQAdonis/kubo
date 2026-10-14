@@ -1269,7 +1269,7 @@
       "name": "ipfs_index_cid",
       "group": "index",
       "title": "Index CID",
-      "description": "Explicitly chunk, embed and store one UnixFS file by CID in the index (requires embeddings configuration; respects the MIME allowlist and size cap). Reads the file through the node as ipfs_cat does; adds, pins and announces nothing. Content left out is reported in skipped_reason. The text goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "description": "Explicitly chunk, embed and store one UnixFS file by CID in the index (requires embeddings configuration; respects the MIME allowlist; text is capped by embeddings.policy.max_bytes, content routed to the extractor by embeddings.extractor.max_bytes and its extracted text by embeddings.extractor.max_text_bytes). Reads the file through the node as ipfs_cat does; adds, pins and announces nothing. Content left out is reported in skipped_reason. The text goes to the configured embedder, so the caller's egress_ack must cover the embedder host and a remote store (egress_not_acknowledged otherwise). An unreachable embedder or vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,

@@ -5,5 +5,5 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 `tokens.js` resolving CSS variables at render and on theme change; Chart.js series from it. Acceptance: no hex in the three chart files.
-- [ ] 1.2 d3 map flat fills from tokens. Acceptance: no gradient or hex in `WorldMap.js`.
+- [x] 1.1 `tokens.js` resolving CSS variables at render and on theme change; Chart.js series from it. Acceptance: no hex in the three chart files.
+- [x] 1.2 d3 map flat fills from tokens. Acceptance: no gradient or hex in `WorldMap.js`.

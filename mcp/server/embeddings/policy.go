@@ -72,6 +72,13 @@ const (
 	SkipTooLarge = "too_large"
 	SkipNotAFile = "not_a_file"
 	SkipEmpty    = "empty"
+	// SkipKindNotEnabled: the content's kind is handled by a stage that is off,
+	// or its type is not in the allowlist although an extractor is configured.
+	SkipKindNotEnabled = "kind_not_enabled"
+	// SkipExtractorUnavailable: the extractor could not be reached.
+	SkipExtractorUnavailable = "extractor_unavailable"
+	// SkipExtractionFailed: the extractor answered without usable text.
+	SkipExtractionFailed = "extraction_failed"
 )
 
 // CheckContent decides whether content is indexed under the policy. It returns

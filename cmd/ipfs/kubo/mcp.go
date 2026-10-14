@@ -143,6 +143,24 @@ anything. Vectors of a CID are deleted after pin_rm or repo_gc only when no
 pin of any type covers it, and ipfs_index_reconcile removes those of content
 you unpinned elsewhere.
 
+Extractor. Without an embeddings.extractor block only plain text and Markdown
+are indexed and no extractor process or request exists. With one, the types
+you add to embeddings.policy.mime_allowlist (PDF and Office documents, source
+code, JSON or CSV data, and images or video when OCR or transcription is on)
+are turned into Markdown by xberg (https://github.com/xberg-io/xberg), a
+separate service that ipfs mcp calls over HTTP and never links; text stays on
+the native path. "mode": "embedded" runs the binary at the absolute path in
+extractor.embedded.xberg_binary (never looked up on PATH, never downloaded) on
+127.0.0.1 with an ephemeral port, behind a token-protected loopback proxy that
+only ipfs mcp uses, with model downloads from the Hugging Face Hub off unless
+allow_model_downloads is true; it stops when ipfs mcp exits. Its cache_dir
+must be owned by you and not writable by others, and one ipfs mcp at a time
+may use it. "mode": "remote" calls extractor.remote.base_url (https, or a
+loopback address), whose host must be in the egress_ack of the identity that
+triggers it. extractor.max_bytes bounds a file sent and
+extractor.max_text_bytes the text taken back. Extraction adds, pins and
+announces nothing.
+
 Remove the command at build time with: make build GOTAGS=nomcp
 
 Example client configuration (Claude Code):

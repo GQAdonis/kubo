@@ -30,6 +30,9 @@ var ErrEgressNotAcknowledged = errors.New("host is not in the egress_ack of the 
 // ErrEgressNotAcknowledged with errors.Is.
 type EgressError struct {
 	Hosts []string
+	// Setting names the configuration key that holds the host, when one key
+	// does, so the message can say where the host comes from.
+	Setting string
 }
 
 // Error implements error.
