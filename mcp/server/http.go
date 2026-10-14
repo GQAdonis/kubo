@@ -241,7 +241,9 @@ func (h *HTTPServer) resourceMetadataURL() string {
 }
 
 // defaultKinds scopes principal kinds to routes. A token for the A2A peer
-// principal does not open the MCP route, nor the other way around.
+// principal does not open the MCP route, nor the other way around. The admin
+// kind is deliberately absent from every default: its only route (the settings
+// route) mounts with an explicit Kinds list (ADR-0009 section 3).
 func defaultKinds(route string) []string {
 	switch route {
 	case RouteMCP:

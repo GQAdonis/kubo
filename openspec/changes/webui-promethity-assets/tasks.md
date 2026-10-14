@@ -5,5 +5,5 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 Favicon set, `manifest.json` (192, 512, maskable; colours), `index.html` (two `theme-color` metas, title, description, generator). Acceptance: every icon path in the manifest exists.
-- [ ] 1.2 Wordmark and p-icon components; remove IPFS logos from NavBar and Welcome; never wordmark and icon side by side. Acceptance: no `ipfs-logo*.svg` import remains in `src`.
+- [x] 1.1 Favicon set, `manifest.json` (192, 512, maskable; colours), `index.html` (two `theme-color` metas, title, description, generator). Acceptance: every icon path in the manifest exists.
+- [x] 1.2 Wordmark and p-icon components; remove IPFS logos from NavBar and Welcome; never wordmark and icon side by side. Acceptance: no `ipfs-logo*.svg` import remains in `src`.

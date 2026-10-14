@@ -26,6 +26,10 @@ const (
 	mcpHTTPAdminToken  = "cli-admin-token-01234567890"
 	mcpHTTPPeerToken   = "cli-a2a-peer-token-012345678"
 	mcpHTTPOtherToken  = "cli-other-token-012345678901"
+	// mcpHTTPSettingsToken is the token of an admin principal (kind admin,
+	// scoped to the settings route). The process gets it only when the test
+	// passes CLI_MCP_SETTINGS_TOKEN in extraEnv.
+	mcpHTTPSettingsToken = "cli-settings-admin-token-0123"
 )
 
 // mcpHTTPConfig is the config file the tests pass with --mcp-config: a read-only

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs_index_bulk_start input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pins",
+          "mfs"
+        ]
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "What the run walks: recursive and direct pins, and the MFS tree under mfs_root. Absent: the configured embeddings.bulk.sources."
+    },
+    "mfs_root": {
+      "$ref": "../common.json#/$defs/MfsPath",
+      "description": "MFS root the run descends from when sources includes mfs. Absent: the configured embeddings.bulk.mfs_root."
+    },
+    "max_files": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "File cap for this run. The effective cap is the smaller of this and the configured embeddings.bulk.max_files_per_run; a run never exceeds the config cap."
+    },
+    "max_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Byte cap for this run. The effective cap is the smaller of this and the configured embeddings.bulk.max_bytes_per_run; a run never exceeds the config cap."
+    },
+    "files_per_minute": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Rate limit for this run. The effective rate is the smaller of this and the configured embeddings.bulk.files_per_minute; a run never exceeds the config rate."
+    },
+    "resume": {
+      "type": "boolean",
+      "default": false,
+      "description": "true resumes the paused run left behind by a restart (a new confirmation is asked); false starts a new run and fails with failed_precondition while a run is active or paused. Runs never resume by themselves (ADR-0011 V4)."
+    },
+    "confirm_token": {
+      "$ref": "../common.json#/$defs/ConfirmToken",
+      "description": "Binding handle from a previous confirmation_required result. Accepted only after a human approved that confirmation (ADR-0003); omit on the first call."
+    }
+  }
+}

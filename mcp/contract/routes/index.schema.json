@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp index route descriptor",
+  "description": "Schema of routes/index.json, the route descriptor for POST /index/search and GET /index/status (vector-search-contract 1.5, ADR-0011 V5). It pins the acceptance structurally: request and response bodies are named by reference to tool schemas under schemas/tools/ (the additionalProperties:false on the request and response objects admits only reference keys, so an inline copy of a tool shape cannot validate), the principal kinds are exactly ui and human-mcp with group index, and admin is listed as refused.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "description", "mount", "authorization", "egress", "cors", "listenerChecks", "routes", "errors"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "source": { "type": "string", "minLength": 10 },
+    "description": { "type": "string", "minLength": 10 },
+    "mount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conditions", "absentBehavior"],
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "string", "minLength": 10 },
+          "allOf": [
+            { "contains": { "type": "string", "pattern": "--http" } },
+            { "contains": { "type": "string", "pattern": "embeddings section" } },
+            { "contains": { "type": "string", "pattern": "search_route\\.enabled" } }
+          ],
+          "description": "The three mount conditions of ADR-0011 V5: --http, an embeddings section, embeddings.search_route.enabled not false."
+        },
+        "absentBehavior": {
+          "type": "string",
+          "minLength": 10,
+          "pattern": "404",
+          "description": "What an unmet condition answers; must state the 404."
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principalKinds", "group", "refusedKinds", "description"],
+      "properties": {
+        "principalKinds": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            { "const": "ui" },
+            { "const": "human-mcp" }
+          ],
+          "description": "The only principal kinds the routes accept (ADR-0011 V5), in this order."
+        },
+        "group": {
+          "const": "index",
+          "description": "The tool group the principal must be granted, the same as for the tools themselves."
+        },
+        "refusedKinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["admin", "a2a", "uar"] },
+          "contains": { "const": "admin" },
+          "description": "Principal kinds a valid bearer of which gets 403. admin must be listed: it is scoped to the runtime settings route only (ADR-0009 section 3; ADR-0011 falsifier V-5)."
+        },
+        "description": { "type": "string", "minLength": 10 }
+      }
+    },
+    "egress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "configKey"],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "minLength": 10,
+          "pattern": "egress_ack",
+          "description": "The egress rule of the routes, identical to the tools' rule (ADR-0011 V7)."
+        },
+        "configKey": {
+          "const": "principals[].egress_ack",
+          "description": "The config key the rule reads."
+        }
+      }
+    },
+    "cors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configKey", "allowMethods", "allowHeaders", "allowCredentials", "unlistedOrigin", "description"],
+      "properties": {
+        "configKey": {
+          "const": "agent.origin_allowlist",
+          "description": "The allowlist the strict per-mount CORS policy reads; on LKE exactly the console origin (ADR-0009 section 4)."
+        },
+        "allowMethods": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "prefixItems": [
+            { "const": "GET" },
+            { "const": "POST" },
+            { "const": "OPTIONS" }
+          ]
+        },
+        "allowHeaders": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["authorization", "content-type"] }
+        },
+        "exposeHeaders": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "allowCredentials": {
+          "const": false,
+          "description": "Never true: the only credential is the bearer in the Authorization header; cookies are not read."
+        },
+        "unlistedOrigin": {
+          "type": "string",
+          "pattern": "403",
+          "description": "What a request whose Origin is not listed gets."
+        },
+        "description": { "type": "string", "minLength": 10 }
+      }
+    },
+    "listenerChecks": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Names the listener-wide protection chain (Host check, cross-site fetch metadata, body limit) the routes inherit."
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": ["method", "path"],
+            "properties": {
+              "method": { "const": "POST" },
+              "path": { "const": "/index/search" }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["method", "path"],
+            "properties": {
+              "method": { "const": "GET" },
+              "path": { "const": "/index/status" }
+            }
+          }
+        }
+      ],
+      "items": { "$ref": "#/$defs/Route" }
+    },
+    "errors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "httpLevel", "mapping"],
+      "properties": {
+        "shape": {
+          "const": "schemas/common.json#/$defs/ToolError",
+          "description": "The error body shape of the codes a mounted route produces; by reference, like every other shape here."
+        },
+        "httpLevel": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Which answers are HTTP-level and carry no ToolError body."
+        },
+        "mapping": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": false,
+          "items": { "$ref": "#/$defs/ErrorMapping" },
+          "allOf": [
+            { "contains": { "type": "object", "required": ["code", "status"], "properties": { "code": { "const": "egress_not_acknowledged" }, "status": { "const": 403 } } } },
+            { "contains": { "type": "object", "required": ["code", "status"], "properties": { "code": { "const": "index_unavailable" }, "status": { "const": 503 } } } },
+            { "contains": { "type": "object", "required": ["code", "status"], "properties": { "code": { "const": "not_configured" }, "status": { "const": 404 } } } },
+            { "contains": { "type": "object", "required": ["code", "status"], "properties": { "code": { "const": "unauthenticated" }, "status": { "const": 401 } } } },
+            { "contains": { "type": "object", "required": ["code", "status"], "properties": { "code": { "const": "permission_denied" }, "status": { "const": 403 } } } }
+          ],
+          "description": "The error-code to HTTP-status mapping. The four codes named by vector-search-contract 1.5 (egress_not_acknowledged, index_unavailable, not_configured) and the two authorization codes (unauthenticated 401, permission_denied 403) must each appear with the pinned status."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "Route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "path", "response"],
+      "properties": {
+        "method": { "type": "string", "enum": ["GET", "POST"] },
+        "path": { "type": "string", "pattern": "^/index/" },
+        "tool": {
+          "type": "string",
+          "pattern": "^ipfs_index_[a-z_]+$",
+          "description": "The single tool whose schemas the route projects (POST /index/search)."
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^ipfs_index_[a-z_]+$" },
+          "description": "The tools whose output schemas the response composes (GET /index/status)."
+        },
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contentType", "schema"],
+          "properties": {
+            "contentType": { "const": "application/json" },
+            "schema": {
+              "type": "string",
+              "pattern": "^schemas/tools/ipfs_index_[a-z_]+\\.input\\.json$",
+              "description": "The request body is the referenced tool input schema. Reference only: this object admits no JSON Schema keyword (type, properties, items, ...), so an inline copy of the tool shape cannot validate."
+            },
+            "description": { "type": "string", "minLength": 10 }
+          }
+        },
+        "response": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "contentType", "schema"],
+          "properties": {
+            "status": { "const": 200 },
+            "contentType": { "const": "application/json" },
+            "schema": {
+              "type": "string",
+              "pattern": "^schemas/tools/ipfs_index_[a-z_]+\\.output\\.json$",
+              "description": "The response body is the referenced tool output schema (plus, for /index/status, the properties under additionalPropertiesFrom). Reference only, as on request."
+            },
+            "additionalPropertiesFrom": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["$ref", "presence", "description"],
+                "properties": {
+                  "$ref": {
+                    "type": "string",
+                    "pattern": "^schemas/tools/ipfs_index_[a-z_]+\\.output\\.json#/",
+                    "description": "A JSON Pointer into a tool output schema; the added property's shape lives only there."
+                  },
+                  "presence": { "type": "string", "enum": ["required", "optional"] },
+                  "description": { "type": "string", "minLength": 10 }
+                }
+              },
+              "description": "Properties the route response adds to the base tool output, each by reference (ADR-0011 V5: the status route adds the bulk run summary)."
+            },
+            "composition": {
+              "type": "string",
+              "minLength": 10,
+              "description": "How schema and additionalPropertiesFrom combine; present only on composed responses."
+            },
+            "description": { "type": "string", "minLength": 10 }
+          }
+        }
+      }
+    },
+    "ErrorMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "status", "when"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "not_configured",
+            "unauthenticated",
+            "permission_denied",
+            "egress_not_acknowledged",
+            "invalid_argument",
+            "index_unavailable",
+            "internal"
+          ],
+          "description": "not_configured is the unmounted-route state (its name matches the ipfs_node_status unavailable_tools reason, not the shared ErrorCode list, because nothing is served to carry a body); the rest are codes of schemas/common.json ErrorCode."
+        },
+        "status": {
+          "type": "integer",
+          "enum": [400, 401, 403, 404, 500, 503]
+        },
+        "when": { "type": "string", "minLength": 10 },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -133,6 +133,40 @@ Precedence: a command-line option wins over its environment variable, which wins
 | `embeddings.policy.mime_allowlist` | array of string | `["text/plain", "text/markdown"]` | - | Empty list: nothing is indexed. | `TestEmptyAllowlistIndexesNothing`, `TestAddOutsidePolicyIsNotIndexed` |
 | `embeddings.policy.max_bytes` | integer | `1048576` | - | Larger content is skipped. | `TestPolicyValidate`, `TestAddOutsidePolicyIsNotIndexed` |
 | `embeddings.policy.chunk_chars` | integer | `2000` | - | Always applies to indexed content. | `TestPolicyValidate`, `TestChunk` |
+| `embeddings.extractor` | object or null | none | - | null (default): no xberg process or request; only text/plain and text/markdown are indexed, as in ADR-0006. | `TestMCPExtractorDisabled`, `TestParseConfigAcceptsTheContractExamples` |
+| `embeddings.extractor.mode` | string | none | - | Remove the extractor block: no xberg process or request; only natively handled MIME types (the policy.mime_allowlist default, text/plain and text/markdown) are indexed (ADR-0011 V6). | `TestMCPExtractorDisabled`, `TestConfigExamplesValidate` |
+| `embeddings.extractor.embedded` | object or null | none | - | null (default) unless extractor.mode is embedded. | `TestMCPExtractorDisabled`, `TestConfigInvalidExamplesFail` |
+| `embeddings.extractor.embedded.xberg_binary` | AbsolutePath | none | - | Remove the embedded block: no xberg process is started. | `TestParseConfigRejectsTheContractInvalidExamples`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.embedded.cache_dir` | AbsolutePath | none | - | Remove the embedded block. | `TestConfigExamplesValidate`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.embedded.min_version` | string | `"1.3.10"` | - | Always checked; an older binary is refused. | `TestConfigKeyAnnotations`, `TestConfigExamplesValidate` |
+| `embeddings.extractor.embedded.allow_model_downloads` | boolean | `false` | - | false (default): no model download is made; pre-warm the cache instead. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.remote` | object or null | none | - | null (default) unless extractor.mode is remote. | `TestMCPExtractorDisabled`, `TestConfigExamplesValidate` |
+| `embeddings.extractor.remote.base_url` | string | none | - | Remove the remote block: no connection is made. | `TestConfigExamplesValidate`, `TestConfigKeyAnnotations` |
+| `embeddings.extractor.remote.credential` | SecretRef or null | none | - | null (default): no credential is sent. | `TestConfigExamplesValidate`, `TestConfigKeyAnnotations` |
+| `embeddings.extractor.timeout_seconds` | integer | `120` | - | Per-request limit; always enforced. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.max_bytes` | integer | `52428800` | - | Files larger than this are skipped too_large before any request is built. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.ocr` | boolean | `false` | - | false (default): no OCR of images or scanned PDFs. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
+| `embeddings.extractor.transcribe` | boolean | `false` | - | false (default): no transcription of audio tracks. | `TestConfigKeyAnnotations`, `TestMCPExtractorDisabled` |
+| `embeddings.describer` | object or null | none | - | null (default): no description request; images and videos are skipped describer_not_configured unless OCR or transcription covers them. | `TestMCPDescriberDisabled`, `TestConfigInvalidExamplesFail` |
+| `embeddings.describer.base_url` | string | none | - | Remove the describer block: no description request is made. | `TestConfigInvalidExamplesFail`, `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.model` | string | none | - | Remove the describer block. | `TestParseConfigRejectsTheContractInvalidExamples`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.api_key` | SecretRef or null | none | - | null (default): requests carry no key. | `TestConfigKeyAnnotations`, `TestConfigExamplesValidate` |
+| `embeddings.describer.kinds` | array of enum | `["image"]` | - | Empty list: nothing is described. Video is described only when listed. | `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.max_output_tokens` | integer | `512` | - | Always enforced; bounds the length of one description. | `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.image_max_bytes` | integer | `20971520` | - | Images larger than this are not described. | `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.video_max_bytes` | integer | `52428800` | - | Videos larger than this are not described. | `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.video_fps` | number | `1` | - | Always applies to video: frames per second sampled for the video_url part. | `TestConfigInvalidExamplesFail`, `TestConfigKeyAnnotations` |
+| `embeddings.describer.max_requests_per_hour` | integer | `120` | - | 0: the describer is disabled even with base_url and model set. | `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.describer.timeout_seconds` | integer | `180` | - | Per-request limit; always enforced. | `TestConfigKeyAnnotations`, `TestMCPDescriberDisabled` |
+| `embeddings.bulk` | object | `{}` | - | Omit the section for the default caps; set enabled false to hide the bulk tools. | `TestMCPBulkIndexDisabled`, `TestConfigExamplesValidate` |
+| `embeddings.bulk.enabled` | boolean | `true` | - | false: ipfs_index_bulk_start, ipfs_index_bulk_status and ipfs_index_bulk_cancel are not listed. | `TestMCPBulkIndexDisabled`, `TestMCPBulkIndexNoInjection` |
+| `embeddings.bulk.sources` | array of enum | `["pins", "mfs"]` | - | Empty list: a run indexes nothing. | `TestConfigKeyAnnotations`, `TestMCPBulkIndexDisabled` |
+| `embeddings.bulk.mfs_root` | string | `"/"` | - | Narrow it to limit the MFS walk to a subtree. | `TestConfigKeyAnnotations`, `TestMCPBulkIndexDisabled` |
+| `embeddings.bulk.max_files_per_run` | integer | `1000` | - | Always enforced; a run stops after this many files. | `TestConfigKeyAnnotations`, `TestMCPBulkIndexDisabled` |
+| `embeddings.bulk.max_bytes_per_run` | integer | `1073741824` | - | Always enforced; a run stops after this many bytes. | `TestConfigKeyAnnotations`, `TestMCPBulkIndexDisabled` |
+| `embeddings.bulk.files_per_minute` | integer | `30` | - | Always enforced; bounds the indexing rate of a run. | `TestConfigKeyAnnotations`, `TestMCPBulkIndexDisabled` |
+| `embeddings.search_route` | object | `{}` | - | Omit the section; set enabled false to unmount the routes. | `TestMCPIndexSearchRouteDisabled`, `TestConfigExamplesValidate` |
+| `embeddings.search_route.enabled` | boolean | `true` | - | false: /index/search and /index/status answer 404 and nothing is read or dialed. | `TestMCPIndexSearchRouteDisabled` |
 
 ## Command-line options
 

@@ -2,26 +2,26 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1446,
-  "derivedRevision": 1446,
+  "sourceRevision": 1632,
+  "derivedRevision": 1632,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1446
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1632
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-13T22:23:29.831311Z",
+  "last_updated": "2026-10-14T14:51:21.516019Z",
   "last_updated_by": "kbd-runtime",
-  "changes_total": 28,
-  "changes_completed": 5,
-  "implementation_total": 28,
-  "implementation_completed": 5,
+  "changes_total": 36,
+  "changes_completed": 9,
+  "implementation_total": 36,
+  "implementation_completed": 9,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 5,
-      "total": 28,
+      "completed": 9,
+      "total": 36,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -49,8 +49,8 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 36,
-      "total": 65,
+      "completed": 43,
+      "total": 76,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -142,42 +142,42 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 11,
-      "tasks_done": 7,
-      "last_task_completed": "Post-merge check script `lke-checks/origin-isolation.sh` with two parts. Unauthenticated: console `/api/v0/version` without credentials returns 401. Credentialed, run by the operator inside OG-6 with ",
-      "next_task_pending": "After OG-6, record the operator's credentialed output and run the unauthenticated part (read-only) into a new dated evidence folder. Acceptance: README marks each check pass or fail. OG-0 hygiene is l",
+      "tasks_done": 8,
+      "last_task_completed": "After OG-6, record the operator's credentialed output and run the unauthenticated part (read-only) into a new dated evidence folder. Acceptance: README marks each check pass or fail. OG-0 hygiene is l",
+      "next_task_pending": "After 1.8 passes, prepare a separate redirect PR: on the gateway host, `/webui` and `/api/v0` redirect to the console host, and `ipfs-webui-legacy` is removed. The PR states that cross-host redirects ",
       "blockers": []
     },
     {
       "id": "webui-promethity-foundation",
       "title": "webui-promethity-foundation",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 4,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "`tokens.css` light and dark; a contrast unit test recomputing pairings from shipped CSS. Acceptance: the test covers every DESIGN.md pairing including the form edge.",
+      "tasks_done": 4,
+      "last_task_completed": "`brand.js`, theme provider and toggle (D16), persisted as a versioned non-secret `localStorage` key. Acceptance: grep finds one constant for the product name.",
+      "next_task_pending": null,
       "blockers": []
     },
     {
       "id": "webui-promethity-assets",
       "title": "webui-promethity-assets",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 2,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Favicon set, `manifest.json` (192, 512, maskable; colours), `index.html` (two `theme-color` metas, title, description, generator). Acceptance: every icon path in the manifest exists.",
+      "tasks_done": 2,
+      "last_task_completed": "Wordmark and p-icon components; remove IPFS logos from NavBar and Welcome; never wordmark and icon side by side. Acceptance: no `ipfs-logo*.svg` import remains in `src`.",
+      "next_task_pending": null,
       "blockers": []
     },
     {
       "id": "mcp-agent-settings-api",
       "title": "mcp-agent-settings-api",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 7,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Principal kind `admin`: settings scope only, refused on `/mcp`, `/agui`, `/a2a`; a configured principal whose token environment variable or file is absent is disabled with a warning, not fatal. Accept",
+      "tasks_done": 7,
+      "last_task_completed": "Off switches and disabled states (W6): `agent.settings.enabled=false` and no admin principal give 404, nothing written, nothing dialed; `GOTAGS=noagent` removes the route. Acceptance: tests exist.",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -377,8 +377,107 @@
       "last_task_completed": null,
       "next_task_pending": "Prepare the CAR of the new Web UI and the re-pin steps for OG-9. Acceptance: CAR root equals the gated CID.",
       "blockers": []
+    },
+    {
+      "id": "vector-search-contract",
+      "title": "vector-search-contract",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 8,
+      "tasks_done": 8,
+      "last_task_completed": "`docs/changelogs/v0.44.md` TOC and Highlights: one entry for whole-node vector search with a concrete disable example (remove the `extractor` and `describer` blocks; `\"bulk\": {\"enabled\": false}`; `\"se",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "mcp-content-extractor",
+      "title": "mcp-content-extractor",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Verify, against the `xberg-cli` `v1.3.10` release asset for the build host (checksum recorded), and write down with commands and output: the `xberg serve` flags for host, port and cache directory; whe",
+      "blockers": []
+    },
+    {
+      "id": "mcp-media-describer",
+      "title": "mcp-media-describer",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Image describer client: `POST <describer.base_url>/chat/completions` with `model`, the contract's fixed instruction, and the image as an `image_url` part carrying a base64 `data:` URL (never an `http(",
+      "blockers": []
+    },
+    {
+      "id": "mcp-whole-node-indexing",
+      "title": "mcp-whole-node-indexing",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Bulk run engine: enumerate recursive and direct pins (`pin/ls`) and MFS under `bulk.mfs_root` (`files/ls`) per `bulk.sources`, descend directories with `ls`, and index each UnixFS file through the `ip",
+      "blockers": []
+    },
+    {
+      "id": "webui-vector-search",
+      "title": "webui-vector-search",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 7,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Route `#/search` in `src/bundles/routes.js` and one navigation entry, shown only when `GET /index/status` answers with a configured index; the client takes the endpoint and token from the same source ",
+      "blockers": []
+    },
+    {
+      "id": "desktop-search-sidecar",
+      "title": "desktop-search-sidecar",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 6,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Verify `xberg-cli-aarch64-apple-darwin.tar.gz` from the `xberg-io/xberg` `v1.3.10` release on macOS arm64 and record commands and output: SHA-256 against the release, Gatekeeper and quarantine behavio",
+      "blockers": []
+    },
+    {
+      "id": "vector-search-security-review",
+      "title": "vector-search-security-review",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 3,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "Review, with file:line evidence: (a) egress: every request path of the extractor, describer, embedder and store checks `egress_ack` before building the request, including bulk runs and resumes; (b) th",
+      "blockers": []
+    },
+    {
+      "id": "lke-vector-search",
+      "title": "lke-vector-search",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 9,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "SurrealDB StatefulSet `ipfs-surrealdb` in namespace `ipfs`: image pinned by digest (OG-19), one replica, a standalone RWO PVC, a ClusterIP Service only, the root credential from the out-of-band Secret",
+      "blockers": []
     }
   ],
-  "children": {},
+  "children": {
+    "lke-deploy-discipline": {
+      "status": "DONE",
+      "changes_completed": 3,
+      "changes_total": 3,
+      "implementation_completed": 3,
+      "implementation_total": 3,
+      "certification_status": "NOT_TRACKED",
+      "handoff": null,
+      "completed_at": null
+    }
+  },
   "migrationStatus": null
 }

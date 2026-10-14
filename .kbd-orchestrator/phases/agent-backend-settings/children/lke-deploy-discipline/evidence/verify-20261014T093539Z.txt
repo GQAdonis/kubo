@@ -1,0 +1,31 @@
+# verify namespace=ipfs
+# 2026-10-14T09:35:34Z context=know-me (read-only)
+## Gateways and listeners
+PASS listener: ipfs-gateway-gw/https Programmed=True(Programmed) ResolvedRefs=True(ResolvedRefs)
+FAIL listener: ipfs-gateway-gw/https-console Programmed=False(Invalid) ResolvedRefs=False(InvalidCertificateRef)
+PASS listener: ipfs-gateway-gw/http Programmed=True(Programmed) ResolvedRefs=True(ResolvedRefs)
+PASS listener: ipfs-gateway-gw/http-console Programmed=True(Programmed) ResolvedRefs=True(ResolvedRefs)
+INFO lb: ipfs-gateway-gw address=['45.56.67.67'] Service=envoy-ipfs-ipfs-gateway-gw-a8eb8933 ports=[443, 80]
+## Routes
+FAIL acme-solver-route: cm-acme-http-solver-g84bg -> ipfs-gateway-gw/ Accepted=True(Accepted) ResolvedRefs=False(BackendNotFound)
+PASS route: ipfs -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+PASS route: ipfs-mcp -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+PASS route: ipfs-webui -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+PASS route: ipfs-webui -> ipfs-gateway-gw/https-console Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+PASS route: ipfs-webui-legacy -> ipfs-gateway-gw/https Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs)
+## Security policies
+PASS securitypolicy: ipfs-webui-auth on ipfs-gateway-gw/https-console Accepted=True(Accepted)
+PASS securitypolicy: ipfs-webui-auth on ipfs-gateway-gw/https Accepted=True(Accepted)
+## Certificates and leftover ACME objects
+FAIL certificate: console-tls Ready=False(DoesNotExist)
+FAIL acme-leftover: challenge/console-tls-1-3247985124-3395327373 state=invalid
+FAIL acme-leftover: order/console-tls-1-3247985124 state=invalid
+## Workloads
+PASS statefulset: ipfs ready 1/1
+PASS pvc: ipfs-data-ipfs-0 Bound
+## External checks from this machine
+PASS dns-address: console.prometheusags.ai A=['45.56.67.67'] gateway=['ipfs-gateway-gw']
+FAIL fetch: POST https://console.prometheusags.ai/api/v0/version -> 000 (expected 401; curl exit 35)
+PASS dns-address: ipfs.prometheusags.ai A=['45.56.67.67'] gateway=['ipfs-gateway-gw']
+PASS fetch: POST https://ipfs.prometheusags.ai/api/v0/version -> 401 (expected 401; curl exit 0)
+# result: FAIL (6 failing checks)

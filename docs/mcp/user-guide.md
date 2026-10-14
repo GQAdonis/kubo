@@ -16,6 +16,7 @@ Related pages: [configuration reference](config-reference.md) (every option, def
 - [Principals and least privilege](#principals-and-least-privilege)
 - [Restrict what `ipfs mcp` can do on the daemon](#restrict-what-ipfs-mcp-can-do-on-the-daemon)
 - [Confirmation and its limits](#confirmation-and-its-limits)
+- [Search the node](#search-the-node)
 - [Off switches](#off-switches)
 - [Troubleshooting](#troubleshooting)
 
@@ -226,6 +227,17 @@ Limits you should know:
 - **Destructive calls from the chat (`ui`) and from A2A peers** need the system prompt or the Desktop window; the chat itself can only deny them, and `ipfs mcp confirm` never approves them.
 - See also [What is not delivered yet](#what-is-not-delivered-yet): HG-1 and the Desktop window are pending.
 
+## Search the node
+
+With an `embeddings` section in the config file, `ipfs mcp` can build a semantic search index over your content and answer searches from agents, MCP clients and a Web UI search box:
+
+- `ipfs_index_search` searches; `ipfs_index_status` reports the index; `ipfs_index_cid` indexes one file; `ipfs_index_reconcile` removes entries for content you no longer pin.
+- `ipfs_index_bulk_start`, `ipfs_index_bulk_status` and `ipfs_index_bulk_cancel` run one operator-started, capped, resumable indexing pass over your pins and MFS. Every read is offline, and a run adds, pins and announces nothing.
+- Documents, code and structured data can go through an xberg extractor, and images and videos through a vision-model describer, so they are searchable in the same index. Both are off until you configure them, and a hosted describer receives the media bytes as base64 uploads — it is never a default.
+- On the HTTP listener, `POST /index/search` and `GET /index/status` serve the Web UI with the same principal and `egress_ack` rules as the tools; `embeddings.search_route.enabled: false` unmounts them.
+
+Everything is off without an `embeddings` section, indexing and search need a principal whose `egress_ack` covers the hosts involved, and the operator identity cannot index. The full setup, every key with its default and off switch, and the LKE and Desktop deployments are in the [embeddings guide](embeddings.md) ([ADR-0006](0006-embeddings-surrealdb.md), [ADR-0011](0011-whole-node-vector-search.md)).
+
 ## Off switches
 
 | To turn off | Do this |
@@ -239,7 +251,7 @@ Limits you should know:
 | A principal | Remove its entry or the variable or file its credential names. |
 | MCP App views | `--no-app-views` (or `tools.app_views: false`). |
 | Out-of-band confirmation prompts | `--confirm=none` or `IPFS_MCP_CONFIRM=none`. Per-call confirmation itself cannot be turned off. |
-| Embeddings and search | Off unless the config file has an `embeddings` section. |
+| Embeddings and search | Off unless the config file has an `embeddings` section. Per part: remove the `extractor` or `describer` block, set `bulk.enabled: false`, set `search_route.enabled: false` (see the [embeddings guide](embeddings.md)). |
 | AG-UI, A2A | Off by default; they need `--agui` / `--a2a`, `--http` and a model backend. |
 
 Each option, its default and the test that runs it in the off state are listed in the [configuration reference](config-reference.md).

@@ -96,6 +96,9 @@ type mcpHTTPSettings struct {
 	opts mcpserver.HTTPOptions
 	// anonymous is true when no credential is configured (loopback only).
 	anonymous bool
+	// warnings are the principals whose credential reference did not resolve;
+	// they are disabled, not fatal (ADR-0009 section 3).
+	warnings []string
 }
 
 func (s *mcpSettings) transport() string {
@@ -187,17 +190,14 @@ func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flag
 	if cfg.GrantsDestructive() && !operatorDestructive {
 		s.tools = append(s.tools, destructiveSelector)
 	}
-	creds, err := cfg.Credentials()
-	if err != nil {
-		return nil, err
-	}
+	creds, warnings := cfg.Credentials()
 	operator, err := operatorCredential(req, operatorDestructive)
 	if err != nil {
 		return nil, err
 	}
 	creds = append(creds, operator...)
 
-	out := &mcpHTTPSettings{opts: mcpserver.HTTPOptions{
+	out := &mcpHTTPSettings{warnings: warnings, opts: mcpserver.HTTPOptions{
 		Listen:         listen,
 		AllowedOrigins: cfg.HTTP.AllowedOrigins,
 		MaxBodyBytes:   cfg.HTTP.MaxBodyBytes,
@@ -270,6 +270,9 @@ func (h *mcpHTTPSettings) serveHTTP(ctx context.Context, srv *mcpserver.Server) 
 	addr, err := hs.Listen()
 	if err != nil {
 		return err
+	}
+	for _, line := range h.warnings {
+		fmt.Fprintln(os.Stderr, "ipfs mcp: warning: "+line)
 	}
 	for _, line := range hs.StartupReport(ctx) {
 		fmt.Fprintln(os.Stderr, "ipfs mcp: "+line)

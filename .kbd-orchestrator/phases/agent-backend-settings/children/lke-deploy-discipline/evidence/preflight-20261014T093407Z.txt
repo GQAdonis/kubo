@@ -1,0 +1,39 @@
+# preflight namespace=ipfs manifests=(live objects)
+# 2026-10-14T09:33:56Z context=know-me (read-only)
+## Argo application
+INFO argo app: ipfs sync=Synced health=Degraded automated={"prune": true, "selfHeal": true}
+FAIL argo health: Degraded; unhealthy: 
+## Referenced Secrets (names and key names only)
+PASS secret: ipfs/ipfs-tls referenced by Gateway/ipfs-gateway-gw listener https exists with keys ['tls.crt', 'tls.key']
+FAIL secret: ipfs/console-tls referenced by Gateway/ipfs-gateway-gw listener https-console does not exist (Error from server (NotFound): secrets "console-tls" not found)
+PASS secret: ipfs/ipfs-webui-basicauth referenced by SecurityPolicy/ipfs-webui-auth basicAuth exists with keys ['.htpasswd']
+PASS secret: ipfs/ipfs-mcp-token referenced by StatefulSet/ipfs env IPFS_MCP_TOKEN exists with keys ['token']
+## Hosts: DNS, gateway address, TLS coverage
+INFO dns: console.prometheusags.ai zone=prometheusags.ai provider=godaddy NS=['ns58.domaincontrol.com', 'ns57.domaincontrol.com'] A=['45.56.67.67'] CAA=none
+PASS dns-address: console.prometheusags.ai A=['45.56.67.67'] matches gateway ipfs-gateway-gw address 45.56.67.67
+FAIL tls: console.prometheusags.ai listener https-console references console-tls, which has no tls.crt (Error from server (NotFound): secrets "console-tls" not found)
+PASS dns-address: console.prometheusags.ai A=['45.56.67.67'] matches gateway ipfs-gateway-gw address 45.56.67.67
+INFO tls-available: console.prometheusags.ai: existing TLS Secrets in ipfs that cover it: ['ipfs-tls (notAfter Feb 13 23:59:59 2027 GMT)']
+INFO dns: ipfs.prometheusags.ai zone=prometheusags.ai provider=godaddy NS=['ns57.domaincontrol.com', 'ns58.domaincontrol.com'] A=['45.56.67.67'] CAA=none
+PASS dns-address: ipfs.prometheusags.ai A=['45.56.67.67'] matches gateway ipfs-gateway-gw address 45.56.67.67
+PASS tls: ipfs.prometheusags.ai covered by ipfs/ipfs-tls SANs=['*.prometheusags.ai', 'prometheusags.ai'] notAfter=Feb 13 23:59:59 2027 GMT
+PASS dns-address: ipfs.prometheusags.ai A=['45.56.67.67'] matches gateway ipfs-gateway-gw address 45.56.67.67
+INFO tls-available: ipfs.prometheusags.ai: existing TLS Secrets in ipfs that cover it: ['ipfs-tls (notAfter Feb 13 23:59:59 2027 GMT)']
+## Certificates and issuers
+PASS solver: console.prometheusags.ai: http01 parent ipfs/ipfs-gateway-gw HTTP listener for host: True
+PASS issuance-path: console.prometheusags.ai: Issuer/letsencrypt-http01-ipfs has solver that can reach this host
+## Cluster issuers (dangling references)
+FAIL issuer-parent: ClusterIssuer/letsencrypt-http01 http01 parent matrix/cinny-gateway does not exist
+FAIL issuer-parent: ClusterIssuer/letsencrypt-http01 http01 parent matrix/livekit-gateway does not exist
+FAIL issuer-parent: ClusterIssuer/letsencrypt-http01 http01 parent matrix/matrix-gateway does not exist
+FAIL issuer-parent: ClusterIssuer/letsencrypt-http01-staging http01 parent envoy-gateway-system/acme-http01-gateway does not exist
+## Gateways: listeners, LoadBalancer ports, route pinning
+INFO lb-ports: ipfs/ipfs-gateway-gw listener https port 443; live Service envoy-ipfs-ipfs-gateway-gw-a8eb8933 ports [443, 80] (new listeners add ports on sync)
+INFO lb-ports: ipfs/ipfs-gateway-gw listener https-console port 443; live Service envoy-ipfs-ipfs-gateway-gw-a8eb8933 ports [443, 80] (new listeners add ports on sync)
+INFO lb-ports: ipfs/ipfs-gateway-gw listener http port 80; live Service envoy-ipfs-ipfs-gateway-gw-a8eb8933 ports [443, 80] (new listeners add ports on sync)
+INFO lb-ports: ipfs/ipfs-gateway-gw listener http-console port 80; live Service envoy-ipfs-ipfs-gateway-gw-a8eb8933 ports [443, 80] (new listeners add ports on sync)
+PASS route-pinning: HTTPRoute/ipfs pinned to ipfs-gateway-gw/https
+PASS route-pinning: HTTPRoute/ipfs-mcp pinned to ipfs-gateway-gw/https
+PASS route-pinning: HTTPRoute/ipfs-webui pinned to ipfs-gateway-gw/https-console
+PASS route-pinning: HTTPRoute/ipfs-webui-legacy pinned to ipfs-gateway-gw/https
+# result: FAIL (7 failing checks)

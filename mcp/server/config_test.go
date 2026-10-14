@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/ipfs/kubo/mcp/contract"
+	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -108,8 +109,8 @@ func TestConfigPrincipalsAreReadOnlyUnlessGranted(t *testing.T) {
 	]}`))
 	require.NoError(t, err)
 	assert.True(t, cfg.GrantsDestructive())
-	creds, err := cfg.Credentials()
-	require.NoError(t, err)
+	creds, warnings := cfg.Credentials()
+	require.Empty(t, warnings)
 	require.Len(t, creds, 3)
 
 	reader := creds[0].Identity
@@ -127,14 +128,39 @@ func TestConfigPrincipalsAreReadOnlyUnlessGranted(t *testing.T) {
 	assert.Equal(t, "admin", id.ID)
 }
 
-func TestConfigCredentialsFailWhenASecretIsMissing(t *testing.T) {
+func TestConfigCredentialsDisableAPrincipalWhoseSecretIsAbsent(t *testing.T) {
+	t.Setenv("IPFS_MCP_TEST_PRESENT", "present-secret-0123456789")
+	missingFile := filepath.Join(t.TempDir(), "absent.token")
+	emptyFile := filepath.Join(t.TempDir(), "empty.token")
+	require.NoError(t, os.WriteFile(emptyFile, []byte("  \n"), 0o600))
+
 	cfg, err := ParseConfig([]byte(`{"principals":[
-		{"name":"ghost","kind":"human-mcp","credential":{"env":"IPFS_MCP_TEST_NOT_SET_ANYWHERE"}}]}`))
+		{"name":"present","kind":"human-mcp","credential":{"env":"IPFS_MCP_TEST_PRESENT"}},
+		{"name":"env-absent","kind":"admin","credential":{"env":"IPFS_MCP_TEST_NOT_SET_ANYWHERE"}},
+		{"name":"file-absent","kind":"ui","credential":{"file":` + strconv.Quote(missingFile) + `}},
+		{"name":"file-empty","kind":"a2a","credential":{"file":` + strconv.Quote(emptyFile) + `}}
+	]}`))
 	require.NoError(t, err)
-	_, err = cfg.Credentials()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "ghost")
-	assert.NotContains(t, err.Error(), "secret")
+
+	// An absent credential disables only its own principal, with a warning, and
+	// is never fatal (ADR-0009 section 3, CRITICAL-2).
+	creds, warnings := cfg.Credentials()
+	require.Len(t, creds, 1, "only the principal whose secret resolves survives")
+	assert.Equal(t, "present", creds[0].Identity.ID)
+	require.Len(t, warnings, 3)
+	joined := strings.Join(warnings, "\n")
+	for _, name := range []string{"env-absent", "file-absent", "file-empty"} {
+		assert.Contains(t, joined, name)
+	}
+	assert.NotContains(t, joined, "present-secret", "a warning never carries a secret")
+
+	v, err := NewStaticVerifier(creds)
+	require.NoError(t, err)
+	id, _, err := v.Verify(t.Context(), "present-secret-0123456789", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "present", id.ID)
+	_, _, err = v.Verify(t.Context(), "any-other-token-0000", nil)
+	require.ErrorIs(t, err, auth.ErrInvalidToken, "a disabled principal authenticates nothing")
 }
 
 func TestLoadConfigReportsTheFile(t *testing.T) {

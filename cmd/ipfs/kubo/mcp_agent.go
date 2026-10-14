@@ -23,6 +23,7 @@ const (
 	mcpLLMKeyFileOptionName = "llm-api-key-file"
 	mcpAGUIOptionName       = "agui"
 	mcpA2AOptionName        = "a2a"
+	mcpSettingsDirName      = "settings-dir"
 )
 
 // mcpAgentHelp is added to the command help only in builds that have the agent
@@ -36,6 +37,19 @@ variable and --llm-api-key-file an absolute path (or llm.api_key in the config
 file). Node content reaches the model only when the server's host is in the
 principal's egress_ack. Remove the agent code at build time with:
 make build GOTAGS=noagent
+
+Settings API. With a principal of kind admin in --mcp-config (and
+agent.settings.enabled not false), GET and PUT /agent/settings on the --http
+listener read and change the backend, model and system prompt without a
+restart; the admin token reaches no other route. Writes persist in
+--settings-dir (or agent.settings.dir; the flag wins) as a 0600 overlay file
+that applies flags > overlay > config at every start; an API key written
+through the API becomes a 0600 file there, and agent.settings.accept_secrets
+false refuses key fields entirely. Without a settings directory, writes hold
+until the process exits. A write that moves the model backend to a host the
+admin principal's egress_ack does not cover is refused with
+egress_confirmation_required unless it carries egress_confirmation naming
+exactly that host, and then extends that egress_ack with that host only.
 
 AG-UI. --agui (or "agui": true under "agent" in the config file) also
 serves POST /agui on the --http listener, for chat UIs such as the Web UI
@@ -71,14 +85,21 @@ func init() {
 		cmds.StringOption(mcpLLMKeyFileOptionName, "Absolute path of a file that holds the model server's API key."),
 		cmds.BoolOption(mcpA2AOptionName, "Serve the A2A endpoint POST /a2a and the agent card on the --http listener (also agent.a2a in --mcp-config). Needs a model backend. Off by default.").WithDefault(false),
 		cmds.BoolOption(mcpAGUIOptionName, "Serve the AG-UI endpoint POST /agui on the --http listener (also agent.agui in --mcp-config). With no model backend it answers 503 backend_not_configured. Off by default.").WithDefault(false),
+		cmds.StringOption(mcpSettingsDirName, "Directory for the settings overlay (also agent.settings.dir in --mcp-config; the flag wins). Writes through the settings API persist there as 0600 files. Unset: nothing is persisted."),
 	)
 }
 
-// agentInputs are the --llm-* flags of one run.
+// agentInputs are the --llm-* and --settings-dir flags of one run, plus the
+// overlay loaded from the settings directory.
 type agentInputs struct {
 	over mcpserver.LLMOverrides
 	agui bool
 	a2a  bool
+	// settingsDir is --settings-dir, else agent.settings.dir (empty: settings
+	// writes are not persisted); overlay is what LoadSettingsOverlay read
+	// from it at startup (nil: no overlay file).
+	settingsDir string
+	overlay     *mcpserver.SettingsOverlay
 }
 
 // agentResolved is the backend settings after flags and config file are
@@ -92,7 +113,7 @@ func agentInputsFromRequest(req *cmds.Request) agentInputs {
 	}
 	agui, _ := req.Options[mcpAGUIOptionName].(bool)
 	a2a, _ := req.Options[mcpA2AOptionName].(bool)
-	return agentInputs{agui: agui, a2a: a2a, over: mcpserver.LLMOverrides{
+	return agentInputs{agui: agui, a2a: a2a, settingsDir: str(mcpSettingsDirName), over: mcpserver.LLMOverrides{
 		BaseURL: str(mcpLLMBaseURLOptionName),
 		Model:   str(mcpLLMModelOptionName),
 		KeyEnv:  str(mcpLLMKeyEnvOptionName),
@@ -102,9 +123,24 @@ func agentInputsFromRequest(req *cmds.Request) agentInputs {
 
 // validateAgent resolves the agent settings without contacting anything, so a
 // literal key or a half-configured backend fails before the daemon is
-// contacted.
+// contacted. The settings overlay (--settings-dir, else agent.settings.dir)
+// sits between the flags and the config file: flags > overlay > config. An
+// absent overlay file is no overlay; an invalid one fails startup with the
+// file named.
 func validateAgent(s *mcpSettings) error {
-	set, err := s.cfg.ResolveAgent(s.agent.over)
+	dir := s.agent.settingsDir
+	if dir == "" {
+		dir = s.cfg.Agent.Settings.Dir
+	}
+	s.agent.settingsDir = dir
+	if dir != "" {
+		ov, err := mcpserver.LoadSettingsOverlay(dir)
+		if err != nil {
+			return err
+		}
+		s.agent.overlay = ov
+	}
+	set, err := s.cfg.ResolveAgentWithOverlay(s.agent.over, s.agent.overlay)
 	if err != nil {
 		return err
 	}
@@ -129,6 +165,14 @@ func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
 			return fmt.Errorf("agent backend: %w", err)
 		}
 		fmt.Fprintln(os.Stderr, "ipfs mcp: agent loop enabled: "+s.resolved.Describe())
+		if s.resolved.APIKey != nil {
+			// CRITICAL-2: an absent key file or unset variable disables only
+			// the key, never startup; the backend sends no key until the
+			// reference resolves.
+			if _, err := s.resolved.APIKey.Read(); err != nil {
+				fmt.Fprintf(os.Stderr, "ipfs mcp: warning: the LLM API key is not readable (%v); the agent backend sends no key until the reference resolves\n", err)
+			}
+		}
 	}
 	if s.http == nil {
 		for flag, want := range map[string]bool{"agui": wantAGUI, "a2a": wantA2A} {
@@ -158,6 +202,17 @@ func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
 		if !slices.ContainsFunc(s.cfg.Principals, func(p mcpserver.PrincipalConfig) bool { return p.Kind == mcpserver.KindA2A }) {
 			fmt.Fprintln(os.Stderr, "ipfs mcp: no principal of kind a2a is configured in --mcp-config, so /a2a will refuse every caller")
 		}
+	}
+	// The settings route exists only where an admin principal can authenticate
+	// and agent.settings.enabled is not false; otherwise the path is a plain
+	// 404 and nothing is written or dialed (ADR-0009 section 3).
+	adminConfigured := slices.ContainsFunc(s.cfg.Principals, func(p mcpserver.PrincipalConfig) bool { return p.Kind == mcpserver.KindAdmin })
+	if adminConfigured && s.cfg.Agent.SettingsEnabled() {
+		err := srv.EnableAgentSettings(mcpserver.AgentSettingsAPIConfig{Over: s.agent.over, Cfg: s.cfg, Dir: s.agent.settingsDir, Overlay: s.agent.overlay, Resolved: s.resolved})
+		if err != nil {
+			return fmt.Errorf("agent settings: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "ipfs mcp: agent settings API enabled at %s (admin principals only)\n", mcpserver.RouteSettings)
 	}
 	return nil
 }

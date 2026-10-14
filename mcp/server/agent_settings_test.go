@@ -143,12 +143,21 @@ func TestKeyOnlyFromEnvOrFile(t *testing.T) {
 		run(t, LLMOverrides{KeyFile: f})
 		assert.Equal(t, "Bearer file-secret-2", got)
 	})
-	t.Run("unset env fails at build, not silently without a key", func(t *testing.T) {
+	t.Run("unset env builds keyless, never silently", func(t *testing.T) {
+		// CRITICAL-2 (ADR-0009 section 1): an unresolvable key reference
+		// disables only the key, never startup or an apply. The startup
+		// warning and the settings read shape (api_key.set=false) report it;
+		// the client sends no Authorization header until the reference
+		// resolves.
 		cfg := mustParse(t, `{}`)
 		set, err := cfg.ResolveAgent(LLMOverrides{BaseURL: "http://127.0.0.1:1/v1", Model: "m", KeyEnv: "IPFS_MCP_TEST_UNSET_KEY"})
 		require.NoError(t, err)
-		_, err = NewLLMClient(*set)
-		require.Error(t, err)
+		set.HTTPClient = &http.Client{Transport: rt}
+		c, err := NewLLMClient(*set)
+		require.NoError(t, err)
+		got = ""
+		_, _ = c.Chat(t.Context(), nil, nil, nil)
+		assert.Empty(t, got, "no key is sent while the reference does not resolve")
 	})
 	t.Run("none sends no header", func(t *testing.T) {
 		run(t, LLMOverrides{})

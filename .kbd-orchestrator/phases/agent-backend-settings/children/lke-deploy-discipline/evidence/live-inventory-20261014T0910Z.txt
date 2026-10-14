@@ -1,0 +1,136 @@
+# Live inventory, know-me, 2026-10-14T09:10:21Z, read-only
+## ClusterIssuers
+letsencrypt-http01 http01 selector= {"dnsNames": ["chat.know-me.tools", "livekit.know-me.tools", "matrix.know-me.tools"]} parents= ['matrix/cinny-gateway', 'matrix/livekit-gateway', 'matrix/matrix-gateway']
+letsencrypt-http01 http01 selector= null parents= ['argocd/argocd-gateway']
+letsencrypt-http01-staging http01 selector= null parents= ['envoy-gateway-system/acme-http01-gateway']
+letsencrypt-prod dns01:cloudflare selector= null parents= []
+letsencrypt-staging dns01:cloudflare selector= null parents= []
+## Issuers (namespaced)
+ipfs   letsencrypt-http01-ipfs   True
+## Certificates
+argocd/design-know-me-tools-tls ClusterIssuer/letsencrypt-prod ['design.know-me.tools'] ready= ['True'] notAfter= 2027-01-05T06:58:02Z
+argocd/know-me-tools-site-tls ClusterIssuer/letsencrypt-prod ['know-me.tools', 'runtime.know-me.tools', 'www.know-me.tools'] ready= ['True'] notAfter= 2026-12-29T11:48:50Z
+argocd/wildcard-know-me-tools-tls ClusterIssuer/letsencrypt-http01 ['auth.know-me.tools', 'sso.know-me.tools', 'gate.know-me.tools', 'api.know-me.tools', 'rt.know-me.tools'] ready= ['True'] notAfter= 2026-12-13T07:40:56Z
+ipfs/console-tls Issuer/letsencrypt-http01-ipfs ['console.prometheusags.ai'] ready= ['False'] notAfter= None
+## TLS secrets issued by gateway-shim or annotations (no data)
+argocd/design-know-me-tools-tls issuer= letsencrypt-prod names= design.know-me.tools created= 2026-10-07T07:56:34Z
+argocd/know-me-tools-site-tls issuer= letsencrypt-prod names= know-me.tools,runtime.know-me.tools,www.know-me.tools created= 2026-09-30T12:47:22Z
+argocd/wildcard-know-me-tools-tls issuer= letsencrypt-http01 names= api.know-me.tools,auth.know-me.tools,gate.know-me.tools,rt.know-me.tools,sso.know-me.tools created= 2026-09-14T08:39:27Z
+argocd/wildcard-prometheusags-ai-tls issuer= None names= None created= 2026-09-11T17:05:59Z
+envoy-gateway-system/envoy issuer= None names= None created= 2026-09-10T23:22:15Z
+envoy-gateway-system/envoy-gateway issuer= None names= None created= 2026-09-10T23:22:15Z
+envoy-gateway-system/envoy-rate-limit issuer= None names= None created= 2026-09-10T23:22:15Z
+ipfs/ipfs-tls issuer= letsencrypt-http01 names= ipfs.prometheusags.ai created= 2026-09-10T23:32:32Z
+kube-system/calico-typha-client issuer= None names= None created= 2026-09-10T22:57:57Z
+kube-system/calico-typha-server issuer= None names= None created= 2026-09-10T22:57:57Z
+onyx/cnpg-webhook-cert issuer= None names= None created= 2026-09-11T17:50:38Z
+onyx/onyx-pg-replication issuer= None names= None created= 2026-09-11T17:51:22Z
+onyx/onyx-pg-server issuer= None names= None created= 2026-09-11T17:51:22Z
+onyx/prometheusags-wildcard-tls issuer= None names= None created= 2026-09-11T17:50:15Z
+## Gateways
+argocd/argocd-gateway addr= ['23.239.29.33'] annotations= {}
+    onyx-https HTTPS 443 onyx.prometheusags.ai from= All
+    onyx-http HTTP 80 onyx.prometheusags.ai from= All
+    edgequake-https HTTPS 443 edgequake.prometheusags.ai from= All
+    edgequake-http HTTP 80 edgequake.prometheusags.ai from= All
+    flint-auth-https HTTPS 443 auth.know-me.tools from= All
+    flint-sso-https HTTPS 443 sso.know-me.tools from= All
+    flint-gate-https HTTPS 443 gate.know-me.tools from= All
+    flint-api-https HTTPS 443 api.know-me.tools from= All
+    flint-rt-https HTTPS 443 rt.know-me.tools from= All
+    knowme-site-https HTTPS 443 know-me.tools from= All
+    knowme-www-https HTTPS 443 www.know-me.tools from= All
+    knowme-runtime-https HTTPS 443 runtime.know-me.tools from= All
+    design-https HTTPS 443 design.know-me.tools from= All
+    flint-auth-http HTTP 80 auth.know-me.tools from= All
+    flint-sso-http HTTP 80 sso.know-me.tools from= All
+    flint-gate-http HTTP 80 gate.know-me.tools from= All
+    flint-api-http HTTP 80 api.know-me.tools from= All
+    flint-rt-http HTTP 80 rt.know-me.tools from= All
+    knowme-site-http HTTP 80 know-me.tools from= All
+    knowme-www-http HTTP 80 www.know-me.tools from= All
+    knowme-runtime-http HTTP 80 runtime.know-me.tools from= All
+    design-http HTTP 80 design.know-me.tools from= All
+ipfs/ipfs-gateway-gw addr= ['45.56.67.67'] annotations= {}
+    https HTTPS 443 ipfs.prometheusags.ai from= Same
+    https-console HTTPS 443 console.prometheusags.ai from= Same
+    http HTTP 80 ipfs.prometheusags.ai from= Same
+    http-console HTTP 80 console.prometheusags.ai from= Same
+## Envoy LoadBalancer services
+envoy-argocd-argocd-gateway-b1d0562e   LoadBalancer   23.239.29.33   443,80
+envoy-gateway                          ClusterIP      <none>         18000,18001,18002,19001,9443
+envoy-ipfs-ipfs-gateway-gw-a8eb8933    LoadBalancer   45.56.67.67    443,80
+## HTTPRoutes
+dot17-uar/dot17-uar ['runtime.know-me.tools'] ['argocd/argocd-gateway/knowme-runtime-https']
+dot17-uar/dot17-uar-https-redirect ['runtime.know-me.tools'] ['argocd/argocd-gateway/knowme-runtime-http']
+edgequake/edgequake-api ['edgequake.prometheusags.ai'] ['argocd/argocd-gateway/edgequake-https']
+edgequake/edgequake-https-redirect ['edgequake.prometheusags.ai'] ['argocd/argocd-gateway/edgequake-http']
+edgequake/edgequake-web ['edgequake.prometheusags.ai'] ['argocd/argocd-gateway/edgequake-https']
+flint-core/flint-gate ['gate.know-me.tools'] ['argocd/argocd-gateway/flint-gate-https']
+flint-core/forge-quarry ['api.know-me.tools'] ['argocd/argocd-gateway/flint-api-https']
+flint-core/frf ['rt.know-me.tools'] ['argocd/argocd-gateway/flint-rt-https']
+flint-core/kratos-public ['auth.know-me.tools'] ['argocd/argocd-gateway/flint-auth-https']
+flint-core/sso-broker ['sso.know-me.tools'] ['argocd/argocd-gateway/flint-sso-https']
+ipfs/cm-acme-http-solver-g84bg ['console.prometheusags.ai'] ['ipfs/ipfs-gateway-gw/']
+ipfs/ipfs ['ipfs.prometheusags.ai'] ['ipfs/ipfs-gateway-gw/https']
+ipfs/ipfs-mcp ['ipfs.prometheusags.ai'] ['ipfs/ipfs-gateway-gw/https']
+ipfs/ipfs-webui ['console.prometheusags.ai'] ['ipfs/ipfs-gateway-gw/https-console']
+ipfs/ipfs-webui-legacy ['ipfs.prometheusags.ai'] ['ipfs/ipfs-gateway-gw/https']
+knowdesign/knowdesign ['design.know-me.tools'] ['argocd/argocd-gateway/design-https']
+knowdesign/knowdesign-http-redirect ['design.know-me.tools'] ['argocd/argocd-gateway/design-http']
+knowme/knowme-site ['know-me.tools'] ['argocd/argocd-gateway/knowme-site-https']
+knowme/knowme-site-http-redirect ['know-me.tools'] ['argocd/argocd-gateway/knowme-site-http']
+knowme/knowme-www-redirect ['www.know-me.tools'] ['argocd/argocd-gateway/knowme-www-https']
+knowme/knowme-www-redirect-http ['www.know-me.tools'] ['argocd/argocd-gateway/knowme-www-http']
+onyx/onyx-api ['onyx.prometheusags.ai'] ['argocd/argocd-gateway/onyx-https']
+onyx/onyx-https-redirect ['onyx.prometheusags.ai'] ['argocd/argocd-gateway/onyx-http']
+onyx/onyx-web ['onyx.prometheusags.ai'] ['argocd/argocd-gateway/onyx-https']
+## SecurityPolicies
+ipfs/ipfs-webui-auth targets= ['ipfs-webui', 'ipfs-webui-legacy'] basicAuthSecret= ipfs-webui-basicauth jwt= False accepted= [('https-console', ['True']), ('https', ['True'])] syncopts= Prune=false
+## Argo applications
+argocd-config https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/argocd-config auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+cert-manager https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/cert-manager auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+cluster-issuers https://github.com/Prometheus-AGS/know-me-cluster.git cluster auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+cluster-root https://github.com/Prometheus-AGS/know-me-cluster.git apps auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+edgequake https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/edgequake auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+envoy-gateway https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/envoy-gateway-system auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+firecrawl https://github.com/GQAdonis/firecrawl.git k8s/base auto= null sync= OutOfSync health= Missing
+flint-core https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/flint-core auto= {"prune": true, "selfHeal": true} sync= Synced health= Degraded
+hotseaters-platform https://github.com/Midnight-Logic-LLC/hotseaters-data-migration-system k8s/overlays/prometheus auto= null sync= Unknown health= Healthy
+ipfs https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/ipfs auto= {"prune": true, "selfHeal": true} sync= Synced health= Progressing
+knowdesign https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/knowdesign auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+onyx https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/onyx auto= {"prune": true, "selfHeal": true} sync= Synced health= Healthy
+velero https://github.com/Prometheus-AGS/know-me-cluster.git namespaces/velero auto= {"prune": true, "selfHeal": true} sync= OutOfSync health= Healthy
+## ipfs StatefulSet
+replicas= 1 updateStrategy= {'type': 'RollingUpdate'} podManagement= OrderedReady
+ init configure-ipfs ghcr.io/gqadonis/kubo@sha256:9f94890efce88c1d57a21c7756eecfc29655fc6f4db56ec1ae931a964d2a8e52
+ ctr ipfs ghcr.io/gqadonis/kubo@sha256:9f94890efce88c1d57a21c7756eecfc29655fc6f4db56ec1ae931a964d2a8e52 args= ['daemon', '--migrate=true', '--agent-version-suffix=gke'] lifecycle= ['postStart']
+ ctr ipfs-mcp ghcr.io/gqadonis/kubo@sha256:9f94890efce88c1d57a21c7756eecfc29655fc6f4db56ec1ae931a964d2a8e52 args= None lifecycle= []
+ terminationGracePeriodSeconds= 30
+## Namespace NetworkPolicies
+argocd      argocd-application-controller-network-policy      app.kubernetes.io/name=argocd-application-controller                                                    32d
+argocd      argocd-applicationset-controller-network-policy   app.kubernetes.io/name=argocd-applicationset-controller                                                 32d
+argocd      argocd-dex-server-network-policy                  app.kubernetes.io/name=argocd-dex-server                                                                32d
+argocd      argocd-notifications-controller-network-policy    app.kubernetes.io/name=argocd-notifications-controller                                                  32d
+argocd      argocd-redis-network-policy                       app.kubernetes.io/name=argocd-redis                                                                     32d
+argocd      argocd-repo-server-network-policy                 app.kubernetes.io/name=argocd-repo-server                                                               32d
+argocd      argocd-server-network-policy                      app.kubernetes.io/name=argocd-server                                                                    32d
+dot17-uar   allow-envoy-to-uar                                app.kubernetes.io/component=app,app.kubernetes.io/name=uar                                              15h
+dot17-uar   allow-envoy-to-uar-grpc                           app.kubernetes.io/component=app,app.kubernetes.io/name=uar                                              15h
+dot17-uar   allow-prometheus-to-uar                           app.kubernetes.io/component=app,app.kubernetes.io/name=uar                                              15h
+dot17-uar   allow-uar-to-postgres                             app.kubernetes.io/component=database,app.kubernetes.io/name=postgres                                    15h
+dot17-uar   allow-uar-to-redis                                app.kubernetes.io/component=cache,app.kubernetes.io/name=redis                                          15h
+dot17-uar   allow-uar-to-surrealdb                            app.kubernetes.io/component=database,app.kubernetes.io/name=surrealdb                                   15h
+dot17-uar   default-deny-ingress                              <none>                                                                                                  15h
+dot17-uar   dot17-qualification-source                        app.kubernetes.io/instance=dot17-qualification-source,app.kubernetes.io/name=dot17-qualification-peer   15h
+knowme      allow-knowme-web-and-gate-to-uar                  app.kubernetes.io/component=app,app.kubernetes.io/name=uar                                              9d
+knowme      allow-uar-and-memory-server-to-surrealdb          app.kubernetes.io/component=database,app.kubernetes.io/name=surrealdb                                   9d
+knowme      site-websearch-boundary                           app.kubernetes.io/component=tool,app.kubernetes.io/name=site-websearch                                  28m
+onyx        onyx-code-interpreter-executor                    app=code-interpreter,component in (executor,session)                                                    32d
+## DNS
+ipfs.prometheusags.ai A=45.56.67.67  NS=ns58.domaincontrol.com. ns57.domaincontrol.com. 
+console.prometheusags.ai A=45.56.67.67  NS=ns58.domaincontrol.com. ns57.domaincontrol.com. 
+onyx.prometheusags.ai A=23.239.29.33  NS=ns58.domaincontrol.com. ns57.domaincontrol.com. 
+edgequake.prometheusags.ai A=23.239.29.33  NS=ns58.domaincontrol.com. ns57.domaincontrol.com. 
+know-me.tools A=23.239.29.33  NS=v2n0.nic.tools. v0n2.nic.tools. v0n1.nic.tools. v0n3.nic.tools. v0n0.nic.tools. v2n1.nic.tools. 
+api.know-me.tools A=23.239.29.33  NS=abdullah.ns.cloudflare.com. yolanda.ns.cloudflare.com. 

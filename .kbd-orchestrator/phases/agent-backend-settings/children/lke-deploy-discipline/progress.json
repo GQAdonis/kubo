@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "2",
+  "generatedBy": "kbd-runtime",
+  "projectionContractVersion": 2,
+  "sourceRevision": 1536,
+  "derivedRevision": 1536,
+  "frontier": {
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1536
+  },
+  "conflictCount": 0,
+  "phase": "lke-deploy-discipline",
+  "phaseId": "agent-backend-settings::lke-deploy-discipline",
+  "parentPhase": "agent-backend-settings",
+  "last_updated": "2026-10-14T11:08:43.555120Z",
+  "last_updated_by": "kbd-runtime",
+  "changes_total": 3,
+  "changes_completed": 3,
+  "implementation_total": 3,
+  "implementation_completed": 3,
+  "completion": {
+    "primaryCounter": "implementation",
+    "implementation": {
+      "completed": 3,
+      "total": 3,
+      "status": "COMPLETE"
+    },
+    "evidence": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    },
+    "certification": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    },
+    "publication": {
+      "status": "NOT_TRACKED",
+      "summary": null,
+      "blockers": []
+    }
+  },
+  "completionScopes": {
+    "completion": "phase",
+    "runCompletion": "run"
+  },
+  "runCompletion": {
+    "scope": "run",
+    "runId": "ipfs-mcp-server-20261009T081630Z",
+    "primaryCounter": "implementation",
+    "implementation": {
+      "completed": 41,
+      "total": 68,
+      "status": "IN_PROGRESS"
+    },
+    "evidence": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    },
+    "certification": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    },
+    "publication": {
+      "status": "PENDING",
+      "summary": null,
+      "blockers": []
+    }
+  },
+  "changes": [
+    {
+      "id": "webui-promethity-foundation",
+      "title": "webui-promethity-foundation",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 1,
+      "tasks_done": 1,
+      "last_task_completed": "Fonts: woff2 only (Hanken 400-700 from `mcp/ui/fonts`, Syne, JetBrains Mono, Newsreader), OFL texts in `public/fonts/LICENSES/`, `font-display: swap`, `unicode-range` system fallback; drop ipfs-css Inter/Montserrat. Acceptance: no Inter/Montserrat file in `build/`; four OFL files present.",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "lke-gitops-change-skill",
+      "title": "lke-gitops-change-skill",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "Validation and packaging: validate against the agentskills.io spec with the installed `validate-skill` skill (listed in ",
+      "next_task_pending": null,
+      "blockers": []
+    },
+    {
+      "id": "lke-console-tls-wildcard",
+      "title": "lke-console-tls-wildcard",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "last_task_completed": "PR-B (#31): remove the console HTTP-01 Issuer and port-80 listeners; verify after sync (replaces 2.4, cancelled in error: #29 was merged, not closed)",
+      "next_task_pending": null,
+      "blockers": []
+    }
+  ],
+  "children": {},
+  "migrationStatus": null
+}

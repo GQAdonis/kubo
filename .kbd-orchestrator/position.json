@@ -2,16 +2,15 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1446,
-  "derivedRevision": 1446,
+  "sourceRevision": 1632,
+  "derivedRevision": 1632,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1446
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1632
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-13T22:23:29.831311Z",
+  "updatedAt": "2026-10-14T14:51:21.516019Z",
   "cursor": [
     "agent-backend-settings",
-    "execute",
     "uar-conformance-release",
     "1.3"
   ],
@@ -20,8 +19,8 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 36,
-      "total": 65
+      "done": 43,
+      "total": 76
     },
     "children": [
       {
@@ -30,10 +29,50 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 5,
-          "total": 28
+          "done": 9,
+          "total": 36
         },
         "children": [
+          {
+            "type": "phase",
+            "id": "lke-deploy-discipline",
+            "canonicalId": "agent-backend-settings::lke-deploy-discipline",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 3,
+              "total": 3
+            },
+            "children": [
+              {
+                "type": "change",
+                "id": "webui-promethity-foundation",
+                "status": "COMPLETE",
+                "progress": {
+                  "done": 1,
+                  "total": 1
+                }
+              },
+              {
+                "type": "change",
+                "id": "lke-gitops-change-skill",
+                "status": "COMPLETE",
+                "progress": {
+                  "done": 6,
+                  "total": 6
+                }
+              },
+              {
+                "type": "change",
+                "id": "lke-console-tls-wildcard",
+                "status": "COMPLETE",
+                "progress": {
+                  "done": 6,
+                  "total": 6
+                }
+              }
+            ],
+            "annotations": []
+          },
           {
             "type": "change",
             "id": "team-ownership-agent-backend",
@@ -93,34 +132,34 @@
             "id": "lke-origin-isolation",
             "status": "PENDING",
             "progress": {
-              "done": 7,
+              "done": 8,
               "total": 11
             }
           },
           {
             "type": "change",
             "id": "webui-promethity-foundation",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 4,
               "total": 4
             }
           },
           {
             "type": "change",
             "id": "webui-promethity-assets",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 2,
               "total": 2
             }
           },
           {
             "type": "change",
             "id": "mcp-agent-settings-api",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 7,
               "total": 7
             }
           },
@@ -284,6 +323,78 @@
             "progress": {
               "done": 0,
               "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "vector-search-contract",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 8,
+              "total": 8
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-content-extractor",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-media-describer",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "mcp-whole-node-indexing",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "webui-vector-search",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 7
+            }
+          },
+          {
+            "type": "change",
+            "id": "desktop-search-sidecar",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 6
+            }
+          },
+          {
+            "type": "change",
+            "id": "vector-search-security-review",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 3
+            }
+          },
+          {
+            "type": "change",
+            "id": "lke-vector-search",
+            "status": "PENDING",
+            "progress": {
+              "done": 0,
+              "total": 9
             }
           }
         ],

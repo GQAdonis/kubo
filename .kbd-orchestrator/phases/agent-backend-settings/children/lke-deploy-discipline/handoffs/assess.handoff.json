@@ -1,0 +1,11 @@
+{
+  "stage": "assess",
+  "completedAt": "2026-10-14T09:15:25Z",
+  "outputs": [
+    "assessment.md"
+  ],
+  "nextStage": "analyze",
+  "summaryForNext": "Live inventory (read-only): prometheusags.ai is on GoDaddy DNS and uses a ZeroSSL wildcard copied per namespace (ipfs-tls covers console); know-me.tools is on Cloudflare. Console TLS is broken now (https-console not Programmed, console-tls never issued); the wildcard private key sits in last-applied-configuration annotations on three Secrets (operator decision: strip annotation, rotate). The skill must add outcome checks (listener/route status, external fetches) and never print Secret annotations; first change to carry: https-console -> ipfs-tls and removal of the #26/#27 Issuer, Certificate and port-80 listeners. Review: 3 CRITICAL, 5 WARNING, all folded in.",
+  "skipped": false,
+  "skipReason": null
+}

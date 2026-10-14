@@ -61,8 +61,8 @@ func newPrincipalEnv(t *testing.T, cfgJSON string, env map[string]string, sopts 
 	}
 	cfg, err := ParseConfig([]byte(cfgJSON))
 	require.NoError(t, err)
-	creds, err := cfg.Credentials()
-	require.NoError(t, err)
+	creds, warnings := cfg.Credentials()
+	require.Empty(t, warnings)
 	verifier, err := NewStaticVerifier(creds)
 	require.NoError(t, err)
 

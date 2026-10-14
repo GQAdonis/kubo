@@ -1,0 +1,11 @@
+{
+  "stage": "plan",
+  "completedAt": "2026-10-14T09:22:43Z",
+  "outputs": [
+    "plan.md"
+  ],
+  "nextStage": "execute",
+  "summaryForNext": "2 changes, 11 tasks: lke-gitops-change-skill (skill, read-only preflight/verify/inventory scripts, live self-test that must fail on the broken console, validation) then lke-console-tls-wildcard (PR-A listener to wildcard ipfs-tls and Certificate removal; PR-B Issuer and port-80 removal after Challenge cleanup; bounded OG-6 restart with stop-and-hand-over). Route: lead on Claude Code (needs read-only live access). Plan reviewed twice; no CRITICAL left; gates G-1/G-1b merges, G-2 annotation strip, G-3 rotation/renewal owner, G-4 orphan cleanup.",
+  "skipped": false,
+  "skipReason": null
+}

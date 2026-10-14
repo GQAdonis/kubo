@@ -1,0 +1,31 @@
+# Follow-up checks, 2026-10-14T09:13:39Z, read-only
+## ipfs-gateway-gw listener status
+https: Programmed=True(Programmed) Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs) 
+https-console: ResolvedRefs=False(InvalidCertificateRef) Accepted=True(Accepted) Programmed=False(Invalid) 
+http: Programmed=True(Programmed) Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs) 
+http-console: Programmed=True(Programmed) Accepted=True(Accepted) ResolvedRefs=True(ResolvedRefs) 
+## console-tls order/challenge
+Order       console-tls-1-3247985124              invalid   <none>
+Challenge   console-tls-1-3247985124-3395327373   invalid   Error accepting authorization: acme: authorization error for console.prometheusags.ai: 400 urn:ietf:params:acme:error:connection: 45.56.67.67: Fetching http://console.prometheusags.ai/.well-known/acme
+## solver route status
+cm-acme-http-solver-g84bg: Accepted=True(Accepted) ResolvedRefs=False(BackendNotFound) 
+## TLS certificate details (public tls.crt only)
+argocd/wildcard-prometheusags-ai-tls: subject=CN=*.prometheusags.ai issuer=C=AT, O=ZeroSSL GmbH, CN=ZeroSSL RSA DV SSL CA 2 notAfter=Feb 13 23:59:59 2027 GMT 
+onyx/prometheusags-wildcard-tls: subject=CN=*.prometheusags.ai issuer=C=AT, O=ZeroSSL GmbH, CN=ZeroSSL RSA DV SSL CA 2 notAfter=Feb 13 23:59:59 2027 GMT 
+ipfs/ipfs-tls: subject=CN=*.prometheusags.ai issuer=C=AT, O=ZeroSSL GmbH, CN=ZeroSSL RSA DV SSL CA 2 notAfter=Feb 13 23:59:59 2027 GMT 
+## Secrets carrying last-applied-configuration (names only)
+argocd/wildcard-prometheusags-ai-tls: True
+onyx/prometheusags-wildcard-tls: True
+ipfs/ipfs-tls: True
+## gateways and namespaces referenced by issuers
+Error from server (NotFound): namespaces "matrix" not found
+argocd   argocd-gateway    eg    23.239.29.33   True   32d
+ipfs     ipfs-gateway-gw   eg    45.56.67.67    True   32d
+## DNS (zone apex NS, CAA)
+prometheusags.ai NS=ns58.domaincontrol.com. ns57.domaincontrol.com.  CAA=
+know-me.tools NS=abdullah.ns.cloudflare.com. yolanda.ns.cloudflare.com.  CAA=
+## external fetch of console challenge path and hosts
+http://console.prometheusags.ai/.well-known/acme-challenge/probe -> 404
+https://ipfs.prometheusags.ai/ -> 404
+https://console.prometheusags.ai/ -> 000
+curl-exit=35

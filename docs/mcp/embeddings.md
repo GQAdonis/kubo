@@ -1,8 +1,8 @@
 # Embeddings and the search index
 
-`ipfs mcp` can chunk text content, send it to an embedding model the operator configures, store the vectors in SurrealDB and answer semantic searches over them. This page covers the two store modes and the indexing lifecycle. The decision behind the design is [ADR-0006](0006-embeddings-surrealdb.md); the authoritative list of keys, defaults and off switches is the config schema in `mcp/contract/config/ipfs-mcp-config.schema.json`, rendered in the [configuration reference](config-reference.md#embeddings).
+`ipfs mcp` can chunk text content, send it to an embedding model the operator configures, store the vectors in SurrealDB and answer semantic searches over them. Beyond plain text and Markdown it can route documents, code, structured data, images and videos through an extraction stage (xberg) and a media description stage (any OpenAI-compatible chat model), index everything the operator pins or keeps in MFS with an operator-started bulk run, and answer searches over HTTP for the Web UI. This page covers the two store modes, the content pipeline, bulk indexing, the search routes and the two deployments. The decisions behind the design are [ADR-0006](0006-embeddings-surrealdb.md) (the index itself) and [ADR-0011](0011-whole-node-vector-search.md) (whole-node vector search); the authoritative list of keys, defaults and off switches is the config schema in `mcp/contract/config/ipfs-mcp-config.schema.json`, rendered in the [configuration reference](config-reference.md#embeddings).
 
-The whole feature is off unless the config file named by `--mcp-config` (or `IPFS_MCP_CONFIG`) has an `embeddings` section. Without it no `surreal` process starts, no store or embedder is contacted, and the four `ipfs_index_*` tools are not listed (`ipfs_node_status` reports them as `not_configured`). Removing the section is the off switch. The feature adds no Kubo repo config key and changes nothing in `docs/config.md`, the `/api/v0` RPC API or the gateway.
+The whole feature is off unless the config file named by `--mcp-config` (or `IPFS_MCP_CONFIG`) has an `embeddings` section. Without it no `surreal` or `xberg` process starts, no store, embedder, extractor or describer is contacted, and the `ipfs_index_*` tools are not listed (`ipfs_node_status` reports them as `not_configured`). Removing the section is the off switch. The feature adds no Kubo repo config key and changes nothing in `docs/config.md`, the `/api/v0` RPC API or the gateway.
 
 ## Contents
 
@@ -12,12 +12,20 @@ The whole feature is off unless the config file named by `--mcp-config` (or `IPF
   - [Embedded mode](#embedded-mode)
   - [Remote mode](#remote-mode)
   - [The embedder](#the-embedder)
+- [Content kinds](#content-kinds)
+- [The extractor (xberg)](#the-extractor-xberg)
+- [The describer](#the-describer)
 - [Indexing](#indexing)
   - [Policy](#policy)
   - [Automatic indexing after `ipfs_add`](#automatic-indexing-after-ipfs_add)
   - [Index tools](#index-tools)
+  - [Bulk indexing](#bulk-indexing)
   - [Pin-aware deletion](#pin-aware-deletion)
   - [Reconciliation](#reconciliation)
+- [Search over HTTP](#search-over-http)
+- [Setups](#setups)
+  - [LKE (cloud node)](#lke-cloud-node)
+  - [IPFS Desktop](#ipfs-desktop)
 - [Limitations](#limitations)
 
 ## Try it
@@ -90,14 +98,20 @@ Steps 1-3 and the tool calls of step 5 were run against a private daemon (`ipfs 
 
 ## What leaves the machine
 
-Indexing and searching send text to the embedder, and vectors to the store. Both happen only on behalf of an identity whose `egress_ack` covers every host involved:
+Indexing and searching send text to the embedder, and vectors to the store; with the extended pipeline they can also send file bytes to an extractor and media bytes to a describer. Each happens only on behalf of an identity whose `egress_ack` covers every host involved:
 
 - the embedder host (`embeddings.embedder.base_url`), always;
-- the store host (`embeddings.remote.endpoint`), in remote mode. The embedded store listens on loopback and needs no acknowledgement.
+- the store host (`embeddings.remote.endpoint`), in remote mode. The embedded store listens on loopback and needs no acknowledgement;
+- the extractor host (`embeddings.extractor.remote.base_url`), in remote extractor mode. The file's bytes (at most `embeddings.extractor.max_bytes`) go there. The embedded extractor runs on loopback and needs no acknowledgement;
+- the describer host (`embeddings.describer.base_url`). Images and videos are uploaded to it as base64 `data:` URLs inside the chat request (at most `describer.image_max_bytes` or `describer.video_max_bytes`), never as a gateway URL: a URL would publish the CID to the model host and let it fetch the content from the node.
 
-`egress_ack` entries are host names, optionally with a port (`embed.internal.example`, `10.0.0.5:8000`), or `local`, which covers any loopback host (`localhost`, `127.0.0.1`, `::1`). The check runs before any request is built, for the automatic trigger, `ipfs_index_cid` and `ipfs_index_search`. A refusal names the hosts that are not acknowledged and sends nothing.
+`egress_ack` entries are host names, optionally with a port (`embed.internal.example`, `10.0.0.5:8000`), or `local`, which covers any loopback host (`localhost`, `127.0.0.1`, `::1`). The check runs per stage, before any request is built: the automatic trigger, `ipfs_index_cid`, `ipfs_index_search` and every file of a bulk run. A refused stage sends nothing and records `egress_not_acknowledged` with the missing hosts; the file's other stages still run.
 
-The operator identity (stdio, and HTTP requests authenticated with `--auth-token-*`) has no `egress_ack`, so it never sends content to an embedder. This is intended: the safe direction is the default. To index, call the tools as a configured HTTP principal that has an `egress_ack`:
+**A hosted describer is never a default.** Describing a file sends its bytes to that host. Xiaomi's hosted MiMo API (`api.xiaomimimo.com`) is the describer [ADR-0011](0011-whole-node-vector-search.md) names for video; turning it on for "all files" sends every allowlisted image and video the node pins to that third party, bounded only by `describer.max_requests_per_hour` and the bulk caps. The same applies to any hosted endpoint you configure.
+
+**A gateway host stands for every provider behind it.** If you front models with a gateway such as liter-llm, the host you acknowledge is the gateway's: acknowledging it acknowledges every provider the gateway can reach. No gateway is required; `ipfs mcp` only needs OpenAI-compatible endpoints, and nothing in it is liter-llm-specific.
+
+The operator identity (stdio, and HTTP requests authenticated with `--auth-token-*`) has no `egress_ack`, so it never sends content to an embedder, extractor or describer. This is intended: the safe direction is the default. To index, call the tools as a configured HTTP principal that has an `egress_ack`:
 
 ```json
 {
@@ -112,7 +126,7 @@ The operator identity (stdio, and HTTP requests authenticated with `--auth-token
 }
 ```
 
-With a local embedder (for example Ollama on `127.0.0.1`) and the embedded store, `["local"]` is enough. With a remote embedder or a remote store, list those hosts instead.
+With a local embedder (for example Ollama on `127.0.0.1`), the embedded store, the embedded extractor and no describer, `["local"]` is enough. With a remote embedder, store, extractor or any describer, list those hosts instead.
 
 ## Store modes
 
@@ -122,7 +136,7 @@ With a local embedder (for example Ollama on `127.0.0.1`) and the embedded store
 - an index on `cid`;
 - an HNSW cosine index whose dimension is `embeddings.embedder.dimensions`.
 
-The chunk text is not stored, only its vector and where it came from. A search reads the text back from the node (see [Index tools](#index-tools)). A database whose vector index was built for another dimension is refused at start with an error that names both dimensions; use another database or `data_dir`, or remove the `ipfs_chunk` table.
+For plain text the chunk text is not stored, only its vector and where it came from: a search reads the text back from the node (see [Index tools](#index-tools)). Entries produced by the extractor or the describer (`source` other than `text`) do store their chunk text beside the vector, because extraction is expensive and a description cannot be reproduced by re-reading the file. A database whose vector index was built for another dimension is refused at start with an error that names both dimensions; use another database or `data_dir`, or remove the `ipfs_chunk` table.
 
 `ipfs mcp` talks to SurrealDB over its HTTP API (`POST /rpc`, method `query`) with the Go standard library. No SurrealDB Go module is linked. `mcp/server/embeddings/SOURCES.md` cites the documentation behind every statement it sends.
 
@@ -191,6 +205,70 @@ The chunk text is not stored, only its vector and where it came from. A search r
 - `embedder.api_key` is an optional env or file reference, sent as a bearer token.
 - Redirects are not followed. An error from the embedder is clipped and never includes the request, so no content reaches a log through it.
 
+## Content kinds
+
+Every indexed file is assigned one kind, from its file name and a content sniff, and each kind names the stages that turn it into searchable text. The mapping is one contract file, [`mcp/contract/derivations/content-kinds.json`](../../mcp/contract/derivations/content-kinds.json), read by `ipfs mcp` and the Web UI alike:
+
+| Kind | MIME types (examples) | Stages | `source` of its chunks |
+|------|-----------------------|--------|------------------------|
+| `text` | `text/plain`, `text/markdown` | native chunking, exactly as before | `text` |
+| `document` | PDF, Office, ODF, iWork, RTF, EPUB, HTML | extractor; OCR for pages without a text layer | `extracted`, `ocr` |
+| `code` | source code in common languages | extractor (tree-sitter-aware) | `extracted` |
+| `data` | JSON, YAML, CSV, TSV, XML, TOML | extractor | `extracted` |
+| `image` | PNG, JPEG, GIF, WebP, TIFF, BMP, AVIF, HEIC | OCR when on; describer when configured | `ocr`, `description` |
+| `video` | MP4, WebM, QuickTime, Matroska, MPEG, AVI | transcription of the audio track when on; describer when enabled | `transcript`, `description` |
+
+Every stage is gated:
+
+- the extractor stages need an `embeddings.extractor` block; OCR additionally needs `extractor.ocr: true`, transcription `extractor.transcribe: true`;
+- the describer stage needs an `embeddings.describer` block whose `kinds` list contains the file's kind (default `["image"]`);
+- `embeddings.policy.mime_allowlist` stays the single allowlist of types that are indexed at all. Its default is `["text/plain", "text/markdown"]`, so configuring an extractor or describer indexes nothing until you add the types you want.
+
+A stage that is off skips the file with a matching `skipped_reason` (`kind_not_enabled`, `extractor_unavailable`, `extraction_failed`, `describer_not_configured`) and the file's other stages still run. Whatever a stage produced is chunked and embedded by the same embedder and stored under the same CID, so images and videos are searched in the same vector space as documents. Hits carry `kind`, `source`, `mime_type` and, for descriptions, `described_by`; a description is untrusted model output, labelled "AI description by <model>" wherever it is shown.
+
+## The extractor (xberg)
+
+The extractor is [xberg](https://github.com/xberg-io/xberg) (MIT), which turns documents, code, structured data, image text (OCR) and video audio tracks (transcription) into Markdown. `ipfs mcp` talks to its REST API (`POST /extract`) with the Go standard library: no xberg code, cgo or native library is linked into the `ipfs` binary, and `ipfs mcp` never downloads xberg. The bytes it sends come from `cat` of the indexed CID, capped at `extractor.max_bytes` before the request is built.
+
+| Key | Default | Meaning and off switch |
+|-----|---------|------------------------|
+| `embeddings.extractor` | `null` | Absent (default): no xberg process or request; only `text/plain` and `text/markdown` are indexed. Removing the block is the off switch. |
+| `embeddings.extractor.mode` | none | Required when the block exists: `embedded` or `remote`. |
+| `embeddings.extractor.embedded.xberg_binary` | none | Absolute path of an operator-installed `xberg` binary (required in embedded mode; never a `PATH` lookup). Remove the `embedded` block and no process starts. |
+| `embeddings.extractor.embedded.cache_dir` | none | Absolute path of the model cache directory (required in embedded mode). Pre-warm it when downloads are off. |
+| `embeddings.extractor.embedded.min_version` | `"1.3.10"` | Always checked; an older binary is refused. |
+| `embeddings.extractor.embedded.allow_model_downloads` | `false` | `false` (default): xberg runs with model downloads disabled and a file that needs a missing model is `extraction_failed`. `true` lets xberg download layout, OCR and transcription models from the Hugging Face Hub, an endpoint you did not otherwise configure. |
+| `embeddings.extractor.remote.base_url` | none | The xberg REST endpoint (required in remote mode; there is no default). xberg documents no authentication, so a remote xberg must sit on a private network or behind an authenticating proxy; the host must also be in the caller's `egress_ack`. Remove the `remote` block and no connection is made. |
+| `embeddings.extractor.remote.credential` | `null` | Env or file reference sent as a bearer token, for an authenticating proxy only. `null` (default): no credential is sent. |
+| `embeddings.extractor.timeout_seconds` | `120` | Per-request limit; always enforced. |
+| `embeddings.extractor.max_bytes` | `52428800` (50 MiB; at most 100 MiB) | Larger files are skipped `too_large` before any request is built. |
+| `embeddings.extractor.ocr` | `false` | `false` (default): no OCR of images or scanned PDFs. |
+| `embeddings.extractor.transcribe` | `false` | `false` (default): no transcription of audio tracks. |
+
+In embedded mode `ipfs mcp` supervises `xberg serve` on `127.0.0.1` with an ephemeral port; it stops when `ipfs mcp` exits and leftovers are cleaned up the way `surreal` leftovers are. The loopback listener has no authentication: any local process can submit files to it and spend your CPU, which is one reason indexing stays opt-in.
+
+## The describer
+
+The describer is any OpenAI-compatible `/chat/completions` endpoint with image (and, if enabled, video) input: Xiaomi's hosted MiMo API, or a local vision model behind any compatible server. It returns a text description, and that text is chunked and embedded like everything else — images and videos are searched in the same vector space as documents, with no second index. Media go to the describer as base64 `data:` URLs inside the request, never as a gateway URL. The fixed instruction is part of the contract, not a config key, and the description is untrusted model output: tool results name the model in `described_by` and every surface labels it "AI description by <model>".
+
+| Key | Default | Meaning and off switch |
+|-----|---------|------------------------|
+| `embeddings.describer` | `null` | Absent (default): no description request; images and videos are skipped `describer_not_configured` unless OCR or transcription covers them. Removing the block is the off switch. |
+| `embeddings.describer.base_url` | none | The chat endpoint (required; no default). Describing a file sends its bytes to this host; the host must also be in the caller's `egress_ack`. |
+| `embeddings.describer.model` | none | The model name (required). |
+| `embeddings.describer.api_key` | `null` | Env or file reference, sent as a bearer token. `null` (default): requests carry no key. The value is never logged. |
+| `embeddings.describer.kinds` | `["image"]` | Which kinds are described. Empty list: nothing is described. Video is described only when listed. |
+| `embeddings.describer.max_output_tokens` | `512` | Always enforced; bounds one description's length. |
+| `embeddings.describer.image_max_bytes` | `20971520` (20 MiB) | Larger images are not described. |
+| `embeddings.describer.video_max_bytes` | `52428800` (50 MiB) | Larger videos are not described. |
+| `embeddings.describer.video_fps` | `1` (0.1 to 10) | Frames per second sampled for the video part; always applies to video. |
+| `embeddings.describer.max_requests_per_hour` | `120` | `0`: the describer is disabled even with `base_url` and `model` set. |
+| `embeddings.describer.timeout_seconds` | `180` | Per-request limit; always enforced. |
+
+**Video description has no Mac path.** MiMo's self-hosted variant needs datacenter GPUs and there is no official Mac or CPU build, so on Desktop video search covers only the audio transcript (with `extractor.transcribe: true`) unless you point the describer at a hosted endpoint — which sends the video bytes to that host. Video is therefore absent from the default `kinds` list, and the Desktop setup keeps it off.
+
+A video request cannot pass through liter-llm today (its content parts have no `video_url`), so video description goes directly to the describer endpoint.
+
 ## Indexing
 
 ### Policy
@@ -204,7 +282,7 @@ The chunk text is not stored, only its vector and where it came from. A search r
 | `max_bytes` | `1048576` (1 MiB) | Larger content is skipped. At most 100 MiB. |
 | `chunk_chars` | `2000` | Longest chunk, in characters (200 to 20000). |
 
-The content type comes from the file name (`.md` and `.markdown` are `text/markdown`, `.txt` is `text/plain`) or is sniffed from the bytes. Content that is not valid UTF-8, contains a NUL byte or is larger than `max_bytes` is never indexed. Content outside the policy is skipped silently by the automatic trigger, and with a `skipped_reason` by `ipfs_index_cid`.
+The content type comes from the file name (`.md` and `.markdown` are `text/markdown`, `.txt` is `text/plain`) or is sniffed from the bytes; the type assigns the file a [content kind](#content-kinds), which decides which stages run. Natively indexed content that is not valid UTF-8, contains a NUL byte or is larger than `max_bytes` is never indexed. Content outside the policy is skipped silently by the automatic trigger, and with a `skipped_reason` by `ipfs_index_cid`.
 
 Chunks are cut at a paragraph break, else a line break, else a space in the second half of the piece, else hard at `chunk_chars` characters. Pieces are trimmed and empty ones dropped. Cutting is a pure function of the text and `chunk_chars`, which is how a search recovers a hit's text: it reads the content again and cuts it the same way. **Changing `chunk_chars` after indexing breaks that.** Hits whose chunk can no longer be found are dropped from search results; run `ipfs_index_cid` with `force: true` on the affected CIDs to rebuild their entries.
 
@@ -223,24 +301,43 @@ With `policy.auto` set to `true`, every successful `ipfs_add` from `ipfs mcp` is
 | Tool | Class | What it does |
 |------|-------|--------------|
 | `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts no embedder. |
-| `ipfs_index_search` | read, content egress, untrusted content | Embeds `query`, returns the `top_k` (default 5, at most 50) nearest chunks with CID, path, chunk index, score (1 minus cosine distance) and text. `cid` restricts the search to one CID. |
-| `ipfs_index_cid` | write (confirmed) | Indexes one UnixFS file by CID: `files/stat`, then `cat` of at most `max_bytes`. `force: true` re-indexes a CID that already has entries. |
+| `ipfs_index_search` | read, content egress, untrusted content | Embeds `query`, returns the `top_k` (default 5, at most 50) nearest chunks with CID, path, chunk index, score (1 minus cosine distance) and text, plus `kind`, `source`, `mime_type` and, for descriptions, `described_by`. `cid` restricts the search to one CID; the optional `kinds` and `sources` filters restrict it to those content kinds or chunk sources. |
+| `ipfs_index_cid` | write (confirmed) | Indexes one UnixFS file by CID: `files/stat`, then `cat` of at most `max_bytes`, routed through the stages of its [content kind](#content-kinds). `force: true` re-indexes a CID that already has entries. |
 | `ipfs_index_reconcile` | write (confirmed), `destructiveHint` | Deletes the entries of indexed CIDs that no pin covers, one page per call. See [Reconciliation](#reconciliation). |
+| `ipfs_index_bulk_start` | write (confirmed), content egress | Starts (or with `resume: true` resumes) the one bulk run over pins and MFS. See [Bulk indexing](#bulk-indexing). |
+| `ipfs_index_bulk_status` | read | Reports the state and counts of the current or last bulk run. Contacts no daemon endpoint, extractor or embedder. |
+| `ipfs_index_bulk_cancel` | write (confirmed) | Cancels the active or paused run; files already indexed stay indexed. Off switch for all three: `embeddings.bulk.enabled: false`. |
 
 `ipfs_index_cid` returns `chunks_indexed` and the `model`, or `chunks_indexed: 0` with a `skipped_reason`:
 
-- `mime_not_allowed`: not UTF-8 text, contains a NUL byte, or a type not in `mime_allowlist`;
-- `too_large`: larger than `max_bytes`;
+- `mime_not_allowed`: a type not in `mime_allowlist`, or natively indexed content that is not valid UTF-8 text or contains a NUL byte;
+- `too_large`: larger than the applicable cap (`policy.max_bytes`, or `extractor.max_bytes` for extractor-routed kinds);
 - `already_indexed`: the CID has entries and `force` was not set;
 - `not_a_file`: a directory or another non-file node;
-- `empty`: an empty or whitespace-only file.
+- `empty`: an empty or whitespace-only file;
+- `not_local`: an offline read found blocks missing locally; nothing is fetched;
+- `kind_not_enabled`: the file's kind has no stage enabled (for example a document with no extractor, or an image with both OCR and the describer off);
+- `extractor_unavailable`: no extractor is configured, or it could not be reached;
+- `extraction_failed`: the extractor ran but produced nothing usable (for example a model missing from a downloads-disabled cache);
+- `describer_not_configured`: no describer covers the file's kind (applies to the description stage; the file's other stages still run).
 
 Errors follow the contract's error model:
 
 - `egress_not_acknowledged`: the calling identity's `egress_ack` does not cover the embedder or the remote store. The error names the missing hosts. Not retryable; use another principal.
 - `index_unavailable`: the embedder or the store failed. Retryable.
 
-Search results are untrusted content: the text is whatever was stored, and clients and the agent loop treat it as data, never instructions. Hit text is read from the node with `cat` (at most `max_bytes` per document, 20 seconds each); a hit whose text cannot be read or found is dropped, so a search can return fewer results than `top_k`.
+Search results are untrusted content: the text is whatever was stored or read back, and clients and the agent loop treat it as data, never instructions. Hits with `source: text` are read from the node with `cat` (at most `max_bytes` per document, 20 seconds each); a hit whose text cannot be read or found is dropped, so a search can return fewer results than `top_k`. Hits of every other source serve the chunk text stored beside the vector, and a hit with `source: description` is untrusted model output named by `described_by`.
+
+### Bulk indexing
+
+One operator-started run can index everything the node holds for you: UnixFS files reachable from recursive and direct pins (`pin/ls`) and from the MFS tree under `embeddings.bulk.mfs_root` (`files/ls`), descending directories with `ls`. It does not index unpinned blocks in the blockstore (a gateway cache holds content strangers asked for, not yours, and pin-aware deletion would remove it again), raw blocks or non-UnixFS DAGs (`not_a_file`). A run never starts in the background: there is no scheduler and no start-up trigger.
+
+- **Every read is offline.** `cat` and `ls` carry `offline: true`; a file with missing blocks is skipped `not_local` and the run never fetches from the network, so nothing is stored or announced because of indexing. A run issues no `add`, `block/put`, `dag/put`, `pin/add`, `files/write` or `routing/provide` call, and images the extractor pulls out of documents are discarded, never added.
+- **Caps.** `embeddings.bulk` bounds every run: `max_files_per_run` (default 1000), `max_bytes_per_run` (default 1 GiB) and `files_per_minute` (default 30), one run at a time. Per-call caps on `ipfs_index_bulk_start` (`max_files`, `max_bytes`, `files_per_minute`) can only tighten the configured ones. `bulk.sources` (default `["pins", "mfs"]`; an empty list indexes nothing) and `bulk.mfs_root` (default `"/"`) set the walk. Off switch: `embeddings.bulk.enabled: false` removes all three bulk tools from `tools/list`.
+- **Confirmation and egress.** `ipfs_index_bulk_start` is a write-class tool, confirmed on every transport; the prompt names the sources, the caps and every host the run may contact. The caller's `egress_ack` must cover every configured stage's host (embedder, remote store, remote extractor, describer), checked at start and again before each file. As with single-file indexing, the operator identity has no `egress_ack` and cannot start a run.
+- **Resumable, never automatic.** Run state (cursor, counts, the starting principal, the caps) lives in SurrealDB. If `ipfs mcp` stops, the run comes back `paused` and indexes nothing until a principal resumes it with `ipfs_index_bulk_start` and `resume: true`, which asks for confirmation again. Files already indexed are skipped (`already_indexed`), so a resumed or later run indexes only what is new.
+
+`ipfs_index_bulk_status` reports the run (`running`, `paused`, `completed`, `cancelled` or `failed`), the principal that started it, the effective sources and caps, and per-reason skip counts; `ipfs_index_bulk_cancel` (write class, confirmed) stops it. The Web UI shows bulk status read-only; starting a run goes through the agent chat or any MCP client, where the confirmation already exists.
 
 ### Pin-aware deletion
 
@@ -267,9 +364,49 @@ Kubo has no pin event stream, and a daemon-wide hook is refused under the User A
 
 Content added with `pin: false` and indexed is covered by no pin, so the next reconciliation or garbage collection removes its entries. Pin what should stay searchable.
 
+## Search over HTTP
+
+For the Web UI search box and other clients that are not full MCP sessions, `ipfs mcp` mounts two routes on its `--http` listener (the full descriptor is [`mcp/contract/routes/index.json`](../../mcp/contract/routes/index.json); request and response shapes are exactly the tool schemas, with no second copy):
+
+- `POST /index/search`: the body is the `ipfs_index_search` input (including its `kinds` and `sources` filters), the response its output;
+- `GET /index/status`: the `ipfs_index_status` output plus a `bulk_run` summary when a bulk run exists.
+
+Authorization is the tool's: a bearer of kind `ui` or `human-mcp` with the `index` group, the same `egress_ack` check as the tool (`POST /index/search` embeds the query, so the embedder and a remote store must be acknowledged; `GET /index/status` contacts no embedder), and the listener's origin allowlist CORS rule. An `admin` principal is refused (403), exactly as on `/mcp` and `/agui`. Hit text is data: render it as plain text, never as HTML or Markdown.
+
+Off switch: `embeddings.search_route.enabled: false` (or no `--http`, or no `embeddings` section) unmounts both routes — they answer 404 and nothing is read or dialed. The Web UI gates its search nav entry on `GET /index/status` answering at all. No `/api/v0` endpoint is added or changed; `ipfs mcp --print-rpc-allowed-paths` lists the RPC paths indexing uses (`pin/ls`, `files/ls`, `files/stat`, `ls`, `cat`) so a scoped `API.Authorizations` entry keeps working.
+
+## Setups
+
+### LKE (cloud node)
+
+The know-me-cluster deployment of [ADR-0011](0011-whole-node-vector-search.md) V8:
+
+- **Store:** SurrealDB in remote mode (the Kubo image contains no `surreal` binary), as an in-cluster StatefulSet with its root credential in an out-of-band Secret.
+- **Extractor:** xberg as a ClusterIP-only Deployment from `ghcr.io/xberg-io/xberg`, pinned by digest (never a floating tag), with a model-cache PVC pre-warmed by a one-off Job — the only workload allowed to reach the Hugging Face Hub. A NetworkPolicy lets only the `ipfs` pod reach xberg.
+- **Embedder:** an in-cluster CPU model; there is no GPU on LKE.
+- **Gateway:** liter-llm is not deployed at first; if a second provider is added later, it is the upstream image pinned by digest, on ClusterIP with a master key.
+- **Describer:** off until the operator has read Xiaomi's data terms; then hosted MiMo for images only, with `api.xiaomimimo.com` added to the `ui` principal's `egress_ack`. Video on LKE takes a further explicit operator choice.
+- **Secrets** (store credential, gateway key, Xiaomi key) are created out of band, never in git, mounted with `optional: true`: an absent Secret disables the dependent stage, never the pod.
+- **Routes:** the console exposes `/index/search` and `/index/status` bearer-only and outside the basic-auth policy, exactly like `/agui`.
+
+### IPFS Desktop
+
+Search is off by default on Desktop. When you turn it on, Desktop asks for absolute paths to an operator-installed `surreal` and `xberg` (the `xberg-cli-aarch64-apple-darwin` release asset) and an embedder URL, and its `ipfs mcp` sidecar writes an `embeddings` block in embedded mode for both, with data and cache directories under Desktop's userData. Desktop downloads and bundles neither binary.
+
+The embedder is local by default (for example Ollama with `bge-m3`). Images are described by a local vision model behind any OpenAI-compatible server; video description is off — [there is no Mac path for it](#the-describer). A non-loopback embedder or describer host is added to the Desktop `ui` principal's `egress_ack` only after a confirmation that names the host, with Touch ID.
+
+Embedding settings are read when `ipfs mcp` starts; changing them restarts `ipfs mcp` (Desktop restarts its sidecar). They are not part of the hot-reload settings API.
+
 ## Limitations
 
 - **The operator identity cannot index.** Stdio and `--auth-token-*` carry no `egress_ack`, so indexing and search need a configured HTTP principal. This keeps content from reaching an embedder by default, at the cost of one more config entry.
+- **Video description has no Mac path.** On Desktop, video search covers only the audio transcript unless you configure a hosted describer, which receives the video's bytes.
+- **Derived text is stored.** Extracted text, OCR output, transcripts and descriptions sit in SurrealDB next to their vectors (natively indexed text is not stored). Deletion still follows pins, but between an out-of-band unpin and the next reconciliation that text stays readable to anyone with the store.
+- **xberg downloads models at runtime** unless `extractor.embedded.allow_model_downloads` stays `false` and the cache is pre-warmed. With downloads on, xberg contacts the Hugging Face Hub, an endpoint you did not configure.
+- **xberg's REST API is unauthenticated.** In embedded mode it listens on loopback, where any local process can submit files and spend your CPU; a remote xberg must sit on a private network or behind an authenticating proxy (`extractor.remote.credential`).
+- **Descriptions are model output searched as if they were content.** A wrong or injected description ranks like a fact; it is labelled "AI description by <model>" wherever shown, but treat it as untrusted.
+- **Embedding settings are not hot-reloaded.** Changing them restarts `ipfs mcp`.
+- **Indexing everything costs real resources.** OCR, layout and transcription models are CPU-heavy; the bulk caps make a run bounded and visible, not cheap.
 - **Unpins outside `ipfs mcp` are not seen until reconciliation.** Between an out-of-band unpin and the next `ipfs_index_reconcile`, search can still match entries for content the operator no longer pins.
 - **No watchdog on Windows.** A killed `ipfs mcp` leaves `surreal` running and `data_dir` locked until the operator stops it.
 - **WebMCP adds are not indexed automatically.** WebMCP is not delivered yet; when it is, its adds bypass `ipfs mcp` and need `ipfs_index_cid`.

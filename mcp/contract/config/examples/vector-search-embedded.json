@@ -1,0 +1,59 @@
+{
+  "$schema": "../ipfs-mcp-config.schema.json",
+  "embeddings": {
+    "mode": "remote",
+    "remote": {
+      "endpoint": "https://surreal.internal.example:8000",
+      "namespace": "ipfs",
+      "database": "index",
+      "credential": {
+        "env": "SURREAL_CREDENTIALS"
+      }
+    },
+    "embedder": {
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "bge-m3",
+      "dimensions": 1024
+    },
+    "extractor": {
+      "mode": "embedded",
+      "embedded": {
+        "xberg_binary": "/usr/local/bin/xberg",
+        "cache_dir": "/var/lib/ipfs-mcp/xberg-cache",
+        "allow_model_downloads": false
+      },
+      "ocr": true,
+      "transcribe": true
+    },
+    "describer": {
+      "base_url": "http://127.0.0.1:1234/v1",
+      "model": "vision-local",
+      "api_key": {
+        "env": "IPFS_MCP_DESCRIBER_KEY"
+      },
+      "kinds": [
+        "image"
+      ]
+    },
+    "bulk": {
+      "enabled": true,
+      "sources": [
+        "pins",
+        "mfs"
+      ],
+      "mfs_root": "/documents"
+    },
+    "search_route": {
+      "enabled": true
+    },
+    "policy": {
+      "mime_allowlist": [
+        "text/plain",
+        "text/markdown",
+        "application/pdf",
+        "image/png",
+        "image/jpeg"
+      ]
+    }
+  }
+}

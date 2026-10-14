@@ -1,0 +1,122 @@
+{
+  "$schema": "./content-kinds.schema.json",
+  "source": "ADR-0011 (docs/mcp/0011-whole-node-vector-search.md) decision V2, operator direction of 2026-10-14: text and Markdown, PDF and Office documents, source code and JSON/CSV, images, and image and video search through model descriptions.",
+  "description": "Content kinds and the stage that turns each into searchable text (ADR-0011 V2), read by ipfs mcp and the Web UI alike. mimeTypes maps every listed MIME type to exactly one kind; the map is candidate types for embeddings.policy.mime_allowlist, whose default stays [text/plain, text/markdown], so configuring an extractor or describer indexes nothing until the operator adds the types they want. kinds names each kind's stages in pipeline order and the source label each stage stamps on the chunks it produces: native -> text (G12 behaviour: bytes chunked and embedded directly), extractor -> extracted (xberg Markdown), extractor.ocr -> ocr (scanned pages and image text, only with embeddings.extractor.ocr: true), extractor.transcribe -> transcript (audio track, only with embeddings.extractor.transcribe: true), describer -> description (OpenAI-compatible chat model over base64 data URLs, only with an embeddings.describer block and the kind in embeddings.describer.kinds). Entries whose source is not text store their chunk text in SurrealDB beside the vector; hits carry kind, source, mime_type and, for descriptions, described_by.",
+  "kinds": {
+    "text": {
+      "description": "Plain text and Markdown, indexed natively exactly as in G12: no extractor or describer is involved, chunk text is recovered by re-reading the content.",
+      "stages": [
+        { "stage": "native", "source": "text" }
+      ]
+    },
+    "document": {
+      "description": "PDF, Office, ODF, iWork, RTF, EPUB and HTML documents. xberg extracts Markdown; pages without a text layer (scanned PDFs) yield text only through OCR when embeddings.extractor.ocr is on.",
+      "stages": [
+        { "stage": "extractor", "source": "extracted" },
+        { "stage": "extractor.ocr", "source": "ocr" }
+      ]
+    },
+    "code": {
+      "description": "Source code, extracted by xberg with tree-sitter syntax-aware handling.",
+      "stages": [
+        { "stage": "extractor", "source": "extracted" }
+      ]
+    },
+    "data": {
+      "description": "Structured data (JSON, YAML, CSV, TSV, XML, TOML), extracted by xberg to Markdown.",
+      "stages": [
+        { "stage": "extractor", "source": "extracted" }
+      ]
+    },
+    "image": {
+      "description": "Raster images. OCR (when on) extracts visible text; the describer (when configured with the image kind, the default) returns an untrusted model description labelled as such wherever it is shown.",
+      "stages": [
+        { "stage": "extractor.ocr", "source": "ocr" },
+        { "stage": "describer", "source": "description" }
+      ]
+    },
+    "video": {
+      "description": "Video files. Transcription (when on) extracts the audio track only; the describer describes the video itself only when the operator lists video in embeddings.describer.kinds, and on Desktop video description has no local path (ADR-0011).",
+      "stages": [
+        { "stage": "extractor.transcribe", "source": "transcript" },
+        { "stage": "describer", "source": "description" }
+      ]
+    }
+  },
+  "mimeTypes": {
+    "text/plain": "text",
+    "text/markdown": "text",
+    "application/pdf": "document",
+    "application/msword": "document",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "document",
+    "application/vnd.ms-excel": "document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "document",
+    "application/vnd.ms-powerpoint": "document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "document",
+    "application/vnd.oasis.opendocument.text": "document",
+    "application/vnd.oasis.opendocument.spreadsheet": "document",
+    "application/vnd.oasis.opendocument.presentation": "document",
+    "application/vnd.apple.pages": "document",
+    "application/vnd.apple.numbers": "document",
+    "application/vnd.apple.keynote": "document",
+    "application/rtf": "document",
+    "text/rtf": "document",
+    "application/epub+zip": "document",
+    "text/html": "document",
+    "application/xhtml+xml": "document",
+    "application/javascript": "code",
+    "text/javascript": "code",
+    "application/x-typescript": "code",
+    "application/x-sh": "code",
+    "application/sql": "code",
+    "text/x-python": "code",
+    "text/x-go": "code",
+    "text/x-java-source": "code",
+    "text/x-c": "code",
+    "text/x-c++": "code",
+    "text/x-rust": "code",
+    "text/x-ruby": "code",
+    "text/x-php": "code",
+    "text/x-perl": "code",
+    "text/x-shellscript": "code",
+    "text/x-swift": "code",
+    "text/x-kotlin": "code",
+    "text/x-scala": "code",
+    "text/x-haskell": "code",
+    "text/x-lua": "code",
+    "text/css": "code",
+    "application/json": "data",
+    "application/ld+json": "data",
+    "application/x-ndjson": "data",
+    "application/yaml": "data",
+    "application/x-yaml": "data",
+    "text/yaml": "data",
+    "text/x-yaml": "data",
+    "application/toml": "data",
+    "text/csv": "data",
+    "application/csv": "data",
+    "text/tab-separated-values": "data",
+    "application/xml": "data",
+    "text/xml": "data",
+    "image/png": "image",
+    "image/jpeg": "image",
+    "image/gif": "image",
+    "image/webp": "image",
+    "image/tiff": "image",
+    "image/bmp": "image",
+    "image/avif": "image",
+    "image/heic": "image",
+    "video/mp4": "video",
+    "video/webm": "video",
+    "video/quicktime": "video",
+    "video/x-matroska": "video",
+    "video/mpeg": "video",
+    "video/x-msvideo": "video"
+  },
+  "notes": {
+    "uniqueness": "mimeTypes is a JSON object, so a MIME type key can appear only once; 'every listed MIME type maps to exactly one kind' is structural. Each kind's MIME types are derived by inverting the map and are never duplicated into the kind entries.",
+    "gating": "Stage gates (ADR-0011 V6): extractor stages need an embeddings.extractor block, extractor.ocr additionally needs embeddings.extractor.ocr: true, extractor.transcribe needs embeddings.extractor.transcribe: true, and describer needs an embeddings.describer block whose kinds list contains the kind (default [image]). A stage that is off skips the file with the matching skipped_reason (kind_not_enabled, extractor_unavailable, extraction_failed, describer_not_configured) and the file's other stages still run.",
+    "allowlist": "embeddings.policy.mime_allowlist stays the single allowlist; its default [text/plain, text/markdown] indexes only the native text kind until the operator adds types from this map.",
+    "descriptions": "Entries with source description are untrusted model output, labelled 'AI description by <model>' (described_by) in tool output and the Web UI, and their chunk text is stored in SurrealDB (V2)."
+  }
+}
