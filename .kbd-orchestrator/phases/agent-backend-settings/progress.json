@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1444,
-  "derivedRevision": 1444,
+  "sourceRevision": 1446,
+  "derivedRevision": 1446,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1444
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1446
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-13T18:33:52.540817Z",
+  "last_updated": "2026-10-13T22:23:29.831311Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 28,
   "changes_completed": 5,
@@ -139,12 +139,12 @@
     {
       "id": "lke-origin-isolation",
       "title": "lke-origin-isolation",
-      "status": "IN_PROGRESS",
-      "implementation_status": "IN_PROGRESS",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
       "tasks_total": 11,
-      "tasks_done": 6,
+      "tasks_done": 7,
       "last_task_completed": "Post-merge check script `lke-checks/origin-isolation.sh` with two parts. Unauthenticated: console `/api/v0/version` without credentials returns 401. Credentialed, run by the operator inside OG-6 with ",
-      "next_task_pending": "Security-reviewer read of the PR diff before OG-6 (C-B). Acceptance: findings file; no open CRITICAL.",
+      "next_task_pending": "After OG-6, record the operator's credentialed output and run the unauthenticated part (read-only) into a new dated evidence folder. Acceptance: README marks each check pass or fail. OG-0 hygiene is l",
       "blockers": []
     },
     {

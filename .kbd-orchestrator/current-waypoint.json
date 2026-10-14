@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1444,
-  "derivedRevision": 1444,
+  "sourceRevision": 1446,
+  "derivedRevision": 1446,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1444
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1446
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -21,8 +21,8 @@
   "phase": "agent-backend-settings",
   "parentPhase": null,
   "childPointer": null,
-  "change": "lke-origin-isolation",
-  "currentTask": "1.6",
+  "change": "uar-conformance-release",
+  "currentTask": "1.3",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": "execute",
@@ -31,9 +31,9 @@
   "implementationCompleted": 36,
   "implementationTotal": 65,
   "planRevision": 1,
-  "revision": 1444,
+  "revision": 1446,
   "exactNextCommand": "/kbd-assess agent-backend-settings",
-  "nextChange": "lke-origin-isolation",
-  "nextTask": "1.6",
-  "updatedAt": "2026-10-13T18:33:52.540817Z"
+  "nextChange": "uar-conformance-release",
+  "nextTask": "1.3",
+  "updatedAt": "2026-10-13T22:23:29.831311Z"
 }

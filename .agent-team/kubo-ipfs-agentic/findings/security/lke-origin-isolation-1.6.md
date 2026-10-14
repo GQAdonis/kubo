@@ -93,6 +93,39 @@ MCP baseline controls and RCE vectors do not apply: the artifact is deployment c
 
 The live SecurityPolicy name and spec, and the htpasswd Secret's name and key; Argo's tracking mode and adoption by name; EG v1.9.1 behavior on an invalid SecurityPolicy (fail closed with 500 or drop the filter), its path normalization and escaped-slash settings; console DNS and certificate issuance; whether the datreeio CRD schemas match EG v1.9.1; whether the deployed image uses go-ipfs-cmds v0.16.1 (taken from the fork's `go.mod:37`); browser `Origin` behavior (from the Fetch spec, not tested live).
 
-## Status
+## Status (first pass)
 
 - Open CRITICAL: 1 (CRITICAL-1). Task 1.6 stays open until the batched correction and the reviewer's confirmation.
+
+## Confirmation pass (same reviewer, 2026-10-13, corrections `dbfe92b`..`99d0c7c`)
+
+**Verdict: PASS WITH FINDINGS. No CRITICAL is open; no HIGH is open.** No shell was available to the reviewer; the negative tests, `shellcheck` and `kubeconform` results are taken from the builder's `lke-checks/offline-render.txt`, not reproduced.
+
+| Finding | Status | Evidence |
+|---|---|---|
+| CRITICAL-1 | Resolved | SecurityPolicy stays in git with targetRefs `ipfs-webui` and `ipfs-webui-legacy` (`M:721-727`); `argocd.argoproj.io/sync-options: Prune=false` under `metadata.annotations` (`M:706`); the rollback is a forward fix and keeps `ipfs-webui` covered at every step; hand re-apply without tracking-id documented (`PR` Rollback step 3) |
+| HIGH-1 | Resolved | `OI:79` and the run_unauth block: legacy `POST /api/v0/version` and `GET /webui/` 401, console `/` 404, `webui.ipfs.io` origin 403 with kubo's body; `PR` expected-results rows 2, 3, 5, 7 |
+| HIGH-2 | Resolved | `PR:77-104` before merge (Secret name and `.htpasswd` key, key names only; DNS; `argocd app diff`); `PR:106-117` after sync, before restart (`console-tls` Ready; policy Accepted on both targets) |
+| MEDIUM-1 | Partially resolved | Property-based on backendRef to `ipfs-api` (`WA:35`); `sectionName` targets do not count (`WA:47`); empty set fails (`WA:57`); `--unrestricted-api` rejected (`WA:78-80`); gap N2 |
+| MEDIUM-2 | Resolved | `M:654` pins console `/ipfs` to `PathPrefix /ipfs/bafybeiblix77cfttmrmz5h54qacay5f4z5bgajc736ufiyoy5cus54stki`, equal to `WebUIPath` (`core/corehttp/webui.go:21`) and the postStart pin (`M:72`); the Web UI redirect and assets stay inside the prefix (`webui.go:154`, `core/corehttp/gateway.go:58`); weaker proof in check 8: N1 |
+| MEDIUM-3 | Resolved | `PR:119-130` |
+| MEDIUM-4 | Recorded as follow-up | `PR:132-138` |
+| LOW-1 | Resolved | forward fix; `git revert -m 1` noted for partial reverts |
+| LOW-2 | Resolved | `OI:117` `curl_escape`; credentials only on stdin; `OI:69` accepts only `https://console.prometheusags.ai` |
+| LOW-3 | Resolved | `OI:86` requires the `403 - Forbidden` body |
+| LOW-4 | Resolved | `PR` names kubo's 6 loopback and 2 Companion origins |
+| LOW-5 | Recorded as follow-up | `PR:139-143` |
+| LOW-6 | Resolved | `argocd app diff` before merge; `webui.ipfs.io` 403 check |
+
+New findings from the corrections (all LOW, none blocks OG-6):
+
+- **N1** Check 8 does not prove the `/ipfs` narrowing: `OI:83` requests `QmUNLLs...` (empty directory), which is not in `WebUIPaths`, so 5001 would answer 404 under the old rule too. Fix: also request a historic `WebUIPaths` build (for example v4.13.0 `/ipfs/bafybeiciqeyipumpmhxzlxnbqdbbv6u5uij4hy4wax64dmj7kvrhusiq6y/`) expecting 404, and add a positive check: credentialed console `GET /webui` returns 302 to `/ipfs/bafybeiblix...`, and `GET /ipfs/bafybeiblix.../` returns 200. This catches a mismatch between the image's `WebUIPath` and the pinned prefix (the OG-9 coupling), which fails closed but as a Web UI outage.
+- **N2** `WA` covers Service `ipfs-api` only (`WA:35`); `ipfs-headless` also exposes 5001 (`M:411-414`). Fix: treat any backendRef to `ipfs-headless` or to port 5001 as protected. Also the `--unrestricted-api` scan reads `containers[].args` only (`WA:80`), not `command`.
+- **N3** The rollback's re-check reports FAIL by design (`PR:263-265`, Rollback step 5): after rollback the console host is gone and the gateway origin is allowed again. Fix: run only the legacy-host unauthenticated checks (must still be 401), or add a `rollback` mode to `OI`.
+- **N4** The first before-merge item (`PR:77-86`) asks the live spec to "equal" this PR's, which cannot hold before `ipfs-webui-legacy` exists. Fix: "same name and same `basicAuth.users` Secret; targetRefs differ only by the added `ipfs-webui-legacy`".
+
+Still unverified (no cluster access): the live policy, the Secret and Argo's adoption; EG v1.9.1 on an invalid SecurityPolicy; console DNS and `console-tls` issuance; whether the image's compiled `WebUIPath` equals `bafybeiblix...`; the builder's offline results.
+
+## Status
+
+- Open CRITICAL: 0. Open HIGH: 0. Task 1.6 acceptance met. N1-N4 stay open as LOW items for the operator's OG-6 run and task 1.8; they were not corrected because the plan allows one batched correction cycle.
