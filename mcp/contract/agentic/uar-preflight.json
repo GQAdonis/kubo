@@ -1,8 +1,12 @@
 {
   "$schema": "./uar-preflight.schema.json",
-  "minVersion": null,
-  "settingsPath": null,
+  "minVersion": "1.1.0",
+  "settingsPath": "/api/uar/settings/effective",
   "settingsSchema": "./uar-effective-settings.schema.json",
   "recheckInterval": "30s",
-  "pinnedFrom": null
+  "pinnedFrom": {
+    "tag": "v1.1.0",
+    "artifact": "sha256:064f5004fb3ba76506abce5cf81285b2a8aa3e54fa5a22e2c2bfc97b1211e43b",
+    "report": "mcp/uar/spike/REPORT.md"
+  }
 }

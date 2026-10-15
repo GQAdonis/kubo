@@ -26,6 +26,12 @@ func check(t *testing.T, in UARCheckInput) UARReport {
 	return NewUARChecker(nil, nil, WithSettingsPath(testUARSettingsPath)).Check(t.Context(), in)
 }
 
+// withoutPin drops the contract's pinned minimum version and settings path
+// (v1.1.0 ships pinned), to cover the unpinned behavior.
+func withoutPin() UARCheckerOption {
+	return func(c *UARChecker) { c.pre.MinVersion, c.pre.SettingsPath, c.pre.PinnedFrom = nil, nil, nil }
+}
+
 func TestCheckUARRefusesUARDefaults(t *testing.T) {
 	u := newFakeUAR(t, "defaults")
 	u.set(func(u *fakeUAR) { u.requireAuth = false }) // JWT off, as shipped by the embedded config
@@ -90,7 +96,11 @@ func TestCheckUARVersionMinimumCountsPublishedReleasesOnly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			u := newFakeUAR(t, "profile")
 			u.set(func(u *fakeUAR) { u.version = tc.version })
-			rep := check(t, u.input(tc.min))
+			opts := []UARCheckerOption{WithSettingsPath(testUARSettingsPath)}
+			if tc.min == "" {
+				opts = append([]UARCheckerOption{withoutPin()}, opts...)
+			}
+			rep := NewUARChecker(nil, nil, opts...).Check(t.Context(), u.input(tc.min))
 			assert.Equal(t, tc.want, rep.Verdict(), rep.Summary())
 			if tc.code != "" {
 				assert.Contains(t, codes(rep, SeverityRefuse), tc.code)
