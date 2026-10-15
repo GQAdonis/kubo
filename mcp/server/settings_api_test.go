@@ -294,7 +294,6 @@ func TestSettingsWriteValidationSharedWithStartup(t *testing.T) {
 		"non-http scheme":     `{"backend":{"base_url":"ftp://127.0.0.1/v1"}}`,
 		"query in URL":        `{"backend":{"base_url":"http://127.0.0.1:1/v1?key=abc"}}`,
 		"empty model":         `{"backend":{"model":""}}`,
-		"uar kind":            `{"backend":{"kind":"uar"}}`,
 		"unknown kind":        `{"backend":{"kind":"ollama"}}`,
 		"unknown write field": `{"backendz":{}}`,
 		"not JSON":            `{`,

@@ -108,6 +108,10 @@ type Server struct {
 	// is typed any so this file builds with the noagent tag, which leaves the
 	// agent code out.
 	agentExt any
+	// uarExt is the UAR backend (agent-backend-uar), set when the backend kind
+	// is uar; typed any for the same reason as agentExt. While it is set, Agent
+	// returns nil: the loop and the UAR proxy never both serve a run.
+	uarExt any
 	// agentChange, when set by OnAgentChange, runs once after every successful
 	// ApplyAgentSettings (agent.go).
 	agentChange func()

@@ -1,0 +1,4 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run"}
+
+data: {"type":"RUN_ERROR","message":"no model configured","code":"no_model"}
+

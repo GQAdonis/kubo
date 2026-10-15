@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"io/fs"
 	"strings"
 	"testing"
 	"time"
@@ -17,9 +18,24 @@ func TestUARPreflightLoads(t *testing.T) {
 	if d, _ := p.Recheck(); d != 30*time.Second {
 		t.Errorf("recheck interval %s, want 30s (ADR-0007)", d)
 	}
-	// No release has passed the topology-B gate (no mcp/uar/spike/REPORT.md).
-	if p.MinVersion != nil || p.SettingsPath != nil || p.PinnedFrom != nil {
-		t.Errorf("UAR pinned without a gate report: %+v", p)
+	// v1.1.0 is pinned (agent-backend-uar 1.4): version, settings path and the
+	// evidence travel together, and nothing in the file is null.
+	if p.MinVersion == nil || *p.MinVersion != "1.1.0" {
+		t.Errorf("minVersion %v, want 1.1.0", p.MinVersion)
+	}
+	if p.SettingsPath == nil || *p.SettingsPath != "/api/uar/settings/effective" {
+		t.Errorf("settingsPath %v, want /api/uar/settings/effective", p.SettingsPath)
+	}
+	want := UARPin{
+		Tag:      "v1.1.0",
+		Artifact: "sha256:064f5004fb3ba76506abce5cf81285b2a8aa3e54fa5a22e2c2bfc97b1211e43b",
+		Report:   "mcp/uar/spike/REPORT.md",
+	}
+	if p.PinnedFrom == nil || *p.PinnedFrom != want {
+		t.Errorf("pinnedFrom %+v, want %+v", p.PinnedFrom, want)
+	}
+	if strings.Contains(string(mustRead(t, UARPreflightFile)), "null") {
+		t.Errorf("%s contains null", UARPreflightFile)
 	}
 }
 
@@ -75,4 +91,13 @@ func TestUARSettingsFixtures(t *testing.T) {
 			t.Errorf("%s: validated", name)
 		}
 	}
+}
+
+func mustRead(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := fs.ReadFile(files, name)
+	if err != nil {
+		t.Fatalf("read %s: %v", name, err)
+	}
+	return data
 }

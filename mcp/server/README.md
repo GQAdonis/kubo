@@ -25,6 +25,7 @@ Go package `github.com/ipfs/kubo/mcp/server`: the IPFS MCP server behind `ipfs m
 | `index_bulk.go`, `index_bulk_tools.go`, `index_routes.go` | the bulk run engine, `ipfs_index_bulk_*` and `POST /index/search` / `GET /index/status` (see Media describer, bulk indexing and search routes) |
 | `pagination.go` | opaque cursors for list tools |
 | `agui.go`, `agui_wire.go`, `agui_stream.go`, `agui_resume.go` | the AG-UI endpoint `POST /agui` (`noagent` compiles it out); protocol sources in `agui/SOURCES.md` |
+| `uar_backend.go`, `uar_client.go`, `uar_provision.go`, `uar_proxy.go`, `uar_settings.go` | the UAR agent backend behind `/agui` (see UAR agent backend); `noagent` compiles it out |
 | `principals.go`, `access.go`, `access_identity.go`, `egress.go`, `policy.go`, `uarcheck.go` | principal config rules, per-request policy, egress acknowledgement, the UAR preflight |
 
 To add a group, create `tools_<group>.go` with a factory and call `registerGroup` from its `init`. Handlers use `s.daemon.Call(ctx, "pin/ls", args, opts, &out)`; tests use a fake `Daemon`.
@@ -119,6 +120,19 @@ Change `mcp-llm-proxy-loop` (ADR-0004, tasks 1.1 to 1.6). Everything here is com
 Use: `srv.EnableAgent(settings)` (nil settings leave the agent off), then `srv.Agent().Run(ctx, identity, RunInput{...}, emit)`. The AG-UI and A2A endpoints adapt `Event` and `RunResult`; the loop owns no transport.
 
 The loop announces a model reply once, as `EventReply` carrying all its tool calls in order, followed by one `EventToolCall` each, before any call runs. A call that waits behind an interrupt is therefore announced in the run that received the reply and never again. `Agent.OpenInterrupt(identity, sessionID)` returns a session's open interrupt to its owner only (`ErrSessionNotFound` for anyone else); a transport calls it, and matches the interrupt ID the client names, before it records any decision. `Server.AwaitConfirmation(ctx, id)` blocks until a confirmation is no longer pending and decides nothing.
+
+## UAR agent backend
+
+Change `agent-backend-uar` (ADR-0010). `llm.kind: "uar"` (or a settings write with `backend.kind: "uar"`) replaces the agent loop with a proxy to a UAR agent; `Server.Agent()` returns nil and `Server.UARBackend()` serves `/agui`. The user-facing description is in `docs/mcp/agentic.md`; the wire contract is the pinned `mcp/uar/v1.1.0-kubo.md`.
+
+| Piece | File | Behavior |
+| --- | --- | --- |
+| Settings | `uar_settings.go`, `agent_settings.go` | `Config.resolveUAR` builds `UARSettings` from `llm.uar` and refuses the kind unless `uar-preflight.json` pins a release. It contacts nothing. The UAR credential is `llm.api_key`; `llm.uar.mcp_principal` names the `uar` principal whose credential becomes the per-run grant. |
+| Client | `uar_client.go` | Standard library, no redirects, no proxy environment, the credential read at every request, bounded replies, errors that carry a status and never a body. `checkRelease` compares the agent card's version with the pinned minimum. |
+| Provisioning | `uar_provision.go` | On the first run (and again after a backend change): release check, `SKILL.md` upload (`POST /api/uar/skills/import-content`, conflict is not an error), agent create or `PUT` with `If-Match`, skill bindings made equal to the skills directory. All wire shapes the contract does not state are in this file. |
+| Proxy | `uar_proxy.go` | Relays UAR's AG-UI events with the client's thread and run ids; the UAR thread id is a digest of principal and thread. Interrupts are translated to the kubo shape; one is shown at a time and the resume is sent when all are answered; a denial denies the rest; interrupts the chat cannot show are answered by kubo and never approved. Bounded events, hops, interrupts and threads. |
+
+Tests: `uar_proxy_test.go` (fixtures in `mcp/uar/fixtures/v1.1.0`), `uar_backend_settings_test.go`; `test/cli/mcp_uar_backend_fake_test.go` runs the built binary against a stand-in, and `test/cli/mcp_uar_backend_test.go` is the run against the published image (opt-in, see its header).
 
 ## AG-UI endpoint
 

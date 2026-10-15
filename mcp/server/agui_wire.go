@@ -188,8 +188,11 @@ func aguiHTTPStatus(err error) (status int, code string, retry bool) {
 	var (
 		input errAGUIInput
 		te    *ToolError
+		ub    *uarBackendError
 	)
 	switch {
+	case errors.As(err, &ub):
+		return http.StatusBadGateway, CodeInternal, true
 	case errors.As(err, &te):
 		return http.StatusForbidden, te.Code, false
 	case errors.As(err, &input),

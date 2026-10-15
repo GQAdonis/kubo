@@ -89,6 +89,13 @@ func (u *mcpFakeUAR) onlyCardRead() bool {
 	return true
 }
 
+// pathHits reports how many requests named path.
+func (u *mcpFakeUAR) pathHits(path string) int {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.paths[path]
+}
+
 // principalConfig writes an ipfs mcp config file and returns its path.
 func principalConfig(t *testing.T, body string) string {
 	t.Helper()
@@ -238,7 +245,7 @@ func TestMCPPrincipalCheckUAR(t *testing.T) {
 	node := harness.NewT(t).NewNode().Init()
 	env := []string{mcpFakeUARAdminEnv + "=" + mcpFakeUARAdminToken}
 
-	t.Run("verify refuses while no settings endpoint is pinned and reads only the card", func(t *testing.T) {
+	t.Run("verify reads the pinned effective-settings path and refuses what it cannot read", func(t *testing.T) {
 		t.Parallel()
 		u := newMCPFakeUAR(t)
 		stdout, stderr, code := runCheckUAR(t, node, env, u.cardURL(),
@@ -248,7 +255,8 @@ func TestMCPPrincipalCheckUAR(t *testing.T) {
 		assert.Contains(t, stdout, "[refuse] auth_probe_inconclusive")
 		assert.Contains(t, stdout, "verdict: refuse")
 		assert.NotContains(t, stdout+stderr, mcpFakeUARAdminToken, "the admin credential is never printed")
-		assert.True(t, u.onlyCardRead(), "no settings or probe request is made without a pinned path")
+		assert.False(t, u.onlyCardRead(), "the pinned effective-settings path is read (v1.1.0)")
+		assert.Positive(t, u.pathHits("/api/uar/settings/effective"))
 	})
 
 	t.Run("assert records both as info and accepts a published version", func(t *testing.T) {
@@ -258,11 +266,10 @@ func TestMCPPrincipalCheckUAR(t *testing.T) {
 		stdout, stderr, code := runCheckUAR(t, node, env, u.srv.URL,
 			"--min-version", "1.4.0", "--check", "assert", "--mcp-config", principalConfig(t, `{"http":{"listen":"127.0.0.1:5050"}}`))
 		assert.Equal(t, 0, code, "stdout: %s\nstderr: %s", stdout, stderr)
-		assert.Contains(t, stdout, "[info] settings_unreadable")
+		assert.Contains(t, stdout, "[info] settings_asserted")
 		assert.Contains(t, stdout, "[info] auth_probe_inconclusive")
 		assert.Contains(t, stdout, "check: assert")
 		assert.Contains(t, stdout, "verdict: ok")
-		assert.True(t, u.onlyCardRead())
 	})
 
 	t.Run("the version check runs under assert", func(t *testing.T) {
@@ -273,9 +280,13 @@ func TestMCPPrincipalCheckUAR(t *testing.T) {
 		assert.NotEqual(t, 0, code)
 		assert.Contains(t, stdout, "version_too_old")
 
-		stdout, _, code = runCheckUAR(t, node, env, u.cardURL(), "--check", "assert") // no minimum pinned or given
+		// No --min-version: the contract's pinned minimum (1.1.0) applies. A card
+		// older than it is refused, and min_version_not_set is gone.
+		u.edit(func(u *mcpFakeUAR) { u.version = "1.0.0" })
+		stdout, _, code = runCheckUAR(t, node, env, u.cardURL(), "--check", "assert")
 		assert.NotEqual(t, 0, code)
-		assert.Contains(t, stdout, "min_version_not_set")
+		assert.Contains(t, stdout, "version_too_old")
+		assert.NotContains(t, stdout, "min_version_not_set")
 	})
 
 	t.Run("an unpublished version is refused", func(t *testing.T) {
@@ -320,7 +331,7 @@ func TestMCPPrincipalUARSessionChecks(t *testing.T) {
 	cs, err := p.namedClient(mcpHTTPOtherToken, "uar")
 	require.NoError(t, err, "stderr: %s", p.stderr.String())
 	assert.Contains(t, mcpListedTools(t, cs), "pin_add")
-	assert.True(t, u.onlyCardRead(), "no settings or probe request is made without a pinned path")
+	assert.Positive(t, u.pathHits("/api/uar/settings/effective"), "the pinned effective-settings path is read; under assert its failure is only a finding")
 
 	// The instance is downgraded after startup: the next session initialize is
 	// refused, for that principal only.
@@ -331,7 +342,10 @@ func TestMCPPrincipalUARSessionChecks(t *testing.T) {
 	assert.NotEmpty(t, mcpListedTools(t, p.mustClient(mcpHTTPReaderToken, nil)), "other principals keep running")
 }
 
-func TestMCPPrincipalUARVerifyIsRefusedWhileNoSettingsEndpointIsPinned(t *testing.T) {
+// TestMCPPrincipalUARVerifyIsRefusedWhenSettingsAreUnreadable: v1.1.0 pins the
+// effective-settings path, so verify reads it; this instance serves nothing
+// there, and the principal is refused (fail closed).
+func TestMCPPrincipalUARVerifyIsRefusedWhenSettingsAreUnreadable(t *testing.T) {
 	t.Parallel()
 	node := harness.NewT(t).NewNode().Init().StartDaemon()
 	defer node.StopDaemon()
@@ -346,7 +360,7 @@ func TestMCPPrincipalUARVerifyIsRefusedWhileNoSettingsEndpointIsPinned(t *testin
 	_, err := p.namedClient(mcpHTTPOtherToken, "uar")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "settings_unreadable")
-	assert.True(t, u.onlyCardRead())
+	assert.Positive(t, u.pathHits("/api/uar/settings/effective"))
 	assert.NotEmpty(t, mcpListedTools(t, p.mustClient(mcpHTTPReaderToken, nil)), "other principals keep running")
 }
 

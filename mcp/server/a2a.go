@@ -143,6 +143,12 @@ func (h *a2aHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "this endpoint serves A2A principals only", http.StatusForbidden)
 		return
 	}
+	if h.srv.Agent() == nil {
+		// A settings write moved the backend to a UAR agent (or the loop was
+		// never installed): A2A runs the agent loop and has nothing to run.
+		http.Error(w, "the A2A endpoint needs the OpenAI-compatible agent loop; the configured backend does not provide it", http.StatusServiceUnavailable)
+		return
+	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		var tooBig *http.MaxBytesError
