@@ -62,7 +62,7 @@
             "description": "The bulk run summary: the run object of the ipfs_index_bulk_status output (ADR-0011 V5: 'ipfs_index_status output plus the bulk run summary'). Present when a bulk run exists; absent when no run has ever been started or embeddings.bulk.enabled is false."
           }
         },
-        "composition": "The body is the referenced ipfs_index_status output object plus the one added property above; no field of either tool output is restated in this descriptor."
+        "composition": "The body is the referenced ipfs_index_status output object (including its optional by_kind map of indexed-file counts per content kind, which the Web UI status panel shows) plus the one added property above; no field of either tool output is restated in this descriptor."
       }
     }
   ],

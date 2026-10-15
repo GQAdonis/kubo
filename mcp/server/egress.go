@@ -26,6 +26,9 @@ const (
 	// ReasonStdioClientIsUAR: the MCP client identifies itself as UAR on a
 	// session that is not a configured uar principal.
 	ReasonStdioClientIsUAR = "client_identifies_as_uar"
+	// ReasonBackendChanged: a resume of a confirmation whose run started on a
+	// model backend that a settings write has since moved or re-keyed.
+	ReasonBackendChanged = "backend_changed"
 )
 
 // normalizeHost lowercases a host or host:port and strips brackets and a
@@ -47,19 +50,24 @@ func sameHostPort(a, b string) bool {
 	return ah != "" && ah == bh && ap == bp
 }
 
-// IsLocalHost reports whether an endpoint host names this machine: localhost, a
-// *.localhost name or a loopback address. The egress_ack sentinel "local" is not
-// a host name (a machine called "local" is not loopback); AckCovers handles it.
+// IsLocalHost reports whether an endpoint host names this machine: the name
+// localhost or a literal loopback address. A *.localhost name is not accepted:
+// RFC 6761 lets a resolver answer it with loopback, but Go's resolver (checked
+// on the go.mod toolchain: net/conf.go's isLocalhost only orders NSS sources)
+// sends it to the configured DNS server, so its address is whatever that
+// server says, and a key or node content could leave the machine. The egress_ack
+// sentinel "local" is not a host name (a machine called "local" is not
+// loopback); AckCovers handles it.
 func IsLocalHost(h string) bool {
 	host, _ := normalizeHost(h)
 	if host == "" {
 		return false
 	}
-	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+	if host == "localhost" {
 		return true
 	}
 	addr, err := netip.ParseAddr(host)
-	return err == nil && addr.IsLoopback()
+	return err == nil && addr.Unmap().IsLoopback()
 }
 
 // EgressDisabled is the provider_host of a provider that is configured but not

@@ -137,6 +137,42 @@ func TestInsecureHTTPHostsAllowsOnlyListedHosts(t *testing.T) {
 	t.Run("the contract in-cluster example still parses and validates", func(t *testing.T) {
 		t.Setenv("SURREAL_CREDENTIALS", "root:pw")
 		cfg := exampleConfig(t, "vector-search-in-cluster.json")
-		assert.Equal(t, []string{"ipfs-xberg.ipfs.svc:8000", "ipfs-embedder.ipfs.svc:11434"}, cfg.Embeddings.InsecureHTTPHosts)
+		assert.Equal(t, []string{"ipfs-surrealdb.ipfs.svc:8000", "ipfs-xberg.ipfs.svc:8000", "ipfs-embedder.ipfs.svc:11434"}, cfg.Embeddings.InsecureHTTPHosts)
+	})
+}
+
+func TestInsecureHTTPHostsCoversAStoreWithACredential(t *testing.T) {
+	parse := func(t *testing.T, endpoint, credential, hosts string) embeddings.Settings {
+		t.Helper()
+		t.Setenv("IPFS_MCP_TEST_DB", "root:secret")
+		cred := ""
+		if credential != "" {
+			cred = `,"credential":{"env":"` + credential + `"}`
+		}
+		cfg, err := ParseConfig([]byte(`{"embeddings":{"mode":"remote","remote":{"endpoint":"` + endpoint + `","namespace":"n","database":"d"` + cred + `},
+		  "embedder":{"base_url":"http://127.0.0.1:11434/v1","model":"m","dimensions":8},
+		  "insecure_http_hosts":` + hosts + `}}`))
+		require.NoError(t, err)
+		set, err := cfg.Embeddings.Settings()
+		require.NoError(t, err)
+		return set
+	}
+
+	t.Run("a credential over plain http to an unlisted host is refused naming the key", func(t *testing.T) {
+		err := parse(t, "http://surreal.ipfs.svc:8000", "IPFS_MCP_TEST_DB", `[]`).Validate()
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "embeddings.remote.endpoint")
+		assert.ErrorContains(t, err, "embeddings.insecure_http_hosts")
+	})
+	t.Run("the host in the list is accepted", func(t *testing.T) {
+		require.NoError(t, parse(t, "http://surreal.ipfs.svc:8000", "IPFS_MCP_TEST_DB", `["surreal.ipfs.svc:8000"]`).Validate())
+	})
+	t.Run("another port of the host is still refused", func(t *testing.T) {
+		require.Error(t, parse(t, "http://surreal.ipfs.svc:8000", "IPFS_MCP_TEST_DB", `["surreal.ipfs.svc:9000"]`).Validate())
+	})
+	t.Run("no credential, https and loopback need no entry", func(t *testing.T) {
+		require.NoError(t, parse(t, "http://surreal.ipfs.svc:8000", "", `[]`).Validate())
+		require.NoError(t, parse(t, "https://surreal.example.test", "IPFS_MCP_TEST_DB", `[]`).Validate())
+		require.NoError(t, parse(t, "http://127.0.0.1:8000", "IPFS_MCP_TEST_DB", `[]`).Validate())
 	})
 }

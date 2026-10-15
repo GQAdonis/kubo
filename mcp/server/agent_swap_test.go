@@ -24,6 +24,15 @@ func (e *agentEnv) swapTo(t *testing.T, m *scriptedModel) {
 	e.a.swapSnapshot(snap)
 }
 
+// swapModelOnly is a settings apply that changes the model name and nothing
+// that identifies the backend: same endpoint, same key.
+func (e *agentEnv) swapModelOnly(t *testing.T, key *SecretRef) {
+	t.Helper()
+	snap, err := newSnapshot(AgentSettings{BaseURL: e.model.baseURL(), Model: "other-model", APIKey: key, Timeout: 5 * time.Second})
+	require.NoError(t, err)
+	e.a.swapSnapshot(snap)
+}
+
 // gateStep answers with payload, but only once release is closed; started is
 // closed when the request arrives, so the test can swap the backend while the
 // run is in flight.
@@ -36,9 +45,12 @@ func gateStep(started chan<- struct{}, release <-chan struct{}, payload func(mod
 	}
 }
 
+// A swap that changes only the model (or the prompt) keeps the open interrupt
+// on the backend its run started with: same endpoint, same key.
 func TestAgentSwapResumeUsesOriginalBackend(t *testing.T) {
 	t.Setenv("IPFS_MCP_TEST_SWAP_KEY", "old-key")
-	e := newAgentEnv(t, agentEnvOpts{key: &SecretRef{Env: "IPFS_MCP_TEST_SWAP_KEY"}},
+	key := &SecretRef{Env: "IPFS_MCP_TEST_SWAP_KEY"}
+	e := newAgentEnv(t, agentEnvOpts{key: key},
 		callStep(10, pinAddCall(t)), sayStep("Pinned on the old backend."))
 	id := uiID(nil, "pin")
 
@@ -47,9 +59,8 @@ func TestAgentSwapResumeUsesOriginalBackend(t *testing.T) {
 	in := res.Interrupts[0]
 	old := e.a.snap.Load()
 
-	newModel := newScriptedModel(t, sayStep("on the new backend"))
-	e.swapTo(t, newModel)
-	assert.Equal(t, secret("old-key"), old.llm.key, "the open interrupt retains the old backend for its resume")
+	e.swapModelOnly(t, key)
+	assert.Equal(t, secret("old-key"), old.llm.key, "the open interrupt retains the old snapshot for its resume")
 
 	_, resolve := e.resolver.last(t)
 	require.NoError(t, resolve(true))
@@ -57,10 +68,120 @@ func TestAgentSwapResumeUsesOriginalBackend(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, OutcomeSuccess, res2.Outcome)
 	assert.Equal(t, "Pinned on the old backend.", res2.Final)
-	assert.Equal(t, 2, e.model.hits(), "the resumed run asked the original backend again")
-	assert.Zero(t, newModel.hits(), "the resumed run never touched the new backend")
+	assert.Equal(t, 2, e.model.hits(), "the resumed run asked the original snapshot again")
 	assert.Equal(t, 1, e.d.count("pin/add"), "the write ran exactly once")
 	assert.Empty(t, string(old.llm.key), "no run uses the old snapshot anymore: its key is dropped")
+}
+
+// L5: a swap that moves the endpoint or clears or replaces the key revokes the
+// retained snapshot of an open interrupt: the key is dropped at once and the
+// resume fails with ErrBackendChanged, never reaching either backend.
+func TestAgentSwapRevokesOpenInterrupt(t *testing.T) {
+	oldKey := &SecretRef{Env: "IPFS_MCP_TEST_SWAP_KEY"}
+	cases := map[string]func(t *testing.T, e *agentEnv, newModel *scriptedModel){
+		"endpoint moved": func(t *testing.T, e *agentEnv, newModel *scriptedModel) {
+			snap, err := newSnapshot(AgentSettings{BaseURL: newModel.baseURL(), Model: "m", APIKey: oldKey, Timeout: 5 * time.Second})
+			require.NoError(t, err)
+			e.a.swapSnapshot(snap)
+		},
+		"key cleared": func(t *testing.T, e *agentEnv, _ *scriptedModel) {
+			snap, err := newSnapshot(AgentSettings{BaseURL: e.model.baseURL(), Model: "m", Timeout: 5 * time.Second})
+			require.NoError(t, err)
+			e.a.swapSnapshot(snap)
+		},
+		"key replaced": func(t *testing.T, e *agentEnv, _ *scriptedModel) {
+			t.Setenv("IPFS_MCP_TEST_SWAP_KEY_2", "new-key")
+			snap, err := newSnapshot(AgentSettings{BaseURL: e.model.baseURL(), Model: "m", APIKey: &SecretRef{Env: "IPFS_MCP_TEST_SWAP_KEY_2"}, Timeout: 5 * time.Second})
+			require.NoError(t, err)
+			e.a.swapSnapshot(snap)
+		},
+	}
+	for name, swap := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("IPFS_MCP_TEST_SWAP_KEY", "old-key")
+			e := newAgentEnv(t, agentEnvOpts{key: oldKey}, callStep(10, pinAddCall(t)), sayStep("must not run"))
+			id := uiID(nil, "pin")
+			res, _ := e.run(id, "pin it")
+			require.Equal(t, OutcomeInterrupt, res.Outcome)
+			in := res.Interrupts[0]
+			old := e.a.snap.Load()
+			require.Equal(t, secret("old-key"), old.llm.key)
+
+			newModel := newScriptedModel(t, sayStep("new backend"))
+			swap(t, e, newModel)
+			assert.Empty(t, string(old.llm.key), "the old key leaves the retained snapshot at the swap")
+
+			_, resolve := e.resolver.last(t)
+			require.NoError(t, resolve(true))
+			_, _, err := e.resume(id, res.SessionID, ResumeEntry{InterruptID: in.ID, Status: ResumeResolved, Approved: true})
+			require.ErrorIs(t, err, ErrBackendChanged)
+			assert.Equal(t, 1, e.model.hits(), "the resume never reached the old backend")
+			assert.Zero(t, newModel.hits(), "nor the new one")
+			assert.Zero(t, e.d.count("pin/add"), "the confirmed write did not run on a backend the operator moved away from")
+
+			// The error is stable: asking again gives the same answer, and a new
+			// message starts a fresh run on the current backend.
+			_, _, err = e.resume(id, res.SessionID, ResumeEntry{InterruptID: in.ID, Status: ResumeResolved, Approved: true})
+			require.ErrorIs(t, err, ErrBackendChanged)
+		})
+	}
+}
+
+// A run that was in flight when the endpoint moved and then ends on an
+// interrupt must not retain its stale snapshot either.
+func TestAgentSwapRevokesInterruptOfRunInFlight(t *testing.T) {
+	t.Setenv("IPFS_MCP_TEST_SWAP_KEY", "old-key")
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	unblock := func() { once.Do(func() { close(release) }) }
+	t.Cleanup(unblock)
+	e := newAgentEnv(t, agentEnvOpts{key: &SecretRef{Env: "IPFS_MCP_TEST_SWAP_KEY"}},
+		gateStep(started, release, callStep(10, pinAddCall(t))), sayStep("must not run"))
+	id := uiID(nil, "pin")
+
+	type outcome struct {
+		res *RunResult
+		err error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		res, err := e.a.Run(t.Context(), id, RunInput{Message: "pin it"}, nil)
+		done <- outcome{res, err}
+	}()
+	<-started
+	old := e.a.snap.Load()
+	e.swapTo(t, newScriptedModel(t, sayStep("new backend")))
+	unblock()
+
+	out := <-done
+	require.NoError(t, out.err)
+	require.Equal(t, OutcomeInterrupt, out.res.Outcome)
+	assert.Empty(t, string(old.llm.key), "the interrupt of a stale run keeps no key")
+	_, _, err := e.resume(id, out.res.SessionID, ResumeEntry{InterruptID: out.res.Interrupts[0].ID, Status: ResumeResolved, Approved: true})
+	require.ErrorIs(t, err, ErrBackendChanged)
+}
+
+// A revoked interrupt's confirmation is denied, so the person is not left with
+// a prompt that can no longer run, and a new message continues the session.
+func TestAgentSwapRevokedResumeDeniesConfirmation(t *testing.T) {
+	e := newAgentEnv(t, agentEnvOpts{}, callStep(10, pinAddCall(t)), sayStep("must not run"))
+	id := uiID(nil, "pin")
+	res, _ := e.run(id, "pin it")
+	require.Equal(t, OutcomeInterrupt, res.Outcome)
+	in := res.Interrupts[0]
+
+	newModel := newScriptedModel(t, sayStep("fresh start on the new backend"))
+	e.swapTo(t, newModel)
+	_, _, err := e.resume(id, res.SessionID, ResumeEntry{InterruptID: in.ID, Status: ResumeResolved, Approved: true})
+	require.ErrorIs(t, err, ErrBackendChanged)
+	require.ErrorIs(t, e.s.ResolveConfirmation(in.ConfirmationID, ResolverLinuxPolkit, true), ErrConfirmationResolved,
+		"the revoked resume already recorded the denial")
+
+	res2, err := e.a.Run(t.Context(), id, RunInput{SessionID: res.SessionID, Message: "carry on"}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "fresh start on the new backend", res2.Final)
+	assert.Zero(t, e.d.count("pin/add"))
 }
 
 func TestAgentSwapMidStream(t *testing.T) {
@@ -108,7 +229,7 @@ func TestAgentSwapKeepsPendingConfirmation(t *testing.T) {
 	require.Equal(t, OutcomeInterrupt, res.Outcome)
 	in := res.Interrupts[0]
 
-	e.swapTo(t, newScriptedModel(t, sayStep("new backend")))
+	e.swapModelOnly(t, nil)
 
 	// The confirmation opened before the swap still resolves, exactly once.
 	require.NoError(t, e.s.ResolveConfirmation(in.ConfirmationID, ResolverLinuxPolkit, true))
@@ -140,7 +261,7 @@ func TestAgentSwapDropsPreviousKey(t *testing.T) {
 		require.Equal(t, OutcomeInterrupt, res.Outcome)
 		old := e.a.snap.Load()
 
-		e.swapTo(t, newScriptedModel(t))
+		e.swapModelOnly(t, &SecretRef{Env: "IPFS_MCP_TEST_SWAP_KEY"})
 		assert.Equal(t, secret("k1"), old.llm.key, "the open interrupt still retains the snapshot")
 
 		// Idle eviction drops the session; nothing is left that could resume

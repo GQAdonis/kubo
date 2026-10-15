@@ -380,7 +380,8 @@ func (h *HTTPServer) originOK(r *http.Request, origin string, allowed []string, 
 
 // setStrictCORS answers a listed origin with exactly the policy: the origin
 // echoed (never *), the methods and headers named, and Vary: Origin. It sends
-// no Access-Control-Allow-Credentials, no exposed headers and no max-age.
+// the policy's exposed headers when it lists any, and no
+// Access-Control-Allow-Credentials and no max-age.
 func setStrictCORS(w http.ResponseWriter, origin string, c *CORSPolicy) {
 	hd := w.Header()
 	hd.Set("Access-Control-Allow-Origin", origin)

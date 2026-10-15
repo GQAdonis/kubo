@@ -203,6 +203,8 @@ func aguiHTTPStatus(err error) (status int, code string, retry bool) {
 		return http.StatusNotFound, CodeNotFound, false
 	case errors.Is(err, ErrSessionBusy):
 		return http.StatusConflict, CodeSessionBusy, true
+	case errors.Is(err, ErrBackendChanged):
+		return http.StatusConflict, CodeFailedPrecondition, false
 	case errors.Is(err, ErrInterruptOpen), errors.Is(err, ErrSessionFull):
 		return http.StatusConflict, CodeFailedPrecondition, false
 	case errors.Is(err, ErrRateLimited):

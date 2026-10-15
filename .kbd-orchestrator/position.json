@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1826,
-  "derivedRevision": 1826,
+  "sourceRevision": 1848,
+  "derivedRevision": 1848,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1826
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1848
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-15T10:26:47.284737Z",
+  "updatedAt": "2026-10-15T12:28:16.712163Z",
   "cursor": [
     "agent-backend-settings",
     "uar-conformance-release",
@@ -19,7 +19,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 56,
+      "done": 59,
       "total": 76
     },
     "children": [
@@ -29,7 +29,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 22,
+          "done": 25,
           "total": 36
         },
         "children": [
@@ -157,9 +157,9 @@
           {
             "type": "change",
             "id": "mcp-agent-settings-api",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 8,
+              "done": 9,
               "total": 9
             }
           },
@@ -276,8 +276,8 @@
             "id": "settings-security-review",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 3
+              "done": 3,
+              "total": 4
             }
           },
           {
@@ -328,9 +328,9 @@
           {
             "type": "change",
             "id": "vector-search-contract",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 9,
+              "done": 11,
               "total": 11
             }
           },
@@ -373,9 +373,9 @@
           {
             "type": "change",
             "id": "desktop-search-sidecar",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 6,
+              "done": 7,
               "total": 7
             }
           },
@@ -384,8 +384,8 @@
             "id": "vector-search-security-review",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 3
+              "done": 3,
+              "total": 4
             }
           },
           {

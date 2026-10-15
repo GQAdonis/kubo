@@ -122,7 +122,7 @@
     "embeddings.bulk.files_per_minute": { "tests": ["TestConfigKeyAnnotations", "TestMCPBulkIndexDisabled"] },
     "embeddings.search_route": { "tests": ["TestMCPIndexSearchRouteDisabled", "TestConfigExamplesValidate"] },
     "embeddings.search_route.enabled": { "tests": ["TestMCPIndexSearchRouteDisabled"] },
-    "embeddings.insecure_http_hosts": { "tests": ["TestInsecureHTTPHostsAllowsOnlyListedHosts", "TestConfigExamplesValidate"] }
+    "embeddings.insecure_http_hosts": { "tests": ["TestInsecureHTTPHostsAllowsOnlyListedHosts", "TestInsecureHTTPHostsCoversAStoreWithACredential", "TestConfigExamplesValidate"] }
   },
   "options": {
     "ipfs mcp": {

@@ -103,10 +103,10 @@ func TestSearchFilteredWidensItsReadUntilTopKPassTheFilter(t *testing.T) {
 		svc := embeddings.NewService(embeddings.Settings{Mode: embeddings.ModeEmbedded}, st, mustTestEmbedder(t, newEmbedServer(t).URL+"/v1"))
 		rows := make([]embeddings.Row, 0, near)
 		for i := range near {
-			rows = append(rows, embeddings.Row{CID: "bafyD", ChunkIndex: i, Model: "m", Vector: axis(0), Kind: "image", Source: embeddings.SourceDescription, Text: "d"})
+			rows = append(rows, embeddings.Row{CID: "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", ChunkIndex: i, Model: "m", Vector: axis(0), Kind: "image", Source: embeddings.SourceDescription, Text: "d"})
 		}
-		require.NoError(t, st.Replace(t.Context(), "bafyD", rows))
-		require.NoError(t, st.Replace(t.Context(), "bafyT", []embeddings.Row{{CID: "bafyT", Model: "m", Vector: axis(1)}}))
+		require.NoError(t, st.Replace(t.Context(), "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", rows))
+		require.NoError(t, st.Replace(t.Context(), "bafkreicegysetgaysvp3255ncz6tifye5uoubvufwrrvehfbicm56y2xl4", []embeddings.Row{{CID: "bafkreicegysetgaysvp3255ncz6tifye5uoubvufwrrvehfbicm56y2xl4", Model: "m", Vector: axis(1)}}))
 		return svc, st
 	}
 	covers := func(string) bool { return true }
@@ -117,7 +117,7 @@ func TestSearchFilteredWidensItsReadUntilTopKPassTheFilter(t *testing.T) {
 		hits, err := svc.SearchFiltered(t.Context(), covers, "cats are here", "", 1, textOnly)
 		require.NoError(t, err)
 		require.Len(t, hits, 1)
-		assert.Equal(t, "bafyT", hits[0].CID)
+		assert.Equal(t, "bafkreicegysetgaysvp3255ncz6tifye5uoubvufwrrvehfbicm56y2xl4", hits[0].CID)
 		assert.Equal(t, []int{40, 160}, st.fetches, "the first read of 40 held only descriptions, so the second read was wider")
 	})
 
@@ -200,7 +200,9 @@ func TestBulkDirectoryListingFailures(t *testing.T) {
 	})
 
 	t.Run("a directory the node does not hold is skipped not_local", func(t *testing.T) {
-		b, file := setup(t, func() error { return &RPCError{Command: "ls", Message: offlineMessage + "bafyx"} })
+		b, file := setup(t, func() error {
+			return &RPCError{Command: "ls", Message: offlineMessage + "bafkreie7yyitkkw4s644k7mu7eo4lvwf2p7ahep6jwn7msavbnkvscowsm"}
+		})
 		_, run := b.run(b.principal(), nil)
 		assert.Equal(t, embeddings.RunCompleted, run.State)
 		assert.Equal(t, []string{file}, b.indexedCIDs())

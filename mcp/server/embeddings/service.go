@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 )
@@ -60,6 +61,7 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 		}
 		svc.sup = sup
 		c = newSurrealClient(sup.Endpoint(), embeddedNamespace, embeddedDatabase, parseCredential(sup.Credential()), opts.HTTPClient)
+		c.gone = sup.Done()
 	case ModeRemote:
 		r := s.Remote
 		c = newSurrealClient(r.Endpoint, r.Namespace, r.Database, parseCredential(r.Credential), opts.HTTPClient)
@@ -146,8 +148,10 @@ func (s *Service) WithDescriber(d *Describer) *Service {
 // Mode is the configured mode.
 func (s *Service) Mode() Mode { return s.settings.Mode }
 
-// Store gives direct access to the vector store (deletion and counts do not
-// send content anywhere).
+// Store gives direct access to the vector store. Deletion and counts send no
+// content, but a remote store still sees what they name: CIDs (the status
+// lookup, reconcile and unpin cleanup) and, in bulk run state, MFS path and
+// entry names and who started the run.
 func (s *Service) Store() Store { return s.store }
 
 // Embedder is the configured embedder.
@@ -199,6 +203,43 @@ func (s *Service) StageHosts() []string {
 		hosts = append(hosts, d.host)
 	}
 	return hosts
+}
+
+// StageHost is one host a stage may send content to, with the stage's name.
+type StageHost struct{ Role, Host string }
+
+// StageRoles is StageHosts with the stage that uses each host, for texts that
+// tell a person where a file may go: the embedder, a store that is not on this
+// machine, a remote extractor and the describer.
+func (s *Service) StageRoles() []StageHost {
+	roles := []StageHost{{"embedder", s.embedder.Host()}}
+	if s.storeHost != "" {
+		roles = append(roles, StageHost{"store", s.storeHost})
+	}
+	if x := s.extractor; x != nil && x.remote {
+		roles = append(roles, StageHost{"extractor", x.host})
+	}
+	if d := s.describer; d.Enabled() {
+		roles = append(roles, StageHost{"describer", d.host})
+	}
+	return roles
+}
+
+// ModelDownloadHost is the host the embedded extractor may download models
+// from when embeddings.extractor.embedded.allow_model_downloads is on: the
+// operator's HF_ENDPOINT mirror if one is set, else the Hugging Face Hub. It is
+// empty when downloads are off or there is no embedded extractor.
+func (s *Service) ModelDownloadHost() string {
+	e := s.settings.Extractor
+	if e == nil || e.Mode != ModeEmbedded || e.Embedded == nil || !e.Embedded.AllowModelDownloads {
+		return ""
+	}
+	if v := os.Getenv("HF_ENDPOINT"); v != "" {
+		if u, err := url.Parse(v); err == nil && u.Host != "" {
+			return u.Host
+		}
+	}
+	return "huggingface.co"
 }
 
 // CheckStageEgress returns an *EgressError naming every stage host the calling

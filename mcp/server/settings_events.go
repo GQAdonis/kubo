@@ -29,21 +29,26 @@ type settingsEventBody struct {
 type settingsEvents struct {
 	mu   sync.Mutex
 	subs map[chan string]struct{}
+	max  int
 }
 
 func newSettingsEvents() *settingsEvents {
-	return &settingsEvents{subs: map[chan string]struct{}{}}
+	return &settingsEvents{subs: map[chan string]struct{}{}, max: maxSettingsSubscribers}
 }
 
 // subscribe adds a subscriber; unsubscribe removes it. The buffer holds one
 // event: a subscriber that falls behind is handed the newest revision next,
-// which is all an event carries.
-func (b *settingsEvents) subscribe() chan string {
-	ch := make(chan string, 1)
+// which is all an event carries. It refuses (nil, false) once max subscribers
+// are open, so a client cannot hold unbounded connections and goroutines.
+func (b *settingsEvents) subscribe() (chan string, bool) {
 	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(b.subs) >= b.max {
+		return nil, false
+	}
+	ch := make(chan string, 1)
 	b.subs[ch] = struct{}{}
-	b.mu.Unlock()
-	return ch
+	return ch, true
 }
 
 func (b *settingsEvents) unsubscribe(ch chan string) {
@@ -81,7 +86,11 @@ func (h *settingsHandler) events(w http.ResponseWriter, r *http.Request) {
 	hd.Set("X-Accel-Buffering", "no")
 	// Subscribe before reading the current revision, so a write landing between
 	// the two is in the buffer and not lost.
-	ch := h.st.events.subscribe()
+	ch, ok := h.st.events.subscribe()
+	if !ok {
+		refuseRate(w, settingsStreamRetry)
+		return
+	}
 	defer h.st.events.unsubscribe(ch)
 	w.WriteHeader(http.StatusOK)
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -128,6 +129,28 @@ func (m *memStore) CountCIDs(ctx context.Context) (int, error) {
 	return len(cids), err
 }
 
+func (m *memStore) CountCIDsByKind(context.Context) (map[string]int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return countKinds(m.rows), nil
+}
+
+// countKinds counts distinct CIDs per kind; a row without a kind is text.
+func countKinds(rows []embeddings.Row) map[string]int {
+	seen := map[[2]string]struct{}{}
+	out := map[string]int{}
+	for _, r := range rows {
+		kind := cmp.Or(r.Kind, embeddings.KindText)
+		key := [2]string{kind, r.CID}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out[kind]++
+	}
+	return out
+}
+
 // cids lists the CIDs that have rows.
 func (m *memStore) cids() []string {
 	cids, _ := m.ListCIDs(m.ctx, "", math.MaxInt32)
@@ -201,6 +224,8 @@ type indexEnv struct {
 	covered map[string]bool
 	// pinLsErr makes pin/ls fail for these CIDs.
 	pinLsErr map[string]bool
+	// mfsFiles are the file CIDs the MFS holds (one entry each, at the root).
+	mfsFiles []string
 
 	mu  sync.Mutex
 	ids map[mcp.Session]Identity
@@ -214,6 +239,9 @@ type indexEnvOptions struct {
 	// noEmbeddings leaves the embeddings feature unconfigured.
 	noEmbeddings bool
 }
+
+// envMFSRoot is the CID the indexEnv's MFS root has.
+const envMFSRoot = "bafyMFSROOT"
 
 func newIndexEnv(t *testing.T, o indexEnvOptions) *indexEnv {
 	t.Helper()
@@ -250,6 +278,14 @@ func newIndexEnv(t *testing.T, o indexEnvOptions) *indexEnv {
 		return data, nil
 	}
 	e.d.handle["files/stat"] = func(args []string, _ map[string]any) (any, error) {
+		switch {
+		case args[0] == "/":
+			return map[string]any{"Hash": envMFSRoot, "Size": 0, "CumulativeSize": 0, "Blocks": len(e.mfsFiles), "Type": "directory"}, nil
+		case args[0] == "/ipfs/"+envMFSRoot:
+			return map[string]any{"Hash": envMFSRoot, "Size": 0, "CumulativeSize": 0, "Blocks": len(e.mfsFiles), "Type": "directory"}, nil
+		case slices.Contains(e.mfsFiles, rootOf(args[0])) && !strings.Contains(strings.TrimPrefix(args[0], "/ipfs/"), "/"):
+			return map[string]any{"Hash": rootOf(args[0]), "Size": 1, "CumulativeSize": 1, "Blocks": 1, "Type": "file"}, nil
+		}
 		data, ok := e.files[args[0]]
 		if !ok {
 			if strings.HasSuffix(args[0], "/dir") {
@@ -258,6 +294,16 @@ func newIndexEnv(t *testing.T, o indexEnvOptions) *indexEnv {
 			return nil, &RPCError{Command: "files/stat", Message: "path not found"}
 		}
 		return map[string]any{"Hash": rootOf(args[0]), "Size": len(data), "CumulativeSize": len(data), "Blocks": 1, "Type": "file"}, nil
+	}
+	e.d.handle["ls"] = func(args []string, _ map[string]any) (any, error) {
+		if args[0] != "/ipfs/"+envMFSRoot {
+			return nil, &RPCError{Command: "ls", Message: "fake: unexpected ls " + args[0]}
+		}
+		links := make([]map[string]any, 0, len(e.mfsFiles))
+		for i, c := range e.mfsFiles {
+			links = append(links, map[string]any{"Name": fmt.Sprintf("f%d", i), "Hash": c, "Size": 1, "Type": 2})
+		}
+		return map[string]any{"Objects": []any{map[string]any{"Hash": args[0], "Links": links}}}, nil
 	}
 	e.d.stream["repo/gc"] = func([]string, map[string]any) ([]any, error) {
 		lines := make([]any, 0, len(e.gcKeys))

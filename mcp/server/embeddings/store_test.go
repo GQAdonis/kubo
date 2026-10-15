@@ -172,3 +172,17 @@ func TestListAndCountStatements(t *testing.T) {
 	_, err = s.SearchCID(ctx, []float32{1}, "bafyA", 3)
 	require.ErrorContains(t, err, "dimensions")
 }
+
+func TestCountCIDsByKind(t *testing.T) {
+	t.Parallel()
+	rs := newReplayServer(t,
+		reply{match: "GROUP BY kind", body: `{"id":1,"result":[{"result":[{"kind":null,"n":2},{"kind":"text","n":3},{"kind":"document","n":4},{"n":1}],"status":"OK"}]}`},
+	)
+	s := testStore(t, rs, 2, "")
+
+	got, err := s.CountCIDsByKind(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, map[string]int{"text": 6, "document": 4}, got, "rows without a kind count as text")
+	body := rs.requests()[len(rs.requests())-1].Body
+	require.Contains(t, body, "GROUP BY kind, cid", "distinct files, not chunks")
+}

@@ -134,7 +134,8 @@ func TestSettingsChangeStreamWithoutBackend(t *testing.T) {
 // revision, so the HTTP part asserts the stream converges to the newest.
 func TestSettingsChangeStreamCoalesces(t *testing.T) {
 	b := newSettingsEvents()
-	ch := b.subscribe()
+	ch, ok := b.subscribe()
+	require.True(t, ok)
 	b.publish("rev-a")
 	b.publish("rev-b")
 	assert.Equal(t, "rev-b", <-ch, "the pending older revision is replaced, not queued")

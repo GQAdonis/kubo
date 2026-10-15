@@ -55,7 +55,7 @@ Or in the config file (flags win over the file):
 }
 ```
 
-- `llm.api_key` (or `--llm-api-key-env NAME` / `--llm-api-key-file /abs/path`) is a reference; a literal key is rejected and never echoed. The key is never sent over plain `http` to a non-loopback host.
+- `llm.api_key` (or `--llm-api-key-env NAME` / `--llm-api-key-file /abs/path`) is a reference; a literal key is rejected and never echoed. The key is never sent over plain `http` to a non-loopback host. The same rule covers the settings API: a settings write or a Test connection probe accepts a plain `http` backend URL only for a loopback host (`localhost` or a literal loopback address; a `*.localhost` name does not count) or a host listed in `embeddings.insecure_http_hosts`, and changing the scheme of the backend URL needs the `egress_confirmation` for that host.
 - `llm.base_url` must not carry credentials, a query or a fragment. Redirects are not followed.
 - `llm.timeout` bounds each model request (default `60s`).
 - The loop has been run against Ollama with `qwen3:8b` (tool calling worked in 5 of 5 runs) and `llama3.2:1b` (3 of 6). Small models call tools unreliably; prefer a model with good tool-calling support. UAR as the backend was not tested.
@@ -95,6 +95,13 @@ AG-UI and A2A callers are always configured principals (`principals` in the conf
 - **Decided 2026-10-10:** `swarm_peers`, `routing_*` and `key_list` are not `contentEgress`. A principal with read grants on the `diag`, `routing` or `names` groups can therefore send the node's peer list, routing answers and key names to the model backend, or receive them as an A2A peer, without `egress_ack`. Leave those groups out of `groups` if that is not acceptable ([ADR-0004](0004-agentic-endpoints-and-llm.md), 2026-10-10 amendment).
 
 `egress_ack` governs where node content may go. It never extends to the model API key: an acknowledged host does not receive the key. The stored key is sent only to the current backend's host and port, by the agent loop, test-connection and model list alike (ADR-0012). Moving the backend to another scheme, host or port clears a key stored through the settings API unless the same write supplies a new `api_key`; a key supplied by reference (environment variable or file) stays as configured, and on a node with `agent.settings.accept_secrets: false` a provider change through the API succeeds and the server-held (referenced) key follows it to the new host. That is an accepted residual of ADR-0012: the `admin` bearer is the root of trust, so keep it scarce or set `agent.settings.enabled: false`.
+
+**Settings route hardening (Round 7).**
+
+- **Audit log.** Every settings write logs one line at `Info` (`Warn` for a host move or an egress extension) with the principal ID, the names of the fields changed, the old and new host and whether a key was not carried. It never contains a key, the prompt, the model name or a path.
+- **Browser origins.** The settings route answers CORS only for the origins in `agent.origin_allowlist`: methods `GET`, `PUT`, `POST` and `OPTIONS`; request headers `authorization`, `content-type`, `accept` and `if-match`; response headers `ETag` and `Retry-After` exposed; no credentials header. An operator who relied on `http.allowed_origins` for the console must add the console origin to `agent.origin_allowlist`, or the settings page is refused cross-origin.
+- **Limits.** The route allows 60 requests a minute per principal with a burst of 60, test-connection and model-list 10 a minute with a burst of 10 and 2 in flight, and the change stream 16 open subscribers in all. A refusal is `429` with `Retry-After`.
+- **Open confirmations after a backend change.** A settings write that changes the backend endpoint or key revokes the interrupts that are waiting for an approval: resuming one fails with `failed_precondition` and `details.reason = "backend_changed"` (`409` on `/agui`, `BACKEND_CHANGED` on `/a2a`), and the old key is dropped at once. A write that changes only the model or the prompt leaves them alone. A resume already in flight when the write lands keeps its snapshot until it ends. The user starts a new message to continue on the new backend.
 
 ## AG-UI
 

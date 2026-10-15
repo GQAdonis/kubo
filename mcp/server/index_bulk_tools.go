@@ -456,10 +456,16 @@ func (s *Server) indexBulkCancel(ctx context.Context, _ json.RawMessage) (any, e
 
 // summaryArgs gives the confirmation text of a bulk start the values the run
 // will use, not the words "default", and appends every host it may contact. It
-// leaves other tools alone. The call's argument hash, which the confirmation
+// adds the same host text to ipfs_index_cid and leaves other tools alone. The call's argument hash, which the confirmation
 // binds to, is computed from the original arguments.
 func (s *Server) summaryArgs(tool string, args map[string]any) (map[string]any, string) {
-	if tool != "ipfs_index_bulk_start" || s.embeddingsExt == nil {
+	if s.embeddingsExt == nil {
+		return args, ""
+	}
+	if tool == "ipfs_index_cid" {
+		return args, contactsText(s.embeddingsExt)
+	}
+	if tool != "ipfs_index_bulk_start" {
 		return args, ""
 	}
 	out := make(map[string]any, len(args)+6)
@@ -489,11 +495,26 @@ func (s *Server) summaryArgs(tool string, args map[string]any) (map[string]any, 
 	out["sources"] = strings.Join(p.sources, ", ")
 	out["mfs_root"] = cmpOr(p.mfsRoot, "(not walked)")
 	out["max_files"], out["max_bytes"], out["files_per_minute"] = p.caps.MaxFiles, p.caps.MaxBytes, p.caps.FilesPerMinute
-	hosts := s.egressHosts(s.embeddingsExt)
-	if len(hosts) == 0 {
-		return out, " Contacts only this machine."
+	return out, contactsText(s.embeddingsExt)
+}
+
+// contactsText names where the stages of a confirmed index call may send a
+// file, each host with its stage, and the host models may be downloaded from
+// when that is allowed. It says "only this machine" only when that is true.
+func contactsText(svc *embeddings.Service) string {
+	var parts []string
+	for _, r := range svc.StageRoles() {
+		if !IsLocalHost(r.Host) {
+			parts = append(parts, r.Role+" "+r.Host)
+		}
 	}
-	return out, " Contacts: " + strings.Join(hosts, ", ") + "."
+	if h := svc.ModelDownloadHost(); h != "" {
+		parts = append(parts, "model downloads from "+h)
+	}
+	if len(parts) == 0 {
+		return " Contacts only this machine."
+	}
+	return " Contacts: " + strings.Join(parts, ", ") + "."
 }
 
 // storedRunForSummary returns the paused run a resume would continue, so the

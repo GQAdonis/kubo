@@ -4,10 +4,12 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -88,6 +90,15 @@ type settingsState struct {
 	revisionAtomic atomic.Pointer[string]
 	// events is the change stream's broadcaster (RouteSettingsEvents).
 	events *settingsEvents
+	// origins are the page origins allowed to call the route
+	// (agent.origin_allowlist); the route's CORS policy is strict over them.
+	origins []string
+	// insecureHTTP are the hosts (embeddings.insecure_http_hosts, exact match)
+	// a write or probe may point at over plain http besides loopback.
+	insecureHTTP []string
+	// route and probe are the per-principal limiters of the route and of the
+	// probes.
+	route, probe *settingsLimiter
 }
 
 // EnableAgentSettings turns the runtime settings route on. The CLI calls it
@@ -100,7 +111,17 @@ func (s *Server) EnableAgentSettings(c AgentSettingsAPIConfig) error {
 	if st.overlay == nil {
 		st.overlay = &SettingsOverlay{}
 	}
+	st.route = newSettingsLimiter(settingsRouteBurst, settingsRoutePerMinute, 0)
+	st.probe = newSettingsLimiter(settingsProbeBurst, settingsProbePerMinute, settingsProbeMaxInFlight)
 	if c.Cfg != nil {
+		origins, err := normalizeOrigins(c.Cfg.Agent.OriginAllowlist)
+		if err != nil {
+			return fmt.Errorf("agent.origin_allowlist: %w", err)
+		}
+		st.origins = origins
+		if c.Cfg.Embeddings != nil {
+			st.insecureHTTP = slices.Clone(c.Cfg.Embeddings.InsecureHTTPHosts)
+		}
 		// The overlay shadows the config file's llm section; the flags are not
 		// part of base and win at every resolve.
 		merged := c.Cfg.WithSettingsOverlay(c.Overlay)
@@ -147,7 +168,9 @@ func mountAgentSettings(s *Server, m RouteMounter) error {
 	if st == nil {
 		return nil
 	}
-	return m.Mount(RouteSettings, &settingsHandler{srv: s, st: st, log: s.log}, MountOptions{Kinds: []string{KindAdmin}})
+	cors := settingsCORS
+	return m.Mount(RouteSettings, &settingsHandler{srv: s, st: st, log: s.log},
+		MountOptions{Kinds: []string{KindAdmin}, AllowedOrigins: st.origins, CORS: &cors})
 }
 
 // resolve builds the effective backend the startup path would build from the
@@ -316,24 +339,34 @@ type settingsHandler struct {
 
 func (h *settingsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// The listener maps the subtree here; the exact paths below are all that
-	// exists.
+	// exists. A request with a wrong method is refused before it is charged to
+	// a limiter.
 	switch r.URL.Path {
 	case RouteSettings:
-		switch r.Method {
-		case http.MethodGet:
-			h.get(w)
-		case http.MethodPut:
-			h.put(w, r)
-		default:
+		if r.Method != http.MethodGet && r.Method != http.MethodPut {
 			w.Header().Set("Allow", "GET, PUT")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
+		if !h.allowRoute(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			h.get(w)
+			return
+		}
+		h.put(w, r)
 	case RouteSettingsTestConnection:
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", "POST")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		done, ok := h.allowProbe(w, r)
+		if !ok {
+			return
+		}
+		defer done()
 		h.testConnection(w, r)
 	case RouteSettingsModels:
 		if r.Method != http.MethodGet {
@@ -341,6 +374,11 @@ func (h *settingsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		done, ok := h.allowProbe(w, r)
+		if !ok {
+			return
+		}
+		defer done()
 		h.listModels(w, r)
 	case RouteSettingsEvents:
 		if r.Method != http.MethodGet {
@@ -348,10 +386,34 @@ func (h *settingsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		if !h.allowRoute(w, r) {
+			return
+		}
 		h.events(w, r)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// allowRoute charges one request to the calling principal's route bucket, or
+// answers 429 with Retry-After.
+func (h *settingsHandler) allowRoute(w http.ResponseWriter, r *http.Request) bool {
+	if _, retry := h.st.route.take(callerIdentity(r).ID); retry > 0 {
+		refuseRate(w, retry)
+		return false
+	}
+	return true
+}
+
+// allowProbe charges one probe to the principal's probe bucket and holds one of
+// its concurrent-probe slots until done runs, or answers 429 with Retry-After.
+func (h *settingsHandler) allowProbe(w http.ResponseWriter, r *http.Request) (done func(), ok bool) {
+	done, retry := h.st.probe.take(callerIdentity(r).ID)
+	if retry > 0 {
+		refuseRate(w, retry)
+		return nil, false
+	}
+	return done, true
 }
 
 func (h *settingsHandler) get(w http.ResponseWriter) {
@@ -489,6 +551,14 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 				http.Error(w, "backend.base_url is not a valid http(s) URL", http.StatusBadRequest)
 				return
 			}
+			// A write arrives over the network, so it gets the probe's scheme
+			// rule: https, or plain http only to loopback or a host the
+			// operator listed (L1). A config file's own URL is the operator's
+			// word and is not held to it.
+			if err := validateCandidateURL(*b.BaseURL, st.insecureHTTP); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 			next.baseURL = *b.BaseURL
 			fields = append(fields, "base_url")
 		}
@@ -560,8 +630,15 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 		oldHost = HostFromURL(st.current.BaseURL)
 	}
 	hostChanged := newHost != "" && !sameHostPort(newHost, oldHost)
+	// A scheme change on the same host (https to http above all) is a host change
+	// for D4: the same name now gets the content over a different, possibly
+	// unencrypted, channel, so it needs the typed confirmation even though
+	// egress_ack, which names hosts, already covers it (L1). A write that moves
+	// to another host is judged by that host alone, as before.
+	schemeChanged := set != nil && st.current != nil && !strings.EqualFold(schemeOf(set.BaseURL), schemeOf(st.current.BaseURL))
+	moved := hostChanged || schemeChanged
 	switch {
-	case wr.EgressConfirmation != nil && !hostChanged:
+	case wr.EgressConfirmation != nil && !moved:
 		h.writeError(w, http.StatusConflict, "egress_confirmation_required",
 			"egress_confirmation may name only the newly chosen model host, and this write changes no model host", nil)
 		return
@@ -570,13 +647,18 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			"egress_confirmation.host must be exactly the newly chosen model host "+newHost+"; no other host can be acknowledged through a settings write",
 			map[string]string{"host": newHost})
 		return
-	case hostChanged && !AckCovers(st.effectiveAck(id), newHost):
+	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (!hostChanged && schemeChanged):
 		// id.ID empty means the request carried no authenticated identity (the
 		// kind gate makes that unreachable today); the extension could not be
 		// attributed to a principal, so it cannot be confirmed.
 		if wr.EgressConfirmation == nil || id.ID == "" {
-			msg := "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; " +
-				"resend with egress_confirmation {\"host\": \"" + newHost + "\"} to acknowledge that node content will be sent to that host"
+			var msg string
+			if hostChanged {
+				msg = "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; "
+			} else {
+				msg = "the write changes the scheme of the model backend at " + newHost + " from " + schemeOf(st.current.BaseURL) + " to " + schemeOf(set.BaseURL) + "; "
+			}
+			msg += "resend with egress_confirmation {\"host\": \"" + newHost + "\"} to acknowledge that node content will be sent to that host"
 			if referencedKey(set, st.keyFilePath()) {
 				// Operator ruling 2026-10-15: a key supplied by reference follows
 				// a host move, so the confirmation names it.
@@ -586,8 +668,10 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			h.writeError(w, http.StatusConflict, "egress_confirmation_required", msg, map[string]string{"host": newHost})
 			return
 		}
-		extendHost = newHost
-		fields = append(fields, "egress_ack")
+		if !AckCovers(st.effectiveAck(id), newHost) {
+			extendHost = newHost
+			fields = append(fields, "egress_ack")
+		}
 	}
 
 	// Persist before applying: the running backend must never reference a key
@@ -643,9 +727,23 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 		st.events.publish(st.revision)
 	}
 	st.base, st.prompt, st.current, st.overlay = next, prompt, set, nextOverlay
-	// The revision and the changed field names are safe to log; values never are.
-	h.log.Debug("agent settings applied", "revision", st.revision, "fields", strings.Join(fields, ","))
+	h.auditWrite(id, fields, oldHost, newHost, moved || extendHost != "", notice != nil)
 	h.writeReadWithNotice(w, notice)
+}
+
+// auditWrite is the settings write's audit line (MCP08, L2): Info for a write,
+// Warn for one that moves the model host or extends the egress_ack. It names
+// the principal, the changed field names, the old and new model host and
+// whether a stored key was withheld, and never a key, a URL path, a model name
+// or the system prompt.
+func (h *settingsHandler) auditWrite(id Identity, fields []string, oldHost, newHost string, moved, keyNotCarried bool) {
+	level := slog.LevelInfo
+	if moved {
+		level = slog.LevelWarn
+	}
+	h.log.Log(context.Background(), level, "agent settings applied",
+		"principal", id.ID, "revision", h.st.revision, "fields", strings.Join(fields, ","),
+		"old_host", oldHost, "new_host", newHost, "key_not_carried", keyNotCarried)
 }
 
 // persistedUndo holds the overlay and key files as they were before a write,

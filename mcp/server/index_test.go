@@ -165,8 +165,8 @@ func TestAddIsNotIndexedWithoutEgressAck(t *testing.T) {
 
 func TestIndexStatus(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{policy: embeddings.Policy{Auto: true}})
-	e.seed("bafyA", 3)
-	e.seed("bafyB", 1)
+	e.seed("bafkreieoswm5yqijue4v3qyit63bd76suvpinoixcelkdzzlfw3uimwtsu", 3)
+	e.seed("bafkreiha5sgvksp5ooau53gcgplgt6ximremnu7jf2pchvwgdirglk5xoa", 1)
 	cs := e.connect(nil)
 
 	out := structured(t, toolCall(t, cs, "ipfs_index_status", nil))
@@ -174,13 +174,29 @@ func TestIndexStatus(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"enabled": true, "mode": "embedded", "store_reachable": true, "auto": true,
 		"model": "fake-embed", "dimensions": float64(indexTestDims), "indexed_cids": float64(2), "chunk_count": float64(4),
+		"by_kind": map[string]any{"text": float64(2)},
 	}, out)
 
-	out = structured(t, toolCall(t, cs, "ipfs_index_status", map[string]any{"cid": "bafyB"}))
+	out = structured(t, toolCall(t, cs, "ipfs_index_status", map[string]any{"cid": "bafkreiha5sgvksp5ooau53gcgplgt6ximremnu7jf2pchvwgdirglk5xoa"}))
 	assert.Equal(t, true, out["cid_indexed"])
-	out = structured(t, toolCall(t, cs, "ipfs_index_status", map[string]any{"cid": "bafyZ"}))
+	out = structured(t, toolCall(t, cs, "ipfs_index_status", map[string]any{"cid": "bafkreick7tl6wovuqsllgxing7gkp6wv6xxzkaltwfn5p2ujtb6qzikbgi"}))
 	assert.Equal(t, false, out["cid_indexed"])
 	assert.Zero(t, e.embed.requests.Load(), "status contacts no embedder")
+}
+
+func TestIndexStatusByKind(t *testing.T) {
+	e := newIndexEnv(t, indexEnvOptions{policy: embeddings.Policy{Auto: true}})
+	e.seed("bafkreieoswm5yqijue4v3qyit63bd76suvpinoixcelkdzzlfw3uimwtsu", 3)
+	rows := []embeddings.Row{
+		{CID: "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", Path: "/ipfs/bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", MIME: "application/pdf", ChunkIndex: 0, Model: "fake-embed", Vector: make([]float32, indexTestDims), Kind: "document", Source: "extracted", Text: "a"},
+		{CID: "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", Path: "/ipfs/bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", MIME: "application/pdf", ChunkIndex: 1, Model: "fake-embed", Vector: make([]float32, indexTestDims), Kind: "document", Source: "extracted", Text: "b"},
+	}
+	require.NoError(t, e.store.Replace(t.Context(), "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", rows))
+	cs := e.connect(nil)
+
+	out := structured(t, toolCall(t, cs, "ipfs_index_status", nil))
+	validateOutput(t, "ipfs_index_status", out)
+	assert.Equal(t, map[string]any{"text": float64(1), "document": float64(1)}, out["by_kind"], "files, not chunks; an unset kind is text")
 }
 
 func TestIndexCID(t *testing.T) {
@@ -188,10 +204,10 @@ func TestIndexCID(t *testing.T) {
 	id := indexIdentity(e.embed.host())
 	cs := e.connect(&id)
 	text := "cats " + strings.Repeat("purr and stretch in the sun. ", 5)
-	e.files["/ipfs/bafyText"] = []byte(text)
-	e.files["/ipfs/bafyBig"] = []byte(strings.Repeat("x ", 150))
-	e.files["/ipfs/bafyBin"] = []byte{0xff, 0xfe, 0x00}
-	e.files["/ipfs/bafyBlank"] = []byte("  \n ")
+	e.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte(text)
+	e.files["/ipfs/bafkreidvfd4h6cvomwmbtoqxwrk7q5qm5hb32xcjrrbhzrprwurlq6gjdm"] = []byte(strings.Repeat("x ", 150))
+	e.files["/ipfs/bafkreid4gibwbzbde2b5gp4xzhsv24nd4zznurtd5z73pewbtlt3nffq54"] = []byte{0xff, 0xfe, 0x00}
+	e.files["/ipfs/bafkreiaezmhplg6kujt4hyc4nxdunghwefve26eha267ot4smkugmivwyi"] = []byte("  \n ")
 
 	call := func(cid string, force bool) map[string]any {
 		res := toolCall(t, cs, "ipfs_index_cid", map[string]any{"cid": cid, "force": force})
@@ -201,38 +217,38 @@ func TestIndexCID(t *testing.T) {
 		return out
 	}
 
-	out := call("bafyText", false)
+	out := call("bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", false)
 	assert.Equal(t, "fake-embed", out["model"])
 	assert.EqualValues(t, 1, out["chunks_indexed"])
-	assert.Equal(t, []string{"bafyText"}, e.store.cids())
-	assert.Equal(t, "/ipfs/bafyText", e.store.rows[0].Path)
+	assert.Equal(t, []string{"bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"}, e.store.cids())
+	assert.Equal(t, "/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", e.store.rows[0].Path)
 	assert.Zero(t, e.d.count("add")+e.d.count("pin/add")+e.d.count("provide/once"), "indexing only reads")
 
 	before := e.embed.requests.Load()
-	assert.Equal(t, "already_indexed", call("bafyText", false)["skipped_reason"])
+	assert.Equal(t, "already_indexed", call("bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", false)["skipped_reason"])
 	assert.Equal(t, before, e.embed.requests.Load(), "already indexed content is not embedded again")
-	assert.EqualValues(t, 1, call("bafyText", true)["chunks_indexed"], "force re-indexes")
+	assert.EqualValues(t, 1, call("bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", true)["chunks_indexed"], "force re-indexes")
 
-	assert.Equal(t, "too_large", call("bafyBig", false)["skipped_reason"])
-	assert.Equal(t, "mime_not_allowed", call("bafyBin", false)["skipped_reason"])
-	blank := call("bafyBlank", false)
+	assert.Equal(t, "too_large", call("bafkreidvfd4h6cvomwmbtoqxwrk7q5qm5hb32xcjrrbhzrprwurlq6gjdm", false)["skipped_reason"])
+	assert.Equal(t, "mime_not_allowed", call("bafkreid4gibwbzbde2b5gp4xzhsv24nd4zznurtd5z73pewbtlt3nffq54", false)["skipped_reason"])
+	blank := call("bafkreiaezmhplg6kujt4hyc4nxdunghwefve26eha267ot4smkugmivwyi", false)
 	assert.Equal(t, "empty", blank["skipped_reason"], "blank content has nothing to embed")
 	assert.EqualValues(t, 0, blank["chunks_indexed"])
 	assert.Equal(t, "not_a_file", call("dir", false)["skipped_reason"], "a directory is not a file")
 	e.mu.Lock()
-	offline, read := e.catOffline["/ipfs/bafyText"]
+	offline, read := e.catOffline["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"]
 	e.mu.Unlock()
 	require.True(t, read)
 	assert.False(t, offline, "ipfs_index_cid reads with the normal, network-capable cat")
-	assert.Equal(t, []string{"bafyText"}, e.store.cids())
+	assert.Equal(t, []string{"bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"}, e.store.cids())
 }
 
 func TestIndexCIDRefusesWithoutEgressAckBeforeReading(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
-	e.files["/ipfs/bafyText"] = []byte("cats purr")
+	e.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte("cats purr")
 	noAck := indexIdentity()
 	for name, id := range map[string]*Identity{"operator": nil, "principal without egress_ack": &noAck} {
-		res := toolCall(t, e.connect(id), "ipfs_index_cid", map[string]any{"cid": "bafyText"})
+		res := toolCall(t, e.connect(id), "ipfs_index_cid", map[string]any{"cid": "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"})
 		require.True(t, res.IsError, name)
 		assert.Equal(t, CodeEgressNotAcknowledged, decodeToolError(t, res).Code, name)
 	}
@@ -246,8 +262,8 @@ func TestIndexSearchReturnsChunkTextFromTheNode(t *testing.T) {
 	cs := e.connect(&id)
 
 	doc := "cats purr. " + strings.Repeat("They nap all day. ", 8) + "\n\ndogs bark. " + strings.Repeat("They fetch sticks. ", 12)
-	e.files["/ipfs/bafyPets"] = []byte(doc)
-	e.files["/ipfs/bafyFish"] = []byte("fish swim in the sea")
+	e.files["/ipfs/bafkreianjquaxe4youz372zjb6cf2rh3hqxhcqkys6chpf6wlh5dcsm6dy"] = []byte(doc)
+	e.files["/ipfs/bafkreiaa26kgoounqrnig6ditsexxn2egosoplv7wlnsiszrrl5uotghbq"] = []byte("fish swim in the sea")
 	for cid := range e.files {
 		res := toolCall(t, cs, "ipfs_index_cid", map[string]any{"cid": strings.TrimPrefix(cid, "/ipfs/")})
 		require.False(t, res.IsError, "%+v", res.Content)
@@ -263,16 +279,16 @@ func TestIndexSearchReturnsChunkTextFromTheNode(t *testing.T) {
 	results := out["results"].([]any)
 	require.Len(t, results, 1)
 	hit := results[0].(map[string]any)
-	assert.Equal(t, "bafyPets", hit["cid"])
+	assert.Equal(t, "bafkreianjquaxe4youz372zjb6cf2rh3hqxhcqkys6chpf6wlh5dcsm6dy", hit["cid"])
 	assert.Equal(t, hit["text"], chunks[int(hit["chunk_index"].(float64))], "the text is the chunk that was embedded")
 	assert.True(t, strings.HasPrefix(hit["text"].(string), "dogs bark"))
 	assert.InDelta(t, 1.0, hit["score"], 1e-6)
 	assert.Equal(t, true, res.Meta[untrustedMetaKey], "search results are untrusted content")
 
 	// Restricting to one CID.
-	out = structured(t, toolCall(t, cs, "ipfs_index_search", map[string]any{"query": "fish", "cid": "bafyPets", "top_k": 50}))
+	out = structured(t, toolCall(t, cs, "ipfs_index_search", map[string]any{"query": "fish", "cid": "bafkreianjquaxe4youz372zjb6cf2rh3hqxhcqkys6chpf6wlh5dcsm6dy", "top_k": 50}))
 	for _, r := range out["results"].([]any) {
-		assert.Equal(t, "bafyPets", r.(map[string]any)["cid"])
+		assert.Equal(t, "bafkreianjquaxe4youz372zjb6cf2rh3hqxhcqkys6chpf6wlh5dcsm6dy", r.(map[string]any)["cid"])
 	}
 	assert.Len(t, out["results"], len(chunks))
 }
@@ -281,16 +297,16 @@ func TestIndexSearchDropsHitsWhoseContentIsGone(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
 	id := indexIdentity(e.embed.host())
 	cs := e.connect(&id)
-	e.seed("bafyGone", 1) // indexed, but the node cannot cat it
-	e.seed("bafyHere", 1)
-	e.files["/ipfs/bafyHere"] = []byte("dogs bark")
+	e.seed("bafkreihb7sw42oji6bz3mn3qqr7iyjjsvyj3ryhhubt6yxrw4jtgdw6qeq", 1) // indexed, but the node cannot cat it
+	e.seed("bafkreidjrp5dj7zmeb4bsuigtqcvthqthbo22vvikgokdwfz7sobt7jdea", 1)
+	e.files["/ipfs/bafkreidjrp5dj7zmeb4bsuigtqcvthqthbo22vvikgokdwfz7sobt7jdea"] = []byte("dogs bark")
 	out := structured(t, toolCall(t, cs, "ipfs_index_search", map[string]any{"query": "cats", "top_k": 5}))
 	for _, r := range out["results"].([]any) {
-		assert.Equal(t, "bafyHere", r.(map[string]any)["cid"])
+		assert.Equal(t, "bafkreidjrp5dj7zmeb4bsuigtqcvthqthbo22vvikgokdwfz7sobt7jdea", r.(map[string]any)["cid"])
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	require.Contains(t, e.catOffline, "/ipfs/bafyGone")
+	require.Contains(t, e.catOffline, "/ipfs/bafkreihb7sw42oji6bz3mn3qqr7iyjjsvyj3ryhhubt6yxrw4jtgdw6qeq")
 	for p, offline := range e.catOffline {
 		assert.True(t, offline, "search reads %s offline, so a collected block is not fetched from the network", p)
 	}
@@ -299,7 +315,7 @@ func TestIndexSearchDropsHitsWhoseContentIsGone(t *testing.T) {
 func TestIndexSearchErrors(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
 	id := indexIdentity(e.embed.host())
-	e.seed("bafyA", 1)
+	e.seed("bafkreieoswm5yqijue4v3qyit63bd76suvpinoixcelkdzzlfw3uimwtsu", 1)
 
 	e.embed.down.Store(true)
 	res := toolCall(t, e.connect(&id), "ipfs_index_search", map[string]any{"query": "cats"})
@@ -325,15 +341,15 @@ func TestIndexSearchErrors(t *testing.T) {
 func TestIndexCIDAndReconcileNeedConfirmation(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
 	id := indexIdentity(e.embed.host())
-	e.files["/ipfs/bafyText"] = []byte("cats purr")
-	e.seed("bafyOld", 1)
+	e.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte("cats purr")
+	e.seed("bafkreieu3xsbh62zkujitrzgmqyfoqe3mefpramwrul6w6otjtj663qdm4", 1)
 
 	declined := e.connectDeciding(&id, func(*mcp.ElicitRequest) *mcp.ElicitResult { return &mcp.ElicitResult{Action: "decline"} })
-	res := toolCall(t, declined, "ipfs_index_cid", map[string]any{"cid": "bafyText"})
+	res := toolCall(t, declined, "ipfs_index_cid", map[string]any{"cid": "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"})
 	assert.Equal(t, CodeConfirmDeclined, decodeToolError(t, res).Code)
 	res = toolCall(t, declined, "ipfs_index_reconcile", nil)
 	assert.Equal(t, CodeConfirmDeclined, decodeToolError(t, res).Code)
-	assert.Equal(t, []string{"bafyOld"}, e.store.cids(), "nothing changed")
+	assert.Equal(t, []string{"bafkreieu3xsbh62zkujitrzgmqyfoqe3mefpramwrul6w6otjtj663qdm4"}, e.store.cids(), "nothing changed")
 	assert.Zero(t, e.d.count("pin/ls"), "nothing ran")
 
 	var prompts []string
@@ -341,10 +357,10 @@ func TestIndexCIDAndReconcileNeedConfirmation(t *testing.T) {
 		prompts = append(prompts, req.Params.Message)
 		return &mcp.ElicitResult{Action: "accept", Content: map[string]any{"confirm": true}}
 	})
-	callOK(t, accepting, "ipfs_index_cid", map[string]any{"cid": "bafyText"})
+	callOK(t, accepting, "ipfs_index_cid", map[string]any{"cid": "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"})
 	callOK(t, accepting, "ipfs_index_reconcile", map[string]any{"dry_run": true})
 	require.Len(t, prompts, 2)
-	assert.Contains(t, prompts[0], "bafyText")
+	assert.Contains(t, prompts[0], "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i")
 	assert.Contains(t, prompts[1], "dry run=true")
 
 	// Without a client that can confirm, a write is refused.

@@ -44,8 +44,8 @@ func TestBulkRunIndexesPinsAndMFS(t *testing.T) {
 	root := n.dir("root", nodeEntry{"in.txt", inDir}, nodeEntry{"sub", sub})
 	missing := "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
 	n.absent[missing] = true
-	n.other["bafyOther"] = "symlink"
-	n.pinRecursive(pinned, root, missing, "bafyOther")
+	n.other["bafkreidt5gbjix64gfd5cuuda5twbncvyfxuozykyutbfpv376mw3qkqla"] = "symlink"
+	n.pinRecursive(pinned, root, missing, "bafkreidt5gbjix64gfd5cuuda5twbncvyfxuozykyutbfpv376mw3qkqla")
 	n.pinDirect(direct)
 	mfsOne := n.file(filler("cats", 30))
 	mfsTwo := n.file(filler("dogs", 30))
@@ -577,7 +577,7 @@ func TestBulkEmbedderDownFailsTheRunWithAnError(t *testing.T) {
 func TestBulkUnreadableEntryIsSkippedAndTheRunContinues(t *testing.T) {
 	n := newFakeNode()
 	ok := n.file(filler("cats", 10))
-	n.pinRecursive(ok, "bafyUnknown") // stat answers "path not found"
+	n.pinRecursive(ok, "bafkreicfv4moaxed3rasc6o4qu4zwqzjwd7trbez5wp4givlnlogeyoi4m") // stat answers "path not found"
 	b := newTextBulkEnv(t, n, nil)
 	_, run := b.run(b.principal(), nil)
 	assert.Equal(t, embeddings.RunCompleted, run.State)
@@ -662,8 +662,8 @@ func TestBulkWalkClassifiesFilesByName(t *testing.T) {
 
 	// The CID-only tool on the same bytes has no name to go by: it is plain text.
 	b2 := newMediaEnv(t, mediaOpts{policy: embeddings.Policy{MIMEAllowlist: []string{"text/plain"}}, extractor: func(*embeddings.ExtractorSettings) {}})
-	b2.files["/ipfs/bafyPy"] = []byte("def hello():\n    return 'cats'\n")
-	out := b2.index(b2.principal(), "bafyPy", false)
+	b2.files["/ipfs/bafkreidx3s3rteeuhhcjboxeztbao6plxbng74qphi4b4tu4upkd3fhuca"] = []byte("def hello():\n    return 'cats'\n")
+	out := b2.index(b2.principal(), "bafkreidx3s3rteeuhhcjboxeztbao6plxbng74qphi4b4tu4upkd3fhuca", false)
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.Empty(t, b2.x.requests(), "without a name the Python source is text and never reaches the extractor")
 	assert.Equal(t, "text", b2.rows()[0].Kind)

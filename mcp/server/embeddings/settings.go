@@ -197,6 +197,8 @@ func (s Settings) validateRemote() []error {
 	var errs []error
 	if err := checkEndpoint(r.Endpoint); err != nil {
 		errs = append(errs, fmt.Errorf("embeddings.remote.endpoint: %w", err))
+	} else if r.Credential != "" && !httpsOrLoopback(r.Endpoint) && !insecureHTTPListed(r.Endpoint, s.Embedder.InsecureHTTPHosts) {
+		errs = append(errs, errors.New("embeddings.remote.endpoint: refusing to send a SurrealDB credential over plain http to a non-loopback host; use https, a loopback endpoint, or list the host in embeddings.insecure_http_hosts"))
 	}
 	if !identName.MatchString(r.Namespace) {
 		errs = append(errs, fmt.Errorf("embeddings.remote.namespace %q must be 1-128 letters, digits, '_' or '-'", r.Namespace))
@@ -253,7 +255,9 @@ func checkEndpoint(raw string) error {
 }
 
 // httpsOrLoopback reports whether a credential may be sent to the endpoint: it
-// uses https, or its host is a loopback name or address.
+// uses https, or its host is localhost or a literal loopback address. A
+// *.localhost name is not accepted: Go's resolver sends it to the configured DNS
+// server, so it need not resolve to loopback.
 func httpsOrLoopback(raw string) bool {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -263,11 +267,11 @@ func httpsOrLoopback(raw string) bool {
 		return true
 	}
 	host := strings.ToLower(u.Hostname())
-	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+	if host == "localhost" {
 		return true
 	}
 	addr, err := netip.ParseAddr(host)
-	return err == nil && addr.IsLoopback()
+	return err == nil && addr.Unmap().IsLoopback()
 }
 
 // insecureHTTPListed reports whether raw is a plain http URL whose host (and,

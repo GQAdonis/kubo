@@ -136,7 +136,7 @@ The shared `ErrorCode` list (`mcp/contract/schemas/common.json`) had no code for
 | Code | Meaning | `/agui` | `/a2a` (JSON-RPC `error.data.error.code`) | Retryable |
 |---|---|---|---|---|
 | `session_busy` | another run is in progress on the same thread, session or A2A context | 409 | a message for a context with a run in progress | yes |
-| `failed_precondition` | the target is not in a state that accepts the request | 409: an open interrupt, a thread at its message cap | `CancelTask` on a terminal task; an open interrupt or full context | no |
+| `failed_precondition` | the target is not in a state that accepts the request | 409: an open interrupt, a thread at its message cap, a resume after the backend endpoint or key changed (`details.reason = "backend_changed"`) | `CancelTask` on a terminal task; an open interrupt or full context | no |
 | `resource_exhausted` | a server-wide cap is reached (64 sessions) | 503 with `Retry-After` | same cap | yes |
 
 Existing codes cover the rest: 413 is `size_limit_exceeded`, an unknown or foreign thread or task is `not_found`, a principal not allowed on the path is `permission_denied`. AG-UI `RUN_ERROR.code`, for failures after `RUN_STARTED`, keeps its own vocabulary (`RunErrorCode` in `fixtures/agui.schema.json`: the three limit reasons, `backend_error`, and the thread conflicts), because AG-UI defines `code` as free text and a limit reason is not an error class. A2A errors carry the ToolError object in `error.data` so a peer reads the same code an MCP client does (Superseded in part by the Round 7 A2A amendment below: `error.data` is an array, and the ToolError is its second element); the numeric JSON-RPC code is JSON-RPC 2.0's or the A2A-defined one recorded in `mcp/server/a2a/SOURCES.md`. Per-endpoint tables: `openspec/changes/mcp-agui-endpoint/design.md` ("Errors before the stream") and `openspec/changes/mcp-a2a-endpoint/design.md` ("Errors").
@@ -192,6 +192,15 @@ Operator decision of 2026-10-12 on R13 security finding L5 (`.agent-team/kubo-ip
 - **WebMCP.** The browser has no `ipfs mcp` config, so `mcp/webmcp` marks every peer-supplied entry untrusted, and the three tools carry `untrustedContentHint` (derivation `any:returnsUntrustedContent,peerSupplied`).
 - **Off switch.** None is needed: the default marks everything untrusted, and listing a peer is the only way to trust its addresses.
 - **Where this is weak.** For `routing_findpeer` and `routing_findprovs`, the addresses of a listed peer come from the routing system, possibly relayed by other DHT nodes. "Trusted" therefore means "a peer ID the operator trusts", not "addresses proven to come from that peer". Kubo's RPC does not report whether addresses came from a signed peer record.
+
+## Amendment (2026-10-16, Round 7: the chat `ui` token on the console origin)
+
+Operator ruling on `settings-security-review` M2 (`.agent-team/kubo-ipfs-agentic/findings/security/agent-backend-settings/settings-security-review.md`), verbatim: "Accept with the conditions (Recommended)". This keeps the 2026-10-10 and 2026-10-11 decision (the Web UI chat token stays in `localStorage`) as an accepted interim residual on the cloud console, only while the console's interim inline Basic credentials (M1, recorded in ADR-0009's Round 7 amendment) are in force, and until Kratos plus `flint-gate` session auth lands.
+
+- **What is accepted.** The token is stored under `ipfs-webui:agent-chat:token` with no expiry or endpoint binding. On LKE it is a bearer usable from anywhere on `/agui` and `/mcp`, and any script in the console origin can read it, as it can read the Basic credentials. A stolen token means unattended reads plus the console `ui` principal's write groups; writes still need the principal's own confirmation and destructive calls stay refused.
+- **Conditions (verbatim from the decision):** a dedicated htpasswd user for the console browser; rotate it and the `ui` token when session auth lands and clear the stored API address in every browser profile; no screenshots or evidence of console Settings/Status meanwhile; the console `ui` principal gets the smallest `write_groups` that works; check read-only whether Envoy Gateway can send a fixed basic-auth realm.
+- **Also from the review.** When session auth lands the `ui` token leaves `localStorage`. An explicit `/mcp` kind list on LKE that excludes `ui` is suggested and not decided.
+- **Settings-driven backend changes and open confirmations.** A settings write that changes the backend endpoint or key revokes open interrupts; resuming one fails with `failed_precondition` and `details.reason = "backend_changed"` (`409` on `/agui`, JSON-RPC `-32603` with reason `BACKEND_CHANGED` on `/a2a`, ToolError `failed_precondition`, not retryable). The `failed_precondition` row of the Round 7 error table above gains this case. A resume already in flight keeps its snapshot until it ends (ADR-0009).
 
 ## Consequences
 

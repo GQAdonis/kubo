@@ -53,3 +53,30 @@ func TestReapStaleIgnoresMissingAndCorruptState(t *testing.T) {
 	_, err := os.Stat(filepath.Join(dir, stateFileName))
 	require.ErrorIs(t, err, os.ErrNotExist)
 }
+
+// TestChildrenOfTheSupervisorDoNotInheritSecrets: the surreal version check and
+// the sh watchdog run with the minimal environment, so a secret in the parent's
+// environment reaches neither.
+func TestChildrenOfTheSupervisorDoNotInheritSecrets(t *testing.T) {
+	t.Setenv("MCP_TEST_SECRET", "sk-parent-secret")
+	t.Setenv("OPENAI_API_KEY", "sk-parent-secret-2")
+
+	dump := filepath.Join(t.TempDir(), "env.txt")
+	bin := filepath.Join(t.TempDir(), "surreal")
+	script := "#!/bin/sh\nenv > '" + dump + "'\necho '3.3.0 for linux on x86_64'\n"
+	require.NoError(t, os.WriteFile(bin, []byte(script), 0o755))
+	require.NoError(t, checkBinary(t.Context(), EmbeddedSettings{Binary: bin}))
+	got, err := os.ReadFile(dump)
+	require.NoError(t, err)
+	require.NotContains(t, string(got), "sk-parent-secret")
+	require.NotContains(t, string(got), "MCP_TEST_SECRET")
+	require.Contains(t, string(got), "PATH=", "the minimal variables are still passed")
+
+	wd := startWatchdog(os.Getpid(), "kv-path")
+	require.NotNil(t, wd, "sh is available on this platform")
+	t.Cleanup(func() { stopWatchdog(wd) })
+	require.NotNil(t, wd.Env, "an explicit environment, not the parent's")
+	for _, kv := range wd.Env {
+		require.NotContains(t, kv, "sk-parent-secret")
+	}
+}

@@ -211,5 +211,11 @@ func (h *aguiHandler) reject(w http.ResponseWriter, err error) {
 		writeAGUIToolError(w, status, te)
 		return
 	}
+	if errors.Is(err, ErrBackendChanged) {
+		// The shared failed_precondition code, with the stable reason a client
+		// matches on (L5): the interrupt's backend moved or was re-keyed.
+		writeAGUIToolError(w, status, &ToolError{Code: code, Message: msg, Details: map[string]any{"reason": ReasonBackendChanged}})
+		return
+	}
 	writeAGUIError(w, status, code, msg, retry)
 }

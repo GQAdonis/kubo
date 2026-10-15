@@ -52,7 +52,15 @@ type surrealClient struct {
 	database  string
 	auth      auth
 	hc        *http.Client
+	// gone, when set, is closed when the embedded store process has exited. The
+	// client then sends nothing: its root credential must not go to whatever
+	// process binds the freed port.
+	gone <-chan struct{}
 }
+
+// ErrStoreExited: the embedded store process ended after it had started. The
+// client fails closed instead of sending to its port.
+var ErrStoreExited = errors.New("the embedded store process has exited; restart ipfs mcp")
 
 func newSurrealClient(endpoint, ns, db string, a auth, hc *http.Client) *surrealClient {
 	if hc == nil {
@@ -125,6 +133,11 @@ func (c *surrealClient) query(ctx context.Context, surql string, vars map[string
 // do sends one request. It returns the body of a 2xx answer; 401 and 403 are
 // ErrAuth; other statuses carry a clipped excerpt of the body.
 func (c *surrealClient) do(ctx context.Context, method, path string, body []byte) ([]byte, int, error) {
+	select {
+	case <-c.gone:
+		return nil, 0, ErrStoreExited
+	default:
+	}
 	req, err := http.NewRequestWithContext(ctx, method, c.endpoint+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, 0, fmt.Errorf("build surrealdb request: %w", err)

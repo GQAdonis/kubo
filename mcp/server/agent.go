@@ -4,6 +4,8 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,13 +59,18 @@ const (
 
 // Errors of the agent API. They never carry conversation content.
 var (
-	ErrSessionNotFound  = errors.New("agent session not found")
-	ErrSessionBusy      = errors.New("agent session already has a run in progress")
-	ErrTooManySessions  = errors.New("too many open agent sessions")
-	ErrSessionFull      = errors.New("agent session is full; start a new one")
-	ErrMessageTooLarge  = errors.New("message is too large")
-	ErrInterruptOpen    = errors.New("a confirmation is still open; resume it before sending a new message")
-	ErrNoOpenInterrupt  = errors.New("the session has no open interrupt")
+	ErrSessionNotFound = errors.New("agent session not found")
+	ErrSessionBusy     = errors.New("agent session already has a run in progress")
+	ErrTooManySessions = errors.New("too many open agent sessions")
+	ErrSessionFull     = errors.New("agent session is full; start a new one")
+	ErrMessageTooLarge = errors.New("message is too large")
+	ErrInterruptOpen   = errors.New("a confirmation is still open; resume it before sending a new message")
+	ErrNoOpenInterrupt = errors.New("the session has no open interrupt")
+	// ErrBackendChanged is the resume of an interrupt whose run started on a model
+	// backend that a settings write has since moved (scheme, host or port) or
+	// re-keyed. The retained snapshot, and its key, were dropped at the swap; the
+	// confirmation is not resumed onto a backend the operator moved away from.
+	ErrBackendChanged   = errors.New("the model backend changed since this confirmation opened; send a new message to continue")
 	ErrUnknownInterrupt = errors.New("resume names an interrupt that is not open")
 	ErrBadResume        = errors.New("resume status must be \"resolved\" or \"cancelled\"")
 	ErrEmptyRun         = errors.New("a run needs either a message or a resume")
@@ -211,6 +218,12 @@ type agentSnapshot struct {
 	backendHost  string
 	limits       LoopLimits
 	systemPrompt string
+	// baseURL and keyFP identify the backend a retained interrupt belongs to:
+	// the endpoint (scheme, host, port) and a digest of the key (empty when
+	// there is none). A swap that changes either revokes the retained
+	// snapshots; a model-only or prompt-only swap changes neither.
+	baseURL string
+	keyFP   string
 
 	// refs counts the runs in flight and the retained interrupts using this
 	// snapshot; retired marks a snapshot a swap replaced. When the last
@@ -345,7 +358,25 @@ func newSnapshot(set AgentSettings) (*agentSnapshot, error) {
 		backendHost:  HostFromURL(set.BaseURL),
 		limits:       set.Limits.withDefaults(),
 		systemPrompt: composeSystemPrompt(set.SystemPrompt),
+		baseURL:      set.BaseURL,
+		keyFP:        keyDigest(llm.key),
 	}, nil
+}
+
+// keyDigest is a one-way digest of a key, empty for no key. It lets a swap tell
+// a replaced key from an unchanged one without keeping a second copy of it.
+func keyDigest(k secret) string {
+	if k == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(k))
+	return hex.EncodeToString(sum[:])
+}
+
+// sameBackend reports whether a retained interrupt of snapshot s may resume
+// after o became current: same endpoint (scheme, host, port) and same key.
+func (s *agentSnapshot) sameBackend(o *agentSnapshot) bool {
+	return !backendMoved(s.baseURL, o.baseURL) && s.keyFP == o.keyFP
 }
 
 func newAgent(s *Server, set AgentSettings) (*Agent, error) {
@@ -423,6 +454,70 @@ func (a *Agent) swapSnapshot(next *agentSnapshot) {
 	if old.refs.Load() == 0 {
 		old.llm.dropKey()
 	}
+	a.revokeRetained(next)
+}
+
+// revokeRetained drops every retained interrupt snapshot that belongs to a
+// different endpoint or key than the new current one, so a resume of that
+// interrupt fails with ErrBackendChanged and the old key leaves memory at once
+// instead of living as long as the session. An interrupt whose backend differs
+// only in model or prompt keeps its snapshot.
+func (a *Agent) revokeRetained(cur *agentSnapshot) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, s := range a.sessions {
+		if s.snap != nil && !s.snap.sameBackend(cur) {
+			s.dropSnapshot()
+			s.backendChanged = true
+		}
+	}
+}
+
+// takeRetained hands the session's retained snapshot to a resume. revoked is
+// true when a swap dropped it.
+func (a *Agent) takeRetained(s *agentSession) (snap *agentSnapshot, revoked bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	snap, s.snap = s.snap, nil
+	return snap, s.backendChanged
+}
+
+// denyRevoked records a denial for the confirmation a revoked resume names, so
+// the person is not left with a pending prompt that can no longer run and can
+// continue with a new message. A denial is final and always safe; any failure
+// leaves the confirmation to expire on its own.
+func (a *Agent) denyRevoked(s *agentSession, entries []ResumeEntry) {
+	if s.interrupt == nil {
+		return
+	}
+	for _, e := range entries {
+		if e.InterruptID == s.interrupt.ID {
+			_ = a.srv.ResolveConfirmation(s.interrupt.ConfirmationID, "", false)
+			return
+		}
+	}
+}
+
+// retainOrRelease ends a run's snapshot reference: a run that ends on an open
+// interrupt hands it to the session, unless a swap made the current backend a
+// different endpoint or key while the run was in flight, in which case the
+// session is marked revoked and the reference is released.
+func (a *Agent) retainOrRelease(s *agentSession, snap *agentSnapshot) {
+	a.mu.Lock()
+	if s.interrupt == nil || s.snap != nil {
+		a.mu.Unlock()
+		snap.release()
+		return
+	}
+	if !snap.sameBackend(a.snap.Load()) {
+		s.backendChanged = true
+		a.mu.Unlock()
+		snap.release()
+		return
+	}
+	s.snap = snap
+	s.backendChanged = false
+	a.mu.Unlock()
 }
 
 // runCtx is the state of one Run call.
@@ -472,9 +567,13 @@ func (a *Agent) Run(ctx context.Context, id Identity, in RunInput, emit func(Eve
 	// ErrSessionNotFound.
 	var snap *agentSnapshot
 	if len(in.Resume) > 0 {
-		snap = sess.snap
-		sess.snap = nil
+		var revoked bool
+		snap, revoked = a.takeRetained(sess)
 		if snap == nil {
+			if revoked {
+				a.denyRevoked(sess, in.Resume)
+				return nil, ErrBackendChanged
+			}
 			return nil, ErrNoOpenInterrupt
 		}
 	} else {
@@ -485,13 +584,7 @@ func (a *Agent) Run(ctx context.Context, id Identity, in RunInput, emit func(Eve
 	// to the backend the run started with; every other ending releases it. A
 	// session that already retains a snapshot (its interrupt is still open and
 	// this run never touched it) keeps its own.
-	defer func() {
-		if sess.interrupt != nil && sess.snap == nil {
-			sess.snap = snap
-			return
-		}
-		snap.release()
-	}()
+	defer a.retainOrRelease(sess, snap)
 
 	ctx = WithIdentity(WithPrincipal(ctx, eff.Principal), eff)
 	ctx = context.WithValue(ctx, sessionIDKey{}, agentSessionPrefix+sess.id)
@@ -560,7 +653,10 @@ func (a *Agent) acceptMessage(run *runCtx, text string) error {
 	a.flushQueue(s, "The confirmation for this call ended before it ran. Nothing changed.")
 	s.interrupt = nil
 	// The interrupt is gone, so nothing resumes onto the backend its run used.
+	a.mu.Lock()
 	s.dropSnapshot()
+	s.backendChanged = false
+	a.mu.Unlock()
 	s.messages = append(s.messages, ChatMessage{Role: "user", Content: text})
 	return nil
 }

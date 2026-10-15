@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1826,
-  "derivedRevision": 1826,
+  "sourceRevision": 1848,
+  "derivedRevision": 1848,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1826
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1848
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-15T10:26:47.284737Z",
+  "last_updated": "2026-10-15T12:28:16.712163Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 22,
+  "changes_completed": 25,
   "implementation_total": 36,
-  "implementation_completed": 22,
+  "implementation_completed": 25,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 22,
+      "completed": 25,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 56,
+      "completed": 59,
       "total": 76,
       "status": "IN_PROGRESS"
     },
@@ -172,12 +172,12 @@
     {
       "id": "mcp-agent-settings-api",
       "title": "mcp-agent-settings-api",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 9,
-      "tasks_done": 8,
-      "last_task_completed": "ADR-0012: key only to the current backend; host move does not carry the key",
-      "next_task_pending": "OpenSpec requirement for ADR-0012",
+      "tasks_done": 9,
+      "last_task_completed": "OpenSpec requirement for ADR-0012",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -317,10 +317,10 @@
       "title": "settings-security-review",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 3,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Review: the settings API, `admin` principal, test-connection (SSRF), egress extension, overlay and secret storage, admin-token storage in the page, the Desktop bridge, the cloud console design (ADR-00",
+      "tasks_total": 4,
+      "tasks_done": 3,
+      "last_task_completed": "Confirmation pass. Acceptance: no open CRITICAL; open HIGHs carried to the gate in writing.",
+      "next_task_pending": "Round 7 confirmation follow-ups",
       "blockers": []
     },
     {
@@ -381,12 +381,12 @@
     {
       "id": "vector-search-contract",
       "title": "vector-search-contract",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 11,
-      "tasks_done": 9,
-      "last_task_completed": "embeddings.insecure_http_hosts contract key",
-      "next_task_pending": "by_kind counts in ipfs_index_status and GET /index/status (additive)",
+      "tasks_done": 11,
+      "last_task_completed": "Round 6 confirmation residuals (plain-http store, docs, changelog)",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -436,12 +436,12 @@
     {
       "id": "desktop-search-sidecar",
       "title": "desktop-search-sidecar",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 7,
-      "tasks_done": 6,
-      "last_task_completed": "Disabled state: with Search off (the default), no `surreal` or `xberg` process runs, the generated `ipfs mcp` config has no `embeddings` section, and the Web UI search navigation entry is hidden becau",
-      "next_task_pending": "Round 6 confirmation residuals (window tone, copy, symlinked binary)",
+      "tasks_done": 7,
+      "last_task_completed": "Round 6 confirmation residuals (window tone, copy, symlinked binary)",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -449,10 +449,10 @@
       "title": "vector-search-security-review",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 3,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Review, with file:line evidence: (a) egress: every request path of the extractor, describer, embedder and store checks `egress_ack` before building the request, including bulk runs and resumes; (b) th",
+      "tasks_total": 4,
+      "tasks_done": 3,
+      "last_task_completed": "Confirmation pass by `security-reviewer`. Acceptance: no open CRITICAL; open HIGHs carried to `phase-integration-gate` in writing.",
+      "next_task_pending": "Round 7 confirmation follow-ups",
       "blockers": []
     },
     {

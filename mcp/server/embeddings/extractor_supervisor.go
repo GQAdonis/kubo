@@ -167,6 +167,12 @@ func (s *ExtractorSupervisor) startProxy(maxFile int) error {
 		return err
 	}
 	s.proxy = p
+	// When xberg exits after startup the proxy stops at once, so nothing is
+	// forwarded to the freed port; Extract also refuses (see Extractor.Extract).
+	go func() {
+		<-s.exited
+		p.Close()
+	}()
 	return nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -89,7 +90,7 @@ func (h *settingsHandler) testConnection(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := validateCandidateURL(req.BaseURL); err != nil {
+	if err := validateCandidateURL(req.BaseURL, h.st.insecureHTTP); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -115,7 +116,7 @@ func (h *settingsHandler) listModels(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		base = cur.BaseURL // validated by ResolveAgent when configured
-	} else if err := validateCandidateURL(base); err != nil {
+	} else if err := validateCandidateURL(base, h.st.insecureHTTP); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -189,12 +190,14 @@ func checkProbeKind(kind string) error {
 	}
 }
 
-// validateCandidateURL checks the URL a probe dials. It is stricter than
-// validateBackendURL, which an operator's own config file passes: a candidate
-// arrives over the network from an admin client, so plain http is accepted
-// only for a loopback host, and credentials, query and fragment are refused.
-// The errors never echo the value, which could carry credentials.
-func validateCandidateURL(raw string) error {
+// validateCandidateURL checks the URL a probe dials or a settings write names.
+// It is stricter than validateBackendURL, which an operator's own config file
+// passes: a candidate arrives over the network from an admin client, so plain
+// http is accepted only for a loopback host or a host the operator listed in
+// insecureHTTP (exact match, see insecureHostListed), and credentials, query
+// and fragment are refused. The errors never echo the value, which could carry
+// credentials.
+func validateCandidateURL(raw string, insecureHTTP []string) error {
 	if raw == "" || len(raw) > maxSettingsURLBytes || strings.ContainsAny(raw, " \t\r\n") {
 		return errors.New("base_url is not a valid http(s) URL")
 	}
@@ -210,10 +213,27 @@ func validateCandidateURL(raw string) error {
 		return errors.New("base_url must not contain credentials; the probe authenticates with the stored key, never with the URL")
 	case u.RawQuery != "" || u.Fragment != "":
 		return errors.New("base_url must not contain a query or fragment (keys do not belong in URLs)")
-	case scheme == "http" && !IsLocalHost(u.Host):
-		return errors.New("base_url may use plain http only on a loopback host; use https")
+	case scheme == "http" && !IsLocalHost(u.Host) && !insecureHostListed(u, insecureHTTP):
+		return errors.New("base_url may use plain http only on a loopback host or a host listed in embeddings.insecure_http_hosts; use https")
 	}
 	return nil
+}
+
+// insecureHostListed reports whether the plain-http URL's host (and, for a
+// listed entry with a port, its port) is named in hosts, the operator's
+// embeddings.insecure_http_hosts. Matching is case-insensitive and exact: a
+// bare host covers every port, host:port covers that port only (an http URL
+// without a port is port 80), and there are no wildcards.
+func insecureHostListed(u *url.URL, hosts []string) bool {
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if port == "" {
+		port = "80"
+	}
+	return slices.ContainsFunc(hosts, func(h string) bool {
+		h = strings.ToLower(strings.TrimSpace(h))
+		return h == host || h == host+":"+port
+	})
 }
 
 // keyAndCurrent returns the key a probe may authenticate with: the currently stored

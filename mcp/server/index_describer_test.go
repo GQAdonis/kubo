@@ -107,9 +107,9 @@ func TestDescriberIndexesAnImageAsADescription(t *testing.T) {
 		describer: func(s *embeddings.DescriberSettings) { s.APIKey = "sekrit" },
 	})
 	m.chat.setReply(func(describeReq) (int, string) { return 200, "cats asleep on a red sofa" })
-	m.files["/ipfs/bafyPNG"] = pngBytes
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
 
-	out := m.index(m.principal(), "bafyPNG", false)
+	out := m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.NotContains(t, out, "skipped_reason")
 
@@ -124,7 +124,7 @@ func TestDescriberIndexesAnImageAsADescription(t *testing.T) {
 	got, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(reqs[0].URLs[0], prefix))
 	require.NoError(t, err)
 	assert.Equal(t, pngBytes, got)
-	assert.NotContains(t, reqs[0].Raw, "bafyPNG", "the request names neither the CID nor a node or gateway URL")
+	assert.NotContains(t, reqs[0].Raw, "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", "the request names neither the CID nor a node or gateway URL")
 	assert.NotContains(t, reqs[0].Raw, "/ipfs/")
 	assert.NotContains(t, reqs[0].Raw, "http")
 
@@ -136,7 +136,7 @@ func TestDescriberIndexesAnImageAsADescription(t *testing.T) {
 	assert.Equal(t, "vision-test", r.DescribedBy)
 	assert.Equal(t, "image/png", r.MIME)
 	assert.Equal(t, "cats asleep on a red sofa", r.Text, "the description is stored with the vector")
-	assert.Equal(t, "/ipfs/bafyPNG", r.Path)
+	assert.Equal(t, "/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", r.Path)
 }
 
 func TestDescriberForceReplacesTheDescriptionEntries(t *testing.T) {
@@ -144,16 +144,16 @@ func TestDescriberForceReplacesTheDescriptionEntries(t *testing.T) {
 		policy:    embeddings.Policy{MIMEAllowlist: []string{"image/png"}},
 		describer: func(*embeddings.DescriberSettings) {},
 	})
-	m.files["/ipfs/bafyPNG"] = pngBytes
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
 	m.chat.setReply(func(describeReq) (int, string) { return 200, "cats first description" })
-	m.index(m.principal(), "bafyPNG", false)
+	m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 
 	m.chat.setReply(func(describeReq) (int, string) { return 200, "dogs second description" })
-	again := m.index(m.principal(), "bafyPNG", false)
+	again := m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	assert.Equal(t, "already_indexed", again["skipped_reason"])
 	assert.Len(t, m.chat.requests(), 1, "an indexed file is not described again without force")
 
-	forced := m.index(m.principal(), "bafyPNG", true)
+	forced := m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", true)
 	assert.EqualValues(t, 1, forced["chunks_indexed"])
 	rows := m.rows()
 	require.Len(t, rows, 1, "force replaces the entries of the file, it does not add to them")
@@ -166,8 +166,9 @@ func TestDescriptionHitsCarryDescribedByAndTheUntrustedMarking(t *testing.T) {
 		policy:    embeddings.Policy{MIMEAllowlist: []string{"image/png"}},
 		describer: func(*embeddings.DescriberSettings) {},
 	})
-	m.files["/ipfs/bafyPNG"] = pngBytes
-	m.index(m.principal(), "bafyPNG", false)
+	png := testCID(t, 4101)
+	m.files["/ipfs/"+png] = pngBytes
+	m.index(m.principal(), png, false)
 
 	id := m.principal()
 	res := toolCall(t, m.connect(&id), "ipfs_index_search", map[string]any{"query": "cats", "top_k": 3})
@@ -187,8 +188,9 @@ func TestDescriptionHitsCarryDescribedByAndTheUntrustedMarking(t *testing.T) {
 
 func TestOnlyDescriptionHitsNameAModel(t *testing.T) {
 	m := newMediaEnv(t, mediaOpts{policy: embeddings.Policy{MIMEAllowlist: []string{"image/png", "text/plain"}}, describer: func(*embeddings.DescriberSettings) {}})
-	m.files["/ipfs/bafyText"] = []byte("cats purr")
-	m.index(m.principal(), "bafyText", false)
+	txt := testCID(t, 4102)
+	m.files["/ipfs/"+txt] = []byte("cats purr")
+	m.index(m.principal(), txt, false)
 	id := m.principal()
 	out := structured(t, toolCall(t, m.connect(&id), "ipfs_index_search", map[string]any{"query": "cats"}))
 	hit := out["results"].([]any)[0].(map[string]any)
@@ -206,9 +208,9 @@ func TestOCRAndDescriptionOfOneImageAreBothStored(t *testing.T) {
 	m.x.setReply(func(extractedFile) (int, string) {
 		return 200, `{"results":[{"content":"cats text found in the picture","mime_type":"image/png","metadata":{"ocr_used":true}}]}`
 	})
-	m.files["/ipfs/bafyPNG"] = pngBytes
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
 
-	out := m.index(m.principal(), "bafyPNG", false)
+	out := m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	assert.EqualValues(t, 2, out["chunks_indexed"])
 	rows := m.rows()
 	require.Len(t, rows, 2)
@@ -231,10 +233,10 @@ func TestDescriberHostNotAcknowledgedSendsNothingAndOCRStillRuns(t *testing.T) {
 		extractor: func(s *embeddings.ExtractorSettings) { s.OCR = true },
 		describer: func(*embeddings.DescriberSettings) {},
 	})
-	m.files["/ipfs/bafyPNG"] = pngBytes
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
 	id := indexIdentity(m.embed.host(), m.x.host()) // not the describer
 
-	res := m.call(id, "bafyPNG", false)
+	res := m.call(id, "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	require.False(t, res.IsError, "%+v %+v", res.Content[0], res.StructuredContent)
 	assert.EqualValues(t, 1, structured(t, res)["chunks_indexed"], "the OCR stage still produced text")
 	assert.Empty(t, m.chat.requests(), "the describer received zero requests")
@@ -253,10 +255,10 @@ func TestDescriberAloneUnacknowledgedIsEgressNotAcknowledgedNamingTheHost(t *tes
 		policy:    embeddings.Policy{MIMEAllowlist: []string{"image/png"}},
 		describer: func(*embeddings.DescriberSettings) {},
 	})
-	m.files["/ipfs/bafyPNG"] = pngBytes
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
 	id := indexIdentity(m.embed.host())
 
-	res := m.call(id, "bafyPNG", false)
+	res := m.call(id, "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	require.True(t, res.IsError)
 	te := toolErr(t, res)
 	assert.Equal(t, CodeEgressNotAcknowledged, te.Code)
@@ -272,8 +274,8 @@ func TestLoopbackDescriberIsCoveredByLocal(t *testing.T) {
 		policy:    embeddings.Policy{MIMEAllowlist: []string{"image/png"}},
 		describer: func(*embeddings.DescriberSettings) {},
 	})
-	m.files["/ipfs/bafyPNG"] = pngBytes
-	out := m.index(indexIdentity("local"), "bafyPNG", false)
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+	out := m.index(indexIdentity("local"), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.Len(t, m.chat.requests(), 1)
 }
@@ -300,8 +302,8 @@ func TestVideoIsDescribedOnlyWhenListedAndTheTranscriptIsIndexedEitherWay(t *tes
 		m.x.setReply(func(extractedFile) (int, string) {
 			return 200, `{"results":[{"content":"cats spoken in the audio","mime_type":"video/mp4","metadata":{}}]}`
 		})
-		m.files["/ipfs/bafyMP4"] = mp4Bytes
-		out := m.index(m.principal(), "bafyMP4", false)
+		m.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
+		out := m.index(m.principal(), "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye", false)
 		assert.EqualValues(t, 1, out["chunks_indexed"])
 		assert.Empty(t, m.chat.requests(), "kinds is [image]: nothing is sent for a video")
 		rows := m.rows()
@@ -317,8 +319,8 @@ func TestVideoIsDescribedOnlyWhenListedAndTheTranscriptIsIndexedEitherWay(t *tes
 		m.x.setReply(func(extractedFile) (int, string) {
 			return 200, `{"results":[{"content":"dogs spoken in the audio","mime_type":"video/mp4","metadata":{}}]}`
 		})
-		m.files["/ipfs/bafyMP4"] = mp4Bytes
-		out := m.index(m.principal(), "bafyMP4", false)
+		m.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
+		out := m.index(m.principal(), "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye", false)
 		assert.EqualValues(t, 2, out["chunks_indexed"])
 		reqs := m.chat.requests()
 		require.Len(t, reqs, 1)
@@ -338,8 +340,8 @@ func TestVideoIsDescribedOnlyWhenListedAndTheTranscriptIsIndexedEitherWay(t *tes
 			s.Kinds = []string{embeddings.KindImage, embeddings.KindVideo}
 		}})
 		m.chat.setReply(func(describeReq) (int, string) { return 400, "unknown content part video_url" })
-		m.files["/ipfs/bafyMP4"] = mp4Bytes
-		res := m.call(m.principal(), "bafyMP4", false)
+		m.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
+		res := m.call(m.principal(), "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye", false)
 		require.False(t, res.IsError, "%+v", res.Content)
 		assert.EqualValues(t, 1, structured(t, res)["chunks_indexed"])
 		assert.Len(t, m.chat.requests(), 1)
@@ -356,8 +358,8 @@ func TestVideoIsDescribedOnlyWhenListedAndTheTranscriptIsIndexedEitherWay(t *tes
 			s.Kinds = []string{embeddings.KindVideo}
 			s.VideoMaxBytes = 16
 		}})
-		m.files["/ipfs/bafyMP4"] = mp4Bytes
-		out := m.index(m.principal(), "bafyMP4", false)
+		m.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
+		out := m.index(m.principal(), "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye", false)
 		assert.Equal(t, "too_large", out["skipped_reason"])
 		assert.Empty(t, m.chat.requests())
 	})
@@ -370,10 +372,10 @@ func TestWithoutADescriberImagesAndVideosAreSkippedNamingIt(t *testing.T) {
 
 	t.Run("nothing configured", func(t *testing.T) {
 		m := newMediaEnv(t, mediaOpts{policy: allowed})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		m.files["/ipfs/bafyMP4"] = mp4Bytes
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		m.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
 		id := indexIdentity(m.embed.host())
-		for _, c := range []string{"bafyPNG", "bafyMP4"} {
+		for _, c := range []string{"bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"} {
 			assert.Equal(t, "describer_not_configured", m.index(id, c, false)["skipped_reason"], c)
 		}
 		assert.Empty(t, m.chat.requests(), "no description request exists")
@@ -382,51 +384,51 @@ func TestWithoutADescriberImagesAndVideosAreSkippedNamingIt(t *testing.T) {
 
 	t.Run("an extractor with OCR off and no describer: the describer is what is missing", func(t *testing.T) {
 		m := newMediaEnv(t, mediaOpts{policy: allowed, extractor: func(*embeddings.ExtractorSettings) {}})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		assert.Equal(t, "describer_not_configured", m.index(m.principal(), "bafyPNG", false)["skipped_reason"])
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		assert.Equal(t, "describer_not_configured", m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)["skipped_reason"])
 	})
 
 	t.Run("OCR covers the image", func(t *testing.T) {
 		m := newMediaEnv(t, mediaOpts{policy: allowed, extractor: func(s *embeddings.ExtractorSettings) { s.OCR = true }})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		out := m.index(m.principal(), "bafyPNG", false)
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		out := m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 		assert.EqualValues(t, 1, out["chunks_indexed"])
 	})
 
 	t.Run("a block with no kinds describes nothing", func(t *testing.T) {
 		m := newMediaEnv(t, mediaOpts{policy: allowed, describer: func(s *embeddings.DescriberSettings) { s.Kinds = []string{} }})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		assert.Equal(t, "describer_not_configured", m.index(m.principal(), "bafyPNG", false)["skipped_reason"])
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		assert.Equal(t, "describer_not_configured", m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)["skipped_reason"])
 		assert.Empty(t, m.chat.requests())
 	})
 
 	t.Run("a zero hourly limit disables the describer", func(t *testing.T) {
 		zero := 0
 		m := newMediaEnv(t, mediaOpts{policy: allowed, describer: func(s *embeddings.DescriberSettings) { s.MaxRequestsPerHour = &zero }})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		assert.Equal(t, "describer_not_configured", m.index(m.principal(), "bafyPNG", false)["skipped_reason"])
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		assert.Equal(t, "describer_not_configured", m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)["skipped_reason"])
 		assert.Empty(t, m.chat.requests())
 	})
 
 	t.Run("a type outside the allowlist is not described", func(t *testing.T) {
 		m := newMediaEnv(t, mediaOpts{policy: embeddings.Policy{}, describer: func(*embeddings.DescriberSettings) {}})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		assert.Equal(t, "kind_not_enabled", m.index(m.principal(), "bafyPNG", false)["skipped_reason"])
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		assert.Equal(t, "kind_not_enabled", m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)["skipped_reason"])
 		assert.Empty(t, m.chat.requests())
 	})
 
 	t.Run("an oversize image is not described", func(t *testing.T) {
 		m := newMediaEnv(t, mediaOpts{policy: allowed, describer: func(s *embeddings.DescriberSettings) { s.ImageMaxBytes = 16 }})
-		m.files["/ipfs/bafyPNG"] = pngBytes
-		assert.Equal(t, "too_large", m.index(m.principal(), "bafyPNG", false)["skipped_reason"])
+		m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+		assert.Equal(t, "too_large", m.index(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)["skipped_reason"])
 		assert.Empty(t, m.chat.requests())
 	})
 }
 
 func TestDescriberDoesNotChangeTheTextPath(t *testing.T) {
 	m := newMediaEnv(t, mediaOpts{describer: func(*embeddings.DescriberSettings) {}})
-	m.files["/ipfs/bafyText"] = []byte("cats purr when content")
-	out := m.index(m.principal(), "bafyText", false)
+	m.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte("cats purr when content")
+	out := m.index(m.principal(), "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", false)
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.Empty(t, m.chat.requests(), "text is never described")
 	assert.Equal(t, "text", m.rows()[0].Source)
@@ -440,8 +442,8 @@ func TestDescriberFailureIsASkipNotAHardError(t *testing.T) {
 		describer: func(*embeddings.DescriberSettings) {},
 	})
 	m.chat.setReply(func(describeReq) (int, string) { return 502, "model host down" })
-	m.files["/ipfs/bafyPNG"] = pngBytes
-	res := m.call(m.principal(), "bafyPNG", false)
+	m.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+	res := m.call(m.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 	require.False(t, res.IsError, "%+v", res.Content)
 	out := structured(t, res)
 	assert.Equal(t, "extraction_failed", out["skipped_reason"])
@@ -459,11 +461,11 @@ func TestDescriberHourlyLimitIsResourceExhausted(t *testing.T) {
 		policy:    embeddings.Policy{MIMEAllowlist: []string{"image/png"}},
 		describer: func(s *embeddings.DescriberSettings) { s.MaxRequestsPerHour = &one },
 	})
-	m.files["/ipfs/bafyOne"] = pngBytes
-	m.files["/ipfs/bafyTwo"] = append(append([]byte{}, pngBytes...), 1)
-	assert.EqualValues(t, 1, m.index(m.principal(), "bafyOne", false)["chunks_indexed"])
+	m.files["/ipfs/bafkreicnvq4wxklk6idh2hqp6qei5njuauwqxb5g27cpmdnph2carknzae"] = pngBytes
+	m.files["/ipfs/bafkreigz6nwofemr42o2ybk7vztfnzmgbzrnkezwah4sm5sn5pwbrlmnyq"] = append(append([]byte{}, pngBytes...), 1)
+	assert.EqualValues(t, 1, m.index(m.principal(), "bafkreicnvq4wxklk6idh2hqp6qei5njuauwqxb5g27cpmdnph2carknzae", false)["chunks_indexed"])
 
-	res := m.call(m.principal(), "bafyTwo", false)
+	res := m.call(m.principal(), "bafkreigz6nwofemr42o2ybk7vztfnzmgbzrnkezwah4sm5sn5pwbrlmnyq", false)
 	require.True(t, res.IsError)
 	te := toolErr(t, res)
 	assert.Equal(t, CodeResourceExhausted, te.Code)
