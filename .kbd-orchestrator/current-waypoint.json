@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1688,
-  "derivedRevision": 1688,
+  "sourceRevision": 1763,
+  "derivedRevision": 1763,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1688
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1763
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -28,12 +28,12 @@
   "stageId": null,
   "stageStatus": null,
   "completionMetric": "implementation",
-  "implementationCompleted": 49,
+  "implementationCompleted": 53,
   "implementationTotal": 76,
   "planRevision": 2,
-  "revision": 1688,
+  "revision": 1763,
   "exactNextCommand": null,
   "nextChange": "uar-conformance-release",
   "nextTask": "1.3",
-  "updatedAt": "2026-10-14T17:21:06.154048Z"
+  "updatedAt": "2026-10-14T20:52:46.715926Z"
 }

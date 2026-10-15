@@ -33,6 +33,7 @@ type memStore struct {
 	rows []embeddings.Row
 	// failCount makes CountCID fail, as an unreachable store would.
 	failCount atomic.Bool
+	memRuns
 }
 
 func (m *memStore) Bootstrap(context.Context) error { return nil }

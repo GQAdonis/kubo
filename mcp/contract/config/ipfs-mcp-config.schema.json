@@ -1054,6 +1054,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 1000,
+              "description": "File cap for one bulk run. It counts files tried: files seen minus already_indexed, excluding not_a_file entries; already-indexed files and directories do not consume it. A per-run max_files can only lower it.",
               "offSwitch": "Always enforced; a run stops after this many files.",
               "ownerChange": "vector-search-contract"
             },

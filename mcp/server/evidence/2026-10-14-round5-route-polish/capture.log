@@ -1,0 +1,120 @@
+chrome pid 59049
+ok files dark 1440
+ok files dark 375
+ok files dark 320
+ok files light 1440
+ok files light 375
+ok files light 320
+ok pins dark 1440
+ok pins dark 375
+ok pins dark 320
+ok pins light 1440
+ok pins light 375
+ok pins light 320
+ok peers dark 1440
+ok peers dark 375
+ok peers dark 320
+ok peers light 1440
+ok peers light 375
+ok peers light 320
+ok diagnostics dark 1440
+ok diagnostics dark 375
+ok diagnostics dark 320
+ok diagnostics light 1440
+ok diagnostics light 375
+ok diagnostics light 320
+ok welcome dark 1440
+ok welcome dark 375
+ok welcome dark 320
+ok welcome light 1440
+ok welcome light 375
+ok welcome light 320
+ok explore dark 1440
+ok explore dark 375
+ok explore dark 320
+ok explore light 1440
+ok explore light 375
+ok explore light 320
+ok explore-cid dark 1440
+ok explore-cid dark 375
+ok explore-cid dark 320
+ok explore-cid light 1440
+ok explore-cid light 375
+ok explore-cid light 320
+modal dark 1440 New folder
+modal-metrics dark 1440 {"left":448,"right":992,"vw":1440,"btns":[[948,992],[464,604],[836,976]],"sw":1440}
+modal dark 375 New folder
+modal-metrics dark 375 {"left":24,"right":351,"vw":375,"btns":[[307,351],[40,351],[40,351]],"sw":375}
+modal dark 320 New folder
+modal-metrics dark 320 {"left":24,"right":296,"vw":320,"btns":[[252,296],[40,296],[40,296]],"sw":320}
+modal light 1440 New folder
+modal-metrics light 1440 {"left":448,"right":992,"vw":1440,"btns":[[948,992],[464,604],[836,976]],"sw":1440}
+modal light 375 New folder
+modal-metrics light 375 {"left":24,"right":351,"vw":375,"btns":[[307,351],[40,351],[40,351]],"sw":375}
+modal light 320 New folder
+modal-metrics light 320 {"left":24,"right":296,"vw":320,"btns":[[252,296],[40,296],[40,296]],"sw":320}
+ctx dark
+ctx light
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics dark 1440 {"scrollTop":0,"scrollH":752,"clientH":752,"dialogBottom":826,"footerTop":677,"footerH":125,"vh":900,"notes":[{"t":"Unanswered, this request is ","top":276,"bottom":296},{"t":"Deny is final. Nothing is se","top":300,"bottom":320},{"t":"This check catches mistakes.","top":324,"bottom":365}],"docScrollW":1440}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics dark 375 {"scrollTop":0,"scrollH":873,"clientH":731,"dialogBottom":771,"footerTop":595,"footerH":177,"vh":812,"notes":[{"t":"Unanswered, this request is ","top":254,"bottom":294},{"t":"Deny is final. Nothing is se","top":298,"bottom":319},{"t":"This check catches mistakes.","top":323,"bottom":363}],"docScrollW":375}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics dark 320 {"scrollTop":0,"scrollH":943,"clientH":576,"dialogBottom":608,"footerTop":431,"footerH":177,"vh":640,"notes":[{"t":"Unanswered, this request is ","top":245,"bottom":286},{"t":"Deny is final. Nothing is se","top":290,"bottom":330},{"t":"This check catches mistakes.","top":334,"bottom":395}],"docScrollW":320}
+ERR light 1440 Error: no writes switch
+    at <anonymous>:1:151
+    at <anonymous>:1:194
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics light 375 {"scrollTop":0,"scrollH":873,"clientH":731,"dialogBottom":771,"footerTop":595,"footerH":177,"vh":812,"notes":[{"t":"Unanswered, this request is ","top":254,"bottom":294},{"t":"Deny is final. Nothing is se","top":298,"bottom":319},{"t":"This check catches mistakes.","top":323,"bottom":363}],"docScrollW":375}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics light 320 {"scrollTop":0,"scrollH":943,"clientH":576,"dialogBottom":608,"footerTop":431,"footerH":177,"vh":640,"notes":[{"t":"Unanswered, this request is ","top":245,"bottom":286},{"t":"Deny is final. Nothing is se","top":290,"bottom":330},{"t":"This check catches mistakes.","top":334,"bottom":395}],"docScrollW":320}
+disconnected peers: 1
+peers-empty dark 1440
+peers-empty dark 375
+peers-empty light 1440
+peers-empty light 375
+welcome-down dark 1440
+welcome-down dark 375
+welcome-down light 1440
+welcome-down light 375
+done
+chrome pid 7469
+ok files dark 1440
+ok files dark 375
+ok files dark 320
+ok files light 1440
+ok files light 375
+ok files light 320
+disconnected peers: 1
+peers-empty dark 1440
+peers-empty dark 375
+peers-empty light 1440
+peers-empty light 375
+done
+chrome pid 13760
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics dark 1440 {"scrollTop":0,"scrollH":752,"clientH":752,"dialogBottom":826,"footerTop":677,"footerH":125,"vh":900,"notes":[{"t":"Unanswered, this request is ","top":276,"bottom":296},{"t":"Deny is final. Nothing is se","top":300,"bottom":320},{"t":"This check catches mistakes.","top":324,"bottom":365}],"docScrollW":1440}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics dark 375 {"scrollTop":0,"scrollH":873,"clientH":731,"dialogBottom":771,"footerTop":595,"footerH":177,"vh":812,"notes":[{"t":"Unanswered, this request is ","top":254,"bottom":294},{"t":"Deny is final. Nothing is se","top":298,"bottom":319},{"t":"This check catches mistakes.","top":323,"bottom":363}],"docScrollW":375}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics dark 320 {"scrollTop":0,"scrollH":943,"clientH":576,"dialogBottom":608,"footerTop":431,"footerH":177,"vh":640,"notes":[{"t":"Unanswered, this request is ","top":245,"bottom":286},{"t":"Deny is final. Nothing is se","top":290,"bottom":330},{"t":"This check catches mistakes.","top":334,"bottom":395}],"docScrollW":320}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics light 1440 {"scrollTop":0,"scrollH":752,"clientH":752,"dialogBottom":826,"footerTop":677,"footerH":125,"vh":900,"notes":[{"t":"Unanswered, this request is ","top":276,"bottom":296},{"t":"Deny is final. Nothing is se","top":300,"bottom":320},{"t":"This check catches mistakes.","top":324,"bottom":365}],"docScrollW":1440}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics light 375 {"scrollTop":0,"scrollH":873,"clientH":731,"dialogBottom":771,"footerTop":595,"footerH":177,"vh":812,"notes":[{"t":"Unanswered, this request is ","top":254,"bottom":294},{"t":"Deny is final. Nothing is se","top":298,"bottom":319},{"t":"This check catches mistakes.","top":323,"bottom":363}],"docScrollW":375}
+tools ipfs_node_info,ipfs_cat,ipfs_get,ipfs_ls,pin_ls,mfs_ls,mfs_stat,mfs_read,ipns_re
+webmcp-metrics light 320 {"scrollTop":0,"scrollH":943,"clientH":576,"dialogBottom":608,"footerTop":431,"footerH":177,"vh":640,"notes":[{"t":"Unanswered, this request is ","top":245,"bottom":286},{"t":"Deny is final. Nothing is se","top":290,"bottom":330},{"t":"This check catches mistakes.","top":334,"bottom":395}],"docScrollW":320}
+done
+chrome pid 22340
+ok files dark 1440
+ok files dark 375
+ok files dark 320
+ok files light 1440
+ok files light 375
+ok files light 320
+disconnected peers: 0
+peers-empty dark 1440
+peers-empty dark 375
+peers-empty light 1440
+peers-empty light 375
+done

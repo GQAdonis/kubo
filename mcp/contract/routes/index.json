@@ -68,7 +68,7 @@
   ],
   "errors": {
     "shape": "schemas/common.json#/$defs/ToolError",
-    "httpLevel": "401, 403 and 404 answers from the authentication, authorization, origin and mount layers are HTTP-level: plain text or empty bodies, not the ToolError shape. The ToolError shape applies to the codes a mounted route produces while serving (invalid_argument, egress_not_acknowledged, index_unavailable, internal).",
+    "httpLevel": "401, 403 and 404 answers from the authentication, authorization, origin and mount layers are HTTP-level: plain text or empty bodies, not the ToolError shape. The ToolError shape applies to the codes a mounted route produces while serving (invalid_argument, egress_not_acknowledged, resource_exhausted, index_unavailable, internal).",
     "mapping": [
       {
         "code": "not_configured",
@@ -99,6 +99,12 @@
         "status": 400,
         "when": "The request body fails the referenced input schema (unknown field, wrong type, query over 2000 characters, top_k outside 1-50).",
         "retryable": false
+      },
+      {
+        "code": "resource_exhausted",
+        "status": 429,
+        "when": "POST /index/search only: the per-identity limiter refused the request before any embedder or store call. Each identity has a token bucket (burst 10, then 1 request per second) and at most 2 searches in flight; the server allows at most 8 searches in flight in total. The response carries Retry-After (whole seconds), which browsers on an allowlisted origin can read through Access-Control-Expose-Headers. Nothing is sent to any host.",
+        "retryable": true
       },
       {
         "code": "index_unavailable",

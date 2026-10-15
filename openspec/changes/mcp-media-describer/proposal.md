@@ -35,3 +35,8 @@ None.
 - Depends on: vector-search-contract, mcp-content-extractor; OG-17 decides whether 1.5 runs against a hosted describer (images only, or images and video) or a local one
 - Size: M-L; goals: 6
 - Stability: no `/api/v0`, HTTP Gateway, default CID recipe or wire change. No default describer endpoint; a hosted describer is never a default. Every new feature keeps an off switch (AGENTS.md).
+
+## Notes
+
+- Skip reasons: a file where no stage (extractor or describer) could produce text is `extraction_failed`; the contract has no describer-specific reason. A `describer_failed` value may be added later (additive enum value in `ipfs_index_cid` and `ipfs_index_bulk_status`) if operators need to tell a describer outage from an extractor failure.
+- Run visibility: any principal with the `index` group can read bulk-run metadata and cancel a run another principal started (cancel is confirmed). This is acceptable for single-operator nodes and is stated in the `ipfs_index_bulk_status` and `ipfs_index_bulk_cancel` descriptions.

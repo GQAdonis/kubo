@@ -32,7 +32,8 @@ export interface SessionError {
   /** Epoch ms before which a send is refused (a 503's Retry-After, clamped). Absent when sending is allowed now. */
   readonly retryNotBefore?: number;
   /**
-   * The message that was refused with a retryable conflict (409 session_busy, 503 resource_exhausted).
+   * The message that was refused before the stream and can be sent again (409 session_busy, 503 resource_exhausted,
+   * 503 backend_not_configured once a backend is set).
    * It is out of the transcript while this is set; retry() sends it again.
    */
   readonly retryText?: string;
@@ -80,7 +81,7 @@ export interface ChatSession {
   subscribe(listener: () => void): () => void;
   /** Start a run with a new user message. */
   send(text: string): Promise<Outcome>;
-  /** Send again the message a retryable conflict refused (session_busy, resource_exhausted). */
+  /** Send again the message a refusal took back (session_busy, resource_exhausted, backend_not_configured). */
   retry(): Promise<Outcome>;
   /**
    * Answer an interrupt. Approval of a call that needs the native prompt is refused here, whatever the
@@ -224,7 +225,7 @@ export function createChatSession(deps: SessionDeps): ChatSession {
       setChat((c) => ({ ...c, messages: [...c.messages, { id, role: 'user', content: trimmed, streaming: false }] }));
       await run(input);
       const refused = snapshot.error;
-      if (refused && (refused.kind === 'session_busy' || refused.kind === 'resource_exhausted')) {
+      if (refused && (refused.kind === 'session_busy' || refused.kind === 'resource_exhausted' || refused.kind === 'backend_not_configured')) {
         // Refused before the stream: the server took nothing. Take the message back out, keep the text.
         setChat((c) => ({ ...c, messages: c.messages.filter((m) => m.id !== id) }));
         set({ error: { ...refused, retryText: trimmed } });

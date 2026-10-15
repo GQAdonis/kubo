@@ -1,0 +1,11 @@
+{
+  "principals": [
+    { "name": "operator-admin", "kind": "admin", "credential": { "env": "EV_ADMIN_TOKEN" } },
+    { "name": "chat-ui", "kind": "ui", "credential": { "env": "EV_UI_TOKEN" } }
+  ],
+  "agent": {
+    "agui": true,
+    "origin_allowlist": ["http://localhost:3297"],
+    "settings": { "accept_secrets": false, "dir": "<tmp>/settings-b2" }
+  }
+}

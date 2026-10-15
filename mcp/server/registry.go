@@ -152,6 +152,11 @@ func (s *Server) handler(t contract.Tool, sc *schemas, impl toolImpl) mcp.ToolHa
 		if derr := rejectDotSegments(args); derr != nil {
 			return errorResult(t.Name, derr), nil
 		}
+		if pf := s.preflights[t.Name]; pf != nil {
+			if perr := pf(ctx, args); perr != nil {
+				return errorResult(t.Name, perr), nil
+			}
+		}
 		if t.Confirmation != contract.ClassNone {
 			// The gate runs before the daemon call and outside its timeout:
 			// a person may take up to the confirmation TTL to answer.

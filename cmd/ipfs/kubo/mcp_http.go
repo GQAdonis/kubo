@@ -76,11 +76,15 @@ func (f mcpHTTPFlag) WithDefault(v any) cmds.Option { return mcpHTTPFlag{f.Optio
 // mcpSettings is the effective configuration of one `ipfs mcp` run: flags
 // override the config file, which overrides the contract defaults.
 type mcpSettings struct {
-	tools      []string
-	readOnly   bool
-	disabled   []string
-	noAppViews bool
-	printPaths bool
+	tools    []string
+	readOnly bool
+	disabled []string
+	// printDisabled is disabled plus the tools whose feature is configured off
+	// (no embeddings section, or embeddings.bulk.enabled false); only the
+	// printed RPC path list uses it.
+	printDisabled []string
+	noAppViews    bool
+	printPaths    bool
 	// http is nil when stdio is served.
 	http *mcpHTTPSettings
 
@@ -132,6 +136,16 @@ func loadMCPSettings(req *cmds.Request, cfg *mcpserver.Config) (*mcpSettings, er
 		printPaths: printPaths,
 		cfg:        cfg,
 		agent:      agentInputsFromRequest(req),
+	}
+	// A tool whose feature is configured off is not in tools.disabled: the
+	// server reports it not_configured. Its RPC paths still stay out of the
+	// printed list.
+	s.printDisabled = slices.Clone(s.disabled)
+	switch e := cfg.Embeddings; {
+	case e == nil:
+		s.printDisabled = append(s.printDisabled, mcpserver.IndexTools()...)
+	case !e.Bulk.IsEnabled():
+		s.printDisabled = append(s.printDisabled, mcpserver.BulkTools()...)
 	}
 	if err := validateAgent(s); err != nil {
 		return nil, err
@@ -248,7 +262,7 @@ func operatorCredential(req *cmds.Request, destructive bool) ([]mcpserver.Static
 // printRPCAllowedPaths writes the API.Authorizations entry for the enabled
 // tools to stdout. It does not contact the daemon.
 func printRPCAllowedPaths(s *mcpSettings) error {
-	paths, err := mcpserver.RPCAllowedPaths(mcpserver.Options{Tools: s.tools, ReadOnly: s.readOnly, Disabled: s.disabled})
+	paths, err := mcpserver.RPCAllowedPaths(mcpserver.Options{Tools: s.tools, ReadOnly: s.readOnly, Disabled: s.printDisabled})
 	if err != nil {
 		return err
 	}

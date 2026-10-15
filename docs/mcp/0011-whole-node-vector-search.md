@@ -78,7 +78,7 @@ CID ──► bytes ──► kind (name + sniff, contract map)    before any re
 ### V4. Bulk indexing of pins and MFS: operator-started, capped, resumable, never in the background by default
 
 - Three new tools: `ipfs_index_bulk_start` (write class, confirmed on every transport per ADR-0003), `ipfs_index_bulk_status` (read) and `ipfs_index_bulk_cancel` (write class, confirmed).
-- **Scope of "all files".** A run walks UnixFS files reachable from recursive and direct pins (`pin/ls`) and from MFS under `bulk.mfs_root` (`files/ls`), descending directories with `ls`. It does not index unpinned blocks in the blockstore (the gateway cache on LKE holds content strangers asked for, not the operator's content, and pin-aware deletion would delete it again), raw blocks, or non-UnixFS DAGs (`not_a_file`).
+- **Scope of "all files".** A run walks UnixFS files reachable from recursive and direct pins (`pin/ls`) and from MFS under `bulk.mfs_root` (one `files/stat /` for the MFS root CID, then offline `ls` and `files/stat` on `/ipfs/<root>/...`), descending directories with `ls`. It does not index unpinned blocks in the blockstore (the gateway cache on LKE holds content strangers asked for, not the operator's content, and pin-aware deletion would delete it again), raw blocks, or non-UnixFS DAGs (`not_a_file`).
 - **Every read is offline.** `cat` and `ls` carry `offline: true`, as search already does. A file with missing blocks is skipped with `not_local`; a run never fetches from the network. This matters: with the default `Provide.Strategy` a fetched block would be stored and announced, which would be a CID entering the provide queue without a local cause.
 - **Nothing is added, pinned or announced.** Indexing issues no `add`, `block/put`, `dag/put`, `pin/add`, `files/write` or `routing/provide` call. Images that xberg extracts from documents are discarded, never added.
 - **Caps** (`embeddings.bulk`): files per run, bytes per run, files per minute, one run at a time.
@@ -93,7 +93,7 @@ CID ──► bytes ──► kind (name + sniff, contract map)    before any re
 - Authorization is the tool's: principal kinds `ui` and `human-mcp` with the `index` group, the same `egress_ack` check, the listener's `origin_allowlist` CORS rule and body limits. An `admin` principal is refused (ADR-0009 section 3). Responses carry hit text as data; the Web UI renders it as plain text, never as HTML or Markdown.
 - The routes mount only with `--http`, an `embeddings` section and `embeddings.search_route.enabled` not `false`; otherwise they answer 404 and nothing is read or dialed.
 - On LKE the console routes for `/index/*` are bearer-only and outside the basic-auth SecurityPolicy, exactly like `/agui` (ADR-0009 section 4). On Desktop the Web UI reaches them through the same endpoint and token source as the agent chat.
-- No `/api/v0` endpoint is added or changed. `ipfs mcp` uses only existing RPC calls (`pin/ls`, `files/ls`, `files/stat`, `ls`, `cat`); `--print-rpc-allowed-paths` lists them so a scoped `API.Authorizations` entry keeps working.
+- No `/api/v0` endpoint is added or changed. `ipfs mcp` uses only existing RPC calls (`pin/ls`, `files/stat`, `ls`, `cat`); `--print-rpc-allowed-paths` lists them so a scoped `API.Authorizations` entry keeps working.
 
 ### V6. Configuration: the `ipfs mcp` config file, each key with a default and an off switch (D12)
 

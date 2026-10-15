@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -26,6 +27,8 @@ type Service struct {
 	policy    Policy
 	// extractor is the xberg client, nil when no extractor is configured.
 	extractor *Extractor
+	// describer is the chat-model client, nil when no describer is configured.
+	describer *Describer
 }
 
 // Options are test seams of Open. The zero value is the production behavior.
@@ -77,6 +80,14 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 		}
 		svc.extractor = x
 	}
+	if s.Describer != nil {
+		d, err := NewDescriber(*s.Describer, opts.HTTPClient)
+		if err != nil {
+			_ = svc.Close()
+			return nil, fmt.Errorf("embeddings describer: %w", err)
+		}
+		svc.describer = d
+	}
 	return svc, nil
 }
 
@@ -122,6 +133,16 @@ func (s *Service) WithExtractor(x *Extractor) *Service {
 	return s
 }
 
+// Describer is the chat-model client, or nil when no describer is configured.
+func (s *Service) Describer() *Describer { return s.describer }
+
+// WithDescriber returns the service with a describer attached: the seam of
+// callers and tests that build the describer themselves.
+func (s *Service) WithDescriber(d *Describer) *Service {
+	s.describer = d
+	return s
+}
+
 // Mode is the configured mode.
 func (s *Service) Mode() Mode { return s.settings.Mode }
 
@@ -149,6 +170,9 @@ func (s *Service) Describe() string {
 	default:
 		desc += ", extractor xberg at " + x.host
 	}
+	if d := s.describer; d != nil {
+		desc += ", describer " + d.host + " model " + d.model
+	}
 	return desc
 }
 
@@ -160,6 +184,36 @@ func (s *Service) Hosts() []string {
 		hosts = append(hosts, s.storeHost)
 	}
 	return hosts
+}
+
+// StageHosts lists every host that the configured stages may send content to:
+// the embedder, a store that is not on this machine, a remote extractor and the
+// describer. A bulk run needs all of them acknowledged, because it reaches each
+// of them for some file.
+func (s *Service) StageHosts() []string {
+	hosts := s.Hosts()
+	if x := s.extractor; x != nil && x.remote && !slices.Contains(hosts, x.host) {
+		hosts = append(hosts, x.host)
+	}
+	if d := s.describer; d.Enabled() && !slices.Contains(hosts, d.host) {
+		hosts = append(hosts, d.host)
+	}
+	return hosts
+}
+
+// CheckStageEgress returns an *EgressError naming every stage host the calling
+// identity's egress_ack does not cover. A nil covers covers nothing.
+func (s *Service) CheckStageEgress(covers func(host string) bool) error {
+	var missing []string
+	for _, h := range s.StageHosts() {
+		if covers == nil || !covers(h) {
+			missing = append(missing, h)
+		}
+	}
+	if len(missing) > 0 {
+		return &EgressError{Hosts: missing}
+	}
+	return nil
 }
 
 // CheckEgress returns an *EgressError naming every host the calling identity's
@@ -188,6 +242,30 @@ type Document struct {
 	// text with the vector.
 	Kind   string
 	Source string
+	// DescribedBy is the describer model when Source is "description".
+	DescribedBy string
+	// Segments, if set, replaces Chunks, Kind, Source and DescribedBy: a file
+	// whose stages each produced text (OCR and a description of one image) is
+	// stored in one replacement, so a later stage never erases an earlier one.
+	// Chunk indexes continue across the segments in order.
+	Segments []Segment
+}
+
+// Segment is the chunks one stage produced for a document.
+type Segment struct {
+	Chunks      []string
+	Kind        string
+	Source      string
+	DescribedBy string
+}
+
+// segments returns the document's segments: Segments, or the single one made
+// of its own fields.
+func (d Document) segments() []Segment {
+	if len(d.Segments) > 0 {
+		return d.Segments
+	}
+	return []Segment{{Chunks: d.Chunks, Kind: d.Kind, Source: d.Source, DescribedBy: d.DescribedBy}}
 }
 
 // Index embeds the chunks and replaces everything stored for the CID. Nothing
@@ -198,25 +276,35 @@ func (s *Service) Index(ctx context.Context, covers func(host string) bool, doc 
 	if doc.CID == "" {
 		return 0, errors.New("index: empty CID")
 	}
-	if len(doc.Chunks) == 0 {
+	segs := doc.segments()
+	total := 0
+	for _, seg := range segs {
+		total += len(seg.Chunks)
+	}
+	if total == 0 {
 		return 0, errors.New("index: no chunks")
 	}
 	if err := s.CheckEgress(covers); err != nil {
 		return 0, err
 	}
-	rows := make([]Row, 0, len(doc.Chunks))
-	for start := 0; start < len(doc.Chunks); start += embedBatch {
-		end := min(start+embedBatch, len(doc.Chunks))
-		vecs, err := s.embedder.Embed(ctx, covers, doc.Chunks[start:end])
-		if err != nil {
-			return 0, fmt.Errorf("index %s: %w", doc.CID, err)
-		}
-		for i, v := range vecs {
-			row := Row{CID: doc.CID, Path: doc.Path, MIME: doc.MIME, ChunkIndex: start + i, Model: s.embedder.Model(), Vector: v, Kind: doc.Kind, Source: doc.Source}
-			if doc.Source != "" && doc.Source != SourceText {
-				row.Text = doc.Chunks[start+i]
+	rows := make([]Row, 0, total)
+	for _, seg := range segs {
+		for start := 0; start < len(seg.Chunks); start += embedBatch {
+			end := min(start+embedBatch, len(seg.Chunks))
+			vecs, err := s.embedder.Embed(ctx, covers, seg.Chunks[start:end])
+			if err != nil {
+				return 0, fmt.Errorf("index %s: %w", doc.CID, err)
 			}
-			rows = append(rows, row)
+			for i, v := range vecs {
+				row := Row{CID: doc.CID, Path: doc.Path, MIME: doc.MIME, ChunkIndex: len(rows), Model: s.embedder.Model(), Vector: v, Kind: seg.Kind, Source: seg.Source}
+				if seg.Source != "" && seg.Source != SourceText {
+					row.Text = seg.Chunks[start+i]
+				}
+				if seg.Source == SourceDescription {
+					row.DescribedBy = seg.DescribedBy
+				}
+				rows = append(rows, row)
+			}
 		}
 	}
 	if err := s.store.Replace(ctx, doc.CID, rows); err != nil {
@@ -228,21 +316,48 @@ func (s *Service) Index(ctx context.Context, covers func(host string) bool, doc 
 // Search embeds the query and returns the k nearest chunks. The query text
 // goes to the embedder, so the same egress rule as Index applies.
 func (s *Service) Search(ctx context.Context, covers func(host string) bool, query string, k int) ([]Hit, error) {
-	if strings.TrimSpace(query) == "" {
-		return nil, errors.New("search: empty query")
-	}
-	if err := s.CheckEgress(covers); err != nil {
-		return nil, err
-	}
-	vecs, err := s.embedder.Embed(ctx, covers, []string{query})
-	if err != nil {
-		return nil, fmt.Errorf("search: %w", err)
-	}
-	return s.store.Search(ctx, vecs[0], k)
+	return s.SearchFiltered(ctx, covers, query, "", k, Filter{})
 }
 
 // SearchCID is Search restricted to the chunks of one CID.
 func (s *Service) SearchCID(ctx context.Context, covers func(host string) bool, query, cid string, k int) ([]Hit, error) {
+	return s.SearchFiltered(ctx, covers, query, cid, k, Filter{})
+}
+
+// Filter limits hits to content kinds and chunk sources. An empty list matches
+// every value. A row written before derived content existed has no kind and no
+// source and counts as natively indexed text.
+type Filter struct {
+	Kinds   []string
+	Sources []string
+}
+
+// Empty reports whether the filter matches every hit.
+func (f Filter) Empty() bool { return len(f.Kinds) == 0 && len(f.Sources) == 0 }
+
+// Match reports whether the hit passes the filter.
+func (f Filter) Match(h Hit) bool {
+	kind, source := h.Kind, h.Source
+	if kind == "" {
+		kind = KindText
+	}
+	if source == "" {
+		source = SourceText
+	}
+	return (len(f.Kinds) == 0 || slices.Contains(f.Kinds, kind)) &&
+		(len(f.Sources) == 0 || slices.Contains(f.Sources, source))
+}
+
+// maxFilterFetch bounds how many nearest rows a filtered search reads from the
+// store while it looks for k that pass the filter.
+const maxFilterFetch = 1000
+
+// SearchFiltered embeds the query once and returns up to k nearest chunks that
+// pass the filter, restricted to one CID when cid is not empty. The store ranks
+// by distance only, so a filter reads more rows than k, widening until k pass,
+// the store has no more, or maxFilterFetch rows were read; the result keeps the
+// nearest-first order. A search with no filter reads exactly k.
+func (s *Service) SearchFiltered(ctx context.Context, covers func(host string) bool, query, cid string, k int, f Filter) ([]Hit, error) {
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("search: empty query")
 	}
@@ -253,5 +368,28 @@ func (s *Service) SearchCID(ctx context.Context, covers func(host string) bool, 
 	if err != nil {
 		return nil, fmt.Errorf("search: %w", err)
 	}
-	return s.store.SearchCID(ctx, vecs[0], cid, k)
+	query1 := func(n int) ([]Hit, error) {
+		if cid != "" {
+			return s.store.SearchCID(ctx, vecs[0], cid, n)
+		}
+		return s.store.Search(ctx, vecs[0], n)
+	}
+	if f.Empty() {
+		return query1(k)
+	}
+	fetch := min(max(4*k, 40), maxFilterFetch)
+	for {
+		hits, err := query1(fetch)
+		if err != nil {
+			return nil, err
+		}
+		matched := slices.DeleteFunc(slices.Clone(hits), func(h Hit) bool { return !f.Match(h) })
+		if len(matched) >= k {
+			return matched[:k], nil
+		}
+		if len(hits) < fetch || fetch >= maxFilterFetch {
+			return matched, nil
+		}
+		fetch = min(4*fetch, maxFilterFetch)
+	}
 }

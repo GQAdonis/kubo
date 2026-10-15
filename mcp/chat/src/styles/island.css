@@ -109,6 +109,7 @@
 
   /* The composer grows with its text up to six lines, then scrolls. */
   .ac-field {
+    font-family: var(--font-body); /* a textarea does not inherit the font; the UA default is monospace */
     field-sizing: content;
     min-block-size: 44px;
     max-block-size: 152px;
@@ -127,4 +128,19 @@
       transition: none;
     }
   }
+}
+
+/* A link drawn as a button (the pick-a-model state's "Choose a backend"). The library's
+   `[data-ipfs-ui] a` rule sets the link colour and outranks the button's own label colour, so the
+   primary label would be accent on accent. These sit outside any layer so they win the same way. */
+[data-ipfs-ui] a.iu-btn {
+  text-decoration: none;
+}
+
+[data-ipfs-ui] a.iu-btn--primary {
+  color: var(--on-accent);
+}
+
+[data-ipfs-ui] a.iu-btn--secondary {
+  color: var(--text);
 }

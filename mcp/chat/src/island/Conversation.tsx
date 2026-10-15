@@ -3,6 +3,7 @@ import { Badge, Button, Notice, interruptExpired, type Tone, type UiTheme } from
 import { X } from 'lucide-react';
 import type { AguiClient } from '../agui/client';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from '../ui/sidebar';
+import { BackendEmpty } from './BackendEmpty';
 import { Composer } from './Composer';
 import { RunNotice, noticeFor } from './RunNotice';
 import { createChatSession, type SessionIds } from './session';
@@ -80,6 +81,8 @@ export function Conversation({ client, readiness, theme, ids, now = Date.now }: 
     [chat.interrupts],
   );
   const notice = noticeFor(error, chat.run);
+  // The node is mounted with no model backend: the panel is an empty state with a way to Settings.
+  const noBackend = error?.kind === 'backend_not_configured';
   // The retry hold of a 503 ends at an instant, like an interrupt's expiry, so the clock stops there too.
   const holdUntil = error?.retryNotBefore;
   const ticks = useMemo(() => (holdUntil === undefined ? expiries : [...expiries, new Date(holdUntil).toISOString()]), [expiries, holdUntil]);
@@ -110,9 +113,11 @@ export function Conversation({ client, readiness, theme, ids, now = Date.now }: 
           ? { word: 'Running', tone: 'info' }
           : waiting
             ? { word: 'Waiting for approval', tone: 'warn' }
-            : notice
-              ? { word: notice.status, tone: notice.tone }
-              : { word: 'Ready', tone: 'neutral' };
+            : noBackend
+              ? { word: 'No backend', tone: 'warn' }
+              : notice
+                ? { word: notice.status, tone: notice.tone }
+                : { word: 'Ready', tone: 'neutral' };
 
   const empty = EMPTY[readiness.state];
   const answer = (interruptId: string, decision: 'approve' | 'deny') => void session.answer(interruptId, decision);
@@ -135,14 +140,14 @@ export function Conversation({ client, readiness, theme, ids, now = Date.now }: 
         {/* Status and the thread action share a row, so the title row stays short at 320px. */}
         <div className="flex items-center justify-between gap-s2">
           <Badge tone={status.tone}>{status.word}</Badge>
-          <Button variant="text" onClick={() => session.reset()} disabled={items.length === 0 && !running}>
+          <Button variant="secondary" onClick={() => session.reset()} disabled={items.length === 0 && !running}>
             New chat
           </Button>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        {items.length === 0 ? (
+        {items.length === 0 && noBackend ? null : items.length === 0 ? (
           <div className="flex flex-col gap-s2 px-s3 py-s3">
             <h4 className="font-ui-heading text-[17px] leading-[1.3] font-semibold">{empty.title}</h4>
             <p className="max-w-[66ch] text-muted-foreground">
@@ -152,6 +157,7 @@ export function Conversation({ client, readiness, theme, ids, now = Date.now }: 
         ) : (
           <Transcript items={items} theme={theme} surfaces={chat.a2uiSurfaces} nowIso={nowIso} running={running} observing={observing} onAnswer={answer} onWatchAgain={watchAgain} />
         )}
+        {noBackend ? <BackendEmpty retryText={error?.retryText} onRetry={() => void session.retry()} onNavigate={() => setOpen(false)} /> : null}
         {notice ? <RunNotice model={notice} nowMs={nowMs} onRetry={() => void session.retry()} /> : null}
       </SidebarContent>
 

@@ -67,6 +67,10 @@ type Settings struct {
 	// Extractor, if set, turns documents, code and data into Markdown through
 	// xberg (embeddings.extractor). Nil means no extractor process or request.
 	Extractor *ExtractorSettings
+	// Describer, if set, describes images (and, if listed, videos) through an
+	// OpenAI-compatible chat model (embeddings.describer). Nil means no
+	// description request exists.
+	Describer *DescriberSettings
 }
 
 // EmbeddedSettings configures the supervised SurrealDB process.
@@ -124,6 +128,9 @@ func (s Settings) Validate() error {
 	errs = append(errs, s.Policy.validate()...)
 	if s.Extractor != nil {
 		errs = append(errs, s.Extractor.Validate())
+	}
+	if s.Describer != nil {
+		errs = append(errs, s.Describer.Validate())
 	}
 	return errors.Join(errs...)
 }

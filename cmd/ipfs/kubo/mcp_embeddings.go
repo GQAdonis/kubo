@@ -41,6 +41,13 @@ func enableMCPEmbeddings(ctx context.Context, srv *mcpserver.Server, s *mcpSetti
 		return nil, fmt.Errorf("embeddings: %w", err)
 	}
 	fmt.Fprintln(os.Stderr, "ipfs mcp: embeddings enabled: "+srv.Embeddings().Describe())
+	// The search routes exist only on the --http listener and only unless
+	// embeddings.search_route.enabled is false.
+	if s.cfg.Embeddings.SearchRouteEnabled() {
+		if err := srv.EnableIndexRoutes(s.cfg.Agent.OriginAllowlist); err != nil {
+			return nil, fmt.Errorf("embeddings: %w", err)
+		}
+	}
 	return func() {
 		if err := srv.CloseEmbeddings(); err != nil {
 			fmt.Fprintf(os.Stderr, "ipfs mcp: stopping the embeddings store: %v\n", err)

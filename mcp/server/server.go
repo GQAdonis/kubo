@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -116,6 +117,17 @@ type Server struct {
 	// the index tools that wait for an embeddings section (index.go).
 	selected   map[string]struct{}
 	indexImpls []toolImpl
+	// bulk is the bulk index run (index_bulk.go); bulkClock and bulkSleep are
+	// the test seams of its rate limit.
+	bulk bulkState
+	// indexRoutesExt is set by EnableIndexRoutes (index_routes.go); nil keeps
+	// /index/search and /index/status unmounted.
+	indexRoutesExt *indexRoutesConfig
+	// preflights run after a tool's arguments are validated and before the
+	// confirmation is asked (index.go).
+	preflights map[string]func(context.Context, json.RawMessage) error
+	bulkClock  func() time.Time
+	bulkSleep  func(context.Context, time.Duration) error
 
 	// hooks run when the HTTP listener stops serving (onShutdown).
 	hookMu sync.Mutex
@@ -336,6 +348,11 @@ func (s *Server) place(impl toolImpl) error {
 	if t.Group == indexGroup && s.embeddingsExt == nil {
 		s.unavailable = append(s.unavailable, Unavailable{Name: t.Name, Reason: ReasonNotConfigured})
 		s.indexImpls = append(s.indexImpls, impl)
+		return nil
+	}
+	if t.Group == indexGroup && isBulkTool(t.Name) && !s.bulkOffered() {
+		// embeddings.bulk.enabled is false: the bulk tools are not listed.
+		s.unavailable = append(s.unavailable, Unavailable{Name: t.Name, Reason: ReasonNotConfigured})
 		return nil
 	}
 	if u := s.info.checkTool(t); u != nil {

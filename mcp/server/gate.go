@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ipfs/kubo/mcp/contract"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -65,6 +66,10 @@ type gate struct {
 	signer    *tokenSigner
 	now       func() time.Time
 	resolvers []Resolver
+	// summaryArgs, when set, gives a confirmation text the values a call will
+	// use and an extra sentence (index.go). The call's argument hash is not
+	// affected.
+	summaryArgs func(tool string, args map[string]any) (map[string]any, string)
 
 	mu       sync.Mutex
 	localIDs map[*mcp.ServerSession]string
@@ -325,7 +330,7 @@ func (g *gate) open(c *call, nativePrompt bool, mechanism string) (Pending, erro
 		sid:       c.sid,
 		tool:      c.tool.Name,
 		argsHash:  c.argsHash,
-		summary:   buildSummary(c.tool, c.sc.rawIn, c.args),
+		summary:   g.summaryOf(c),
 		nativeReq: nativePrompt,
 		mechanism: mechanism,
 	}, maxOpenExternal)
@@ -471,4 +476,17 @@ func (g *gate) acceptToken(c *call, tok string) *ToolError {
 	default:
 		return g.outcomeError(c.tool.Name, p, "invalid")
 	}
+}
+
+// summaryOf builds the confirmation text of a call.
+func (g *gate) summaryOf(c *call) Summary {
+	args, extra := c.args, ""
+	if g.summaryArgs != nil {
+		args, extra = g.summaryArgs(c.tool.Name, c.args)
+	}
+	sum := buildSummary(c.tool, c.sc.rawIn, args)
+	if extra != "" {
+		sum.Text = clipRunes(sum.Text, maxSummaryRunes-utf8.RuneCountInString(extra)) + extra
+	}
+	return sum
 }

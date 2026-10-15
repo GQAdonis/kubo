@@ -47,3 +47,18 @@ describe('axe through the shadow root', () => {
     el.remove();
   });
 });
+
+describe.each(['dark', 'light'] as const)('axe, %s theme, node with no backend', (theme) => {
+  it('finds no WCAG 2.2 AA violation in the pick-a-model state', async () => {
+    const noBackend = (async () =>
+      new Response(JSON.stringify({ error: { code: 'backend_not_configured', message: 'no model backend is configured', retryable: false } }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch;
+    const m = mountIsland({ props: { theme, fetchImpl: noBackend, ids: idsFor(fixture('read-pin-ls'), ['run-1']) } });
+    await say(m, 'Which pins do I have?');
+    await screen.findByText('Choose a backend to start');
+    const violations = await axeViolations(screen.getByRole('complementary', { name: 'Agent chat' }));
+    expect(violations, describeViolations(violations)).toEqual([]);
+  });
+});

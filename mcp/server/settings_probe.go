@@ -49,9 +49,17 @@ type testConnectionBody struct {
 // this shape too: the settings error code set is closed and has no code for
 // "backend unreachable", and the client already renders ok/detail.
 type testConnectionResult struct {
-	OK     bool   `json:"ok"`
-	Detail string `json:"detail,omitempty"`
+	OK bool `json:"ok"`
+	// KeySent says whether the stored key was attached to the probe. It is false
+	// for a host that is neither the current backend nor acknowledged by the
+	// calling principal, and when no key is stored.
+	KeySent bool   `json:"key_sent"`
+	Detail  string `json:"detail,omitempty"`
 }
+
+// keyWithheldDetail explains a probe that was answered 401 or 403 without the
+// stored key.
+const keyWithheldDetail = "the host answered but needs a key; the stored key is not sent to a host that is neither the current backend nor acknowledged for this principal"
 
 // modelListResult is the model-list endpoint's success shape (contract
 // settings/model-list.schema.json, ModelListResult).
@@ -83,13 +91,9 @@ func (h *settingsHandler) testConnection(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	key := h.st.storedKey()
+	key, sent, withheld := h.probeKey(req.BaseURL, callerIdentity(r))
 	_, err := probeOpenAIModels(r.Context(), req.BaseURL, key)
-	res := testConnectionResult{OK: err == nil}
-	if err != nil {
-		res.Detail = probeDetail(err, key)
-	}
-	writeSettingsJSON(w, http.StatusOK, "", res)
+	writeSettingsJSON(w, http.StatusOK, "", probeResult(err, key, sent, withheld, true))
 }
 
 // listModels answers GET on the model-list endpoint. With no base_url it lists
@@ -117,10 +121,10 @@ func (h *settingsHandler) listModels(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	key := h.st.storedKey()
+	key, sent, withheld := h.probeKey(base, callerIdentity(r))
 	ids, err := probeOpenAIModels(r.Context(), base, key)
 	if err != nil {
-		writeSettingsJSON(w, http.StatusOK, "", testConnectionResult{OK: false, Detail: probeDetail(err, key)})
+		writeSettingsJSON(w, http.StatusOK, "", probeResult(err, key, sent, withheld, false))
 		return
 	}
 	res := modelListResult{Models: make([]modelEntry, 0, len(ids))}
@@ -128,6 +132,49 @@ func (h *settingsHandler) listModels(w http.ResponseWriter, r *http.Request) {
 		res.Models = append(res.Models, modelEntry{ID: id})
 	}
 	writeSettingsJSON(w, http.StatusOK, "", res)
+}
+
+// probeKey decides whether the stored key goes to the probed host. It does only
+// for the current backend's own host and port or a host the calling principal
+// has acknowledged (its egress_ack, plus the hosts its confirmed writes added):
+// anything else is a candidate typed by a client, and sending the key there would
+// hand it to whoever runs that host. sent is false when no key goes out,
+// including when none is stored; withheld is true when a stored key was held
+// back.
+func (h *settingsHandler) probeKey(baseURL string, id Identity) (key secret, sent, withheld bool) {
+	key = h.st.storedKey()
+	if key == "" {
+		return "", false, false
+	}
+	host := HostFromURL(baseURL)
+	h.st.mu.Lock()
+	cur := h.st.current
+	covered := AckCovers(h.st.effectiveAck(id), host)
+	h.st.mu.Unlock()
+	if covered || (cur != nil && sameHostPort(host, HostFromURL(cur.BaseURL))) {
+		return key, true, false
+	}
+	return "", false, true
+}
+
+// probeResult renders a probe outcome. A 401 or 403 from a host that was probed
+// without the stored key is reachable-but-key-not-sent: for test-connection
+// (reachableOK) the host did answer, so ok is true and key_sent false says why
+// it may still refuse; the model list has no field for that and reports ok
+// false with the same key_sent and detail.
+func probeResult(err error, key secret, sent, withheld, reachableOK bool) testConnectionResult {
+	res := testConnectionResult{OK: err == nil, KeySent: sent}
+	if err == nil {
+		return res
+	}
+	var le *LLMError
+	if withheld && errors.As(err, &le) && (le.Status == http.StatusUnauthorized || le.Status == http.StatusForbidden) {
+		res.OK = reachableOK
+		res.Detail = keyWithheldDetail
+		return res
+	}
+	res.Detail = probeDetail(err, key)
+	return res
 }
 
 // checkProbeKind validates the kind field of a probe request. uar is a
@@ -171,7 +218,7 @@ func validateCandidateURL(raw string) error {
 	return nil
 }
 
-// storedKey returns the key a probe authenticates with: the currently stored
+// storedKey returns the key a probe may authenticate with: the currently stored
 // backend key (flags winning over config and overlay, exactly as the resolved
 // backend sees it), never a value sent with the probe request. An unresolved
 // reference (absent file, unset variable) means the probe sends no key, never

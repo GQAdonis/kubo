@@ -222,3 +222,68 @@ describe('panel: HTTP conflicts', () => {
     expect(f.calls).toHaveLength(1);
   });
 });
+
+// agent-chat-island-integration 1.2: a node mounted with /agui and no backend answers 503
+// backend_not_configured (mcp/server TestAGUIWithoutABackendAnswers503). The panel shows a "pick a model"
+// state with a link to Settings, not the session-limit notice, and a retry is not held by Retry-After.
+describe('503 backend_not_configured', () => {
+  const noBackend = () => json(503, { error: { code: 'backend_not_configured', message: 'no model backend is configured', retryable: false } });
+
+  it('is its own kind, not the session limit, and shows fixed text', async () => {
+    const e = await refusal(noBackend());
+    expect(e).toMatchObject({ kind: 'backend_not_configured', status: 503 });
+    expect(e.retryAfterSeconds).toBeUndefined();
+    expect(e.message).toBe('The node has no model backend yet. Choose one in Settings.');
+  });
+
+  it('keeps a 503 with another code, or no readable body, as the session limit', async () => {
+    expect(await refusal(json(503, toolError('resource_exhausted')))).toMatchObject({ kind: 'resource_exhausted' });
+    expect(await refusal(new Response('upstream down', { status: 503 }))).toMatchObject({ kind: 'resource_exhausted' });
+  });
+
+  it('takes the message back out and keeps its text, with no wait imposed', async () => {
+    const f = scripted(noBackend, () => sse(fixture('read-pin-ls').events as never));
+    const s = createChatSession({ client: createAguiClient({ endpoint: endpoint(), getToken: () => TOKEN, fetch: f.fetch }), ids: { thread: () => 't', run: () => 'r', message: () => 'm' } });
+    await s.send('Which pins do I have?');
+    const snap = s.getSnapshot();
+    expect(snap.error).toMatchObject({ kind: 'backend_not_configured', retryText: 'Which pins do I have?' });
+    expect(snap.error?.retryNotBefore).toBeUndefined();
+    expect(snap.chat.messages).toHaveLength(0);
+    expect(await s.retry()).toEqual({ ok: true });
+    expect(s.getSnapshot().error).toBeUndefined();
+  });
+
+  it('replays the 503 in the panel: a pick-a-model state, a link to Settings, no failure notice', async () => {
+    const m = mountIsland({ props: { fetchImpl: (async () => noBackend()) as typeof fetch, ids: idsFor(fixture('read-pin-ls'), ['run-1']) } });
+    await say(m, 'Which pins do I have?');
+    expect(await screen.findByText('Choose a backend to start')).toBeInTheDocument();
+    expect(screen.getByText(/The agent needs a backend before it can answer. Choose one in Settings./)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Choose a backend' });
+    expect(link).toHaveAttribute('href', '#/settings/agent');
+    expect(screen.getByText('No backend', { selector: '.iu-badge' })).toBeInTheDocument();
+    expect(screen.queryByText(/session limit/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send message again' })).toBeEnabled();
+    expect(screen.getByRole('textbox', { name: 'Message to the agent' })).toBeEnabled();
+  });
+
+  it('names the unsent message with a visible lead-in and announces only the explanation', async () => {
+    const m = mountIsland({ props: { fetchImpl: (async () => noBackend()) as typeof fetch, ids: idsFor(fixture('read-pin-ls'), ['run-1']) } });
+    await say(m, 'Which pins do I have?');
+    const unsent = await screen.findByTestId('backend-empty-unsent');
+    expect(unsent).toHaveTextContent('Not sent: Which pins do I have?');
+    const block = screen.getByTestId('backend-empty');
+    expect(block).not.toHaveAttribute('role');
+    expect(block.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(unsent).not.toHaveAttribute('role');
+  });
+
+  it('closes the panel when the link is followed, so the Settings page is in view', async () => {
+    let open = true;
+    const m = mountIsland({ props: { fetchImpl: (async () => noBackend()) as typeof fetch, ids: idsFor(fixture('read-pin-ls'), ['run-1']), onOpenChange: (o) => { open = o; } } });
+    await say(m, 'hello');
+    const link = await screen.findByRole('link', { name: 'Choose a backend' });
+    link.addEventListener('click', (e) => e.preventDefault());
+    await m.user.click(link);
+    expect(open).toBe(false);
+  });
+});
