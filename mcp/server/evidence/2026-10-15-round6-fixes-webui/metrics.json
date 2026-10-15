@@ -1,0 +1,109 @@
+[
+  {
+    "shot": "search-focus-last-chip-light-320",
+    "text": "AI description",
+    "bottom": 527,
+    "top": 487,
+    "launcherTop": 582,
+    "clearOfLauncher": true,
+    "overflowX": false,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "search-focus-last-chip-light-375",
+    "text": "AI description",
+    "bottom": 557,
+    "top": 517,
+    "launcherTop": 642,
+    "clearOfLauncher": true,
+    "overflowX": false,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "search-focus-last-chip-light-1440",
+    "text": "AI description",
+    "bottom": 552,
+    "top": 512,
+    "launcherTop": 842,
+    "clearOfLauncher": true,
+    "overflowX": false,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "search-focus-last-chip-dark-320",
+    "text": "AI description",
+    "bottom": 527,
+    "top": 487,
+    "launcherTop": 582,
+    "clearOfLauncher": true,
+    "overflowX": false,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "search-focus-last-chip-dark-375",
+    "text": "AI description",
+    "bottom": 557,
+    "top": 517,
+    "launcherTop": 642,
+    "clearOfLauncher": true,
+    "overflowX": false,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "search-focus-last-chip-dark-1440",
+    "text": "AI description",
+    "bottom": 552,
+    "top": 512,
+    "launcherTop": 842,
+    "clearOfLauncher": true,
+    "overflowX": false,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "status-403-light-1440",
+    "panelText": "Index\nRefresh\n\nYou are signed in, but this identity does not have search access. Ask for an identity whose group includes the index tools.",
+    "overflowX": false,
+    "launcherTop": 842,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "status-403-dark-1440",
+    "panelText": "Index\nRefresh\n\nYou are signed in, but this identity does not have search access. Ask for an identity whose group includes the index tools.",
+    "overflowX": false,
+    "launcherTop": 842,
+    "clearance": "72px",
+    "scrollPaddingBottom": "72px"
+  },
+  {
+    "shot": "settings-search-switch-light-1440",
+    "checked": "true",
+    "navEntry": 1
+  },
+  {
+    "shot": "after switch off",
+    "checked": "false",
+    "navEntry": 0
+  },
+  {
+    "shot": "settings-search-switch-light-375",
+    "checked": "true",
+    "navEntry": 1
+  },
+  {
+    "shot": "settings-search-switch-dark-1440",
+    "checked": "true",
+    "navEntry": 1
+  },
+  {
+    "shot": "settings-search-switch-dark-375",
+    "checked": "true",
+    "navEntry": 1
+  }
+]

@@ -115,6 +115,9 @@ type DescriberSettings struct {
 	MaxRequestsPerHour *int
 	// Timeout bounds one request; 0 means the default.
 	Timeout time.Duration
+	// InsecureHTTPHosts is embeddings.insecure_http_hosts: hosts the describer
+	// may be reached at over plain http.
+	InsecureHTTPHosts []string
 }
 
 // Validate checks the settings without touching the network. Errors name the
@@ -123,9 +126,9 @@ func (s DescriberSettings) Validate() error {
 	var errs []error
 	if err := checkEndpoint(s.BaseURL); err != nil {
 		errs = append(errs, fmt.Errorf("embeddings.describer.base_url: %w", err))
-	} else if !httpsOrLoopback(s.BaseURL) {
+	} else if !httpsOrLoopback(s.BaseURL) && !insecureHTTPListed(s.BaseURL, s.InsecureHTTPHosts) {
 		// Media bytes, not only a key, cross the network.
-		errs = append(errs, errors.New("embeddings.describer.base_url: refusing plain http to a non-loopback host, which would send media (and any API key) unencrypted; use https"))
+		errs = append(errs, errors.New("embeddings.describer.base_url: refusing plain http to a non-loopback host, which would send media (and any API key) unencrypted; use https or list the host in embeddings.insecure_http_hosts"))
 	}
 	if strings.TrimSpace(s.Model) == "" {
 		errs = append(errs, errors.New("embeddings.describer.model is required"))

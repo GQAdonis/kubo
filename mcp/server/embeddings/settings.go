@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -106,6 +107,9 @@ type EmbedderSettings struct {
 	Dimensions int
 	// APIKey is sent as a bearer token; empty sends no Authorization header.
 	APIKey Secret
+	// InsecureHTTPHosts is embeddings.insecure_http_hosts: hosts that may be
+	// reached over plain http while APIKey is set.
+	InsecureHTTPHosts []string
 }
 
 // identName restricts namespace and database names to characters that are safe
@@ -125,6 +129,7 @@ func (s Settings) Validate() error {
 		errs = append(errs, fmt.Errorf("embeddings.mode %q is not embedded or remote", s.Mode))
 	}
 	errs = append(errs, s.Embedder.validate()...)
+	errs = append(errs, validateInsecureHTTPHosts(s.Embedder.InsecureHTTPHosts)...)
 	errs = append(errs, s.Policy.validate()...)
 	if s.Extractor != nil {
 		errs = append(errs, s.Extractor.Validate())
@@ -133,6 +138,32 @@ func (s Settings) Validate() error {
 		errs = append(errs, s.Describer.Validate())
 	}
 	return errors.Join(errs...)
+}
+
+// insecureHostPattern is the contract's pattern for an
+// embeddings.insecure_http_hosts entry: a host name or IPv4 address with an
+// optional :port, nothing else.
+var insecureHostPattern = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(:[0-9]{1,5})?$`)
+
+// validateInsecureHTTPHosts rejects entries the matcher could never use or
+// would match more than intended (a scheme, a path, a wildcard, a bare IPv6
+// such as fd00::1:8000 whose port cannot be told from an address group).
+func validateInsecureHTTPHosts(hosts []string) []error {
+	var errs []error
+	for _, h := range hosts {
+		if len(h) <= 262 && insecureHostPattern.MatchString(h) {
+			if _, port, ok := strings.Cut(h, ":"); !ok || validPort(port) {
+				continue
+			}
+		}
+		errs = append(errs, fmt.Errorf("embeddings.insecure_http_hosts entry %q must be a host name or IPv4 address with an optional :port (1-65535); no scheme, path, wildcard or IPv6", h))
+	}
+	return errs
+}
+
+func validPort(p string) bool {
+	n, err := strconv.Atoi(p)
+	return err == nil && n >= 1 && n <= 65535
 }
 
 func (s Settings) validateEmbedded() []error {
@@ -183,8 +214,8 @@ func (e EmbedderSettings) validate() []error {
 	var errs []error
 	if err := checkEndpoint(e.BaseURL); err != nil {
 		errs = append(errs, fmt.Errorf("embeddings.embedder.base_url: %w", err))
-	} else if e.APIKey != "" && !httpsOrLoopback(e.BaseURL) {
-		errs = append(errs, errors.New("embeddings.embedder.base_url: refusing to send an API key over plain http to a non-loopback host; use https or a loopback embedder"))
+	} else if e.APIKey != "" && !httpsOrLoopback(e.BaseURL) && !insecureHTTPListed(e.BaseURL, e.InsecureHTTPHosts) {
+		errs = append(errs, errors.New("embeddings.embedder.base_url: refusing to send an API key over plain http to a non-loopback host; use https, a loopback embedder, or list the host in embeddings.insecure_http_hosts"))
 	}
 	if strings.TrimSpace(e.Model) == "" {
 		errs = append(errs, errors.New("embeddings.embedder.model is required"))
@@ -237,6 +268,30 @@ func httpsOrLoopback(raw string) bool {
 	}
 	addr, err := netip.ParseAddr(host)
 	return err == nil && addr.IsLoopback()
+}
+
+// insecureHTTPListed reports whether raw is a plain http URL whose host (and,
+// for an entry with a port, port) is named in hosts, the operator's
+// embeddings.insecure_http_hosts. Matching is case-insensitive and exact: a bare
+// host covers every port, host:port covers that port only (an http URL without
+// a port is port 80), and there are no wildcards.
+func insecureHTTPListed(raw string, hosts []string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || !strings.EqualFold(u.Scheme, "http") {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if port == "" {
+		port = "80"
+	}
+	for _, h := range hosts {
+		h = strings.ToLower(strings.TrimSpace(h))
+		if h == host || h == host+":"+port {
+			return true
+		}
+	}
+	return false
 }
 
 func (p Policy) validate() []error {

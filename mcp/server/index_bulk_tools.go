@@ -422,8 +422,11 @@ func (s *Server) indexBulkCancel(ctx context.Context, _ json.RawMessage) (any, e
 	// The run records how it ended when it stops, so the stop is awaited without
 	// the lock (the run takes the lock to leave). The check and the write below
 	// then run under it, so a start or resume cannot slip in between.
-	if r := s.bulk.active(); r != nil {
-		r.stop(errBulkCancelled)
+	if r := s.bulk.active(); r != nil && !r.stop(errBulkCancelled) {
+		return nil, &ToolError{
+			Code:    CodeFailedPrecondition,
+			Message: "the bulk run was told to stop but is still ending, because a daemon command has not returned; it ends once that returns, so check ipfs_index_bulk_status in a moment",
+		}
 	}
 	s.bulk.mu.Lock()
 	defer s.bulk.mu.Unlock()

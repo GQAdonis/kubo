@@ -183,8 +183,21 @@ func (n *fakeNode) install(e *indexEnv) {
 		if n.absent[c] {
 			return nil, &RPCError{Command: "ls", Message: offlineMessage + c}
 		}
+		// Like the daemon, ls loads every child to learn its type or size unless it
+		// is told not to, and an offline load of a missing block fails the whole
+		// listing.
+		resolve, size := true, true
+		if v, ok := opts["resolve-type"].(bool); ok {
+			resolve = v
+		}
+		if v, ok := opts["size"].(bool); ok {
+			size = v
+		}
 		links := []map[string]any{}
 		for _, en := range n.dirs[c] {
+			if (resolve || size) && n.absent[en.CID] {
+				return nil, &RPCError{Command: "ls", Message: offlineMessage + en.CID}
+			}
 			typ := 2
 			if n.dirs[en.CID] != nil {
 				typ = 1

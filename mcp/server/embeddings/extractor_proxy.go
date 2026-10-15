@@ -82,7 +82,7 @@ func startExtractorProxy(upstream string, maxFile int) (*extractorProxy, error) 
 		upstream: upstream,
 		maxBody:  int64(maxFile) + proxyBodyOverhead,
 		// No client timeout: the caller's request context bounds the exchange.
-		hc:   &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
+		hc:   &http.Client{Transport: directTransport(), CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
 		done: make(chan struct{}),
 	}
 	p.srv = &http.Server{Handler: p, ReadHeaderTimeout: proxyHeaderTimeout, MaxHeaderBytes: 16 << 10}

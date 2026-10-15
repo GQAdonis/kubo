@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/ipfs/kubo/mcp/contract"
+	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
 
 const (
@@ -186,12 +187,9 @@ func WithSettingsPath(path string) UARCheckerOption {
 // settings path and recheck interval come from contract.LoadUARPreflight.
 func NewUARChecker(client *http.Client, now func() time.Time, opts ...UARCheckerOption) *UARChecker {
 	if client == nil {
-		tr, _ := http.DefaultTransport.(*http.Transport)
-		tr = tr.Clone()
-		tr.Proxy = nil
 		client = &http.Client{
 			Timeout:       uarHTTPTimeout,
-			Transport:     tr,
+			Transport:     embeddings.DirectTransport(),
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 		}
 	}

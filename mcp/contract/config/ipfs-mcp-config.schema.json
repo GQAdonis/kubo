@@ -1092,6 +1092,21 @@
           "default": {},
           "offSwitch": "Omit the section; set enabled false to unmount the routes.",
           "ownerChange": "vector-search-contract"
+        },
+        "insecure_http_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 262,
+            "pattern": "^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(:[0-9]{1,5})?$",
+            "description": "A host name or IPv4 address, optionally followed by :port. No scheme, no path, no wildcard, no credentials. A bare host covers every port on it; host:port covers that port only. Matching is case-insensitive and exact; ipfs-xberg.ipfs.svc does not cover ipfs-xberg.ipfs.svc.cluster.local."
+          },
+          "uniqueItems": true,
+          "default": [],
+          "description": "Hosts that may be reached over plain http (no TLS) by the remote extractor, the describer and an embedder holding an api_key. Without an entry, plain http to a non-loopback extractor or describer, or to an embedder with a key, is refused at startup because document bytes, media and credentials would travel unencrypted. List only in-cluster Service names on a network you control, for example ipfs-xberg.ipfs.svc:8000 and ipfs-embedder.ipfs.svc:11434, and keep those Services cluster-only with a NetworkPolicy. Loopback hosts need no entry. The entry relaxes the scheme rule only: the host must still be in the calling principal's egress_ack, and https endpoints are unaffected. The remote store already accepts http and needs no entry.",
+          "offSwitch": "[] (default): plain http to a non-loopback extractor, describer or keyed embedder is refused.",
+          "ownerChange": "vector-search-contract"
         }
       },
       "required": [

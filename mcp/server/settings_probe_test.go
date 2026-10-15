@@ -239,7 +239,7 @@ func backendJSONAt(baseURL string) string {
 }
 
 // TestSettingsProbeWithholdsKeyFromNewHost: the stored key reaches only the
-// current backend host or a host the calling principal acknowledged. A new
+// current backend host and port (ADR-0012). A new
 // host is probed without Authorization, on both probe endpoints, and a 401 or
 // 403 is reported as reachable with key_sent false.
 func TestSettingsProbeWithholdsKeyFromNewHost(t *testing.T) {
@@ -261,7 +261,7 @@ func TestSettingsProbeWithholdsKeyFromNewHost(t *testing.T) {
 	validateSettingsSchemaDef(t, "settings/test-connection.schema.json", "TestConnectionResult", doc)
 	assert.Equal(t, true, doc["ok"], "the host answered")
 	assert.Equal(t, false, doc["key_sent"])
-	assert.Contains(t, doc["detail"], "not sent")
+	assert.Contains(t, doc["detail"], "sent only to the current backend")
 
 	resp = e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url="+candidate.srv.URL+"/v1", tokSettingsAdmin, "")
 	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
@@ -275,21 +275,61 @@ func TestSettingsProbeWithholdsKeyFromNewHost(t *testing.T) {
 	}
 }
 
-// TestSettingsProbeSendsKeyToAcknowledgedHost: a host in the principal's
-// egress_ack gets the stored key, so an acknowledged new host can be tested.
-func TestSettingsProbeSendsKeyToAcknowledgedHost(t *testing.T) {
-	backend := newFakeModels(t, "m1")
-	candidate := newFakeModels(t, "c1")
-	e := newSettingsEnvWith(t, backendJSONAt(backend.srv.URL+"/v1"), "", adminVerifierWithAck(t, []string{"local"}))
+// TestSettingsProbeNeverSendsKeyBeyondCurrentBackend pins ADR-0012 option A
+// (the N3 cases): an acknowledged host, any loopback port under "local", and a
+// host acknowledged by an earlier confirmed write all get a keyless probe; only
+// the current backend's own host and port receives the stored key.
+func TestSettingsProbeNeverSendsKeyBeyondCurrentBackend(t *testing.T) {
+	probe := func(t *testing.T, e *settingsEnv, candidate *fakeModels) {
+		t.Helper()
+		resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, `{"base_url":"`+candidate.srv.URL+`/v1"}`)
+		var doc map[string]any
+		require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
+		validateSettingsSchemaDef(t, "settings/test-connection.schema.json", "TestConnectionResult", doc)
+		assert.Equal(t, false, doc["key_sent"])
+		resp = e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url="+candidate.srv.URL+"/v1", tokSettingsAdmin, "")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		for _, a := range candidate.seen() {
+			assert.Empty(t, a, "no Authorization header reached the candidate")
+		}
+		require.Len(t, candidate.seen(), 2)
+	}
 
-	resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, `{"base_url":"`+candidate.srv.URL+`/v1"}`)
-	var doc map[string]any
-	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
-	assert.Equal(t, true, doc["ok"])
-	assert.Equal(t, true, doc["key_sent"])
-	resp = e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url="+candidate.srv.URL+"/v1", tokSettingsAdmin, "")
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Equal(t, []string{"Bearer " + settingsTestKey, "Bearer " + settingsTestKey}, candidate.seen())
+	t.Run("acknowledged host", func(t *testing.T) {
+		backend := newFakeModels(t, "m1")
+		candidate := newFakeModels(t, "c1")
+		host := HostFromURL(candidate.srv.URL)
+		e := newSettingsEnvWith(t, backendJSONAt(backend.srv.URL+"/v1"), "", adminVerifierWithAck(t, []string{host}))
+		probe(t, e, candidate)
+	})
+
+	t.Run("any loopback port under local", func(t *testing.T) {
+		backend := newFakeModels(t, "m1")
+		candidate := newFakeModels(t, "c1")
+		e := newSettingsEnvWith(t, backendJSONAt(backend.srv.URL+"/v1"), "", adminVerifierWithAck(t, []string{"local"}))
+		probe(t, e, candidate)
+	})
+
+	t.Run("previously acknowledged host", func(t *testing.T) {
+		backend := newFakeModels(t, "m1")
+		candidate := newFakeModels(t, "c1")
+		dir := t.TempDir()
+		e := newSettingsEnvWith(t, backendJSONAt(backend.srv.URL+"/v1"), dir, adminVerifierWithAck(t, nil))
+		// Move to the candidate with the typed confirmation (an environment
+		// key travels), then back; the candidate stays in the overlay's ack.
+		etag, _ := getSettings(t, e)
+		etag = e.putEgress(t, etag, `{"backend":{"base_url":"`+candidate.srv.URL+`/v1"},"egress_confirmation":{"host":"`+HostFromURL(candidate.srv.URL)+`"}}`)
+		_ = e.putEgress(t, etag, `{"backend":{"base_url":"`+backend.srv.URL+`/v1"},"egress_confirmation":{"host":"`+HostFromURL(backend.srv.URL)+`"}}`)
+		// The candidate is acknowledged but is no longer the current backend.
+		before := len(candidate.seen())
+		resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, `{"base_url":"`+candidate.srv.URL+`/v1"}`)
+		var doc map[string]any
+		require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
+		assert.Equal(t, false, doc["key_sent"])
+		seen := candidate.seen()[before:]
+		require.Len(t, seen, 1)
+		assert.Empty(t, seen[0])
+	})
 }
 
 // TestSettingsModelsListNoBackend: with nothing configured the endpoint
@@ -346,4 +386,24 @@ func TestSettingsProbeKind(t *testing.T) {
 		resp := e.doPath(t, http.MethodGet, path, tokSettingsAdmin, "")
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode, name)
 	}
+}
+
+// TestSettingsProbeWithholdsKeyOnSchemeChange: the key decision uses the whole
+// endpoint (scheme, host, port, default ports filled in), not host and port
+// alone, so an https candidate on the current backend's loopback port is
+// probed without the key.
+func TestSettingsProbeWithholdsKeyOnSchemeChange(t *testing.T) {
+	backend := newFakeModels(t, "m1")
+	e := newSettingsEnv(t, backendJSONAt(backend.srv.URL+"/v1"))
+	same := func(base string) bool {
+		resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, `{"base_url":"`+base+`"}`)
+		var doc map[string]any
+		require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
+		sent, _ := doc["key_sent"].(bool)
+		return sent
+	}
+	assert.True(t, same(backend.srv.URL+"/v1"), "the current backend's own endpoint gets the key")
+	assert.True(t, same(backend.srv.URL+"/other"), "a path change is not a move")
+	https := "https://" + HostFromURL(backend.srv.URL) + "/v1"
+	assert.False(t, same(https), "https on the same host and port is another endpoint")
 }

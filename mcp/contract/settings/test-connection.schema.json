@@ -33,7 +33,7 @@
         },
         "key_sent": {
           "type": "boolean",
-          "description": "Additive, optional. Whether the stored API key was attached to the probe. false with ok true means the host answered but the key was withheld because the host is neither the current backend host nor an acknowledged one; the connection is reachable but unauthenticated, so a key-requiring backend may still refuse it. Absent is read as false (older servers never reported it)."
+          "description": "Additive, optional. Whether the stored API key was attached to the probe. The key is sent only to the current backend host:port (ADR-0012); an acknowledged host, a loopback wildcard or any other candidate never receives it. false with ok true means the host answered but the key was withheld; the connection is reachable but unauthenticated, so a key-requiring backend may still refuse it. Absent is read as false (older servers never reported it)."
         },
         "detail": {
           "type": "string",

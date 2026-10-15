@@ -82,6 +82,9 @@ type ExtractorSettings struct {
 	OCR bool
 	// Transcribe turns on transcription of audio tracks.
 	Transcribe bool
+	// InsecureHTTPHosts is embeddings.insecure_http_hosts: hosts a remote
+	// extractor may be reached at over plain http.
+	InsecureHTTPHosts []string
 }
 
 // ExtractorEmbedded configures the supervised xberg process.
@@ -165,9 +168,9 @@ func (s ExtractorSettings) validateRemote() []error {
 	var errs []error
 	if err := checkEndpoint(r.BaseURL); err != nil {
 		errs = append(errs, fmt.Errorf("embeddings.extractor.remote.base_url: %w", err))
-	} else if !httpsOrLoopback(r.BaseURL) {
+	} else if !httpsOrLoopback(r.BaseURL) && !insecureHTTPListed(r.BaseURL, s.InsecureHTTPHosts) {
 		// Document content, not only a credential, crosses the network.
-		errs = append(errs, errors.New("embeddings.extractor.remote.base_url: refusing plain http to a non-loopback host, which would send documents (and any credential) unencrypted; use https"))
+		errs = append(errs, errors.New("embeddings.extractor.remote.base_url: refusing plain http to a non-loopback host, which would send documents (and any credential) unencrypted; use https or list the host in embeddings.insecure_http_hosts"))
 	}
 	if s.Embedded != nil {
 		errs = append(errs, errors.New("embeddings.extractor.embedded is set but embeddings.extractor.mode is remote"))

@@ -5,7 +5,7 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 Mark the two superseded changes and write ADR-0010. Acceptance: both old `tasks.md` carry a superseded note; the ADR lists the release gate.
+- [x] 1.1 Mark the two superseded changes and write ADR-0010. Acceptance: both old `tasks.md` carry a superseded note; the ADR lists the release gate.
 - [ ] 1.2 `backend.kind: uar`: provision the agent against the released API (W9). Acceptance: a fixture test against recorded release responses, and the real-service run of 1.5 shows `GET /api/agents/{id}` returning a system prompt equal to kubo's configured prompt (prefix included), an MCP binding naming the kubo server, and skill bindings equal to the directory names under `mcp/skills/`.
 - [ ] 1.3 Proxy AG-UI runs and translate interrupts (`tool_approval`, `mcp_elicitation`) to the kubo shape. Acceptance: fixture tests for both interrupt kinds.
 - [ ] 1.4 Pin `uar-preflight.json` to the release tag and digest; set `check-uar` minimum version. Acceptance: no `null` in the preflight file.

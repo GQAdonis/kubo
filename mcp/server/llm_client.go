@@ -15,6 +15,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
 
 // Limits on what a model backend can make this process hold in memory.
@@ -134,7 +136,9 @@ func NewLLMClient(set AgentSettings) (*LLMClient, error) {
 		}
 	}
 	if c.hc == nil {
-		c.hc = &http.Client{}
+		// Like the embedder and the other clients that carry operator-named content
+		// or keys, it ignores HTTP_PROXY, HTTPS_PROXY and NO_PROXY.
+		c.hc = &http.Client{Transport: embeddings.DirectTransport()}
 	}
 	// A redirect would carry the Authorization header to another host. The
 	// operator named one endpoint; a redirect is an answer, not a detour.

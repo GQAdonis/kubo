@@ -3,6 +3,8 @@
 Plan reference: `.kbd-orchestrator/phases/ipfs-mcp-server/plan.md` (plan revision 2), section TASK MODEL ASSIGNMENTS, phase path `ipfs-mcp-server`, change ID `agentic-uar-integration`, backend task IDs 1.1, 1.2, 1.3, 1.4. Route, model and prerequisites (every task requires PR-1) come from those rows only.
 Change-level prerequisites (plan revision 2): every task in this change also requires completion of: `uar-integration-spike`. Scheduled in Round 7.
 
+> **Superseded 2026-10-15 (phase `agent-backend-settings`, Round 6):** this whole change (tasks 1.1-1.5) is superseded by OpenSpec change `agent-backend-uar` and ADR-0010 (`docs/mcp/0010-uar-agent-behind-agui.md`). Every task stays unchecked and is not carried forward as written; topology B (UAR hosting AG-UI and A2A and calling `ipfs mcp --http` as a `kind: uar` principal) is replaced by kubo provisioning and proxying a UAR agent behind `ipfs mcp /agui` (D13, D14), gated on a published UAR release (OG-4).
+
 ## 1. Topology B (conditional)
 
 - [ ] 1.1 DEFERRED (unmet; topology-B gate NO-GO, ADR-0008; carried to a later phase 2026-10-12, tracked in Prometheus-AGS/universal-agent-runtime#379). Write the UAR profile in `mcp/uar/profile/` with the safe settings and HTTP-only `mcp.json`. Verify: a checklist test asserts each safe setting, no stdio entry and no reserved port

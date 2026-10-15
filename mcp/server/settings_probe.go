@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
 
 // Routes of the settings surface's probe endpoints, pinned here by
@@ -50,16 +52,16 @@ type testConnectionBody struct {
 // "backend unreachable", and the client already renders ok/detail.
 type testConnectionResult struct {
 	OK bool `json:"ok"`
-	// KeySent says whether the stored key was attached to the probe. It is false
-	// for a host that is neither the current backend nor acknowledged by the
-	// calling principal, and when no key is stored.
+	// KeySent says whether the stored key was attached to the probe. The stored
+	// key is sent only to the current backend's scheme, host and port, so it is
+	// false for any other candidate and when no key is stored.
 	KeySent bool   `json:"key_sent"`
 	Detail  string `json:"detail,omitempty"`
 }
 
 // keyWithheldDetail explains a probe that was answered 401 or 403 without the
 // stored key.
-const keyWithheldDetail = "the host answered but needs a key; the stored key is not sent to a host that is neither the current backend nor acknowledged for this principal"
+const keyWithheldDetail = "the host answered but needs a key; the stored key is sent only to the current backend's host and port"
 
 // modelListResult is the model-list endpoint's success shape (contract
 // settings/model-list.schema.json, ModelListResult).
@@ -91,7 +93,7 @@ func (h *settingsHandler) testConnection(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	key, sent, withheld := h.probeKey(req.BaseURL, callerIdentity(r))
+	key, sent, withheld := h.probeKey(req.BaseURL)
 	_, err := probeOpenAIModels(r.Context(), req.BaseURL, key)
 	writeSettingsJSON(w, http.StatusOK, "", probeResult(err, key, sent, withheld, true))
 }
@@ -121,7 +123,7 @@ func (h *settingsHandler) listModels(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	key, sent, withheld := h.probeKey(base, callerIdentity(r))
+	key, sent, withheld := h.probeKey(base)
 	ids, err := probeOpenAIModels(r.Context(), base, key)
 	if err != nil {
 		writeSettingsJSON(w, http.StatusOK, "", probeResult(err, key, sent, withheld, false))
@@ -135,23 +137,19 @@ func (h *settingsHandler) listModels(w http.ResponseWriter, r *http.Request) {
 }
 
 // probeKey decides whether the stored key goes to the probed host. It does only
-// for the current backend's own host and port or a host the calling principal
-// has acknowledged (its egress_ack, plus the hosts its confirmed writes added):
-// anything else is a candidate typed by a client, and sending the key there would
-// hand it to whoever runs that host. sent is false when no key goes out,
-// including when none is stored; withheld is true when a stored key was held
-// back.
-func (h *settingsHandler) probeKey(baseURL string, id Identity) (key secret, sent, withheld bool) {
-	key = h.st.storedKey()
+// for the current backend's own host and port (ADR-0012): an acknowledged host,
+// the "local" sentinel and any other candidate typed by a client never receive
+// it, because sending it there would hand it to whoever runs that host. sent is
+// false when no key goes out, including when none is stored; withheld is true
+// when a stored key was held back.
+func (h *settingsHandler) probeKey(baseURL string) (key secret, sent, withheld bool) {
+	// The key and the current backend are read in one critical section, so a
+	// concurrent move cannot pair the old key with the new host.
+	key, cur := h.st.keyAndCurrent()
 	if key == "" {
 		return "", false, false
 	}
-	host := HostFromURL(baseURL)
-	h.st.mu.Lock()
-	cur := h.st.current
-	covered := AckCovers(h.st.effectiveAck(id), host)
-	h.st.mu.Unlock()
-	if covered || (cur != nil && sameHostPort(host, HostFromURL(cur.BaseURL))) {
+	if cur != nil && !backendMoved(cur.BaseURL, baseURL) {
 		return key, true, false
 	}
 	return "", false, true
@@ -218,14 +216,19 @@ func validateCandidateURL(raw string) error {
 	return nil
 }
 
-// storedKey returns the key a probe may authenticate with: the currently stored
+// keyAndCurrent returns the key a probe may authenticate with: the currently stored
 // backend key (flags winning over config and overlay, exactly as the resolved
 // backend sees it), never a value sent with the probe request. An unresolved
 // reference (absent file, unset variable) means the probe sends no key, never
 // an error (CRITICAL-2).
-func (st *settingsState) storedKey() secret {
+func (st *settingsState) keyAndCurrent() (secret, *AgentSettings) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	return st.storedKeyLocked(), st.current
+}
+
+// storedKeyLocked is the key part of keyAndCurrent; st.mu must be held.
+func (st *settingsState) storedKeyLocked() secret {
 	ref := st.base.key
 	if st.over.keyGiven() {
 		if flagRef, err := keyRefFromFlags(st.over); err == nil {
@@ -258,6 +261,7 @@ func probeOpenAIModels(ctx context.Context, baseURL string, key secret) ([]strin
 		req.Header.Set("Authorization", "Bearer "+key.reveal())
 	}
 	hc := &http.Client{
+		Transport:     embeddings.DirectTransport(),
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	resp, err := hc.Do(req)

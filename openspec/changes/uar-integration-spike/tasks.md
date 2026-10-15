@@ -3,6 +3,8 @@
 Plan reference: `.kbd-orchestrator/phases/ipfs-mcp-server/plan.md` (plan revision 2), section TASK MODEL ASSIGNMENTS, phase path `ipfs-mcp-server`, change ID `uar-integration-spike`, backend task IDs 1.1, 1.2, 1.3, 1.4, 1.5. Route, model and prerequisites (every task requires PR-1) come from those rows only.
 Change-level prerequisites (plan revision 2): every task in this change also requires completion of: `mcp-agent-principal-enforcement`, `native-confirmation-prompt`, `uar-conformance-request`. Scheduled in Round 6.
 
+> **Superseded 2026-10-15 (phase `agent-backend-settings`, Round 6):** tasks 1.2-1.5 are superseded by OpenSpec change `agent-backend-uar` and ADR-0010 (`docs/mcp/0010-uar-agent-behind-agui.md`). They stay unchecked and are not carried forward as written; the work they described (a UAR-hosted topology B with a `kind: uar` principal) is replaced by kubo provisioning and proxying a UAR agent behind `ipfs mcp /agui` (D13, D14), and is gated on a published UAR release (OG-4). Task 1.1 (the recorded NO-GO, ADR-0008) is unchanged.
+
 ## 1. UAR spike (conditional)
 
 - [x] 1.1 Record the topology-B gate result: published UAR release, tag and digest or package, and contained conformance items; stop and mark N2 and N3 deferred if it fails. Verify: the result is in `mcp/uar/spike/REPORT.md` and reported to the orchestrator for `progress.json`. Result 2026-10-09: NO-GO, recorded with evidence in `docs/mcp/0008-topology-b-gate-no-go.md` (ADR-0008; `REPORT.md` could not be written from the architect's session, see the ADR's note on location) and reported to the orchestrator
