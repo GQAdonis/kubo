@@ -2,24 +2,24 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1870,
-  "derivedRevision": 1870,
+  "sourceRevision": 1871,
+  "derivedRevision": 1871,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1870
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1871
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-15T20:46:46.827133Z",
+  "updatedAt": "2026-10-15T20:59:39.461352Z",
   "cursor": [
     "agent-backend-settings",
-    "kubo-candidate-image",
-    "1.6"
+    "lke-origin-isolation",
+    "1.9"
   ],
   "root": {
     "type": "phase",
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 62,
+      "done": 63,
       "total": 76
     },
     "children": [
@@ -29,7 +29,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 28,
+          "done": 29,
           "total": 36
         },
         "children": [
@@ -283,9 +283,9 @@
           {
             "type": "change",
             "id": "kubo-candidate-image",
-            "status": "IN_PROGRESS",
+            "status": "COMPLETE",
             "progress": {
-              "done": 5,
+              "done": 6,
               "total": 6
             }
           },

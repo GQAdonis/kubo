@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1870,
-  "derivedRevision": 1870,
+  "sourceRevision": 1871,
+  "derivedRevision": 1871,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1870
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1871
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -21,19 +21,19 @@
   "phase": "agent-backend-settings",
   "parentPhase": null,
   "childPointer": null,
-  "change": "kubo-candidate-image",
-  "currentTask": "1.6",
+  "change": "lke-origin-isolation",
+  "currentTask": "1.9",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": null,
   "stageStatus": null,
   "completionMetric": "implementation",
-  "implementationCompleted": 62,
+  "implementationCompleted": 63,
   "implementationTotal": 76,
   "planRevision": 2,
-  "revision": 1870,
+  "revision": 1871,
   "exactNextCommand": null,
-  "nextChange": "kubo-candidate-image",
-  "nextTask": "1.6",
-  "updatedAt": "2026-10-15T20:46:46.827133Z"
+  "nextChange": "lke-origin-isolation",
+  "nextTask": "1.9",
+  "updatedAt": "2026-10-15T20:59:39.461352Z"
 }
