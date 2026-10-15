@@ -24,7 +24,7 @@
     "max_files": {
       "type": "integer",
       "minimum": 1,
-      "description": "File cap for this run. The effective cap is the smaller of this and the configured embeddings.bulk.max_files_per_run; a run never exceeds the config cap."
+      "description": "File cap for this run. The effective cap is the smaller of this and the configured embeddings.bulk.max_files_per_run; a run never exceeds the config cap. The cap counts files tried (files seen minus already_indexed, excluding not_a_file), so re-running over indexed content does not consume it."
     },
     "max_bytes": {
       "type": "integer",

@@ -1372,7 +1372,6 @@
       "contentEgress": true,
       "rpc": [
         "cat",
-        "files/ls",
         "files/stat",
         "ls",
         "pin/ls"
@@ -1395,7 +1394,7 @@
       "name": "ipfs_index_bulk_status",
       "group": "index",
       "title": "Bulk index status",
-      "description": "Report whether bulk indexing is enabled and the state of the current or last run: running, paused, completed, cancelled or failed, the principal that started it, the effective sources and caps, counts of files seen, indexed and skipped per reason, and chunks and bytes indexed. Reads only the persisted run state in the vector store; contacts no daemon endpoint, extractor or embedder. An unreachable vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "description": "Report whether bulk indexing is enabled and the state of the current or last run (any principal with the index group can read run metadata, including runs another principal started; acceptable on a single-operator node): running, paused, completed, cancelled or failed, the principal that started it, the effective sources and caps, counts of files seen, indexed and skipped per reason, and chunks and bytes indexed. Reads only the persisted run state in the vector store; contacts no daemon endpoint, extractor or embedder. An unreachable vector store is index_unavailable, which is retryable. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -1423,7 +1422,7 @@
       "name": "ipfs_index_bulk_cancel",
       "group": "index",
       "title": "Cancel bulk index",
-      "description": "Cancel the active or paused bulk indexing run and report the counts gathered so far. Files already indexed stay indexed, so a later run skips them as already_indexed. Write class: confirmed on every transport. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
+      "description": "Cancel the active or paused bulk indexing run (any principal with the index group can cancel a run another principal started, always after confirmation; acceptable on a single-operator node) and report the counts gathered so far. Files already indexed stay indexed, so a later run skips them as already_indexed. Write class: confirmed on every transport. If the ipfs-content-search skill is available, load it first for search, indexing and availability checks.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,

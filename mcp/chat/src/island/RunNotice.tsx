@@ -34,6 +34,9 @@ export function noticeFor(error: SessionError | undefined, run: ChatState['run']
           canRetry: error.retryText !== undefined,
           retryNotBefore: error.retryNotBefore,
         };
+      case 'backend_not_configured':
+        // Drawn as the panel's empty state (BackendEmpty), not as a failure notice.
+        return undefined;
       case 'failed_precondition':
         return { tone: 'warn', label: 'Waiting', text: error.message, status: 'Waiting for approval', canRetry: false };
       default:

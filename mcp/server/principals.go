@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+
+	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
 
 // Values of a principal's check key.
@@ -118,6 +120,102 @@ type EmbeddingsConfig struct {
 	// Extractor turns documents, code and data into Markdown through xberg; nil
 	// means no extractor process or request exists.
 	Extractor *ExtractorConfig `json:"extractor"`
+	// Describer describes images (and, if listed, videos) through an
+	// OpenAI-compatible chat model; nil means no description request exists.
+	Describer *DescriberConfig `json:"describer"`
+	// Bulk holds the bulk indexing caps and its off switch (bulk.enabled).
+	Bulk BulkConfig `json:"bulk"`
+	// SearchRoute is search_route: the HTTP search routes' off switch.
+	SearchRoute struct {
+		Enabled *bool `json:"enabled"`
+	} `json:"search_route"`
+}
+
+// DescriberConfig is embeddings.describer. Pointer and slice fields tell an
+// absent key (the contract default) from an explicit zero or empty value.
+type DescriberConfig struct {
+	BaseURL string     `json:"base_url"`
+	Model   string     `json:"model"`
+	APIKey  *SecretRef `json:"api_key"`
+	// Kinds nil is the default ["image"]; [] describes nothing.
+	Kinds           []string `json:"kinds"`
+	MaxOutputTokens int      `json:"max_output_tokens"`
+	ImageMaxBytes   int      `json:"image_max_bytes"`
+	VideoMaxBytes   int      `json:"video_max_bytes"`
+	VideoFPS        float64  `json:"video_fps"`
+	// MaxRequestsPerHour nil is the default 120; 0 disables the describer.
+	MaxRequestsPerHour *int `json:"max_requests_per_hour"`
+	TimeoutSeconds     int  `json:"timeout_seconds"`
+}
+
+// Enabled reports whether the describer can describe anything: a kind is
+// listed and its hourly limit is not 0.
+func (c *DescriberConfig) Enabled() bool {
+	if c == nil || (c.MaxRequestsPerHour != nil && *c.MaxRequestsPerHour == 0) {
+		return false
+	}
+	return c.Kinds == nil || len(c.Kinds) > 0
+}
+
+// Bulk defaults, the contract's defaults of embeddings.bulk.
+const (
+	DefaultBulkMFSRoot        = "/"
+	DefaultBulkMaxFiles       = 1000
+	DefaultBulkMaxBytes       = int64(1) << 30
+	DefaultBulkFilesPerMinute = 30
+)
+
+// BulkConfig is embeddings.bulk. Zero values take the contract defaults.
+type BulkConfig struct {
+	// Enabled nil is true; false hides the three bulk tools.
+	Enabled *bool `json:"enabled"`
+	// Sources nil is ["pins","mfs"]; [] makes a run index nothing.
+	Sources        []string `json:"sources"`
+	MFSRoot        string   `json:"mfs_root"`
+	MaxFilesPerRun int      `json:"max_files_per_run"`
+	MaxBytesPerRun int64    `json:"max_bytes_per_run"`
+	FilesPerMinute int      `json:"files_per_minute"`
+}
+
+// IsEnabled reports whether the bulk tools are offered (bulk.enabled, default
+// true).
+func (b BulkConfig) IsEnabled() bool { return b.Enabled == nil || *b.Enabled }
+
+// EffectiveSources is the configured sources, or both when the key is absent.
+func (b BulkConfig) EffectiveSources() []string {
+	if b.Sources == nil {
+		return []string{"pins", "mfs"}
+	}
+	return slices.Clone(b.Sources)
+}
+
+// EffectiveMFSRoot is the configured MFS root, or "/".
+func (b BulkConfig) EffectiveMFSRoot() string {
+	if b.MFSRoot == "" {
+		return DefaultBulkMFSRoot
+	}
+	return b.MFSRoot
+}
+
+// Caps returns the configured caps with defaults filled in.
+func (b BulkConfig) Caps() embeddings.RunCaps {
+	c := embeddings.RunCaps{MaxFiles: b.MaxFilesPerRun, MaxBytes: b.MaxBytesPerRun, FilesPerMinute: b.FilesPerMinute}
+	if c.MaxFiles == 0 {
+		c.MaxFiles = DefaultBulkMaxFiles
+	}
+	if c.MaxBytes == 0 {
+		c.MaxBytes = DefaultBulkMaxBytes
+	}
+	if c.FilesPerMinute == 0 {
+		c.FilesPerMinute = DefaultBulkFilesPerMinute
+	}
+	return c
+}
+
+// SearchRouteEnabled reports whether the HTTP search routes may mount
+// (embeddings.search_route.enabled, default true).
+func (c *EmbeddingsConfig) SearchRouteEnabled() bool {
+	return c != nil && (c.SearchRoute.Enabled == nil || *c.SearchRoute.Enabled)
 }
 
 // ExtractorConfig is embeddings.extractor.
@@ -167,6 +265,10 @@ func (c *Config) BackendHosts() []string {
 		// is a host content is sent to.
 		if x := c.Embeddings.Extractor; x != nil && x.Remote != nil {
 			add(x.Remote.BaseURL)
+		}
+		// The describer receives media bytes; a disabled one receives nothing.
+		if d := c.Embeddings.Describer; d.Enabled() {
+			add(d.BaseURL)
 		}
 	}
 	return hosts

@@ -81,7 +81,7 @@ func NewEmbedder(s EmbedderSettings, hc *http.Client) (*Embedder, error) {
 		return nil, fmt.Errorf("embeddings.embedder.base_url: %w", err)
 	}
 	if hc == nil {
-		hc = &http.Client{Timeout: embedTimeout}
+		hc = &http.Client{Timeout: embedTimeout, Transport: directTransport()}
 	}
 	// A redirect would carry the document text and the key to a host the
 	// operator did not name and the principal did not acknowledge.

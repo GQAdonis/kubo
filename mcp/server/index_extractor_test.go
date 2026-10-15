@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"maps"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 type kindStore struct {
 	mu   sync.Mutex
 	rows []embeddings.Row
+	memRuns
 }
 
 func (k *kindStore) Bootstrap(context.Context) error { return nil }
@@ -40,7 +42,7 @@ func (k *kindStore) Replace(_ context.Context, cid string, rows []embeddings.Row
 func (k *kindStore) hit(r embeddings.Row, v []float32) embeddings.Hit {
 	return embeddings.Hit{
 		CID: r.CID, Path: r.Path, MIME: r.MIME, ChunkIndex: r.ChunkIndex, Model: r.Model,
-		Distance: cosineDistance(r.Vector, v), Kind: r.Kind, Source: r.Source, Text: r.Text,
+		Distance: cosineDistance(r.Vector, v), Kind: r.Kind, Source: r.Source, Text: r.Text, DescribedBy: r.DescribedBy,
 	}
 }
 
@@ -109,7 +111,18 @@ func (k *kindStore) CountCIDs(context.Context) (int, error) {
 	return len(seen), nil
 }
 
-func (k *kindStore) ListCIDs(context.Context, string, int) ([]string, error) { return nil, nil }
+func (k *kindStore) ListCIDs(_ context.Context, after string, limit int) ([]string, error) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	set := map[string]struct{}{}
+	for _, r := range k.rows {
+		if r.CID > after {
+			set[r.CID] = struct{}{}
+		}
+	}
+	cids := slices.Sorted(maps.Keys(set))
+	return cids[:min(limit, len(cids))], nil
+}
 
 func (k *kindStore) snapshot() []embeddings.Row {
 	k.mu.Lock()
@@ -531,8 +544,8 @@ func TestImagesAndVideoNeedTheirStageOn(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, nil) // ocr and transcribe off
 	e.files["/ipfs/bafyPNG"] = pngBytes
 	e.files["/ipfs/bafyMP4"] = mp4Bytes
-	assert.Equal(t, "kind_not_enabled", e.index(e.principal(), "bafyPNG")["skipped_reason"], "OCR is off")
-	assert.Equal(t, "kind_not_enabled", e.index(e.principal(), "bafyMP4")["skipped_reason"], "transcription is off")
+	assert.Equal(t, "describer_not_configured", e.index(e.principal(), "bafyPNG")["skipped_reason"], "OCR is off and no describer covers images")
+	assert.Equal(t, "describer_not_configured", e.index(e.principal(), "bafyMP4")["skipped_reason"], "transcription is off and no describer covers video")
 	assert.Empty(t, e.x.requests())
 }
 

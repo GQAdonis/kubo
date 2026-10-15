@@ -276,13 +276,14 @@
             "egress_not_acknowledged",
             "invalid_argument",
             "index_unavailable",
+            "resource_exhausted",
             "internal"
           ],
           "description": "not_configured is the unmounted-route state (its name matches the ipfs_node_status unavailable_tools reason, not the shared ErrorCode list, because nothing is served to carry a body); the rest are codes of schemas/common.json ErrorCode."
         },
         "status": {
           "type": "integer",
-          "enum": [400, 401, 403, 404, 500, 503]
+          "enum": [400, 401, 403, 404, 429, 500, 503]
         },
         "when": { "type": "string", "minLength": 10 },
         "retryable": { "type": "boolean" }

@@ -67,10 +67,41 @@ func (c *EmbeddingsConfig) Settings() (embeddings.Settings, error) {
 		}
 		s.Extractor = x
 	}
+	if c.Describer != nil {
+		d, err := c.Describer.settings()
+		if err != nil {
+			errs = append(errs, err)
+		}
+		s.Describer = d
+	}
 	if err := errors.Join(errs...); err != nil {
 		return embeddings.Settings{}, err
 	}
 	return s, nil
+}
+
+// settings resolves embeddings.describer: it reads the API key reference now.
+func (c *DescriberConfig) settings() (*embeddings.DescriberSettings, error) {
+	d := &embeddings.DescriberSettings{
+		BaseURL:            c.BaseURL,
+		Model:              c.Model,
+		Kinds:              c.Kinds,
+		MaxOutputTokens:    c.MaxOutputTokens,
+		ImageMaxBytes:      c.ImageMaxBytes,
+		VideoMaxBytes:      c.VideoMaxBytes,
+		VideoFPS:           c.VideoFPS,
+		MaxRequestsPerHour: c.MaxRequestsPerHour,
+		Timeout:            time.Duration(c.TimeoutSeconds) * time.Second,
+	}
+	if c.APIKey == nil {
+		return d, nil
+	}
+	v, err := c.APIKey.Read()
+	d.APIKey = embeddings.Secret(v)
+	if err != nil {
+		return d, fmt.Errorf("embeddings.describer.api_key: %w", err)
+	}
+	return d, nil
 }
 
 // settings resolves embeddings.extractor: it reads the credential reference now.
@@ -127,7 +158,9 @@ func (s *Server) EnableEmbeddings(ctx context.Context, cfg *EmbeddingsConfig, lo
 	if err != nil {
 		return err
 	}
+	s.bulk.cfg = cfg.Bulk
 	s.attachEmbeddings(svc)
+	s.recoverBulkRun(ctx)
 	return nil
 }
 
@@ -141,6 +174,7 @@ func (s *Server) CloseEmbeddings() error {
 	if s.embeddingsExt == nil {
 		return nil
 	}
+	s.StopBulk()
 	return s.embeddingsExt.Close()
 }
 

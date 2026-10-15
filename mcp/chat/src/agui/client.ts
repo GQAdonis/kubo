@@ -17,6 +17,7 @@ export type AguiErrorKind =
   | 'session_busy' // 409 session_busy: another run is streaming on this thread; retryable
   | 'failed_precondition' // 409 failed_precondition: an open interrupt or a full thread; not retryable unchanged
   | 'resource_exhausted' // 503: a server-wide cap (the session limit); retryable after Retry-After
+  | 'backend_not_configured' // 503 backend_not_configured: /agui is mounted but no model backend is set; fixed by Settings, not by waiting
   | 'http'
   | 'network'
   | 'protocol'
@@ -55,6 +56,24 @@ const STATUS_MESSAGE: Record<number, [AguiErrorKind, string]> = {
 export const SESSION_BUSY_MESSAGE = 'A reply is still streaming. Send again when it ends.';
 export const FAILED_PRECONDITION_MESSAGE = 'Answer the open question first.';
 export const RESOURCE_EXHAUSTED_MESSAGE = 'The node is at its session limit. Try again shortly.';
+export const BACKEND_NOT_CONFIGURED_MESSAGE = 'The node has no model backend yet. Choose one in Settings.';
+
+/**
+ * A 503 is either the node's session limit (resource_exhausted, retryable after Retry-After) or
+ * "mounted with no backend" (backend_not_configured, fixed in Settings, not by waiting). Only the code
+ * in the body tells them apart. Nothing else of the body is read or shown, and an unreadable body is
+ * the session limit, the case waiting can fix. The code is not in the shared tool error list, so it
+ * is read here rather than through parseToolError.
+ */
+async function isBackendNotConfigured(response: Response): Promise<boolean> {
+  try {
+    const body: unknown = JSON.parse(await response.text());
+    const error = typeof body === 'object' && body !== null ? (body as { error?: unknown }).error : undefined;
+    return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'backend_not_configured';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * A 409 carries a ToolError body whose code says which conflict it is. Only the code is read: the body's
@@ -115,6 +134,7 @@ export function createAguiClient(options: AguiClientOptions): AguiClient {
       if (known) throw new AguiError(known[0], known[1], response.status);
       if (response.status === 409) throw await conflictError(response);
       if (response.status === 503) {
+        if (await isBackendNotConfigured(response)) throw new AguiError('backend_not_configured', BACKEND_NOT_CONFIGURED_MESSAGE, 503);
         const wait = parseRetryAfter(response.headers.get('retry-after'), (options.now ?? Date.now)());
         throw new AguiError('resource_exhausted', RESOURCE_EXHAUSTED_MESSAGE, 503, wait);
       }

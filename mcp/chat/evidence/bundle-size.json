@@ -3,26 +3,26 @@
   "closed": {
     "description": "paid when the host page loads the module and never opens the sidebar",
     "raw": 5376,
-    "gzip": 2399,
-    "brotli": 2033
+    "gzip": 2398,
+    "brotli": 2011
   },
   "firstOpen": {
     "description": "paid once, on first open: React 19, the A2UI renderer and catalog, the library, zod, the bundled brand fonts",
-    "raw": 1140154,
-    "gzip": 374788,
-    "brotli": 332098
+    "raw": 1145416,
+    "gzip": 376145,
+    "brotli": 333355
   },
   "total": {
-    "raw": 1145530,
-    "gzip": 377187,
-    "brotli": 334131
+    "raw": 1150792,
+    "gzip": 378543,
+    "brotli": 335366
   },
   "files": [
     {
-      "file": "dist/chunks/mount-9hrP-V2S.js",
-      "raw": 941596,
-      "gzip": 226119,
-      "brotli": 183835
+      "file": "dist/chunks/mount-DYmoEgTR.js",
+      "raw": 946858,
+      "gzip": 227476,
+      "brotli": 185092
     },
     {
       "file": "dist/chunks/fonts-data-D_fXGTRc-DVfbGgFJ.js",
@@ -33,8 +33,8 @@
     {
       "file": "dist/ipfs-agent-chat.js",
       "raw": 3902,
-      "gzip": 1668,
-      "brotli": 1413
+      "gzip": 1667,
+      "brotli": 1391
     },
     {
       "file": "dist/chunks/endpoint-BhoYC3ie.js",

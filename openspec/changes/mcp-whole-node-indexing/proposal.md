@@ -34,4 +34,4 @@ None.
 - Scope: `mcp/server/**`, `cmd/ipfs/kubo/mcp*.go`, `test/cli/mcp_*_test.go`
 - Depends on: vector-search-contract, mcp-content-extractor; mcp-http-transport-auth and mcp-agent-principal-enforcement (delivered) for the route's authorization
 - Size: L; goals: 6
-- Stability: no `/api/v0`, HTTP Gateway, default CID recipe or wire change; only existing RPC calls are used (`pin/ls`, `files/ls`, `files/stat`, `ls`, `cat`). Nothing is added, pinned or announced (AGENTS.md "No silent CID injection"). Every new feature keeps an off switch (AGENTS.md).
+- Stability: no `/api/v0`, HTTP Gateway, default CID recipe or wire change; only existing RPC calls are used (`pin/ls`, `files/stat`, `ls`, `cat`; the MFS walk is `files/stat /` once, then offline `ls` and offline `files/stat` on `/ipfs/<root>/...`). Nothing is added, pinned or announced (AGENTS.md "No silent CID injection"). Every new feature keeps an off switch (AGENTS.md).

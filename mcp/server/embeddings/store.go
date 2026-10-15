@@ -42,6 +42,9 @@ type Row struct {
 	Source string
 	// Text is the chunk text of a derived chunk; empty for Source "text".
 	Text string
+	// DescribedBy is the describer model that produced a Source "description"
+	// chunk; empty for every other source.
+	DescribedBy string
 }
 
 // Hit is one search result. Distance is the cosine distance (0 is identical).
@@ -57,11 +60,16 @@ type Hit struct {
 	Kind   string `json:"kind"`
 	Source string `json:"source"`
 	Text   string `json:"text"`
+	// DescribedBy names the describer model of a description chunk.
+	DescribedBy string `json:"described_by"`
 }
 
 // Derived reports whether the hit's text came from a derivation and is stored
 // with the row, rather than being cut from the file's bytes on demand.
 func (h Hit) Derived() bool { return h.Source != "" && h.Source != SourceText }
+
+// KindText is the content kind of natively indexed text.
+const KindText = "text"
 
 // Chunk sources, the contract's source values.
 const (
@@ -144,7 +152,9 @@ func ddl(dims int) string {
 		"DEFINE FIELD IF NOT EXISTS kind ON " + chunkTable + " TYPE option<string>;",
 		"DEFINE FIELD IF NOT EXISTS source ON " + chunkTable + " TYPE option<string>;",
 		"DEFINE FIELD IF NOT EXISTS text ON " + chunkTable + " TYPE option<string>;",
+		"DEFINE FIELD IF NOT EXISTS described_by ON " + chunkTable + " TYPE option<string>;",
 		"DEFINE FIELD IF NOT EXISTS vector ON " + chunkTable + " TYPE array<float, " + n + ">;",
+		runDefinesQ,
 		"DEFINE INDEX IF NOT EXISTS " + cidIndex + " ON " + chunkTable + " FIELDS cid;",
 		"DEFINE INDEX IF NOT EXISTS " + vectorIndex + " ON " + chunkTable + " FIELDS vector HNSW DIMENSION " + n + " DIST COSINE TYPE F32;",
 	}, " ")
@@ -198,9 +208,10 @@ type rowDoc struct {
 	Vector     []float32 `json:"vector"`
 	// Kind, Source and Text are left out when empty so SurrealDB stores NONE
 	// for an option<string> field, never NULL.
-	Kind   string `json:"kind,omitempty"`
-	Source string `json:"source,omitempty"`
-	Text   string `json:"text,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Source      string `json:"source,omitempty"`
+	Text        string `json:"text,omitempty"`
+	DescribedBy string `json:"described_by,omitempty"`
 }
 
 // Replace implements Store.
@@ -219,14 +230,14 @@ func (s *surrealStore) Replace(ctx context.Context, cid string, rows []Row) erro
 		docs = append(docs, rowDoc{
 			ID: rowID(r.CID, r.ChunkIndex, r.Model), CID: r.CID, Path: r.Path, MIME: r.MIME,
 			ChunkIndex: r.ChunkIndex, Model: r.Model, Dims: len(r.Vector), Vector: r.Vector,
-			Kind: r.Kind, Source: r.Source, Text: r.Text,
+			Kind: r.Kind, Source: r.Source, Text: r.Text, DescribedBy: r.DescribedBy,
 		})
 	}
 	_, err := s.c.query(ctx, "BEGIN TRANSACTION; "+
 		"DELETE "+chunkTable+" WHERE cid = $cid; "+
 		"FOR $r IN $rows { UPSERT type::record('"+chunkTable+"', $r.id) CONTENT { cid: $r.cid, path: $r.path, mime: $r.mime, "+
 		"chunk_index: $r.chunk_index, model: $r.model, dims: $r.dims, vector: $r.vector, "+
-		"kind: $r.kind, source: $r.source, text: $r.text }; }; "+
+		"kind: $r.kind, source: $r.source, text: $r.text, described_by: $r.described_by }; }; "+
 		"COMMIT TRANSACTION;", map[string]any{"cid": cid, "rows": docs})
 	if err != nil {
 		return fmt.Errorf("store rows of %s: %w", cid, err)
@@ -246,7 +257,7 @@ func (s *surrealStore) Search(ctx context.Context, vector []float32, k int) ([]H
 		return nil, fmt.Errorf("search: vector has %d dimensions, want %d", len(vector), s.dims)
 	}
 	// k and ef are integers formatted here, never operator or model text.
-	surql := "SELECT cid, path, mime, chunk_index, model, kind, source, text, vector::distance::knn() AS distance FROM " + chunkTable +
+	surql := "SELECT cid, path, mime, chunk_index, model, kind, source, text, described_by, vector::distance::knn() AS distance FROM " + chunkTable +
 		" WHERE vector <|" + strconv.Itoa(k) + "," + strconv.Itoa(efFor(k)) + "|> $v ORDER BY distance;"
 	res, err := s.c.query(ctx, surql, map[string]any{"v": vector})
 	if err != nil {
@@ -312,7 +323,7 @@ func (s *surrealStore) SearchCID(ctx context.Context, vector []float32, cid stri
 	if len(vector) != s.dims {
 		return nil, fmt.Errorf("search: vector has %d dimensions, want %d", len(vector), s.dims)
 	}
-	surql := "SELECT cid, path, mime, chunk_index, model, kind, source, text, 1 - vector::similarity::cosine(vector, $v) AS distance FROM " + chunkTable +
+	surql := "SELECT cid, path, mime, chunk_index, model, kind, source, text, described_by, 1 - vector::similarity::cosine(vector, $v) AS distance FROM " + chunkTable +
 		" WHERE cid = $cid ORDER BY distance LIMIT " + strconv.Itoa(k) + ";"
 	res, err := s.c.query(ctx, surql, map[string]any{"v": vector, "cid": cid})
 	if err != nil {

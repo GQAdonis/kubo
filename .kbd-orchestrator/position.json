@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1688,
-  "derivedRevision": 1688,
+  "sourceRevision": 1763,
+  "derivedRevision": 1763,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1688
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1763
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-14T17:21:06.154048Z",
+  "updatedAt": "2026-10-14T20:52:46.715926Z",
   "cursor": [
     "agent-backend-settings",
     "uar-conformance-release",
@@ -19,7 +19,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 49,
+      "done": 53,
       "total": 76
     },
     "children": [
@@ -29,7 +29,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 15,
+          "done": 19,
           "total": 36
         },
         "children": [
@@ -166,9 +166,9 @@
           {
             "type": "change",
             "id": "webui-shell-redesign",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 3,
+              "done": 4,
               "total": 4
             }
           },
@@ -222,16 +222,16 @@
             "id": "webui-agent-settings-page",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 7
+              "done": 7,
+              "total": 8
             }
           },
           {
             "type": "change",
             "id": "agent-chat-island-integration",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 4,
               "total": 4
             }
           },
@@ -240,16 +240,16 @@
             "id": "desktop-agent-settings-bridge",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 5
+              "done": 5,
+              "total": 6
             }
           },
           {
             "type": "change",
             "id": "webui-route-polish",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 4,
               "total": 4
             }
           },
@@ -346,9 +346,9 @@
           {
             "type": "change",
             "id": "mcp-media-describer",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 7,
               "total": 7
             }
           },
@@ -357,8 +357,8 @@
             "id": "mcp-whole-node-indexing",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 8
+              "done": 8,
+              "total": 9
             }
           },
           {

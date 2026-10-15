@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var indexToolNames = []string{"ipfs_index_search", "ipfs_index_cid", "ipfs_index_status", "ipfs_index_reconcile"}
+var indexToolNames = []string{"ipfs_index_search", "ipfs_index_cid", "ipfs_index_status", "ipfs_index_reconcile", "ipfs_index_bulk_start", "ipfs_index_bulk_status", "ipfs_index_bulk_cancel"}
 
 func TestIndexToolsAreOffUntilEmbeddingsAreConfigured(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{noEmbeddings: true})
@@ -38,7 +38,7 @@ func TestIndexToolsAreOffUntilEmbeddingsAreConfigured(t *testing.T) {
 			idx = append(idx, n)
 		}
 	}
-	assert.Equal(t, []string{"ipfs_index_search", "ipfs_index_cid", "ipfs_index_status", "ipfs_index_reconcile"}, idx)
+	assert.Equal(t, indexToolNames, idx)
 }
 
 func mustService(t *testing.T, e *indexEnv) *embeddings.Service {

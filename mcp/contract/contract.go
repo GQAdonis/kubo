@@ -35,6 +35,13 @@ const (
 // returnsUntrustedContent. Its value is untrusted data, never instructions.
 const UntrustedContentMetaKey = "ai.ipfs/untrusted-content"
 
+// StageWarningsMetaKey is the optional CallToolResult _meta key on
+// ipfs_index_cid carrying non-normative diagnostics: one entry per content
+// stage (extractor, describer) that failed or was refused while another stage
+// produced text. Each entry holds a stage name and a fixed reason code, never
+// endpoint text, URLs or model output. Clients may ignore it.
+const StageWarningsMetaKey = "ai.ipfs/stage-warnings"
+
 // Catalog is catalog.json.
 type Catalog struct {
 	ContractVersion string        `json:"contractVersion"`

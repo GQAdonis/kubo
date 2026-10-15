@@ -99,7 +99,7 @@ func validateSettingsSchemaDef(t *testing.T, schemaPath, def string, doc map[str
 // revision included, is byte-identical.
 func TestSettingsTestConnection(t *testing.T) {
 	fake := newFakeModels(t, "m1", "m2")
-	e := newSettingsEnv(t, settingsBackendJSON)
+	e := newSettingsEnv(t, backendJSONAt(fake.srv.URL+"/v1"))
 	etagBefore, before := getSettings(t, e)
 
 	resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin,
@@ -109,6 +109,7 @@ func TestSettingsTestConnection(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
 	validateSettingsSchemaDef(t, "settings/test-connection.schema.json", "TestConnectionResult", doc)
 	assert.Equal(t, true, doc["ok"])
+	assert.Equal(t, true, doc["key_sent"], "the current backend's host gets the stored key")
 	assert.NotContains(t, bodyString(t, e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin,
 		`{"base_url":"`+fake.srv.URL+`/v1"}`)), settingsTestKey)
 
@@ -132,7 +133,7 @@ func TestSettingsTestConnectionFailureDetail(t *testing.T) {
 		// A hostile endpoint reflecting the credential it was sent.
 		_, _ = w.Write([]byte(`{"error":{"message":"bad key ` + auth + `"}}`))
 	}
-	e := newSettingsEnv(t, settingsBackendJSON)
+	e := newSettingsEnv(t, backendJSONAt(fake.srv.URL+"/v1"))
 
 	resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin,
 		`{"base_url":"`+fake.srv.URL+`/v1"}`)
@@ -221,7 +222,7 @@ func TestSettingsModelsList(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
 	validateSettingsSchemaDef(t, "settings/model-list.schema.json", "ModelListResult", doc)
 	assert.Equal(t, []any{map[string]any{"id": "cand-1"}}, doc["models"])
-	assert.Equal(t, []string{"Bearer " + settingsTestKey}, other.seen(), "a candidate list also authenticates with the stored key")
+	assert.Equal(t, []string{""}, other.seen(), "a candidate host that is not the backend or acknowledged gets no key")
 
 	// Candidate URL rules apply to the list endpoint too.
 	bad := e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url=http://example.com/v1", tokSettingsAdmin, "")
@@ -229,6 +230,66 @@ func TestSettingsModelsList(t *testing.T) {
 	bad = e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url=http://user:pw@127.0.0.1:1/v1", tokSettingsAdmin, "")
 	assert.Equal(t, http.StatusBadRequest, bad.StatusCode)
 	assert.NotContains(t, bodyString(t, bad), "pw")
+}
+
+// backendJSONAt is a configured backend at the given URL with the key named by
+// environment.
+func backendJSONAt(baseURL string) string {
+	return fmt.Sprintf(`{"llm":{"base_url":%q,"model":"m-old","api_key":{"env":%q}}}`, baseURL, settingsKeyEnv)
+}
+
+// TestSettingsProbeWithholdsKeyFromNewHost: the stored key reaches only the
+// current backend host or a host the calling principal acknowledged. A new
+// host is probed without Authorization, on both probe endpoints, and a 401 or
+// 403 is reported as reachable with key_sent false.
+func TestSettingsProbeWithholdsKeyFromNewHost(t *testing.T) {
+	backend := newFakeModels(t, "m1")
+	candidate := newFakeModels(t, "c1")
+	candidate.reply = func(w http.ResponseWriter, auth string) {
+		if auth == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"c1"}]}`))
+	}
+	e := newSettingsEnv(t, backendJSONAt(backend.srv.URL+"/v1"))
+
+	resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, `{"base_url":"`+candidate.srv.URL+`/v1"}`)
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
+	validateSettingsSchemaDef(t, "settings/test-connection.schema.json", "TestConnectionResult", doc)
+	assert.Equal(t, true, doc["ok"], "the host answered")
+	assert.Equal(t, false, doc["key_sent"])
+	assert.Contains(t, doc["detail"], "not sent")
+
+	resp = e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url="+candidate.srv.URL+"/v1", tokSettingsAdmin, "")
+	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
+	validateSettingsSchemaDef(t, "settings/test-connection.schema.json", "TestConnectionResult", doc)
+	assert.Equal(t, false, doc["ok"])
+	assert.Equal(t, false, doc["key_sent"])
+
+	assert.Equal(t, []string{"", ""}, candidate.seen(), "no Authorization header reached the new host")
+	for _, a := range candidate.seen() {
+		assert.NotContains(t, a, settingsTestKey)
+	}
+}
+
+// TestSettingsProbeSendsKeyToAcknowledgedHost: a host in the principal's
+// egress_ack gets the stored key, so an acknowledged new host can be tested.
+func TestSettingsProbeSendsKeyToAcknowledgedHost(t *testing.T) {
+	backend := newFakeModels(t, "m1")
+	candidate := newFakeModels(t, "c1")
+	e := newSettingsEnvWith(t, backendJSONAt(backend.srv.URL+"/v1"), "", adminVerifierWithAck(t, []string{"local"}))
+
+	resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, `{"base_url":"`+candidate.srv.URL+`/v1"}`)
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal([]byte(bodyString(t, resp)), &doc))
+	assert.Equal(t, true, doc["ok"])
+	assert.Equal(t, true, doc["key_sent"])
+	resp = e.doPath(t, http.MethodGet, RouteSettingsModels+"?base_url="+candidate.srv.URL+"/v1", tokSettingsAdmin, "")
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, []string{"Bearer " + settingsTestKey, "Bearer " + settingsTestKey}, candidate.seen())
 }
 
 // TestSettingsModelsListNoBackend: with nothing configured the endpoint

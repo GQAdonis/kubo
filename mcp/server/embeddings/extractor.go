@@ -230,7 +230,7 @@ func newExtractor(s ExtractorSettings, baseURL string, remote bool, cred Secret,
 		e.maxText = DefaultExtractorMaxTextBytes
 	}
 	if hc == nil {
-		hc = &http.Client{}
+		hc = &http.Client{Transport: directTransport()}
 	}
 	// The per-request deadline is the context's; a redirect would carry the
 	// document to a host the operator did not name and the principal did not

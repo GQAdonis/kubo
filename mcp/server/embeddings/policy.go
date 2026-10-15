@@ -79,6 +79,14 @@ const (
 	SkipExtractorUnavailable = "extractor_unavailable"
 	// SkipExtractionFailed: the extractor answered without usable text.
 	SkipExtractionFailed = "extraction_failed"
+	// SkipAlreadyIndexed: the CID has index entries and force was false.
+	SkipAlreadyIndexed = "already_indexed"
+	// SkipNotLocal: the file's blocks are not on the node; indexing never
+	// fetches them.
+	SkipNotLocal = "not_local"
+	// SkipDescriberNotConfigured: the kind is covered only by the describer and
+	// no describer block exists, its kinds omit the kind, or its limit is 0.
+	SkipDescriberNotConfigured = "describer_not_configured"
 )
 
 // CheckContent decides whether content is indexed under the policy. It returns
