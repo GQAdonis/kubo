@@ -264,6 +264,13 @@ Scope:
 - Outbound only. Inbound listeners (`/ws`, `/wss`, gateway, RPC) are not affected.
 - Direct libp2p transports (TCP, QUIC, WebTransport, WebRTC) do not use a proxy.
 
+Exception, `ipfs mcp` (see the [agent guide](mcp/agentic.md)): the clients of `ipfs mcp` that carry your content, prompts or API keys to a host you configured ignore `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`, so that data goes only to the host you named and acknowledged (`egress_ack`), never through a proxy an unrelated process environment names. This covers:
+
+- the embedder, the vector store (remote SurrealDB), the content extractor and the media describer of [`embeddings`](mcp/embeddings.md);
+- the model client of the agent loop (`/agui`, `/a2a`) and the backend probe behind the settings route.
+
+The one `ipfs mcp` client that does honor the variables is the RPC client for a remote `--api` URL, which behaves as the `ipfs` CLI does toward a remote daemon. To reach a model, store or extractor endpoint through a proxy, point the setting at a gateway host you control and acknowledge, and let that host do the proxying.
+
 ## `HTTP_PROXY`
 
 Same as [`HTTPS_PROXY`](#https_proxy), applied to `http://` URLs and `/ws` libp2p WebSocket peer dials.

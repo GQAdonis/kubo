@@ -56,7 +56,7 @@ type surrealClient struct {
 
 func newSurrealClient(endpoint, ns, db string, a auth, hc *http.Client) *surrealClient {
 	if hc == nil {
-		hc = &http.Client{Timeout: surrealTimeout}
+		hc = &http.Client{Timeout: surrealTimeout, Transport: directTransport()}
 	}
 	// The operator named one server; a redirect would carry the credentials
 	// to another host.

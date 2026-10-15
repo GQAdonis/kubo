@@ -1,0 +1,73 @@
+{
+  "description": "Input to docs/mcp/config_reference.py: the fork's agent features that ship enabled (AGENTS.md, User Agency, commit 5f019f0df), each with where it is on, its off switch and its disabled-state test. Rendered into docs/mcp/config-reference.md and between the defaults-table markers of docs/mcp/chat-setup.md. Test names marked (unconfirmed) were not found in a committed tree when this was written.",
+  "rows": [
+    {
+      "feature": "Local `ipfs mcp` agent endpoint on loopback",
+      "on": "IPFS Desktop starts `ipfs mcp --http --agui` on `127.0.0.1` (port 5050 preferred) as a supervised child. Stock `ipfs mcp` stays off: it serves no HTTP and no `/agui` without `--http` and `--agui`.",
+      "off": "Desktop: the tray toggle, or `mcpSidecar.enabled` = `false` in the Desktop store. Stock: leave `--http` and `--agui` unset.",
+      "tests": "Desktop `test/unit/mcp-sidecar.spec.js`: `mcpSidecar.enabled=false starts no child and binds no port`, `is on by default`. Kubo: `TestAGUIIsNotMountedUnlessEnabled`, `TestSettingsRouteRequiresAdminPrincipal`; the `test/cli` pin of the stock defaults (`agent-features-default-on` 1.3) is being written (name unconfirmed)."
+    },
+    {
+      "feature": "Web UI agent chat",
+      "on": "The fork's Web UI build (`src/agent-chat/`). On by default; it makes no request until an endpoint and token exist, which Desktop supplies and a browser user enters in Settings.",
+      "off": "Web UI Settings, Agent chat, `enabled` off (local storage key `ipfs-webui:agent-chat`). Turning it off loads nothing and removes the stored token.",
+      "tests": "Web UI `src/agent-chat/agent-chat.test.js`: `removes the element and the launcher when switched off, and forgets the token`, `publishes nothing while the chat is off (disabled-state)`; `src/agent-chat/boot.test.js`: `keeps a stored enabled: false for both features` (survival through app boot). Uncommitted in the builder's tree on 2026-10-15; names to be rechecked when it lands."
+    },
+    {
+      "feature": "WebMCP read tools",
+      "on": "The fork's Web UI build, in a browser that offers WebMCP. `enabled` defaults to on; DNSLink resolution is a separate switch.",
+      "off": "Web UI Settings, WebMCP, `enabled` off (local storage key `ipfs-webui:webmcp`). Off registers nothing and sends nothing, and clears the two dependent switches.",
+      "tests": "Web UI `src/webmcp/webmcp.test.js`: `registers nothing and sends nothing once the person switches it off, and the choice survives a reload`, `registers nothing on a profile that opted out, even when the browser has WebMCP`; `boot.test.js` as above."
+    },
+    {
+      "feature": "WebMCP write tools",
+      "on": "Off by default and per page load. This one does not ship enabled: `writes` is never persisted and every write still needs your confirmation.",
+      "off": "Already off at every load. Switch `writes` off in Settings, or use \"Deny all and turn off agent writes\" in the confirmation dialog.",
+      "tests": "Web UI `src/webmcp/webmcp.test.js`: `adds write tools only under the second switch, and removes them when it goes off`, `the confirmation hook itself declines when writes are off`."
+    },
+    {
+      "feature": "Desktop agent chat bridge",
+      "on": "IPFS Desktop: supplies the chat endpoint and token (safeStorage) to the Web UI. Store key `agentChat.enabled`, default on; the chat is still inert without a valid endpoint.",
+      "off": "`agentChat.enabled` = `false` in the Desktop store. A stored `false` is never overwritten by the default migration (D18).",
+      "tests": "Desktop `test/unit/agent-defaults.spec.js`: `a stored false survives app start, for each switch`, `disabled state: chat reads off with a stored false even when an endpoint is set`; `test/unit/agent-chat.spec.js`: `disabled state: registers no channel at all`."
+    },
+    {
+      "feature": "Desktop confirmation window",
+      "on": "IPFS Desktop on macOS and Linux. Never on Windows (`win32`): the feature is inert there and the tray entries are greyed out. Store key `desktopConfirm.enabled`, default on. Writes still need confirmation.",
+      "off": "`desktopConfirm.enabled` = `false` in the Desktop store, the tray \"Turn off\" entry, or \"Turn off\" in the pairing or request window.",
+      "tests": "Desktop `test/unit/agent-confirm.spec.js`: `a hand-written off value in the store keeps it off after a restart`, `win32: inert, and the tray entries are greyed out`; `test/unit/agent-defaults.spec.js`: `never switches the confirmation window on for win32`, `disabled state: a stored false keeps the confirmation window off after the defaults ran`."
+    },
+    {
+      "feature": "Desktop settings bridge",
+      "on": "IPFS Desktop: the `ipfsDesktop.agentSettings.*` bridge to the sidecar's settings API. Store key `agentSettings.enabled`, default on; the bridge needs the sidecar's `admin` principal, which Desktop configures.",
+      "off": "`agentSettings.enabled` = `false` in the Desktop store: no channel exists and nothing is pushed.",
+      "tests": "Desktop `test/unit/agent-settings-bridge.spec.js`: `with the switch off no channel exists and nothing is pushed`, `the store key defaults to on and reads false as off, like the sidecar switch`."
+    },
+    {
+      "feature": "Settings API (`agent.settings.enabled`)",
+      "on": "`ipfs mcp`, key `agent.settings.enabled` defaults to `true`, but the route is mounted only when an `admin` principal is configured, so a stock `ipfs mcp` serves no settings route. Desktop and the LKE manifest configure one.",
+      "off": "`agent.settings.enabled: false`: the route answers 404, nothing is written and nothing is dialed. Or configure no `admin` principal.",
+      "tests": "`TestSettingsRouteDisabledAnswers404`, `TestSettingsRouteRequiresAdminPrincipal` (`test/cli/mcp_settings_disabled_test.go`)."
+    },
+    {
+      "feature": "Server-emitted A2UI surfaces (`agent.a2ui`)",
+      "on": "`ipfs mcp`, key `agent.a2ui` defaults to `true` wherever `/agui` is on; no effect when `agent.agui` is false.",
+      "off": "`agent.a2ui: false`: no A2UI surface message is emitted on `/agui`; the run stream is otherwise unchanged and the client-side tool-call card renders.",
+      "tests": "`TestNoA2UISurfaceEventsWhenDisabled` (`mcp/server/agui_a2ui_test.go`)."
+    },
+    {
+      "feature": "Web UI vector search (`search.enabled`)",
+      "on": "The fork's Web UI build (`src/search/`). On by default; it is effective only when the node has a configured index (an `embeddings` section with `search_route.enabled` not `false`) and the chat endpoint and token exist; otherwise it shows the not-configured state and makes no request.",
+      "off": "Web UI Settings, Agent features, the Search switch off; or on the node, remove the `embeddings` section or set `search_route.enabled` to `false` (`/index/search` and `/index/status` then answer 404).",
+      "tests": "Web UI `src/search` tests (disabled state makes no request; the switch is being mounted in Settings, Agent features, test names to be confirmed)."
+    },
+    {
+      "feature": "Desktop search (`search.enabled`)",
+      "on": "Off by default. IPFS Desktop adds search only after you turn it on.",
+      "off": "Desktop Search settings, the search switch off (the default).",
+      "tests": "Desktop `agent-search.spec.js`."
+    }
+  ],
+  "resource": "Idle resident memory of the `ipfs mcp` child as Desktop launches it: 42336 KB (about 41.3 MiB), steady across five samples taken 6 s apart, no model backend configured, no tool call or chat run, one run on one macOS arm64 machine ([evidence](../../mcp/server/evidence/2026-10-14-desktop-sidecar-idle-rss/README.md)). The Electron main process cost of supervising the child and the cost under load are not included.",
+  "note": "The default-on rows follow the fork rule in AGENTS.md (User Agency): an off switch is not a default-off requirement, and each feature keeps a documented off switch. No third-party service is enabled without the operator choosing it: the model backend, the embedder, the extractor and the describer all stay unconfigured until you name them."
+}

@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1763,
-  "derivedRevision": 1763,
+  "sourceRevision": 1826,
+  "derivedRevision": 1826,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1763
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1826
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-14T20:52:46.715926Z",
+  "last_updated": "2026-10-15T10:26:47.284737Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 19,
+  "changes_completed": 22,
   "implementation_total": 36,
-  "implementation_completed": 19,
+  "implementation_completed": 22,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 19,
+      "completed": 22,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 53,
+      "completed": 56,
       "total": 76,
       "status": "IN_PROGRESS"
     },
@@ -172,12 +172,12 @@
     {
       "id": "mcp-agent-settings-api",
       "title": "mcp-agent-settings-api",
-      "status": "DONE",
-      "implementation_status": "COMPLETE",
-      "tasks_total": 7,
-      "tasks_done": 7,
-      "last_task_completed": "Off switches and disabled states (W6): `agent.settings.enabled=false` and no admin principal give 404, nothing written, nothing dialed; `GOTAGS=noagent` removes the route. Acceptance: tests exist.",
-      "next_task_pending": null,
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 9,
+      "tasks_done": 8,
+      "last_task_completed": "ADR-0012: key only to the current backend; host move does not carry the key",
+      "next_task_pending": "OpenSpec requirement for ADR-0012",
       "blockers": []
     },
     {
@@ -249,12 +249,12 @@
     {
       "id": "webui-agent-settings-page",
       "title": "webui-agent-settings-page",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
-      "tasks_total": 8,
-      "tasks_done": 7,
-      "last_task_completed": "Jest and e2e tests for every state and both clients. Acceptance: test files exist; run at the gate.",
-      "next_task_pending": "Round 5 confirmation residuals (C1-C5, L6) and owed captures",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 9,
+      "tasks_done": 9,
+      "last_task_completed": "ADR-0012 client copy and key-not-moved state",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -271,12 +271,12 @@
     {
       "id": "desktop-agent-settings-bridge",
       "title": "desktop-agent-settings-bridge",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
-      "tasks_total": 6,
-      "tasks_done": 5,
-      "last_task_completed": "Hardening tests (renderer cannot widen CSP; untrusted frames refused). Acceptance: test files exist.",
-      "next_task_pending": "Round 5 security confirmation residuals (N1, N2, N4, N5)",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
+      "tasks_total": 7,
+      "tasks_done": 7,
+      "last_task_completed": "ADR-0012 Desktop copy and key-not-moved state",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -293,12 +293,12 @@
     {
       "id": "agent-features-default-on",
       "title": "agent-features-default-on",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 5,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Web UI: chat `enabled` and WebMCP `enabled` default true; WebMCP `writes` stays per-load and off; absent-keys-only migration (D18) through app boot; disabled-state tests; fork docs. Acceptance: a test",
+      "tasks_done": 5,
+      "last_task_completed": "`v0.44.md` Highlights (W6). Acceptance: a disable example per feature, including `agent.settings.enabled: false` and `agent.a2ui: false`, plus the resource note; only Highlights and TOC change.",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -307,9 +307,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 6,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Mark the two superseded changes and write ADR-0010. Acceptance: both old `tasks.md` carry a superseded note; the ADR lists the release gate.",
+      "tasks_done": 1,
+      "last_task_completed": "Mark the two superseded changes and write ADR-0010. Acceptance: both old `tasks.md` carry a superseded note; the ADR lists the release gate.",
+      "next_task_pending": "`backend.kind: uar`: provision the agent against the released API (W9). Acceptance: a fixture test against recorded release responses, and the real-service run of 1.5 shows `GET /api/agents/{id}` retu",
       "blockers": []
     },
     {
@@ -381,12 +381,12 @@
     {
       "id": "vector-search-contract",
       "title": "vector-search-contract",
-      "status": "DONE",
-      "implementation_status": "COMPLETE",
-      "tasks_total": 8,
-      "tasks_done": 8,
-      "last_task_completed": "`docs/changelogs/v0.44.md` TOC and Highlights: one entry for whole-node vector search with a concrete disable example (remove the `extractor` and `describer` blocks; `\"bulk\": {\"enabled\": false}`; `\"se",
-      "next_task_pending": null,
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 11,
+      "tasks_done": 9,
+      "last_task_completed": "embeddings.insecure_http_hosts contract key",
+      "next_task_pending": "by_kind counts in ipfs_index_status and GET /index/status (additive)",
       "blockers": []
     },
     {
@@ -394,9 +394,9 @@
       "title": "mcp-content-extractor",
       "status": "DONE",
       "implementation_status": "COMPLETE",
-      "tasks_total": 7,
-      "tasks_done": 7,
-      "last_task_completed": "No CID injection: extraction issues no `add`, `block/put`, `dag/put`, `pin/add`, `files/write` or `routing/provide` RPC call, and images xberg returns from documents are discarded. Acceptance: a test ",
+      "tasks_total": 8,
+      "tasks_done": 8,
+      "last_task_completed": "Honour embeddings.insecure_http_hosts for extractor, describer, embedder",
       "next_task_pending": null,
       "blockers": []
     },
@@ -414,23 +414,23 @@
     {
       "id": "mcp-whole-node-indexing",
       "title": "mcp-whole-node-indexing",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 9,
-      "tasks_done": 8,
-      "last_task_completed": "File names reach classification in the bulk directory walk",
-      "next_task_pending": "Round 5 confirmation residuals (Go N1-N8, proxy docs, store transport)",
+      "tasks_done": 9,
+      "last_task_completed": "Round 5 confirmation residuals (Go N1-N8, proxy docs, store transport)",
+      "next_task_pending": null,
       "blockers": []
     },
     {
       "id": "webui-vector-search",
       "title": "webui-vector-search",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 7,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Route `#/search` in `src/bundles/routes.js` and one navigation entry, shown only when `GET /index/status` answers with a configured index; the client takes the endpoint and token from the same source ",
+      "tasks_done": 7,
+      "last_task_completed": "Playwright spec `test/e2e/search.test.js` against a stub `ipfs mcp` that serves fixed `/index/status` and `/index/search` responses: search, filter, open a hit in Files, and the disabled state. Accept",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -438,10 +438,10 @@
       "title": "desktop-search-sidecar",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 6,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Verify `xberg-cli-aarch64-apple-darwin.tar.gz` from the `xberg-io/xberg` `v1.3.10` release on macOS arm64 and record commands and output: SHA-256 against the release, Gatekeeper and quarantine behavio",
+      "tasks_total": 7,
+      "tasks_done": 6,
+      "last_task_completed": "Disabled state: with Search off (the default), no `surreal` or `xberg` process runs, the generated `ipfs mcp` config has no `embeddings` section, and the Web UI search navigation entry is hidden becau",
+      "next_task_pending": "Round 6 confirmation residuals (window tone, copy, symlinked binary)",
       "blockers": []
     },
     {

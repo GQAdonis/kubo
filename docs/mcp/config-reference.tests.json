@@ -22,8 +22,8 @@
       "note": "The anonymous listener refuses (403) any request that carries `Forwarded`, `X-Forwarded-For` or `X-Real-IP`: a proxied request did not come from this machine, so behind a reverse proxy a credential (an operator bearer token or configured principals) is required."
     },
     "principals[].name": { "tests": ["TestUnknownTokenGetsNothing", "TestPrincipalConfigRules"] },
-    "principals[].kind": { "tests": ["TestHTTPPrincipalKindsAreScopedToRoutes", "TestA2AEndpointRejectsOtherPrincipalKinds", "TestAdminTokenIsRefusedOnToolRoutes"] },
-    "principals[].credential": { "tests": ["TestAbsentSecretDisablesOnlyTheDependentFeature", "TestParseConfigRejectsLiteralSecretsAndReservedPorts"] },
+    "principals[].kind": { "tests": ["TestHTTPPrincipalKindsAreScopedToRoutes", "TestA2AEndpointRejectsOtherPrincipalKinds", "TestAdminPrincipalScopedToSettingsRoute", "TestAdminPrincipalHasNoToolGrants"] },
+    "principals[].credential": { "tests": ["TestAbsentCredentialDisablesOnlyThatPrincipal", "TestAllCredentialsAbsentServerStarts", "TestConfigCredentialsDisableAPrincipalWhoseSecretIsAbsent", "TestParseConfigRejectsLiteralSecretsAndReservedPorts"] },
     "principals[].groups": { "tests": ["TestHTTPScopesNarrowTheToolList", "TestHTTPToolOutsideGrantsIsRefusedWithoutRunning"] },
     "principals[].write_groups": { "tests": ["TestConfigPrincipalsAreReadOnlyUnlessGranted", "TestReadOnlyPrincipalListsNoWriteTool"] },
     "principals[].destructive_groups": { "tests": ["TestConfigPrincipalsAreReadOnlyUnlessGranted", "TestKeyRmIsOffByDefault"] },
@@ -37,10 +37,10 @@
     "llm": { "tests": ["TestAgentOffWhenUnconfigured", "TestAgentHasNoDefaultEndpointOrModel"] },
     "llm.base_url": { "tests": ["TestAgentHasNoDefaultEndpointOrModel", "TestBackendURLValidation"] },
     "llm.model": { "tests": ["TestAgentHasNoDefaultEndpointOrModel"] },
-    "llm.api_key": { "tests": ["TestKeyOnlyFromEnvOrFile", "TestLiteralKeyInConfigIsRejectedAndNeverEchoed", "TestKeyNotSentOverPlainHTTPToRemoteHost", "TestAbsentSecretDisablesOnlyTheDependentFeature"] },
+    "llm.api_key": { "tests": ["TestKeyOnlyFromEnvOrFile", "TestLiteralKeyInConfigIsRejectedAndNeverEchoed", "TestKeyNotSentOverPlainHTTPToRemoteHost", "TestAbsentLLMKeyFileYieldsApiKeySetFalse"] },
     "llm.timeout": { "tests": ["TestChatTimeoutBoundsTheWholeStream"] },
     "agent": { "tests": ["TestAGUIIsNotMountedUnlessEnabled", "TestA2ADisabledServesNothing"] },
-    "agent.agui": { "tests": ["TestAGUIIsNotMountedUnlessEnabled", "TestAGUIWithoutBackendAnswersBackendNotConfigured"] },
+    "agent.agui": { "tests": ["TestAGUIIsNotMountedUnlessEnabled", "TestAGUIWithoutABackendAnswers503"] },
     "agent.a2ui": { "tests": ["TestNoA2UISurfaceEventsWhenDisabled"] },
     "agent.settings": { "tests": ["TestSettingsRouteRequiresAdminPrincipal"] },
     "agent.settings.enabled": { "tests": ["TestSettingsRouteRequiresAdminPrincipal", "TestSettingsRouteDisabledAnswers404"] },
@@ -121,7 +121,8 @@
     "embeddings.bulk.max_bytes_per_run": { "tests": ["TestConfigKeyAnnotations", "TestMCPBulkIndexDisabled"] },
     "embeddings.bulk.files_per_minute": { "tests": ["TestConfigKeyAnnotations", "TestMCPBulkIndexDisabled"] },
     "embeddings.search_route": { "tests": ["TestMCPIndexSearchRouteDisabled", "TestConfigExamplesValidate"] },
-    "embeddings.search_route.enabled": { "tests": ["TestMCPIndexSearchRouteDisabled"] }
+    "embeddings.search_route.enabled": { "tests": ["TestMCPIndexSearchRouteDisabled"] },
+    "embeddings.insecure_http_hosts": { "tests": ["TestInsecureHTTPHostsAllowsOnlyListedHosts", "TestConfigExamplesValidate"] }
   },
   "options": {
     "ipfs mcp": {

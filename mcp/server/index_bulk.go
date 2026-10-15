@@ -29,8 +29,6 @@ const (
 	bulkSaveTimeout = 10 * time.Second
 	// bulkMaxDepth bounds how deep a walk descends into directories.
 	bulkMaxDepth = 64
-	// bulkStopWait bounds how long a cancel waits for the run to end.
-	bulkStopWait = 30 * time.Second
 	// bulkListTimeout bounds listing the pins, which grows with the node.
 	bulkListTimeout = 5 * time.Minute
 )
@@ -39,6 +37,10 @@ const (
 // stalls (a lock held by another client, a block that never answers) ends and
 // the entry is skipped instead of the run hanging in "running". Tests shorten it.
 var bulkCallTimeout = time.Minute
+
+// bulkStopWait bounds how long a cancel waits for the run to end. Tests shorten
+// it.
+var bulkStopWait = 30 * time.Second
 
 var (
 	// errBulkCapReached ends a run that hit max_files_per_run or
@@ -152,13 +154,16 @@ func (s *Server) StopBulk() {
 	s.bulk.cancel(errBulkShutdown)
 }
 
-// stop cancels the runner with a cause and waits for it to end.
-func (r *bulkRunner) stop(cause error) {
+// stop cancels the runner with a cause and waits for it to end. It reports
+// whether the run ended within bulkStopWait.
+func (r *bulkRunner) stop(cause error) bool {
 	r.cancel(cause)
 	select {
 	case <-r.done:
+		return true
 	case <-time.After(bulkStopWait):
 		r.s.log.Warn("bulk index: the run did not stop in time")
+		return false
 	}
 }
 
@@ -445,8 +450,19 @@ func (r *bulkRunner) walkMFS(ctx context.Context) error {
 	}
 	mfsRoot := cmp.Or(r.run.MFSRoot, "/")
 	ref := "/ipfs/" + root.Hash
-	if rel := strings.Trim(mfsRoot, "/"); rel != "" {
+	rel := strings.Trim(mfsRoot, "/")
+	if rel != "" {
 		ref += "/" + rel
+	}
+	// A narrowed root that is not in the tree is an outcome of the whole run, not
+	// one unreadable file that leaves a completed run with nothing indexed.
+	if rel != "" {
+		if _, err := r.statOffline(ctx, ref); err != nil {
+			if ctx.Err() != nil {
+				return context.Cause(ctx)
+			}
+			return fmt.Errorf("mfs_root %q cannot be read: %w", mfsRoot, err)
+		}
 	}
 	w := &treeWalk{commit: func(p string) {
 		r.run.Cursor = embeddings.RunCursor{Source: embeddings.SourceMFS, After: p}
@@ -458,16 +474,6 @@ func (r *bulkRunner) walkMFS(ctx context.Context) error {
 	// The root has no CID of its own to key a duplicate check on until it is
 	// stat-ed; the MFS root itself is never indexed.
 	return r.walkTree(ctx, w, ref, "", path.Base(mfsRoot), mfsRoot, 0)
-}
-
-// mfsDone reports whether a resumed run has already finished the MFS entry at
-// p, a file or a whole directory: the entry sorts before the cursor and does
-// not contain it.
-func (r *bulkRunner) mfsDone(p string) bool {
-	if r.resumeAfter.Source != embeddings.SourceMFS {
-		return false
-	}
-	return pathDone(r.resumeAfter.After, p)
 }
 
 // segmentsLess orders two absolute paths segment by segment, the order a walk
@@ -577,6 +583,12 @@ func (r *bulkRunner) file(ctx context.Context, c, name string, size int64) error
 	// for its turn does not count the file again when it resumes.
 	r.seen[c] = struct{}{}
 	r.run.FilesSeen++
+	// A pause or cancel that ends the file before it is indexed leaves it for the
+	// resume, which counts it then; take the count back so it is counted once.
+	unsee := func() {
+		delete(r.seen, c)
+		r.run.FilesSeen--
+	}
 	t := indexTarget{CID: c, Path: "/ipfs/" + c, Name: name, Offline: true, Checked: true, memo: &stageMemo{}}
 	st := statResponse{Hash: c, Size: size, Type: "file"}
 	for {
@@ -589,11 +601,13 @@ func (r *bulkRunner) file(ctx context.Context, c, name string, size int64) error
 		var te *ToolError
 		switch {
 		case ctx.Err() != nil:
+			unsee()
 			return context.Cause(ctx)
 		case errors.As(err, &te) && te.Code == CodeResourceExhausted:
 			// The describer's hourly limit is used up: wait for a request to
 			// free and try the file again, so the description is not left out.
 			if werr := r.s.bulkWait(ctx, r.svc.Describer().RetryAfter()); werr != nil {
+				unsee()
 				return werr
 			}
 			continue

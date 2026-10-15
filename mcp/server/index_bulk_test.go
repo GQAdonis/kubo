@@ -682,7 +682,7 @@ func TestBulkWalkRefusesHostileEntryNames(t *testing.T) {
 // --- cursor order -----------------------------------------------------------------------------------
 
 func TestMFSCursorSkipsWhatTheWalkAlreadyFinished(t *testing.T) {
-	r := &bulkRunner{resumeAfter: embeddings.RunCursor{Source: "mfs", After: "/b/m.txt"}}
+	const after = "/b/m.txt"
 	for p, done := range map[string]bool{
 		"/a":        true, // sorts before, does not contain the cursor
 		"/a/z.txt":  true,
@@ -693,9 +693,9 @@ func TestMFSCursorSkipsWhatTheWalkAlreadyFinished(t *testing.T) {
 		"/b/m.txt2": false, // sorts after the cursor
 		"/c":        false,
 	} {
-		assert.Equal(t, done, r.mfsDone(p), p)
+		assert.Equal(t, done, pathDone(after, p), p)
 	}
-	assert.False(t, (&bulkRunner{}).mfsDone("/a"), "a new run skips nothing")
+	assert.False(t, pathDone("", "/a"), "a new run skips nothing")
 	assert.True(t, segmentsLess("/a/b", "/a/c"))
 	assert.True(t, segmentsLess("/a", "/b/x"))
 	assert.False(t, segmentsLess("/b/x", "/a"))

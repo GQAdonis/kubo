@@ -1,0 +1,38 @@
+{
+  "$schema": "../ipfs-mcp-config.schema.json",
+  "embeddings": {
+    "mode": "remote",
+    "remote": {
+      "endpoint": "http://ipfs-surrealdb.ipfs.svc:8000",
+      "namespace": "ipfs",
+      "database": "index",
+      "credential": {
+        "file": "/etc/ipfs-mcp/surreal.credential"
+      }
+    },
+    "embedder": {
+      "base_url": "http://ipfs-embedder.ipfs.svc:11434/v1",
+      "model": "bge-m3",
+      "dimensions": 1024,
+      "api_key": {
+        "file": "/etc/ipfs-mcp/embedder.key"
+      }
+    },
+    "extractor": {
+      "mode": "remote",
+      "remote": {
+        "base_url": "http://ipfs-xberg.ipfs.svc:8000"
+      }
+    },
+    "insecure_http_hosts": [
+      "ipfs-xberg.ipfs.svc:8000",
+      "ipfs-embedder.ipfs.svc:11434"
+    ],
+    "bulk": {
+      "enabled": true
+    },
+    "search_route": {
+      "enabled": true
+    }
+  }
+}

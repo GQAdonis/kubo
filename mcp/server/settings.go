@@ -10,7 +10,9 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -247,6 +249,14 @@ type settingsReadBody struct {
 	Revision     string               `json:"revision"`
 	Backend      *backendReadBody     `json:"backend"`
 	SystemPrompt systemPromptReadBody `json:"system_prompt"`
+	// KeyNotCarried is set only in the response to a PUT whose backend move
+	// withheld a key stored through this API (ADR-0012).
+	KeyNotCarried *keyNotCarriedBody `json:"key_not_carried,omitempty"`
+}
+
+type keyNotCarriedBody struct {
+	Reason  string `json:"reason"`
+	Cleared bool   `json:"cleared"`
 }
 
 type backendReadBody struct {
@@ -353,9 +363,16 @@ func (h *settingsHandler) get(w http.ResponseWriter) {
 // writeRead answers with the current read shape and its ETag. Call with the
 // state lock held.
 func (h *settingsHandler) writeRead(w http.ResponseWriter) {
+	h.writeReadWithNotice(w, nil)
+}
+
+// writeReadWithNotice answers with the read shape plus, for a PUT, the
+// key_not_carried notice.
+func (h *settingsHandler) writeReadWithNotice(w http.ResponseWriter, notice *keyNotCarriedBody) {
 	st := h.st
 	body := settingsReadBody{
-		Revision: st.revision,
+		KeyNotCarried: notice,
+		Revision:      st.revision,
 		SystemPrompt: systemPromptReadBody{
 			SafetyPrefix: systemPromptSafetyPrefix,
 			Custom:       st.prompt,
@@ -507,6 +524,27 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 		return
 	}
 
+	// ADR-0012: a change of backend scheme, host or port does not carry a key
+	// stored through this API. Unless the same write supplies api_key (a new key
+	// or null), the stored key is cleared; a key supplied by reference (file or
+	// environment variable) is the operator's and stays as configured.
+	var notice *keyNotCarriedBody
+	carriesKey := wr.Backend != nil && len(wr.Backend.APIKey) > 0
+	if !carriesKey && set != nil && st.current != nil && backendMoved(st.current.BaseURL, set.BaseURL) &&
+		st.dir != "" && st.current.APIKey != nil && st.current.APIKey.File == st.keyFilePath() {
+		wasSet := keyStatusOf(st.current, st.dir).Set
+		next.key = nil
+		keyClear = true
+		cand.base = next
+		if set, err = cand.resolve(); err != nil {
+			http.Error(w, "the settings are not valid: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if wasSet {
+			notice = &keyNotCarriedBody{Reason: "host_changed", Cleared: true}
+		}
+	}
+
 	// D4: a write that moves the effective model backend to a host the calling
 	// principal's egress_ack does not cover needs the typed host confirmation,
 	// and extends that egress_ack with exactly that host and no other. The
@@ -537,10 +575,15 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 		// kind gate makes that unreachable today); the extension could not be
 		// attributed to a principal, so it cannot be confirmed.
 		if wr.EgressConfirmation == nil || id.ID == "" {
-			h.writeError(w, http.StatusConflict, "egress_confirmation_required",
-				"the write moves the model backend to "+newHost+", which the calling principal's egress_ack does not cover; "+
-					"resend with egress_confirmation {\"host\": \""+newHost+"\"} to acknowledge that node content will be sent to that host",
-				map[string]string{"host": newHost})
+			msg := "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; " +
+				"resend with egress_confirmation {\"host\": \"" + newHost + "\"} to acknowledge that node content will be sent to that host"
+			if referencedKey(set, st.keyFilePath()) {
+				// Operator ruling 2026-10-15: a key supplied by reference follows
+				// a host move, so the confirmation names it.
+				msg += "; the configured model key (supplied by an environment variable, file or flag, not stored through this API) " +
+					"will be sent to that host too"
+			}
+			h.writeError(w, http.StatusConflict, "egress_confirmation_required", msg, map[string]string{"host": newHost})
 			return
 		}
 		extendHost = newHost
@@ -552,7 +595,10 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// write did not apply. The key file first, then the overlay that
 	// references it; a clear removes the file after the overlay records it.
 	nextOverlay := st.overlay.withWrite(wr, keySetTo != "", keyClear, st.keyFilePath(), id.ID, extendHost)
+	// The prior files, so a failed apply puts them back byte for byte.
+	var undo persistedUndo
 	if st.dir != "" {
+		undo = snapshotPersisted(st.dir)
 		if keySetTo != "" {
 			if err := writeFile0600(st.dir, settingsKeyFileName, []byte(keySetTo)); err != nil {
 				h.log.Warn("the settings key file could not be written", "error", err)
@@ -561,17 +607,10 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			}
 		}
 		if err := nextOverlay.save(st.dir); err != nil {
+			undo.restore(h.log, st.dir)
 			h.log.Warn("the settings overlay could not be written", "error", err)
 			http.Error(w, "the settings could not be persisted: the overlay could not be written", http.StatusInternalServerError)
 			return
-		}
-		if keyClear {
-			// A leftover file is unreferenced once the overlay records the
-			// clear and is overwritten by the next set, so a removal failure
-			// does not fail the write.
-			if err := os.Remove(st.keyFilePath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
-				h.log.Warn("the old settings key file could not be removed", "error", err)
-			}
 		}
 	}
 
@@ -583,9 +622,11 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	if set != nil {
 		if err := h.srv.ApplyAgentSettings(set); err != nil {
 			st.setRevision(oldRevision)
+			undo.restore(h.log, st.dir)
 			http.Error(w, "the settings did not apply: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		h.removeClearedKeyFile(st, keyClear)
 		if set.APIKey != nil {
 			if _, err := set.APIKey.Read(); err != nil {
 				// CRITICAL-2: an unreadable key reference never fails a write;
@@ -598,12 +639,108 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 		// A write that installs no backend (a prompt-only write with none
 		// configured) never runs ApplyAgentSettings, so the hook does not fire;
 		// publish the change here.
+		h.removeClearedKeyFile(st, keyClear)
 		st.events.publish(st.revision)
 	}
 	st.base, st.prompt, st.current, st.overlay = next, prompt, set, nextOverlay
 	// The revision and the changed field names are safe to log; values never are.
 	h.log.Debug("agent settings applied", "revision", st.revision, "fields", strings.Join(fields, ","))
-	h.writeRead(w)
+	h.writeReadWithNotice(w, notice)
+}
+
+// persistedUndo holds the overlay and key files as they were before a write,
+// so a write that fails after persisting leaves the directory as it found it.
+type persistedUndo struct {
+	files [2]undoFile
+}
+
+type undoFile struct {
+	name    string
+	data    []byte
+	existed bool
+}
+
+// snapshotPersisted records the overlay and key files of dir. A file that
+// cannot be read is treated as absent: the restore then removes whatever the
+// write created, which is what an absent file asks for.
+func snapshotPersisted(dir string) persistedUndo {
+	var u persistedUndo
+	for i, name := range [...]string{settingsOverlayFileName, settingsKeyFileName} {
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		u.files[i] = undoFile{name: name, data: data, existed: err == nil}
+	}
+	return u
+}
+
+// restore puts the snapshotted files back and logs, without failing, any file
+// it cannot restore: the caller is already answering with the write's error.
+func (u persistedUndo) restore(log *slog.Logger, dir string) {
+	if dir == "" {
+		return
+	}
+	for _, f := range u.files {
+		if f.name == "" {
+			continue
+		}
+		var err error
+		if f.existed {
+			err = writeFile0600(dir, f.name, f.data)
+		} else if err = os.Remove(filepath.Join(dir, f.name)); errors.Is(err, fs.ErrNotExist) {
+			err = nil
+		}
+		if err != nil {
+			log.Warn("the previous settings file could not be restored", "file", f.name, "error", err)
+		}
+	}
+}
+
+// removeClearedKeyFile deletes the stored key file once a write that cleared
+// the key has applied. It runs only after a successful ApplyAgentSettings: the
+// running backend still reads the file until the new settings are in place, so
+// a failed apply leaves the old backend keyed (the contract's failed-apply
+// rule). A leftover file is unreferenced once the overlay records the clear and
+// is overwritten by the next set, so a removal failure does not fail the write.
+func (h *settingsHandler) removeClearedKeyFile(st *settingsState, cleared bool) {
+	if !cleared || st.dir == "" {
+		return
+	}
+	if err := os.Remove(st.keyFilePath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		h.log.Warn("the old settings key file could not be removed", "error", err)
+	}
+}
+
+// referencedKey reports whether the resolved backend carries a key supplied by
+// reference (environment variable, file or flag) rather than the key file this
+// API stores. Such a key follows a backend move (operator ruling 2026-10-15).
+func referencedKey(set *AgentSettings, apiKeyFile string) bool {
+	return set != nil && set.APIKey != nil && (apiKeyFile == "" || set.APIKey.File != apiKeyFile)
+}
+
+// backendMoved reports whether two backend base URLs differ in scheme, host or
+// port (ADR-0012); a change of path alone is not a move. Default ports are
+// filled in so https://h and https://h:443 are the same endpoint. An
+// unparsable URL counts as moved, which withholds rather than carries a key.
+func backendMoved(oldURL, newURL string) bool {
+	a, errA := url.Parse(oldURL)
+	b, errB := url.Parse(newURL)
+	if errA != nil || errB != nil {
+		return true
+	}
+	return endpointOf(a) != endpointOf(b)
+}
+
+func endpointOf(u *url.URL) string {
+	scheme := strings.ToLower(u.Scheme)
+	host, port := normalizeHost(u.Host)
+	if port == "" {
+		switch scheme {
+		case "https":
+			port = "443"
+		case "http":
+			port = "80"
+		}
+	}
+	return scheme + "://" + net.JoinHostPort(host, port)
 }
 
 // writeError answers with the contract's settings error shape.

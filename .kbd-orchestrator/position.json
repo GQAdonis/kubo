@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1763,
-  "derivedRevision": 1763,
+  "sourceRevision": 1826,
+  "derivedRevision": 1826,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1763
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1826
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-14T20:52:46.715926Z",
+  "updatedAt": "2026-10-15T10:26:47.284737Z",
   "cursor": [
     "agent-backend-settings",
     "uar-conformance-release",
@@ -19,7 +19,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 53,
+      "done": 56,
       "total": 76
     },
     "children": [
@@ -29,7 +29,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 19,
+          "done": 22,
           "total": 36
         },
         "children": [
@@ -157,10 +157,10 @@
           {
             "type": "change",
             "id": "mcp-agent-settings-api",
-            "status": "COMPLETE",
+            "status": "PENDING",
             "progress": {
-              "done": 7,
-              "total": 7
+              "done": 8,
+              "total": 9
             }
           },
           {
@@ -220,10 +220,10 @@
           {
             "type": "change",
             "id": "webui-agent-settings-page",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 7,
-              "total": 8
+              "done": 9,
+              "total": 9
             }
           },
           {
@@ -238,10 +238,10 @@
           {
             "type": "change",
             "id": "desktop-agent-settings-bridge",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 5,
-              "total": 6
+              "done": 7,
+              "total": 7
             }
           },
           {
@@ -256,9 +256,9 @@
           {
             "type": "change",
             "id": "agent-features-default-on",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 5,
               "total": 5
             }
           },
@@ -267,7 +267,7 @@
             "id": "agent-backend-uar",
             "status": "PENDING",
             "progress": {
-              "done": 0,
+              "done": 1,
               "total": 6
             }
           },
@@ -328,10 +328,10 @@
           {
             "type": "change",
             "id": "vector-search-contract",
-            "status": "COMPLETE",
+            "status": "PENDING",
             "progress": {
-              "done": 8,
-              "total": 8
+              "done": 9,
+              "total": 11
             }
           },
           {
@@ -339,8 +339,8 @@
             "id": "mcp-content-extractor",
             "status": "COMPLETE",
             "progress": {
-              "done": 7,
-              "total": 7
+              "done": 8,
+              "total": 8
             }
           },
           {
@@ -355,18 +355,18 @@
           {
             "type": "change",
             "id": "mcp-whole-node-indexing",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 8,
+              "done": 9,
               "total": 9
             }
           },
           {
             "type": "change",
             "id": "webui-vector-search",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 0,
+              "done": 7,
               "total": 7
             }
           },
@@ -375,8 +375,8 @@
             "id": "desktop-search-sidecar",
             "status": "PENDING",
             "progress": {
-              "done": 0,
-              "total": 6
+              "done": 6,
+              "total": 7
             }
           },
           {

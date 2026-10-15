@@ -42,7 +42,7 @@ func (c *EmbeddingsConfig) Settings() (embeddings.Settings, error) {
 		s.Remote = r
 	}
 	if c.Embedder != nil {
-		e := embeddings.EmbedderSettings{BaseURL: c.Embedder.BaseURL, Model: c.Embedder.Model, Dimensions: c.Embedder.Dimensions}
+		e := embeddings.EmbedderSettings{BaseURL: c.Embedder.BaseURL, Model: c.Embedder.Model, Dimensions: c.Embedder.Dimensions, InsecureHTTPHosts: c.InsecureHTTPHosts}
 		if c.Embedder.APIKey != nil {
 			v, err := c.Embedder.APIKey.Read()
 			if err != nil {
@@ -62,6 +62,9 @@ func (c *EmbeddingsConfig) Settings() (embeddings.Settings, error) {
 	}
 	if c.Extractor != nil {
 		x, err := c.Extractor.settings()
+		if x != nil {
+			x.InsecureHTTPHosts = c.InsecureHTTPHosts
+		}
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -69,6 +72,9 @@ func (c *EmbeddingsConfig) Settings() (embeddings.Settings, error) {
 	}
 	if c.Describer != nil {
 		d, err := c.Describer.settings()
+		if d != nil {
+			d.InsecureHTTPHosts = c.InsecureHTTPHosts
+		}
 		if err != nil {
 			errs = append(errs, err)
 		}

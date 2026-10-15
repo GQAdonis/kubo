@@ -94,6 +94,8 @@ AG-UI and A2A callers are always configured principals (`principals` in the conf
 - `"local"` covers loopback hosts (`localhost`, `127.0.0.1`, `::1`). A host name covers any port unless the entry names one (`models.internal.example`, `10.0.0.5:8000`).
 - **Decided 2026-10-10:** `swarm_peers`, `routing_*` and `key_list` are not `contentEgress`. A principal with read grants on the `diag`, `routing` or `names` groups can therefore send the node's peer list, routing answers and key names to the model backend, or receive them as an A2A peer, without `egress_ack`. Leave those groups out of `groups` if that is not acceptable ([ADR-0004](0004-agentic-endpoints-and-llm.md), 2026-10-10 amendment).
 
+`egress_ack` governs where node content may go. It never extends to the model API key: an acknowledged host does not receive the key. The stored key is sent only to the current backend's host and port, by the agent loop, test-connection and model list alike (ADR-0012). Moving the backend to another scheme, host or port clears a key stored through the settings API unless the same write supplies a new `api_key`; a key supplied by reference (environment variable or file) stays as configured, and on a node with `agent.settings.accept_secrets: false` a provider change through the API succeeds and the server-held (referenced) key follows it to the new host. That is an accepted residual of ADR-0012: the `admin` bearer is the root of trust, so keep it scarce or set `agent.settings.enabled: false`.
+
 ## AG-UI
 
 `--agui` (or `agent.agui`) serves `POST /agui` on the `--http` listener. It is mounted only when `--http` and a model backend are both configured; otherwise `/agui` answers 404 and `ipfs mcp` prints that the flag is ignored.

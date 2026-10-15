@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ipfs mcp agent settings: model-list shapes",
-  "description": "Request and result of the model-list endpoint (mcp-agent-settings-api 1.4). With no base_url the configured backend is queried; when no backend is configured the endpoint answers backend_not_configured. A base_url is a candidate URL under the same rules as test-connection (https, or http on loopback, no credentials). Nothing is persisted.",
+  "description": "Request and result of the model-list endpoint (mcp-agent-settings-api 1.4). With no base_url the configured backend is queried; when no backend is configured the endpoint answers backend_not_configured. A base_url is a candidate URL under the same rules as test-connection (https, or http on loopback, no credentials). Nothing is persisted. The stored key is attached only when the queried host:port is the current backend's (ADR-0012); a candidate base_url on any other host is queried without a key.",
   "$defs": {
     "ModelListRequest": {
       "type": "object",

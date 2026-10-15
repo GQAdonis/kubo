@@ -123,6 +123,10 @@ type EmbeddingsConfig struct {
 	// Describer describes images (and, if listed, videos) through an
 	// OpenAI-compatible chat model; nil means no description request exists.
 	Describer *DescriberConfig `json:"describer"`
+	// InsecureHTTPHosts are hosts (or host:port) that may be reached over plain
+	// http by the remote extractor, the describer and a keyed embedder; empty
+	// refuses plain http to every non-loopback host. egress_ack still applies.
+	InsecureHTTPHosts []string `json:"insecure_http_hosts"`
 	// Bulk holds the bulk indexing caps and its off switch (bulk.enabled).
 	Bulk BulkConfig `json:"bulk"`
 	// SearchRoute is search_route: the HTTP search routes' off switch.

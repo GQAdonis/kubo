@@ -15,9 +15,27 @@
       ],
       "description": "The effective agent-loop backend, resolved as flags > overlay > config (ADR-0009 section 7). null means no backend is configured; agent surfaces then answer backend_not_configured."
     },
-    "system_prompt": { "$ref": "#/$defs/SystemPromptRead" }
+    "system_prompt": { "$ref": "#/$defs/SystemPromptRead" },
+    "key_not_carried": { "$ref": "#/$defs/KeyNotCarried" }
   },
   "$defs": {
+    "KeyNotCarried": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "cleared"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": ["host_changed"],
+          "description": "Why the stored key was not applied to the new backend: the write changed the backend scheme, host or port and did not carry api_key (ADR-0012)."
+        },
+        "cleared": {
+          "type": "boolean",
+          "description": "true when the key stored through this API was deleted by the move, so a move back needs the key re-entered. A key supplied by reference (environment variable or file) is never cleared and never produces this notice."
+        }
+      },
+      "description": "Additive, optional, ADR-0012. Present only in the response to a successful PUT whose backend move withheld a key stored through this API; absent on GET and on every other write. After the move backend.api_key reports set false (there is no separate read-side field: clients learn the state from api_key.set). Absent is read as: nothing was withheld."
+    },
     "Revision": {
       "type": "string",
       "minLength": 1,
