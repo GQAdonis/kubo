@@ -1,0 +1,16 @@
+## agui
+HTTP/1.1 503 Service Unavailable
+{"error":{"code":"backend_not_configured","message":"no model backend is configured","retryable":false}}
+## GET /agent/settings
+HTTP/1.1 404 Not Found
+## POST /index/search
+HTTP/1.1 404 Not Found
+## GET /index/status
+HTTP/1.1 404 Not Found
+## tools
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+"name":"ipfs_cat"
+"name":"ipfs_get"
+"name":"ipfs_ls"
+"name":"ipfs_node_info"
+"name":"ipfs_node_status"

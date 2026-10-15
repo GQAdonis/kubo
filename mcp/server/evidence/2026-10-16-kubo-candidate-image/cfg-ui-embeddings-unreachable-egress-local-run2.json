@@ -1,0 +1,36 @@
+{
+  "principals": [
+    {
+      "name": "webui-chat",
+      "kind": "ui",
+      "credential": {
+        "env": "IPFS_MCP_UI_TOKEN"
+      },
+      "groups": [
+        "*"
+      ],
+      "egress_ack": [
+        "local"
+      ]
+    }
+  ],
+  "embeddings": {
+    "mode": "remote",
+    "remote": {
+      "endpoint": "http://127.0.0.1:59998",
+      "namespace": "ipfs",
+      "database": "index"
+    },
+    "embedder": {
+      "base_url": "http://127.0.0.1:59997/v1",
+      "model": "bge-m3",
+      "dimensions": 1024
+    },
+    "extractor": {
+      "mode": "remote",
+      "remote": {
+        "base_url": "http://127.0.0.1:59996"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+=== RUN   TestDefaultMatchesExpectedProfile
+=== PAUSE TestDefaultMatchesExpectedProfile
+=== CONT  TestDefaultMatchesExpectedProfile
+--- PASS: TestDefaultMatchesExpectedProfile (1.73s)
+PASS
+ok  	github.com/ipfs/kubo/test/cli	1.770s
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/autoconf	(cached) [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/fuse	(cached) [no tests to run]
+?   	github.com/ipfs/kubo/test/cli/harness	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/migrations	(cached) [no tests to run]
+?   	github.com/ipfs/kubo/test/cli/testutils	[no test files]
+?   	github.com/ipfs/kubo/test/cli/testutils/httprouting	[no test files]
+?   	github.com/ipfs/kubo/test/cli/testutils/pinningservice	[no test files]
+exit=0

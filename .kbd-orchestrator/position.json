@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1852,
-  "derivedRevision": 1852,
+  "sourceRevision": 1858,
+  "derivedRevision": 1858,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1852
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1858
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-15T19:19:27.895495Z",
+  "updatedAt": "2026-10-15T20:15:18.686979Z",
   "cursor": [
     "agent-backend-settings",
     "uar-conformance-release",
@@ -285,7 +285,7 @@
             "id": "kubo-candidate-image",
             "status": "PENDING",
             "progress": {
-              "done": 0,
+              "done": 3,
               "total": 5
             }
           },

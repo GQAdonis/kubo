@@ -5,9 +5,9 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 
 ## 1. Tasks
 
-- [ ] 1.1 Pre-image verification on the branch head (exception 5): `make build`, `go test ./mcp/...`, `TestDefaultMatchesExpectedProfile`, `test/cli/gateway_test.go`, `TestTelemetry`. Acceptance: outputs saved in a new dated evidence folder; all pass.
-- [ ] 1.2 Build a linux/amd64 image from the branch head with the repository `Dockerfile` (`docker buildx build --platform linux/amd64 --load`), tagged with the short commit in the registry named at OG-1. Acceptance: `docker image inspect` shows `linux/amd64` and the tag; build log saved.
-- [ ] 1.3 Container smoke with its own `IPFS_PATH` on non-default ports. Acceptance: `ipfs version --commit` equals the branch commit; `ipfs mcp --help` lists `--settings-dir`; with the principal tokens and the LLM key file absent, `ipfs mcp --http --agui` starts, `/agui` answers 503 `backend_not_configured` and the settings route answers 404 (CRITICAL-2 disabled state); image digest recorded.
+- [x] 1.1 Pre-image verification on the branch head (exception 5): `make build`, `go test ./mcp/...`, `TestDefaultMatchesExpectedProfile`, `test/cli/gateway_test.go`, `TestTelemetry`. Acceptance: outputs saved in a new dated evidence folder; all pass.
+- [x] 1.2 Build a linux/amd64 image from the branch head with the repository `Dockerfile` (`docker buildx build --platform linux/amd64 --load`), tagged with the short commit in the registry named at OG-1. Acceptance: `docker image inspect` shows `linux/amd64` and the tag; build log saved.
+- [x] 1.3 Container smoke with its own `IPFS_PATH` on non-default ports. Acceptance: `ipfs version --commit` equals the branch commit; `ipfs mcp --help` lists `--settings-dir`; with the principal tokens and the LLM key file absent, `ipfs mcp --http --agui` starts, `/agui` answers 503 `backend_not_configured` and the settings route answers 404 (CRITICAL-2 disabled state); image digest recorded.
 - [ ] 1.4 Image-only know-me-cluster PR (the `image:` line set to the digest from 1.3; no flag or config change) and the OG-12 runbook (planned single-replica restart under the 2026-10-13 gotcha; rollback image 0.44.0-dev-0f15c24). Acceptance: `git diff` touches only the `image:` line(s); runbook in the PR body.
 - [ ] 1.5 Security-reviewer read of the image PR before OG-12. Acceptance: findings file; no open CRITICAL.
 

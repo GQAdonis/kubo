@@ -38,3 +38,31 @@ Local digest: none exists. `--load` produces no RepoDigest until the image is pu
 - Scenarios: a = no config; b = `cfg-ui.json` with credential env unset; c = `cfg-ui.json` with token; d = `cfg-ui-embeddings-unreachable.json` with token.
 - Containers started (all stopped and removed by ID, `container-ids.txt`): a `a0f43d4d...`, b `72fa6c91...`, c `5beb77cc...`, d `93a6bce4...`. No images or volumes pruned.
 - `go test ./mcp/...` was a mix of cached and fresh runs; `mcp/server` ran fresh (105s).
+
+## Run 2 (3d8a128c5)
+
+Head `3d8a128c5`, after the lead rulings amending 1.3 (see the two dated amendments at the end of `openspec/changes/kubo-candidate-image/tasks.md`). First-run files above are unchanged; run 2 files carry a `-run2` suffix.
+Image: `ghcr.io/gqadonis/kubo:3d8a128c5`, not pushed. Image ID: `sha256:b23de475c717faa6974452144035c12386626c1c5502ba0c2c1fd84cd81e2af3`. Os=linux, Architecture=amd64. Local digest: none (`RepoDigests=[]`, `1.2-image-ls-run2.txt`). The old `ff1d66e0f` image was left in place.
+
+| Check | Result | File |
+|---|---|---|
+| 1.1 `make build` | PASS | `1.1-1-make-build-run2.txt` |
+| 1.1 `go test ./mcp/...` | PASS | `1.1-2-go-test-mcp-run2.txt` |
+| 1.1 `TestDefaultMatchesExpectedProfile` | PASS (1) | `1.1-3-TestDefaultMatchesExpectedProfile-run2.txt` |
+| 1.1 `TestGateway` | PASS (75 PASS, 0 FAIL) | `1.1-3-TestGateway-run2.txt` |
+| 1.1 `TestTelemetry` | PASS (9 PASS, 0 FAIL) | `1.1-3-TestTelemetry-run2.txt` |
+| 1.2 build linux/amd64 exit 0; inspect shows linux/amd64 and tag | PASS | `1.2-docker-build-run2.log`, `1.2-image-inspect-summary-run2.txt`, `1.2-image-inspect-run2.json` |
+| 1.3 `ipfs version --commit` shows commit | PASS: `0.44.0-dev-3d8a128` (7-char prefix of `3d8a128c5`) | `1.3-a-no-config-run2.txt` |
+| 1.3 `--help` lists `--settings-dir` | PASS | `1.3-a-no-config-run2.txt` |
+| 1.3 starts with no tokens and no LLM key; `/agui` 403 with no token | PASS (403) | `1.3-a-no-config-run2.txt` |
+| 1.3 `/agui` 403 with `ui` principal whose credential env is unset | PASS (403) | `1.3-b-credential-unset-run2.txt` |
+| 1.3 `/agui` 503 `backend_not_configured` with throwaway `ui` token | PASS | `1.3-c-token-no-embeddings-run2.txt` |
+| 1.3 settings route `/agent/settings` 404 | PASS (a, b, c) | same files |
+| 1.3 no `embeddings`: `POST /index/search` 404, `GET /index/status` 404, no `ipfs_index_*` tool | PASS (tools: `ipfs_cat`, `ipfs_get`, `ipfs_ls`, `ipfs_node_info`, `ipfs_node_status`) | `1.3-c-token-no-embeddings-run2.txt` |
+| 1.3 unreachable store, embedder, extractor, `ui` principal with `egress_ack: ["local"]`: container stays up | PASS (Up after probes; startup warns and serves) | `1.3-d2-embeddings-unreachable-run2.txt` |
+| 1.3 `GET /index/status`: store, embedder, extractor each `available:false` | PASS (200, three stages `available:false` with connection-refused reasons) | `1.3-d2-embeddings-unreachable-run2.txt` |
+| 1.3 `POST /index/search` 503 `index_unavailable` | PASS (503, `retryable:true`, `Retry-After: 5`) | `1.3-d2-embeddings-unreachable-run2.txt` |
+
+Notes:
+- `1.3-d-embeddings-unreachable-run2.txt` is a superseded probe artifact, kept for honesty: `raw.sh` let busybox `nc` close the connection after sending, which cancelled the request context (stages showed `context canceled`, search answered 500 `cancelled`). `raw-run2.sh` keeps stdin open for 3 seconds; `1.3-d2-...` is the valid result from a fresh container. The server behavior at `3d8a128c5` is correct; the earlier odd answers came from the probe, not the server. That earlier tools list also showed `ipfs_index_search`, `ipfs_index_status`, `ipfs_index_bulk_status` with embeddings configured, as expected.
+- Same isolation as run 1: own `IPFS_PATH`, ports 4101/5101/8181/5151 inside the container, nothing on 4001/5001/8080/5050, throwaway tokens inside containers only. Containers started and removed by ID: `container-ids-run2.txt` (a, b, c, d, d2). No images or volumes pruned.
