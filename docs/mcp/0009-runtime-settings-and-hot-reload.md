@@ -24,7 +24,7 @@
 - **Hot reload.** A settings write takes effect without a manual restart of `ipfs mcp`. "Applies without restart" means no manual restart by the operator; it does not promise zero downtime of an in-flight run.
 - The runtime holds the effective settings as one immutable snapshot (`LLMClient`, backend host, limits, system prompt) behind an `atomic.Pointer`, read once per run (`mcp-agent-hot-reload` 1.1). Consequences:
   - A run in flight completes on the snapshot it started with; the next run uses the new one.
-  - A resumed interrupt reuses its run's original snapshot, or fails with a stable error code; it never silently switches backends mid-run.
+  - A resumed interrupt reuses its run's original snapshot, or fails with a stable error code; it never silently switches backends mid-run. Since Round 7 a swap that changes the backend endpoint or key revokes the open interrupts: resuming one fails with `failed_precondition` and `details.reason = "backend_changed"`, and the key is dropped at once. A resume already in flight keeps its snapshot until it ends.
   - The previous API key is dropped once no run references the old snapshot.
   - A pending confirmation is never lost across a settings swap (R3).
   - `sessions` and `buckets` survive a swap.
@@ -53,7 +53,7 @@
 ### 4. Bearer-only routes outside basic auth; `origin_allowlist`; token storage
 
 - **The Authorization conflict.** Envoy basic auth and the `ipfs mcp` bearer both use the `Authorization` header. If the basic-auth SecurityPolicy targets the new routes, the bearer cannot be sent. Therefore the console routes for `/agui`, the settings route and `/mcp` are *outside* the basic-auth SecurityPolicy and authenticate by bearer only. An offline check per PR asserts no SecurityPolicy targets those rules and that `ipfs-webui-auth` still targets every `/api/v0` and `/webui` rule (`lke-origin-isolation` 1.2, `lke-agent-settings` 1.2).
-- **`origin_allowlist` is exactly the console origin.** The strict CORS policy on the `ipfs mcp` listener accepts only the mount's own `origin_allowlist`, not the listener's origin (`mcp/server/http.go:43-60`), so it must name the console origin and nothing else. The bearer routes are not callable from the gateway origin or any other.
+- **`origin_allowlist` is exactly the console origin.** The strict CORS policy on the `ipfs mcp` listener accepts only the mount's own `origin_allowlist`, not the listener's origin (`mcp/server/http.go:43-60`), so it must name the console origin and nothing else. The bearer routes are not callable from the gateway origin or any other. Since Round 7 the settings route has its own strict policy over `agent.origin_allowlist` (it previously got the listener-wide one): methods `GET`, `PUT`, `POST`, `OPTIONS`; request headers `authorization`, `content-type`, `accept`, `if-match`; response headers `ETag` and `Retry-After` exposed; no credentials header. An operator who relied on `http.allowed_origins` must add the console origin to `agent.origin_allowlist`.
 - **The `admin` token never touches `localStorage`.** The settings page holds it in memory or `sessionStorage` only; a 401 from the settings API means "Sign in again". (The chat `ui` token in `localStorage` on the console origin is a separate, pre-existing operator decision of 2026-10-10, recorded in ADR-0004's R11 amendment; `settings-security-review` rules on it under W7. This ADR does not extend that acceptance to the `admin` token.)
 
 ### 5. Secrets (D3 with S4)
@@ -101,6 +101,47 @@ This ADR's own design carries two exposures it does not close, and naming them i
 
 1. **A cloud `admin` bearer holder can repoint egress.** Whoever holds the `admin` token can change the LLM backend host through the settings API; the per-host typed re-confirmation is a UI safeguard in a page that same holder's browser is running, not a server-enforced second factor. The bearer *is* the authorization. `egress_ack` extension is bounded to the newly chosen host, but the holder chooses the host, so the bound is a speed bump, not a wall. The mitigations are scope (the token reaches only the settings route), storage (never `localStorage`), and origin isolation (D1) — none of which helps once the token itself leaks.
 2. **An Argo rollback does not revert overlay settings.** The settings overlay lives on the `ipfs-mcp-settings` PVC, outside git. A `git revert` plus Argo sync restores the manifest — flags, routes, Secrets references — but the overlay file keeps whatever backend, model and switches were last written through the API. Rolling back the deployment can therefore leave the node running a settings state that exists nowhere in GitOps. The written rollback procedure (`lke-agent-settings` 1.5) must include the explicit settings reset (delete the overlay file on the PVC); without that step, a rollback is partial and the operator may not know it.
+
+## Amendment (2026-10-16, Round 7: security review corrections and operator rulings)
+
+Source: `.agent-team/kubo-ipfs-agentic/findings/security/agent-backend-settings/settings-security-review.md` (PASS WITH FINDINGS, no CRITICAL or HIGH). The dispositions are in that file; this section records the rulings and the behaviour changes that touch this ADR.
+
+### Operator ruling on M1 and M2: accepted with the conditions
+
+Operator, verbatim: "Accept with the conditions (Recommended)". Two MEDIUM residual risks are accepted as interim, until Kratos plus `flint-gate` session auth lands:
+
+- **M1: the console's interim inline Basic credentials in `localStorage`.** The interim API address `https://<user>:<password>@console.prometheusags.ai` is stored verbatim as `ipfsApi`, turned into `Authorization: Basic` on every call and shown in a plain text field. Any same-origin script can read it, it persists in the browser profile, and it grants the full `/api/v0` surface (config replace, key export, pin removal, shutdown) from anywhere. It is contained by the console `/ipfs` pin to `WebUIPath`, kubo's Origin check and the GET 405. The residual is XSS or supply-chain compromise of that bundle, or access to the profile.
+- **M2: the chat `ui` token in `localStorage` on the console origin** (ADR-0004 R11 amendment, ADR-0005 amendment). It has no expiry or endpoint binding and is a bearer usable from anywhere on `/agui` and `/mcp`. The same script that reads M1 gets it. A stolen token means unattended reads plus the console `ui` principal's write groups; destructive calls stay refused. The 2026-10-10 acceptance holds only while M1 is in force.
+
+Conditions, as recorded in `.prometheus/decisions.md`:
+
+1. a dedicated htpasswd user for the console browser;
+2. rotate it and the `ui` token when session auth lands, and clear the stored API address in every browser profile;
+3. no screenshots or evidence of console Settings or Status meanwhile;
+4. the console `ui` principal gets the smallest `write_groups` that works;
+5. check read-only whether Envoy Gateway can send a fixed basic-auth realm (unverified; it would remove the workaround).
+
+When session auth replaces Basic auth the `ui` token also leaves `localStorage` (a session cookie from `flint-gate`, or memory plus `sessionStorage`). The reviewer also suggested an explicit `/mcp` kind list on LKE that excludes `ui`; it is not decided.
+
+### Carried to the session-auth ADR
+
+Design notes from the review for the Kratos and `flint-gate` ADR. They are not findings and nothing here is implemented:
+
+- **Cookie sessions bring back CSRF.** Use `SameSite=Strict`, `HttpOnly` and `Secure`, an Origin check at the gateway, and no ambient credentials reaching the bearer-designed `ipfs mcp` routes.
+- **Trusted identity headers.** Accept identity headers only from the proxy, strip them from client input, and stop direct pod access with a NetworkPolicy. `lke-origin-isolation` MEDIUM-4 is still open and becomes load-bearing.
+- **NetworkPolicy** as above, enforced and verified live (unverified today).
+- **`admin` as a distinct identity.** Map the admin capability to a distinct Kratos identity or role with step-up, not to any logged-in session.
+
+### Settings fixes now in code
+
+- **L1: plain-http backends.** A settings write or probe accepts a plain `http` backend URL only for a loopback host or a host listed in `embeddings.insecure_http_hosts` (before, a write accepted `http` to any host when no key went with it). A scheme change (`https` to `http` on the same host) is treated as a host change and needs `egress_confirmation`, like a host or port move.
+- **L2: audit log.** Settings writes log at `Info`, or `Warn` for a host move or an egress extension, with the principal ID, the field names, the old and new host and whether a key was not carried; never a key, prompt, model or path.
+- **L3: strict CORS** on the settings route, as in section 4.
+- **L4: limits.** Route 60 requests a minute with a burst of 60 per principal; probes 10 a minute with a burst of 10 and 2 in flight; 16 open change streams. A refusal is `429` with `Retry-After`.
+- **L5: open interrupts after a backend change** fail with `failed_precondition` and `details.reason = "backend_changed"` (AG-UI `409`; A2A `BACKEND_CHANGED`), as in section 1.
+- **I5: `*.localhost` is no longer loopback.** Only `localhost` and literal loopback IPs are. Go's resolver sends other `*.localhost` names to DNS, so a key could leave the machine in cleartext.
+- **I2: overlay `egress_ack` persistence.** The overlay's per-principal `egress_ack` is stored per principal ID, is not pruned, and a principal re-created under the same ID inherits the hosts. Moving back to a previously confirmed host asks for no new confirmation. Deleting the overlay clears it (the rollback step in "The uncomfortable thing", item 2).
+- **I3: stale preflight.** The `/mcp` preflight for `ui` and `a2a` reads `BackendHosts` from the configuration file, not the overlay, so after a settings move it can check a stale host. Nothing leaks (the content check uses the snapshot host) but a refusal can be wrong, and the D4 copy that says content will go to the new host overstates when the `ui` principal's `egress_ack` does not cover it: the chat fails closed. `chat-setup.md` now says so.
 
 ## Consequences
 

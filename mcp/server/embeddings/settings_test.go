@@ -76,3 +76,21 @@ func TestParseCredential(t *testing.T) {
 	require.Equal(t, auth{user: "root", pass: "p:w"}, parseCredential("root:p:w"))
 	require.Equal(t, auth{token: "eyJhbGciOi.payload.sig"}, parseCredential("eyJhbGciOi.payload.sig"))
 }
+
+func TestHTTPSOrLoopbackHosts(t *testing.T) {
+	for raw, want := range map[string]bool{
+		"https://example.com":       true,
+		"http://localhost:11434":    true,
+		"http://127.0.0.1:11434":    true,
+		"http://[::1]:11434":        true,
+		"http://[::ffff:127.0.0.1]": true,
+		"http://app.localhost:80":   false,
+		"http://localhost.evil.com": false,
+		"http://example.com":        false,
+		"http://10.0.0.5":           false,
+	} {
+		if got := httpsOrLoopback(raw); got != want {
+			t.Errorf("httpsOrLoopback(%q) = %v, want %v", raw, got, want)
+		}
+	}
+}

@@ -21,8 +21,8 @@ func TestIndexSearchSourcesFilterKeepsDescriptionsOut(t *testing.T) {
 		describer: func(*embeddings.DescriberSettings) {},
 	}})
 	e.seedIndex(t)
-	e.files["/ipfs/bafyPNG"] = pngBytes
-	e.index(e.principal(), "bafyPNG", false)
+	e.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+	e.index(e.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 
 	search := func(extra string) map[string]any {
 		resp := e.do(t, http.MethodPost, RouteIndexSearch, tokUI, `{"query":"cats",`+extra+`}`, nil)
@@ -61,17 +61,17 @@ func TestSearchFilteredWidensUntilTopKPassTheFilter(t *testing.T) {
 	}
 	var rows []embeddings.Row
 	for i := range 20 {
-		rows = append(rows, embeddings.Row{CID: "bafyD", ChunkIndex: i, Model: "m", Vector: axis(0), Kind: "image", Source: embeddings.SourceDescription, Text: "d"})
+		rows = append(rows, embeddings.Row{CID: "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", ChunkIndex: i, Model: "m", Vector: axis(0), Kind: "image", Source: embeddings.SourceDescription, Text: "d"})
 	}
-	require.NoError(t, st.Replace(t.Context(), "bafyD", rows))
-	require.NoError(t, st.Replace(t.Context(), "bafyT", []embeddings.Row{{CID: "bafyT", Model: "m", Vector: axis(1)}}))
+	require.NoError(t, st.Replace(t.Context(), "bafkreigqzecctngknadksgwbf6po52s6byvbz4oz5hpr7sky5aamillqcm", rows))
+	require.NoError(t, st.Replace(t.Context(), "bafkreicegysetgaysvp3255ncz6tifye5uoubvufwrrvehfbicm56y2xl4", []embeddings.Row{{CID: "bafkreicegysetgaysvp3255ncz6tifye5uoubvufwrrvehfbicm56y2xl4", Model: "m", Vector: axis(1)}}))
 
 	f := embeddings.Filter{Sources: []string{"text"}}
 	assert.True(t, f.Match(embeddings.Hit{}), "a row from before derived content is text")
 	assert.False(t, f.Match(embeddings.Hit{Source: "description"}))
 	hits := filterByStore(t, svc, axis(0), 1, f)
 	require.Len(t, hits, 1, "top_k is counted after the filter")
-	assert.Equal(t, "bafyT", hits[0].CID)
+	assert.Equal(t, "bafkreicegysetgaysvp3255ncz6tifye5uoubvufwrrvehfbicm56y2xl4", hits[0].CID)
 }
 
 // filterByStore runs the widening loop of SearchFiltered over a stored vector.
@@ -346,9 +346,9 @@ func TestBulkResumeNarrowsToTheCurrentConfiguration(t *testing.T) {
 
 func TestBulkNotAFileEntriesDoNotCountAgainstMaxFiles(t *testing.T) {
 	n := newFakeNode()
-	n.other["bafyLink"] = "symlink"
+	n.other["bafkreigeidx5xv6wggfym2jjtvrcnamqbanrvvjlqxty5fxd57cwkzsbum"] = "symlink"
 	text := n.file(filler("cats", 10))
-	root := n.dir("root", nodeEntry{"a-link", "bafyLink"}, nodeEntry{"b.txt", text})
+	root := n.dir("root", nodeEntry{"a-link", "bafkreigeidx5xv6wggfym2jjtvrcnamqbanrvvjlqxty5fxd57cwkzsbum"}, nodeEntry{"b.txt", text})
 	n.pinRecursive(root)
 	b := newTextBulkEnv(t, n, nil)
 	_, run := b.run(b.principal(), map[string]any{"max_files": 1})
@@ -426,24 +426,24 @@ func TestRetryAfterTheDescriberLimitDoesNotSendTheFileToTheExtractorAgain(t *tes
 	id := m.principal()
 	covers := EgressCovers(id)
 	ctx := WithIdentity(WithPrincipal(t.Context(), id.Principal), id)
-	m.files["/ipfs/bafyA"] = append(append([]byte{}, pngBytes...), 'a')
-	m.files["/ipfs/bafyB"] = append(append([]byte{}, pngBytes...), 'b')
+	m.files["/ipfs/bafkreieoswm5yqijue4v3qyit63bd76suvpinoixcelkdzzlfw3uimwtsu"] = append(append([]byte{}, pngBytes...), 'a')
+	m.files["/ipfs/bafkreiha5sgvksp5ooau53gcgplgt6ximremnu7jf2pchvwgdirglk5xoa"] = append(append([]byte{}, pngBytes...), 'b')
 
 	run := func(c string, memo *stageMemo) error {
 		t := indexTarget{CID: c, Path: "/ipfs/" + c, Offline: true, Checked: true, memo: memo}
 		_, err := m.s.indexResolved(ctx, m.svc, covers, t, statResponse{Hash: c, Size: int64(len(m.files["/ipfs/"+c])), Type: "file"})
 		return err
 	}
-	require.NoError(t, run("bafyA", nil), "the first image takes the hourly slot")
+	require.NoError(t, run("bafkreieoswm5yqijue4v3qyit63bd76suvpinoixcelkdzzlfw3uimwtsu", nil), "the first image takes the hourly slot")
 	requests := len(m.x.requests())
 
 	memo := &stageMemo{}
-	err1 := run("bafyB", memo)
+	err1 := run("bafkreiha5sgvksp5ooau53gcgplgt6ximremnu7jf2pchvwgdirglk5xoa", memo)
 	var te *ToolError
 	require.ErrorAs(t, indexErr(err1), &te)
 	assert.Equal(t, CodeResourceExhausted, te.Code)
 	assert.Len(t, m.x.requests(), requests+1, "the first attempt extracted")
-	err2 := run("bafyB", memo)
+	err2 := run("bafkreiha5sgvksp5ooau53gcgplgt6ximremnu7jf2pchvwgdirglk5xoa", memo)
 	require.ErrorAs(t, indexErr(err2), &te)
 	assert.Len(t, m.x.requests(), requests+1, "the retry reused the extraction")
 }

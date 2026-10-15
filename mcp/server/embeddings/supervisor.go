@@ -179,7 +179,11 @@ func checkBinary(ctx context.Context, cfg EmbeddedSettings) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, versionTimeout)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, cfg.Binary, "version").Output()
+	// The binary is the operator's, but it does not need the operator's
+	// environment: nothing of the shell (API keys, tokens) is passed on.
+	vcmd := exec.CommandContext(ctx, cfg.Binary, "version")
+	vcmd.Env = minimalEnv()
+	out, err := vcmd.Output()
 	if err != nil {
 		return fmt.Errorf("embeddings.embedded.surreal_binary: running 'version': %w", err)
 	}

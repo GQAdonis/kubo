@@ -111,6 +111,12 @@ func (k *kindStore) CountCIDs(context.Context) (int, error) {
 	return len(seen), nil
 }
 
+func (k *kindStore) CountCIDsByKind(context.Context) (map[string]int, error) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return countKinds(k.rows), nil
+}
+
 func (k *kindStore) ListCIDs(_ context.Context, after string, limit int) ([]string, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -303,9 +309,9 @@ func TestExtractorRoutesEachKind(t *testing.T) {
 				}
 				return 200, `{"results":[{"content":"cats are in this ` + tt.wantKind + `","mime_type":"x","metadata":{"ocr_used":` + used + `}}]}`
 			})
-			e.files["/ipfs/bafyDoc"] = tt.content(t)
+			e.files["/ipfs/bafkreic6x5cipjtn2p6q3ryzmy2vnxhuiv65os2omoyhmk62kg67bcnnfa"] = tt.content(t)
 
-			out := e.index(e.principal(), "bafyDoc")
+			out := e.index(e.principal(), "bafkreic6x5cipjtn2p6q3ryzmy2vnxhuiv65os2omoyhmk62kg67bcnnfa")
 			assert.EqualValues(t, 1, out["chunks_indexed"])
 			assert.NotContains(t, out, "skipped_reason")
 
@@ -322,15 +328,15 @@ func TestExtractorRoutesEachKind(t *testing.T) {
 			assert.Equal(t, tt.wantSource, r.Source)
 			assert.Equal(t, tt.wantMIME, r.MIME)
 			assert.Equal(t, "cats are in this "+tt.wantKind, r.Text, "derived chunk text is stored with the vector")
-			assert.Equal(t, "/ipfs/bafyDoc", r.Path)
+			assert.Equal(t, "/ipfs/bafkreic6x5cipjtn2p6q3ryzmy2vnxhuiv65os2omoyhmk62kg67bcnnfa", r.Path)
 		})
 	}
 }
 
 func TestTextKindStaysOnTheNativePath(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{}, nil)
-	e.files["/ipfs/bafyText"] = []byte("cats purr when content")
-	out := e.index(e.principal(), "bafyText")
+	e.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte("cats purr when content")
+	out := e.index(e.principal(), "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i")
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.Empty(t, e.x.requests(), "text never goes to the extractor")
 	rows := e.store.snapshot()
@@ -344,8 +350,8 @@ func TestPlainTextOutsideTheRefinedAllowlistEntryStaysNative(t *testing.T) {
 	// JSON text with the default allowlist (text/plain, text/markdown) was
 	// indexed as plain text before the extractor existed, and still is.
 	e := newExtEnv(t, embeddings.Policy{}, nil)
-	e.files["/ipfs/bafyJSON"] = []byte(`{"animal": "cats"}`)
-	out := e.index(e.principal(), "bafyJSON")
+	e.files["/ipfs/bafkreie4a4p72xstfzcvrdx4ihd3yd4mptgmelxhlei2osph7cf7ajameq"] = []byte(`{"animal": "cats"}`)
+	out := e.index(e.principal(), "bafkreie4a4p72xstfzcvrdx4ihd3yd4mptgmelxhlei2osph7cf7ajameq")
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.Empty(t, e.x.requests())
 	assert.Equal(t, "text", e.store.snapshot()[0].Kind)
@@ -354,10 +360,10 @@ func TestPlainTextOutsideTheRefinedAllowlistEntryStaysNative(t *testing.T) {
 func TestSearchReturnsStoredTextForDerivedEntriesWithoutReading(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, nil)
 	id := e.principal()
-	e.files["/ipfs/bafyPDF"] = pdfBytes
-	e.files["/ipfs/bafyNote"] = []byte("dogs bark at the mailman")
-	require.EqualValues(t, 1, e.index(id, "bafyPDF")["chunks_indexed"])
-	require.EqualValues(t, 1, e.index(id, "bafyNote")["chunks_indexed"])
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
+	e.files["/ipfs/bafkreicsqlw6wnsgan23jnaq4lgfftkfg6athfnxrddqqk7yvur3if2dmm"] = []byte("dogs bark at the mailman")
+	require.EqualValues(t, 1, e.index(id, "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["chunks_indexed"])
+	require.EqualValues(t, 1, e.index(id, "bafkreicsqlw6wnsgan23jnaq4lgfftkfg6athfnxrddqqk7yvur3if2dmm")["chunks_indexed"])
 
 	// A derived hit needs no re-read of its text; only an offline one-byte
 	// presence check of the file.
@@ -369,18 +375,18 @@ func TestSearchReturnsStoredTextForDerivedEntriesWithoutReading(t *testing.T) {
 	results := out["results"].([]any)
 	require.NotEmpty(t, results)
 	first := results[0].(map[string]any)
-	assert.Equal(t, "bafyPDF", first["cid"])
+	assert.Equal(t, "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq", first["cid"])
 	assert.Equal(t, "cats extracted by the fake", first["text"])
 	assert.Equal(t, "document", first["kind"])
 	assert.Equal(t, "extracted", first["source"])
 	assert.Equal(t, "application/pdf", first["mime_type"])
 	assert.Equal(t, cats+1, e.d.count("cat"), "search read one byte, offline, to confirm the file is still here")
-	assert.True(t, e.catOffline["/ipfs/bafyPDF"], "the presence check never fetches from the network")
+	assert.True(t, e.catOffline["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"], "the presence check never fetches from the network")
 	lastCat := e.catCalls()[len(e.catCalls())-1]
 	assert.EqualValues(t, 1, lastCat.length)
 
 	// A native text hit is still recovered by re-reading the file.
-	res = toolCall(t, e.connect(&id), "ipfs_index_search", map[string]any{"query": "dogs", "cid": "bafyNote"})
+	res = toolCall(t, e.connect(&id), "ipfs_index_search", map[string]any{"query": "dogs", "cid": "bafkreicsqlw6wnsgan23jnaq4lgfftkfg6athfnxrddqqk7yvur3if2dmm"})
 	require.False(t, res.IsError)
 	hit := structured(t, res)["results"].([]any)[0].(map[string]any)
 	assert.Equal(t, "dogs bark at the mailman", hit["text"])
@@ -413,8 +419,8 @@ func (e *indexEnv) catCalls() []catRead {
 func TestDerivedHitIsDroppedWhenItsContentIsGone(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, nil)
 	id := e.principal()
-	e.files["/ipfs/bafyPDF"] = pdfBytes
-	require.EqualValues(t, 1, e.index(id, "bafyPDF")["chunks_indexed"])
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
+	require.EqualValues(t, 1, e.index(id, "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["chunks_indexed"])
 
 	search := func() []any {
 		res := toolCall(t, e.connect(&id), "ipfs_index_search", map[string]any{"query": "cats", "top_k": 5})
@@ -426,11 +432,11 @@ func TestDerivedHitIsDroppedWhenItsContentIsGone(t *testing.T) {
 	require.Len(t, search(), 1, "the file is on the node")
 
 	// pin rm and repo gc by another client: the node no longer has the file.
-	delete(e.files, "/ipfs/bafyPDF")
+	delete(e.files, "/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")
 	assert.Empty(t, search(), "the stored text must not outlive the content")
 	assert.Len(t, e.store.snapshot(), 1, "a search stays read-only; ipfs_index_reconcile removes the rows")
 	for _, c := range e.catCalls() {
-		if c.path == "/ipfs/bafyPDF" && c.length == 1 {
+		if c.path == "/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq" && c.length == 1 {
 			assert.True(t, c.offline, "the check never fetches from the network")
 		}
 	}
@@ -439,9 +445,9 @@ func TestDerivedHitIsDroppedWhenItsContentIsGone(t *testing.T) {
 func TestRowsWithoutKindOrSourceAreReportedAsText(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{}, nil)
 	id := e.principal()
-	e.files["/ipfs/bafyOld"] = []byte("cats written before derived content existed")
+	e.files["/ipfs/bafkreieu3xsbh62zkujitrzgmqyfoqe3mefpramwrul6w6otjtj663qdm4"] = []byte("cats written before derived content existed")
 	// A row as an earlier release stored it: no kind, no source, no text.
-	require.NoError(t, e.store.Replace(t.Context(), "bafyOld", []embeddings.Row{{CID: "bafyOld", Path: "/ipfs/bafyOld", MIME: "text/plain", ChunkIndex: 0, Model: "fake-embed", Vector: axisVector(0)}}))
+	require.NoError(t, e.store.Replace(t.Context(), "bafkreieu3xsbh62zkujitrzgmqyfoqe3mefpramwrul6w6otjtj663qdm4", []embeddings.Row{{CID: "bafkreieu3xsbh62zkujitrzgmqyfoqe3mefpramwrul6w6otjtj663qdm4", Path: "/ipfs/bafkreieu3xsbh62zkujitrzgmqyfoqe3mefpramwrul6w6otjtj663qdm4", MIME: "text/plain", ChunkIndex: 0, Model: "fake-embed", Vector: axisVector(0)}}))
 	res := toolCall(t, e.connect(&id), "ipfs_index_search", map[string]any{"query": "cats", "top_k": 1})
 	require.False(t, res.IsError, "%+v", res.Content)
 	hit := structured(t, res)["results"].([]any)[0].(map[string]any)
@@ -460,11 +466,11 @@ func axisVector(axis int) []float32 {
 
 func TestExtractedTextOverTheCapIsTooLarge(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, func(s *embeddings.ExtractorSettings) { s.MaxTextBytes = 64 })
-	e.files["/ipfs/bafyPDF"] = pdfBytes
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
 	e.x.setReply(func(extractedFile) (int, string) {
 		return 200, `{"results":[{"content":"` + strings.Repeat("cats ", 20) + `","mime_type":"x","metadata":{}}]}`
 	})
-	out := e.index(e.principal(), "bafyPDF")
+	out := e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")
 	assert.Equal(t, "too_large", out["skipped_reason"])
 	assert.EqualValues(t, 0, out["chunks_indexed"])
 	assert.Zero(t, e.embed.requests.Load(), "nothing was embedded")
@@ -473,19 +479,19 @@ func TestExtractedTextOverTheCapIsTooLarge(t *testing.T) {
 	e.x.setReply(func(extractedFile) (int, string) {
 		return 200, `{"results":[{"content":"` + strings.Repeat("c", 64) + `","mime_type":"x","metadata":{}}]}`
 	})
-	assert.EqualValues(t, 1, e.index(e.principal(), "bafyPDF")["chunks_indexed"], "text at the cap is indexed")
+	assert.EqualValues(t, 1, e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["chunks_indexed"], "text at the cap is indexed")
 }
 
 func TestExtractedTextWithTooManyChunksIsTooLarge(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds, ChunkChars: embeddings.MinChunkChars}, nil)
-	e.files["/ipfs/bafyPDF"] = pdfBytes
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
 	// About 2300 chunks of 200 characters, well under the 2 MiB text cap.
 	text := strings.Repeat("cats purr softly. ", 25000)
 	require.Less(t, len(text), embeddings.DefaultExtractorMaxTextBytes)
 	e.x.setReply(func(extractedFile) (int, string) {
 		return 200, `{"results":[{"content":"` + text + `","mime_type":"x","metadata":{}}]}`
 	})
-	out := e.index(e.principal(), "bafyPDF")
+	out := e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")
 	assert.Equal(t, "too_large", out["skipped_reason"])
 	assert.Zero(t, e.embed.requests.Load(), "no embedder request is spent on a document over the chunk cap")
 	assert.Empty(t, e.store.snapshot())
@@ -494,31 +500,31 @@ func TestExtractedTextWithTooManyChunksIsTooLarge(t *testing.T) {
 func TestTextKeepsPolicyMaxBytesEvenWithAnExtractor(t *testing.T) {
 	pol := embeddings.Policy{MIMEAllowlist: allKinds, MaxBytes: 1024}
 	e := newExtEnv(t, pol, func(s *embeddings.ExtractorSettings) { s.MaxBytes = 8192 })
-	e.files["/ipfs/bafyLog"] = []byte(strings.Repeat("cats in the log\n", 300))       // 4800 bytes of text
-	e.files["/ipfs/bafyPDF"] = append(slices.Clone(pdfBytes), make([]byte, 3000)...)  // a binary signature
-	e.files["/ipfs/bafyHuge"] = append(slices.Clone(pdfBytes), make([]byte, 9000)...) // over extractor.max_bytes
-	e.files["/ipfs/bafySmall"] = []byte("cats nap")
+	e.files["/ipfs/bafkreib35miyeekjflf6vdqvszekuvkksh5kk3fmzs5ktzgv5rsyqrgcie"] = []byte(strings.Repeat("cats in the log\n", 300))      // 4800 bytes of text
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = append(slices.Clone(pdfBytes), make([]byte, 3000)...) // a binary signature
+	e.files["/ipfs/bafkreichp6alcm2xg4izl6brjwcn4m5dqcwolchcjkcy5kof33byzyqpkq"] = append(slices.Clone(pdfBytes), make([]byte, 9000)...) // over extractor.max_bytes
+	e.files["/ipfs/bafkreia66rmdlyiv6eha26kivqikxs2smpo7vbaxslnlzudvyeywhelfau"] = []byte("cats nap")
 
-	assert.Equal(t, "too_large", e.index(e.principal(), "bafyLog")["skipped_reason"], "text is bounded by policy.max_bytes")
+	assert.Equal(t, "too_large", e.index(e.principal(), "bafkreib35miyeekjflf6vdqvszekuvkksh5kk3fmzs5ktzgv5rsyqrgcie")["skipped_reason"], "text is bounded by policy.max_bytes")
 	for _, c := range e.catCalls() {
 		assert.LessOrEqual(t, c.length, int64(sniffPrefixBytes), "a large text file costs a small prefix read, not a full read: %+v", c)
 	}
 
-	assert.EqualValues(t, 1, e.index(e.principal(), "bafyPDF")["chunks_indexed"], "binary content may use extractor.max_bytes")
+	assert.EqualValues(t, 1, e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["chunks_indexed"], "binary content may use extractor.max_bytes")
 	reads := e.catCalls()
 	assert.EqualValues(t, 8192+1, reads[len(reads)-1].length, "the full read is bounded by extractor.max_bytes")
 
-	assert.Equal(t, "too_large", e.index(e.principal(), "bafyHuge")["skipped_reason"])
-	assert.EqualValues(t, 1, e.index(e.principal(), "bafySmall")["chunks_indexed"])
+	assert.Equal(t, "too_large", e.index(e.principal(), "bafkreichp6alcm2xg4izl6brjwcn4m5dqcwolchcjkcy5kof33byzyqpkq")["skipped_reason"])
+	assert.EqualValues(t, 1, e.index(e.principal(), "bafkreia66rmdlyiv6eha26kivqikxs2smpo7vbaxslnlzudvyeywhelfau")["chunks_indexed"])
 }
 
 // --- 1.6: disabled states -----------------------------------------------------
 
 func TestWithoutAnExtractorAPDFIsMimeNotAllowedAsInG12(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{policy: embeddings.Policy{MIMEAllowlist: allKinds}})
-	e.files["/ipfs/bafyPDF"] = pdfBytes
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
 	id := indexIdentity(e.embed.host())
-	res := toolCall(t, e.connect(&id), "ipfs_index_cid", map[string]any{"cid": "bafyPDF"})
+	res := toolCall(t, e.connect(&id), "ipfs_index_cid", map[string]any{"cid": "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"})
 	require.False(t, res.IsError, "%+v", res.Content)
 	out := structured(t, res)
 	assert.Equal(t, "mime_not_allowed", out["skipped_reason"])
@@ -529,10 +535,10 @@ func TestWithoutAnExtractorAPDFIsMimeNotAllowedAsInG12(t *testing.T) {
 
 func TestExtractorWithAnUnlistedTypeIsKindNotEnabled(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{}, func(s *embeddings.ExtractorSettings) { s.OCR, s.Transcribe = true, true })
-	e.files["/ipfs/bafyPDF"] = pdfBytes
-	e.files["/ipfs/bafyPNG"] = pngBytes
-	e.files["/ipfs/bafyMP4"] = mp4Bytes
-	for _, c := range []string{"bafyPDF", "bafyPNG", "bafyMP4"} {
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
+	e.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+	e.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
+	for _, c := range []string{"bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq", "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"} {
 		out := e.index(e.principal(), c)
 		assert.Equal(t, "kind_not_enabled", out["skipped_reason"], c)
 	}
@@ -542,37 +548,37 @@ func TestExtractorWithAnUnlistedTypeIsKindNotEnabled(t *testing.T) {
 
 func TestImagesAndVideoNeedTheirStageOn(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, nil) // ocr and transcribe off
-	e.files["/ipfs/bafyPNG"] = pngBytes
-	e.files["/ipfs/bafyMP4"] = mp4Bytes
-	assert.Equal(t, "describer_not_configured", e.index(e.principal(), "bafyPNG")["skipped_reason"], "OCR is off and no describer covers images")
-	assert.Equal(t, "describer_not_configured", e.index(e.principal(), "bafyMP4")["skipped_reason"], "transcription is off and no describer covers video")
+	e.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+	e.files["/ipfs/bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye"] = mp4Bytes
+	assert.Equal(t, "describer_not_configured", e.index(e.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y")["skipped_reason"], "OCR is off and no describer covers images")
+	assert.Equal(t, "describer_not_configured", e.index(e.principal(), "bafkreihcz4dt6lzpbww7ccgkdrnbc3x2dmz2gd6ggnks42edhgdvep4bye")["skipped_reason"], "transcription is off and no describer covers video")
 	assert.Empty(t, e.x.requests())
 }
 
 func TestExtractorFailuresAreSkippedReasons(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, func(s *embeddings.ExtractorSettings) { s.MaxBytes = 4096 })
-	e.files["/ipfs/bafyPDF"] = pdfBytes
-	e.files["/ipfs/bafyBig"] = append(slices.Clone(pdfBytes), make([]byte, 5000)...)
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
+	e.files["/ipfs/bafkreidvfd4h6cvomwmbtoqxwrk7q5qm5hb32xcjrrbhzrprwurlq6gjdm"] = append(slices.Clone(pdfBytes), make([]byte, 5000)...)
 
 	e.x.setReply(func(extractedFile) (int, string) {
 		return 200, `{"results":[],"errors":[{"index":0,"code":1008,"error_type":"plugin","message":"Hugging Face offline mode is enabled"}]}`
 	})
-	assert.Equal(t, "extraction_failed", e.index(e.principal(), "bafyPDF")["skipped_reason"])
+	assert.Equal(t, "extraction_failed", e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["skipped_reason"])
 
 	e.x.setReply(func(extractedFile) (int, string) { return 200, `not json` })
-	assert.Equal(t, "extraction_failed", e.index(e.principal(), "bafyPDF")["skipped_reason"])
+	assert.Equal(t, "extraction_failed", e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["skipped_reason"])
 
 	e.x.setReply(func(extractedFile) (int, string) {
 		return 200, `{"results":[{"content":" \n","mime_type":"x","metadata":{}}]}`
 	})
-	assert.Equal(t, "empty", e.index(e.principal(), "bafyPDF")["skipped_reason"])
+	assert.Equal(t, "empty", e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["skipped_reason"])
 
 	before := len(e.x.requests())
-	assert.Equal(t, "too_large", e.index(e.principal(), "bafyBig")["skipped_reason"])
+	assert.Equal(t, "too_large", e.index(e.principal(), "bafkreidvfd4h6cvomwmbtoqxwrk7q5qm5hb32xcjrrbhzrprwurlq6gjdm")["skipped_reason"])
 	assert.Len(t, e.x.requests(), before, "a file over extractor.max_bytes costs no request")
 
 	e.x.Close()
-	assert.Equal(t, "extractor_unavailable", e.index(e.principal(), "bafyPDF")["skipped_reason"])
+	assert.Equal(t, "extractor_unavailable", e.index(e.principal(), "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["skipped_reason"])
 	assert.Empty(t, e.store.snapshot())
 }
 
@@ -580,11 +586,11 @@ func TestExtractorFailuresAreSkippedReasons(t *testing.T) {
 
 func TestRemoteExtractorHostMustBeAcknowledged(t *testing.T) {
 	e := newExtEnv(t, embeddings.Policy{MIMEAllowlist: allKinds}, nil)
-	e.files["/ipfs/bafyPDF"] = pdfBytes
-	e.files["/ipfs/bafyText"] = []byte("cats purr")
+	e.files["/ipfs/bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"] = pdfBytes
+	e.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte("cats purr")
 
 	embedderOnly := indexIdentity(e.embed.host())
-	res := toolCall(t, e.connect(&embedderOnly), "ipfs_index_cid", map[string]any{"cid": "bafyPDF"})
+	res := toolCall(t, e.connect(&embedderOnly), "ipfs_index_cid", map[string]any{"cid": "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq"})
 	require.True(t, res.IsError)
 	te := decodeToolError(t, res)
 	assert.Equal(t, CodeEgressNotAcknowledged, te.Code)
@@ -595,13 +601,13 @@ func TestRemoteExtractorHostMustBeAcknowledged(t *testing.T) {
 	assert.Empty(t, e.store.snapshot())
 
 	// Other stages are unaffected: text does not need the extractor.
-	out := e.index(embedderOnly, "bafyText")
+	out := e.index(embedderOnly, "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i")
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 	assert.Empty(t, e.x.requests())
 
 	// The loopback sentinel covers a loopback extractor.
 	local := indexIdentity("local")
-	assert.EqualValues(t, 1, e.index(local, "bafyPDF")["chunks_indexed"])
+	assert.EqualValues(t, 1, e.index(local, "bafkreihgublgn5dxmyq3orjnernjlodnahljxv6tvzdyuhbvwf5ft5hfkq")["chunks_indexed"])
 	assert.Len(t, e.x.requests(), 1)
 }
 
@@ -629,8 +635,8 @@ func TestExtractionAddsPinsAndAnnouncesNothing(t *testing.T) {
 		return 200, `{"results":[{"content":"cats and a picture","mime_type":"x","metadata":{},
 			"images":[{"data":[137,80,78,71],"format":"png","image_index":0}]}]}`
 	})
-	e.files["/ipfs/bafyDocx"] = zipOf(t, "[Content_Types].xml", "word/document.xml", "word/media/image1.png")
-	out := e.index(e.principal(), "bafyDocx")
+	e.files["/ipfs/bafkreia7vnpar6k2l3amuaa3ozxkmwugmiaw6y5is5qauntxtxyl5kr4j4"] = zipOf(t, "[Content_Types].xml", "word/document.xml", "word/media/image1.png")
+	out := e.index(e.principal(), "bafkreia7vnpar6k2l3amuaa3ozxkmwugmiaw6y5is5qauntxtxyl5kr4j4")
 	assert.EqualValues(t, 1, out["chunks_indexed"])
 
 	banned := []string{"add", "block/put", "dag/put", "pin/add", "pin/update", "files/write", "files/cp", "routing/provide", "provide/once"}

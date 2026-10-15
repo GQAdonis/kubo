@@ -59,7 +59,7 @@
       "feature": "Web UI vector search (`search.enabled`)",
       "on": "The fork's Web UI build (`src/search/`). On by default; it is effective only when the node has a configured index (an `embeddings` section with `search_route.enabled` not `false`) and the chat endpoint and token exist; otherwise it shows the not-configured state and makes no request.",
       "off": "Web UI Settings, Agent features, the Search switch off; or on the node, remove the `embeddings` section or set `search_route.enabled` to `false` (`/index/search` and `/index/status` then answer 404).",
-      "tests": "Web UI `src/search` tests (disabled state makes no request; the switch is being mounted in Settings, Agent features, test names to be confirmed)."
+      "tests": "Web UI `src/settings/agent/SearchSwitch.test.js`, `src/search/SearchPage.test.js` and `test/e2e/search.test.js` (the switch in Settings, Agent features; the disabled state makes no request)."
     },
     {
       "feature": "Desktop search (`search.enabled`)",

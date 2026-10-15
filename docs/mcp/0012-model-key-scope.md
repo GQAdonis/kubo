@@ -80,7 +80,7 @@ On a node whose key is mounted by reference (LKE: a Kubernetes Secret with `acce
 
 Why not A alone: it leaves a move carrying a key stored through the API, which B closes. Why not B alone: probes keep sending the key to every host ever acknowledged. Why not C alone: it documents the exposure without removing it and is defeated by the same bearer R1 describes.
 
-Open points for the operator before this is accepted:
+Open points (resolved):
 
 1. On a host move under B, is the old key **retained** for a later move back, or **cleared**? Retained is more convenient and keeps a secret around for a host that is no longer used; cleared is safer and costs one re-entry. The recommendation is cleared for a key stored through the API; a key supplied by reference follows the move (the file or variable is the operator's), per the 2026-10-15 ruling.
 2. Should the cloud node get a config-declared exception (for example a `llm.key_hosts` list naming hosts that may receive the referenced key) so a provider change does not need a config edit? It would be a new config key with its own default and off switch and is not part of this recommendation.

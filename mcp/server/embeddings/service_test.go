@@ -33,6 +33,9 @@ func (f *fakeStore) SearchCID(_ context.Context, v []float32, _ string, _ int) (
 }
 func (f *fakeStore) CountCID(context.Context, string) (int, error) { return 0, nil }
 func (f *fakeStore) CountCIDs(context.Context) (int, error)        { return 0, nil }
+func (f *fakeStore) CountCIDsByKind(context.Context) (map[string]int, error) {
+	return map[string]int{}, nil
+}
 func (f *fakeStore) ListCIDs(context.Context, string, int) ([]string, error) {
 	return nil, nil
 }

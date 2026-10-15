@@ -25,6 +25,7 @@
       }
     },
     "insecure_http_hosts": [
+      "ipfs-surrealdb.ipfs.svc:8000",
       "ipfs-xberg.ipfs.svc:8000",
       "ipfs-embedder.ipfs.svc:11434"
     ],

@@ -49,6 +49,7 @@ func startWatchdog(pid int, kv string) *exec.Cmd {
 		return nil
 	}
 	cmd := exec.Command(sh, "-c", watchdogScript, "sh", strconv.Itoa(os.Getpid()), strconv.Itoa(pid), kv)
+	cmd.Env = minimalEnv()
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		return nil
@@ -72,7 +73,9 @@ func processIsStore(pid int, kv string) bool {
 	if kv == "" || !pidAlive(pid) {
 		return false
 	}
-	out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "command=").Output()
+	ps := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "command=")
+	ps.Env = minimalEnv()
+	out, err := ps.Output()
 	return err == nil && strings.Contains(string(out), kv)
 }
 

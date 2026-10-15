@@ -328,10 +328,13 @@ func TestSettingsWriteNeverLogsValues(t *testing.T) {
 	_ = bodyString(t, e.do(t, http.MethodPut, tokSettingsAdmin, `{"backend":{"base_url":"http://user:pw2@127.0.0.1:1/v1"}}`, map[string]string{"If-Match": resp.Header.Get("ETag")}))
 
 	logs := e.logs.String()
-	for _, leaked := range []string{settingsTestKey, "59997", "m-secret-new", "a private prompt", "pw2"} {
+	// The audit line names the hosts (L2) but no key, model name, prompt or
+	// credential.
+	for _, leaked := range []string{settingsTestKey, "m-secret-new", "a private prompt", "pw2"} {
 		assert.NotContains(t, logs, leaked, "log must not contain %q", leaked)
 	}
 	assert.Contains(t, logs, "agent settings applied", "the apply is logged by revision and field names")
+	assert.Contains(t, logs, "new_host=127.0.0.1:59997", "the audit line names the new host")
 }
 
 // TestSettingsWriteWithSecretRefusedWhenAcceptSecretsFalse: the write-only key

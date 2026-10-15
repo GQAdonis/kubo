@@ -38,6 +38,21 @@ With `agent.settings.accept_secrets: false`, a write carrying key fields SHALL f
 - **WHEN** `accept_secrets` is false and an `admin` writes an API key
 - **THEN** the response is `secrets_not_accepted` and nothing is stored
 
+### Requirement: Stored model key follows only its own host
+A write that changes the model backend scheme, host or port SHALL NOT carry a key stored through the API to the new backend (ADR-0012). Unless the same write supplies `api_key`, the API-stored key SHALL be cleared and the response SHALL carry `key_not_carried`. A key supplied by reference (environment variable or file) SHALL follow the move unchanged, because the file or variable is the operator's. An acknowledged host SHALL NOT receive the stored key by being acknowledged.
+
+#### Scenario: API-stored key cleared on a host move
+- **WHEN** an `admin` changes the model base URL to a different host or port without `api_key` and the current key was stored through the API
+- **THEN** the stored key file is cleared, the new backend is contacted without it, and the response carries `key_not_carried`
+
+#### Scenario: Same-write api_key
+- **WHEN** an `admin` changes the model host and supplies `api_key` in the same write
+- **THEN** the new key is stored and used for the new backend, and the response does not carry `key_not_carried`
+
+#### Scenario: Referenced key follows the move
+- **WHEN** an `admin` changes the model host and the key is a reference (environment variable or file) rather than an API-stored key
+- **THEN** the reference is unchanged and used for the new backend, and the response does not carry `key_not_carried` (operator ruling 2026-10-15)
+
 ### Requirement: Egress extension only with confirmation
 A write SHALL add to a principal's `egress_ack` only the newly chosen backend host, never any other host, and SHALL do so only when the request carries the typed host confirmation.
 

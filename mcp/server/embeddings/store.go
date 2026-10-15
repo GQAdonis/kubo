@@ -101,6 +101,10 @@ type Store interface {
 	CountCID(ctx context.Context, cid string) (int, error)
 	// CountCIDs returns the number of distinct CIDs that have rows.
 	CountCIDs(ctx context.Context) (int, error)
+	// CountCIDsByKind returns the number of distinct CIDs per content kind.
+	// Rows written before derived content existed carry no kind and count as
+	// KindText.
+	CountCIDsByKind(ctx context.Context) (map[string]int, error)
 	// ListCIDs returns up to limit distinct CIDs that sort after the given
 	// one ("" starts at the beginning), in ascending order.
 	ListCIDs(ctx context.Context, after string, limit int) ([]string, error)
@@ -372,6 +376,33 @@ func (s *surrealStore) CountCID(ctx context.Context, cid string) (int, error) {
 // CountCIDs implements Store.
 func (s *surrealStore) CountCIDs(ctx context.Context) (int, error) {
 	return s.countOf(ctx, "indexed CIDs", "SELECT count() AS n FROM (SELECT cid FROM "+chunkTable+" GROUP BY cid) GROUP ALL;", nil)
+}
+
+// CountCIDsByKind implements Store.
+func (s *surrealStore) CountCIDsByKind(ctx context.Context) (map[string]int, error) {
+	res, err := s.c.query(ctx, "SELECT kind, count() AS n FROM (SELECT kind, cid FROM "+chunkTable+" GROUP BY kind, cid) GROUP BY kind;", nil)
+	if err != nil {
+		return nil, fmt.Errorf("count indexed CIDs by kind: %w", err)
+	}
+	if len(res) != 1 {
+		return nil, fmt.Errorf("count indexed CIDs by kind: %d results, want 1", len(res))
+	}
+	var rows []struct {
+		Kind *string `json:"kind"`
+		N    int     `json:"n"`
+	}
+	if err := json.Unmarshal(res[0], &rows); err != nil {
+		return nil, fmt.Errorf("count indexed CIDs by kind: %w", err)
+	}
+	out := make(map[string]int, len(rows))
+	for _, r := range rows {
+		kind := KindText
+		if r.Kind != nil && *r.Kind != "" {
+			kind = *r.Kind
+		}
+		out[kind] += r.N
+	}
+	return out, nil
 }
 
 // ListCIDs implements Store.

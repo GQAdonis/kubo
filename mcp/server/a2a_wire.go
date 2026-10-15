@@ -244,6 +244,8 @@ func rpcErrorOf(err error) *rpcError {
 		return errInvalidParams("Message has no text")
 	case errors.Is(err, ErrSessionBusy):
 		return errContextBusy()
+	case errors.Is(err, ErrBackendChanged):
+		return a2aErr(rpcInternalError, "BACKEND_CHANGED", CodeFailedPrecondition, false, err.Error())
 	case errors.Is(err, ErrInterruptOpen):
 		return a2aErr(rpcInternalError, "INTERRUPT_OPEN", CodeFailedPrecondition, false, "A confirmation is still open in this context")
 	case errors.Is(err, ErrSessionFull):

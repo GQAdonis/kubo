@@ -38,6 +38,17 @@
     },
     "cid_indexed": {
       "type": "boolean"
+    },
+    "by_kind": {
+      "type": "object",
+      "description": "Optional. Indexed-file count per content kind: each key is a kind from derivations/content-kinds.json (text, document, code, data, image, video) and each value is the number of indexed files of that kind. A kind with no indexed files may be omitted. Absent from responses of servers that predate it; clients treat absence as unknown, not zero.",
+      "propertyNames": {
+        "enum": ["text", "document", "code", "data", "image", "video"]
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
     }
   },
   "required": [

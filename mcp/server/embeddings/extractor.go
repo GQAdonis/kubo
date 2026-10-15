@@ -355,6 +355,13 @@ func (e *Extractor) Extract(ctx context.Context, covers func(host string) bool, 
 	if len(r.Data) > e.maxBytes {
 		return Extraction{}, fmt.Errorf("%w (%d bytes, limit %d)", ErrExtractTooLarge, len(r.Data), e.maxBytes)
 	}
+	if e.sup != nil {
+		select {
+		case <-e.sup.Done():
+			return Extraction{}, fmt.Errorf("%w: the embedded xberg process has exited; restart ipfs mcp", ErrExtractorUnavailable)
+		default:
+		}
+	}
 	if e.remote && (covers == nil || !covers(e.host)) {
 		return Extraction{}, &EgressError{Hosts: []string{e.host}, Setting: "embeddings.extractor.remote.base_url"}
 	}

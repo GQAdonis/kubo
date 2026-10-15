@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"time"
+	"unicode/utf8"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
@@ -40,6 +44,9 @@ const (
 	// rpcReadTimeout bounds one cat of the index path, so a read that stalls ends
 	// instead of holding a bulk run or a tool call.
 	rpcReadTimeout = 2 * time.Minute
+	// searchReadBudget bounds the bytes one ipfs_index_search call reads back
+	// from the node to cut chunk text, whatever top_k and policy.max_bytes are.
+	searchReadBudget = 8 << 20
 )
 
 func indexTools(s *Server) []toolImpl {
@@ -99,6 +106,8 @@ type indexStatusOutput struct {
 	IndexedCIDs    *int   `json:"indexed_cids,omitempty"`
 	ChunkCount     *int   `json:"chunk_count,omitempty"`
 	CIDIndexed     *bool  `json:"cid_indexed,omitempty"`
+	// ByKind counts distinct indexed files per content kind.
+	ByKind map[string]int `json:"by_kind,omitempty"`
 }
 
 func (s *Server) indexStatus(ctx context.Context, raw json.RawMessage) (any, error) {
@@ -131,6 +140,11 @@ func (s *Server) indexStatus(ctx context.Context, raw json.RawMessage) (any, err
 		return nil, indexErr(fmt.Errorf("index status: %w", err))
 	}
 	out.IndexedCIDs = &cids
+	byKind, err := svc.Store().CountCIDsByKind(ctx)
+	if err != nil {
+		return nil, indexErr(fmt.Errorf("index status: %w", err))
+	}
+	out.ByKind = byKind
 	if in.CID != "" {
 		n, err := svc.Store().CountCID(ctx, in.CID)
 		if err != nil {
@@ -203,16 +217,26 @@ func (s *Server) indexSearch(ctx context.Context, raw json.RawMessage) (any, err
 	pol := svc.Policy()
 	texts := map[string][]string{}
 	present := map[string]bool{}
+	// Native chunks are cut from a prefix of the file: the last chunk any hit
+	// of a source needs says how much of it to read.
+	deepest := map[string]int{}
+	for _, h := range hits {
+		if !h.Derived() {
+			src := indexSource(h)
+			deepest[src] = max(deepest[src], h.ChunkIndex)
+		}
+	}
+	budget := searchReadBudget
 	for _, h := range hits {
 		if h.Derived() {
 			// Derived text (extracted, OCR, transcript) is not a slice of the
 			// file's bytes; it was stored with the vector, so nothing is read.
 			// It would outlive the content, though, so a hit is returned only
 			// while the node still holds the file.
-			src := cmpOr(h.Path, "/ipfs/"+h.CID)
+			src := indexSource(h)
 			ok, seen := present[src]
 			if !seen {
-				ok = s.contentPresent(ctx, src)
+				ok = src != "" && s.contentPresent(ctx, src)
 				present[src] = ok
 			}
 			if !ok {
@@ -225,10 +249,12 @@ func (s *Server) indexSearch(ctx context.Context, raw json.RawMessage) (any, err
 			})
 			continue
 		}
-		src := cmpOr(h.Path, "/ipfs/"+h.CID)
+		src := indexSource(h)
 		chunks, ok := texts[src]
 		if !ok {
-			chunks = s.readChunks(ctx, src, pol)
+			if src != "" {
+				chunks = s.readChunks(ctx, src, pol, deepest[src], &budget)
+			}
 			texts[src] = chunks
 		}
 		if h.ChunkIndex < 0 || h.ChunkIndex >= len(chunks) {
@@ -294,17 +320,34 @@ func (s *Server) contentPresent(ctx context.Context, path string) bool {
 	return true
 }
 
-// readChunks reads the content at path from the node and cuts it with the
-// policy that indexed it. It returns nil when the content cannot be read.
-// The read is offline: a hit whose blocks were garbage collected is dropped
-// at once instead of fetched from the network.
-func (s *Server) readChunks(ctx context.Context, path string, pol embeddings.Policy) []string {
+// readChunks reads the start of the content at path from the node and cuts it
+// with the policy that indexed it, returning at least the chunks up to index
+// upto. It returns nil when the content cannot be read, or when reading it
+// would take the call past budget, the bytes one search may still read. The
+// read is offline: a hit whose blocks were garbage collected is dropped at once
+// instead of fetched from the network.
+//
+// Chunk is prefix-stable: a chunk is decided by the text up to the end of its
+// window, so reading the characters of chunks 0..upto plus one more window
+// (at most four bytes each) gives the same chunks 0..upto as reading the whole
+// file. That keeps the memory of one search at the budget, not at top_k times
+// policy.max_bytes.
+func (s *Server) readChunks(ctx context.Context, path string, pol embeddings.Policy, upto int, budget *int) []string {
 	ctx, cancel := context.WithTimeout(ctx, chunkReadTimeout)
 	defer cancel()
+	want := int64(pol.MaxBytes) + 1
+	if need := (int64(upto) + 2) * int64(pol.ChunkChars) * utf8.UTFMax; need < want {
+		want = need
+	}
+	if want > int64(*budget) {
+		s.log.Debug("index search: read budget exhausted, hit dropped", "path", path)
+		return nil
+	}
+	*budget -= int(want)
 	var data []byte
-	err := s.rawCall(ctx, "cat", []string{path}, map[string]any{"length": int64(pol.MaxBytes) + 1, "offline": true}, nil, func(r io.Reader) error {
+	err := s.rawCall(ctx, "cat", []string{path}, map[string]any{"length": want, "offline": true}, nil, func(r io.Reader) error {
 		var err error
-		data, err = readBounded(r, int64(pol.MaxBytes)+1)
+		data, err = readBounded(r, want)
 		return err
 	})
 	if err != nil || len(data) > pol.MaxBytes {
@@ -312,6 +355,37 @@ func (s *Server) readChunks(ctx context.Context, path string, pol embeddings.Pol
 		return nil
 	}
 	return embeddings.Chunk(string(data), pol.ChunkChars)
+}
+
+// indexSource is the path a hit's content is read from. The stored path is not
+// trusted: a store that could be steered (a compromised remote one) must not
+// make the node read an arbitrary /ipfs or /ipns path, so the path is rebuilt
+// from the parsed CID, keeping only the in-DAG file name that follows it.
+func indexSource(h embeddings.Hit) string {
+	return safeIndexPath(h.Path, h.CID)
+}
+
+// safeIndexPath builds "/ipfs/<cid>", or "/ipfs/<cid>/<name>" when the stored
+// path is that CID followed by one plain file name. Anything else (another
+// CID, an /ipns path, a name with a separator or a control character) is
+// replaced by "/ipfs/<cid>", and a CID that does not parse gives "": the hit is
+// then unreadable and dropped.
+func safeIndexPath(stored, c string) string {
+	parsed, err := cid.Decode(c)
+	if err != nil {
+		return ""
+	}
+	base := "/ipfs/" + parsed.String()
+	rest, ok := strings.CutPrefix(stored, "/ipfs/")
+	if !ok {
+		return base
+	}
+	root, name, hasName := strings.Cut(rest, "/")
+	rootCID, err := cid.Decode(root)
+	if err != nil || !hasName || !rootCID.Equals(parsed) || !safeEntryName(name) {
+		return base
+	}
+	return base + "/" + name
 }
 
 func notConfigured() error {

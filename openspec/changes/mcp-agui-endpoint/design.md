@@ -42,6 +42,7 @@ The loop answers the calls of one model reply in order and ends the run at the f
 | `ErrSessionNotFound` (also another principal's thread; the body does not say which) | 404 | `not_found` | false |
 | `ErrSessionBusy` | 409 | `session_busy` | true |
 | `ErrInterruptOpen`, `ErrSessionFull` | 409 | `failed_precondition` | false |
+| `ErrBackendChanged` (a resume whose run started on a backend whose endpoint or key has since changed; Round 7 settings L5) | 409 | `failed_precondition` with `details.reason = "backend_changed"` | false |
 | `ErrTooManySessions` | 503 with `Retry-After` | `resource_exhausted` | true |
 | any non-`ui` principal on `/agui`, including a resume that approves | 403 | `permission_denied` | false |
 | policy refusal (`*ToolError` from `applyPolicy`) | 403 | the ToolError's own code | as set |

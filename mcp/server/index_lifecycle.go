@@ -83,10 +83,11 @@ func (s *Server) pinCovers(ctx context.Context, c string) (bool, error) {
 	return false, err
 }
 
-// dropIfUnpinned deletes the vectors of one CID when it has any and no pin
-// covers it. It never deletes on a guess: when the pin check or the store
-// fails the vectors stay and the returned warning says so.
-func (s *Server) dropIfUnpinned(ctx context.Context, svc *embeddings.Service, c string) (deleted bool, warning string) {
+// dropIfUnpinned deletes the vectors of one CID when it has any and nothing
+// covers it: no pin (direct, recursive or indirect) and, when mfs is not nil,
+// no file in the MFS. It never deletes on a guess: when the pin check, the MFS
+// check or the store fails the vectors stay and the returned warning says so.
+func (s *Server) dropIfUnpinned(ctx context.Context, svc *embeddings.Service, c string, mfs *mfsCoverage) (deleted bool, warning string) {
 	n, err := svc.Store().CountCID(ctx, c)
 	if err != nil {
 		return false, fmt.Sprintf("index entries of %s were not checked: %s", c, clipMessage(err.Error()))
@@ -94,12 +95,8 @@ func (s *Server) dropIfUnpinned(ctx context.Context, svc *embeddings.Service, c 
 	if n == 0 {
 		return false, ""
 	}
-	pinned, err := s.pinCovers(ctx, c)
-	if err != nil {
-		return false, fmt.Sprintf("index entries of %s were kept because the pin check failed: %s", c, clipMessage(err.Error()))
-	}
-	if pinned {
-		return false, ""
+	if keep, w := s.keepEntries(ctx, c, mfs); keep {
+		return false, w
 	}
 	if _, err := svc.Store().DeleteCID(ctx, c); err != nil {
 		return false, fmt.Sprintf("index entries of %s were not deleted: %s", c, clipMessage(err.Error()))
@@ -107,19 +104,74 @@ func (s *Server) dropIfUnpinned(ctx context.Context, svc *embeddings.Service, c 
 	return true, ""
 }
 
-// afterUnpin removes the vectors of CIDs that a confirmed pin_rm or pin_update
-// has just unpinned, unless another pin still covers them. It returns warnings
-// for the result's _meta.
-func (s *Server) afterUnpin(ctx context.Context, cids []string) []string {
+// keepEntries reports whether the index entries of c must stay: a pin covers
+// it, the MFS holds it, or either answer is unknown (the warning says which).
+func (s *Server) keepEntries(ctx context.Context, c string, mfs *mfsCoverage) (keep bool, warning string) {
+	pinned, err := s.pinCovers(ctx, c)
+	if err != nil {
+		return true, fmt.Sprintf("index entries of %s were kept because the pin check failed: %s", c, clipMessage(err.Error()))
+	}
+	if pinned {
+		return true, ""
+	}
+	if mfs == nil {
+		return false, ""
+	}
+	in, known := mfs.covers(ctx, c)
+	switch {
+	case in:
+		return true, ""
+	case !known:
+		return true, fmt.Sprintf("index entries of %s were kept because the MFS could not be fully checked: %s", c, mfs.reason())
+	}
+	return false, ""
+}
+
+// afterUnpin removes the vectors that a confirmed pin_rm or pin_update has left
+// uncovered. The roots it is given are the unpinned CIDs; a pinned directory
+// has no vectors of its own, its files do (a bulk run indexes each file under
+// its own CID), so the unpinned DAG is walked offline and every indexed file in
+// it is checked too. Vectors stay while another pin or the MFS covers the CID.
+// It returns warnings for the result's _meta.
+func (s *Server) afterUnpin(ctx context.Context, roots []string) []string {
 	svc := s.embeddingsExt
-	if svc == nil || len(cids) == 0 {
+	if svc == nil || len(roots) == 0 {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lifecycleTimeout)
 	defer cancel()
+	roots = slices.Compact(slices.Sorted(slices.Values(roots)))
+	var warnings []string
+	targets := slices.Clone(roots)
+	indexed, err := s.loadIndexed(ctx)
+	switch {
+	case err != nil:
+		warnings = append(warnings, "the files under the unpinned paths were not checked, run ipfs_index_reconcile: "+clipMessage(err.Error()))
+	case len(indexed.byHash) > 0:
+		for _, root := range roots {
+			if _, own := indexed.lookup(root); own {
+				continue // a file with entries of its own: nothing below it
+			}
+			complete, werr := s.walkFiles(ctx, root, indexed.see)
+			if complete {
+				continue
+			}
+			reason := "its walk reached a limit"
+			if werr != nil {
+				reason = clipMessage(werr.Error())
+			}
+			warnings = append(warnings, fmt.Sprintf("not every file under %s was checked (%s); run ipfs_index_reconcile to remove the entries of files no pin covers", root, reason))
+		}
+		targets = append(targets, indexed.found...)
+	}
+	return append(warnings, s.dropUncovered(ctx, svc, targets, &mfsCoverage{s: s})...)
+}
+
+// dropUncovered runs dropIfUnpinned over the CIDs, each once.
+func (s *Server) dropUncovered(ctx context.Context, svc *embeddings.Service, cids []string, mfs *mfsCoverage) []string {
 	var warnings []string
 	for _, c := range slices.Compact(slices.Sorted(slices.Values(cids))) {
-		if _, w := s.dropIfUnpinned(ctx, svc, c); w != "" {
+		if _, w := s.dropIfUnpinned(ctx, svc, c, mfs); w != "" {
 			warnings = append(warnings, w)
 		}
 	}
@@ -133,20 +185,18 @@ func (s *Server) afterUnpin(ctx context.Context, cids []string) []string {
 type gcWatch struct {
 	byHash map[string]string
 	found  []string
+	seen   map[string]struct{}
 }
 
-// newGCWatch loads the indexed CIDs. It is nil when embeddings are off.
-func (s *Server) newGCWatch(ctx context.Context) (*gcWatch, []string) {
-	svc := s.embeddingsExt
-	if svc == nil {
-		return nil, nil
-	}
-	w := &gcWatch{byHash: map[string]string{}}
+// loadIndexed loads the indexed CIDs, by multihash. It fails when the store
+// cannot be listed.
+func (s *Server) loadIndexed(ctx context.Context) (*gcWatch, error) {
+	w := &gcWatch{byHash: map[string]string{}, seen: map[string]struct{}{}}
 	after := ""
 	for {
-		page, err := svc.Store().ListCIDs(ctx, after, watchPageSize)
+		page, err := s.embeddingsExt.Store().ListCIDs(ctx, after, watchPageSize)
 		if err != nil {
-			return nil, []string{"index entries were not checked against the removed blocks, run ipfs_index_reconcile: " + clipMessage(err.Error())}
+			return nil, err
 		}
 		for _, c := range page {
 			if parsed, err := cid.Decode(c); err == nil {
@@ -160,18 +210,42 @@ func (s *Server) newGCWatch(ctx context.Context) (*gcWatch, []string) {
 	}
 }
 
-// see records a removed key when it is an indexed CID.
+// newGCWatch loads the indexed CIDs. It is nil when embeddings are off.
+func (s *Server) newGCWatch(ctx context.Context) (*gcWatch, []string) {
+	if s.embeddingsExt == nil {
+		return nil, nil
+	}
+	w, err := s.loadIndexed(ctx)
+	if err != nil {
+		return nil, []string{"index entries were not checked against the removed blocks, run ipfs_index_reconcile: " + clipMessage(err.Error())}
+	}
+	return w, nil
+}
+
+// lookup returns the indexed form of a key that is an indexed CID.
+func (w *gcWatch) lookup(key string) (string, bool) {
+	parsed, err := cid.Decode(key)
+	if err != nil {
+		return "", false
+	}
+	c, ok := w.byHash[string(parsed.Hash())]
+	return c, ok
+}
+
+// see records a key when it is an indexed CID.
 func (w *gcWatch) see(key string) {
 	if w == nil || len(w.byHash) == 0 {
 		return
 	}
-	parsed, err := cid.Decode(key)
-	if err != nil {
+	c, ok := w.lookup(key)
+	if !ok {
 		return
 	}
-	if c, ok := w.byHash[string(parsed.Hash())]; ok && !slices.Contains(w.found, c) {
-		w.found = append(w.found, c)
+	if _, dup := w.seen[c]; dup {
+		return
 	}
+	w.seen[c] = struct{}{}
+	w.found = append(w.found, c)
 }
 
 // afterGC deletes the vectors of indexed CIDs that garbage collection removed,
@@ -180,7 +254,12 @@ func (s *Server) afterGC(ctx context.Context, w *gcWatch) []string {
 	if w == nil || len(w.found) == 0 {
 		return nil
 	}
-	return s.afterUnpin(ctx, w.found)
+	svc := s.embeddingsExt
+	// Garbage collection removes only blocks no pin and no MFS file reaches, and
+	// each indexed file is itself among the removed keys, so no walk is needed.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lifecycleTimeout)
+	defer cancel()
+	return s.dropUncovered(ctx, svc, w.found, nil)
 }
 
 // --- ipfs_index_reconcile --------------------------------------------------
@@ -202,7 +281,7 @@ type indexReconcileOutput struct {
 
 // indexReconcile deletes the vectors of indexed CIDs that no pin covers, one
 // page of indexed CIDs per call, for content unpinned outside ipfs mcp. A CID
-// whose pin check fails is kept.
+// that a pin or the MFS covers is kept, and so is one whose check fails.
 func (s *Server) indexReconcile(ctx context.Context, raw json.RawMessage) (any, error) {
 	var in indexReconcileInput
 	if err := json.Unmarshal(raw, &in); err != nil {
@@ -231,15 +310,13 @@ func (s *Server) indexReconcile(ctx context.Context, raw json.RawMessage) (any, 
 		out.Page = pageInfo{HasMore: true, NextCursor: encodeCursor(cursor{After: cids[limit-1]})}
 	}
 	out.Checked = len(cids)
+	mfs := &mfsCoverage{s: s}
 	for _, c := range cids {
-		pinned, err := s.pinCovers(ctx, c)
-		if err != nil {
+		if keep, w := s.keepEntries(ctx, c, mfs); keep {
 			out.Kept++
-			out.Warnings = append(out.Warnings, fmt.Sprintf("index entries of %s were kept because the pin check failed: %s", c, clipMessage(err.Error())))
-			continue
-		}
-		if pinned {
-			out.Kept++
+			if w != "" {
+				out.Warnings = append(out.Warnings, w)
+			}
 			continue
 		}
 		if !in.DryRun {

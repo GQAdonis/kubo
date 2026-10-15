@@ -71,6 +71,10 @@ type agentSession struct {
 	// one snapshot reference held, so a resume after a backend swap still talks
 	// to the backend the run started with. nil whenever interrupt is nil.
 	snap *agentSnapshot
+	// backendChanged is set when a swap revoked snap (the endpoint or key moved
+	// while the interrupt was open). A resume then fails with ErrBackendChanged
+	// instead of ErrNoOpenInterrupt. Cleared when the interrupt ends.
+	backendChanged bool
 }
 
 // dropSnapshot releases the session's retained snapshot, if any. Callers hold

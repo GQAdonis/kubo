@@ -43,6 +43,7 @@ Reviewed against `mcp/server/agent.go` (`Agent.Run`, `Interrupt`, `ResumeEntry`,
 | a `contextId` that is unknown, another principal's, or whose agent session is gone (`ErrSessionNotFound`) | -32001 | `CONTEXT_NOT_FOUND` | `not_found` | false |
 | a message for a context with a task still running or waiting for approval (`ErrSessionBusy` or an open task in the store) | -32603 | `CONTEXT_BUSY` | `session_busy` | true |
 | `ErrInterruptOpen` | -32603 | `INTERRUPT_OPEN` | `failed_precondition` | false |
+| `ErrBackendChanged` (a continuation of a task whose run started on a backend whose endpoint or key has since changed; Round 7 settings L5) | -32603 | `BACKEND_CHANGED` | `failed_precondition` | false |
 | `ErrSessionFull` | -32603 | `CONTEXT_FULL` | `failed_precondition` | false |
 | `ErrTooManySessions`, or the task store's context cap | -32603 | `TOO_MANY_CONTEXTS` | `resource_exhausted` | true |
 | a message naming a task in a terminal state (3.1.2) | -32004 | `TASK_FINAL` | `failed_precondition` | false |

@@ -21,7 +21,8 @@ func TestAckCoversAndLocal(t *testing.T) {
 		{"local covers loopback v4", []string{"local"}, "127.0.0.1:11434", true},
 		{"local covers loopback v6", []string{"local"}, "[::1]:80", true},
 		{"local covers localhost", []string{"local"}, "LocalHost", true},
-		{"local covers a .localhost name", []string{"local"}, "llm.localhost", true},
+		{"local does not cover a .localhost name (the resolver may send it to DNS)", []string{"local"}, "llm.localhost", false},
+		{"local covers an IPv4-mapped loopback", []string{"local"}, "[::ffff:127.0.0.1]:80", true},
 		{"local does not cover a remote host", []string{"local"}, "api.openai.com", false},
 		{"local does not cover a private LAN address", []string{"local"}, "192.168.1.10", false},
 		{"named host covers any port", []string{"llm.example.test"}, "llm.example.test:8443", true},
@@ -36,6 +37,8 @@ func TestAckCoversAndLocal(t *testing.T) {
 	assert.False(t, IsLocalHost("local"), "the ack sentinel is not a loopback host name")
 	assert.False(t, IsLocalHost(""))
 	assert.False(t, IsLocalHost("0.0.0.0"), "the wildcard address is not loopback")
+	assert.False(t, IsLocalHost("model.localhost"), "only localhost and literal loopback addresses are local")
+	assert.False(t, IsLocalHost("a.b.localhost:8080"))
 	assert.Equal(t, []string{"x.test"}, MissingAck([]string{"y.test"}, []string{"x.test", "x.test", "y.test"}))
 }
 
@@ -199,7 +202,7 @@ func TestAckLocalDoesNotCoverAHostNamedLocal(t *testing.T) {
 		assert.False(t, IsLocalHost(host), h)
 		assert.False(t, AckCovers(ack, host), h)
 	}
-	for _, h := range []string{"127.0.0.1", "127.0.0.1:11434", "localhost", "localhost:8080", "[::1]:443", "model.localhost"} {
+	for _, h := range []string{"127.0.0.1", "127.0.0.1:11434", "localhost", "localhost:8080", "[::1]:443"} {
 		assert.True(t, IsLocalHost(h), h)
 		assert.True(t, AckCovers(ack, h), h)
 	}

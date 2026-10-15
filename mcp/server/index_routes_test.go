@@ -138,8 +138,8 @@ const searchBody = `{"query":"cats","top_k":3}`
 // seedIndex indexes a text file and a described image.
 func (e *routeEnv) seedIndex(t *testing.T) {
 	t.Helper()
-	e.files["/ipfs/bafyText"] = []byte("cats purr in the sun")
-	e.index(indexIdentity(e.embed.host()), "bafyText", false)
+	e.files["/ipfs/bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i"] = []byte("cats purr in the sun")
+	e.index(indexIdentity(e.embed.host()), "bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", false)
 }
 
 // --- 1.5: mounting ----------------------------------------------------------------------------
@@ -216,8 +216,8 @@ func TestIndexSearchRouteReturnsTheToolsOutput(t *testing.T) {
 		describer: func(*embeddings.DescriberSettings) {},
 	}})
 	e.seedIndex(t)
-	e.files["/ipfs/bafyPNG"] = pngBytes
-	e.index(e.principal(), "bafyPNG", false)
+	e.files["/ipfs/bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y"] = pngBytes
+	e.index(e.principal(), "bafkreicekrpml5sqim726ua5vf3ta3lee5pcydv6iz3m67l2dcgvwgwm7y", false)
 
 	resp := e.do(t, http.MethodPost, RouteIndexSearch, tokUI, searchBody, nil)
 	require.Equal(t, http.StatusOK, resp.status, resp.body)
@@ -303,7 +303,7 @@ func TestIndexStatusRouteAddsTheBulkSummary(t *testing.T) {
 	validateOutput(t, "ipfs_index_bulk_status", map[string]any{"enabled": true, "run": run})
 	assert.Equal(t, "paused", run["state"])
 
-	out = e.do(t, http.MethodGet, RouteIndexStatus+"?cid=bafyText", tokUI, "", nil).json(t)
+	out = e.do(t, http.MethodGet, RouteIndexStatus+"?cid=bafkreifqsh2pn3nv7r5oqcnfokuj4qubog4rqcnp25ggqmqkx762pi6b5i", tokUI, "", nil).json(t)
 	assert.Equal(t, true, out["cid_indexed"])
 	assert.Equal(t, http.StatusBadRequest, e.do(t, http.MethodGet, RouteIndexStatus+"?cid=not%20a%20cid", tokUI, "", nil).status)
 }
