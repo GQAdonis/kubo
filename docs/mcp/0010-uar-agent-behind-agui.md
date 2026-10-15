@@ -28,7 +28,7 @@ When `backend.kind` is `uar`, `ipfs mcp`:
 1. **Provisions** one UAR agent through UAR's released management API: system prompt equal to kubo's configured prompt (the fixed safety prefix included), an MCP binding naming this `ipfs mcp` server, and skill bindings equal to the directory names under `mcp/skills/` (acceptance of `agent-backend-uar` 1.2).
 2. **Proxies** each `/agui` run to UAR's AG-UI endpoint for that agent and relays the event stream back unchanged except for the interrupt translation below. The island, the principal model (`ui` token on `/agui`) and the confirmation classes of ADR-0003 are unchanged.
 3. **Translates interrupts** (`tool_approval`, `mcp_elicitation`) between UAR's shape and kubo's shape (`agent-backend-uar` 1.3). Kubo's confirmation gate stays the authority for every write and destructive tool call: a UAR-side approval never substitutes for it, and a proxied approval is only an input to kubo's own confirmation (capability inversion: the agent kernel does not write).
-4. **Holds a UAR credential** supplied by the operator by reference (file or environment name, never a literal in config or the settings API). An absent credential disables only the `uar` backend and the dependent route answers `backend_not_configured`; it is never fatal (CRITICAL-2, ADR-0009 section 1).
+4. **Holds a UAR credential** supplied by the operator by reference (file or environment name, never a literal in config; see the amendment of 2026-10-16 for the settings API). An absent credential disables only the `uar` backend and the dependent route answers `backend_not_configured`; it does not stop startup (CRITICAL-2, ADR-0009 section 1).
 
 The binding UAR makes to `ipfs mcp` uses a run-time credential that is scoped to that agent. The `ipfs mcp` listener stays loopback or console-bearer as configured; UAR gets the same `ui`/tool-principal grants and `egress_ack` as any other backend and no wider.
 
@@ -81,3 +81,21 @@ Rejected under D13: it would delay goals 1, 3, 4 and 5 on an external team's sch
 - The uncomfortable part, stated once: this repeats the dependency that failed in ADR-0008. If the UAR team does not publish a release carrying G1-G7, goal 2 stays open and the only UAR path that works is topology A (UAR as an OpenAI-compatible model endpoint), with no agent-level prompt, skills or tool binding. The settings page must say so honestly (`webui-agent-settings-page` 1.3: honest unavailable states, no fake success).
 - Superseded: `agentic-uar-integration` and `uar-integration-spike` 1.2-1.5 carry a superseded note in their `tasks.md`; their checkboxes are unchanged.
 - Follow-up work after OG-4: `agent-backend-uar` 1.2-1.6 and the `phase-integration-gate` 1.5 UAR item.
+
+## Amendment (2026-10-16, Round 8: implementation notes)
+
+### The UAR credential follows the settings schema
+
+Section 1 item 4 and the Consequences say the UAR credential is by reference and never a literal in the settings API. The implementation follows the settings schema instead, as the OpenAI backend does: `settings-write.schema.json` carries a write-only `api_key`, which the settings API stores as a 0600 file in the settings directory (never returned by a read; the read shape reports only `api_key: {set, source}`), and the credential can equally be given by reference (`llm.api_key` as an environment name or file) in the configuration file. This is consistent with ADR-0012: the key scope rules (a key stored through the API is cleared on a host move, a key supplied by reference stays) apply to the `uar` kind unchanged, because the UAR instance is the backend host. The by-reference statement still holds for the configuration file and for LKE, where `agent.settings.accept_secrets: false` refuses a key in a write. `llm.uar.*` (`agent_id`, `mcp_principal`, `mcp_credential_revision`, `skills_dir`, and the other keys in that object) is configuration-file only; the settings API neither reads nor writes it.
+
+### Not yet verified against the running release
+
+The request bodies below were inferred from the pinned contract (`mcp/uar/v1.1.0-kubo.md`) and the paths it names, not observed against the running v1.1.0 image: the agent-create body, the skill-record body, the MCP-server binding body, and the placement of the run grant at `forwardedProps.uar.mcp_servers`. The interrupt fixtures in `mcp/uar/fixtures/v1.1.0/` follow the contract field for field, but they are fixtures, not captures. `test/cli/mcp_uar_backend_test.go` (task 1.5 of `agent-backend-uar`) is the first run against the published image and checks these four points first. Until it has run, treat them as unverified; a mismatch is a bug in kubo's request bodies, not in the contract, unless the image contradicts the contract itself.
+
+### Shipped skills need `llm.uar.skills_dir`
+
+Section 1 item 1 says the skill bindings equal the directory names under `mcp/skills/`. There is no embed package in `mcp/skills/` yet, so the binary cannot carry the skills. Until one exists, the operator points `llm.uar.skills_dir` at a directory of skills (a checkout of `mcp/skills/` or an installed copy); without it no skill is uploaded or bound and the agent is created without the IPFS skills.
+
+### Gate state
+
+The section 4 line "State on 2026-10-15: not met" is superseded. `mcp/contract/agentic/uar-preflight.json` now pins the published release v1.1.0, and the `llm.kind: uar` backend is implemented behind that pin.

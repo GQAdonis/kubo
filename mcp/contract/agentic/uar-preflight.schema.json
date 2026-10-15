@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "check-uar preflight pins",
-  "description": "Values check-uar takes from the contract rather than from operator config (ADR-0007). minVersion and settingsPath are pinned together from one published UAR release that passed the topology-B gate (mcp/uar/requests/CONFORMANCE.md, gate recorded in mcp/uar/spike/REPORT.md); both stay null until then. They are set only by the architect in agentic-uar-integration task 1.2. recheckInterval is a security bound, not an operator preference.",
+  "description": "Values check-uar takes from the contract rather than from operator config (ADR-0007). minVersion and settingsPath are pinned together from one published UAR release that passed the topology-B gate (mcp/uar/requests/CONFORMANCE.md, gate recorded in mcp/uar/spike/REPORT.md); both are now pinned (release v1.1.0, see uar-preflight.json); the schema still allows null so an unpinned contract remains expressible, and a null is refused by check-uar (min_version_not_set). They are set only by the architect. recheckInterval is a security bound, not an operator preference.",
   "type": "object",
   "additionalProperties": false,
   "required": ["minVersion", "settingsPath", "settingsSchema", "recheckInterval", "pinnedFrom"],

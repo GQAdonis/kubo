@@ -29,7 +29,7 @@
   - A pending confirmation is never lost across a settings swap (R3).
   - `sessions` and `buckets` survive a swap.
 - Validation is one function shared by startup resolution and the runtime apply path (`ApplyAgentSettings`), so a value that would be rejected at startup is rejected by a settings write with the same error.
-- **Absent secrets are never fatal (CRITICAL-2).** An absent Secret file or token environment variable disables only the dependent feature (the principal that would authenticate with it, or the backend that would use the key), never startup. The server starts, logs a warning, and the dependent route reports its disabled state.
+- **Absent secrets are never fatal (CRITICAL-2).** An absent Secret file or token environment variable disables only the dependent feature (the principal that would authenticate with it, or the backend that would use the key). The server starts, logs a warning, and the dependent route reports its disabled state. One case stops startup (amended 2026-10-16, Round 8): principals are configured, none of them resolved a credential, and no operator token (`--auth-token-*`) resolved either. Then no authenticated caller could ever exist and the anonymous listener would be the wrong fallback, so startup fails and names the principals and the environment variables or files it expected. A partial resolution still works: only the principals that resolved are enabled, the others are disabled with a warning. With no principals configured at all, a loopback listener stays anonymous (read-only), as before.
 
 ### 2. The cloud threat model (D0, D1)
 
@@ -47,7 +47,7 @@
 
 - A new principal kind `admin` is added beside `human-mcp`, `ui`, `a2a` and `uar` (ADR-0004). Its scope is the settings API only: settings read and write. It has **no tool access**: an `admin` token is refused on `/mcp`, `/agui` and `/a2a`, and a tool principal's token is refused on the settings route (path-scoped authorization, the G9-4 pattern).
 - The settings route is mounted only when an `admin` principal is configured and `agent.settings.enabled` is not `false` (plan-made assumption, confirmed at OG-1). Without an `admin` principal the route answers 404 and nothing is written or dialed.
-- A configured `admin` principal whose token environment variable or file is absent is disabled with a warning, not fatal (CRITICAL-2, section 1); the server starts and the principal authenticates nothing.
+- A configured `admin` principal whose token environment variable or file is absent is disabled with a warning (CRITICAL-2, section 1); the server starts and the principal authenticates nothing, unless it is one of several configured principals none of which resolved (and no operator token resolved), which stops startup (section 1).
 - On LKE the cloud gate is bearer-only (section 4). Typed re-confirmation of backend and egress changes in the settings page is a UI safeguard only, not a security boundary; on Desktop a backend change additionally requires Touch ID.
 
 ### 4. Bearer-only routes outside basic auth; `origin_allowlist`; token storage
@@ -166,7 +166,7 @@ Design notes from the review for the Kratos and `flint-gate` ADR. They are not f
 |---|---|---|
 | Settings apply without restart | A backend change requires a process restart to take effect in `test/cli` | Block `mcp-agent-settings-api` |
 | Runs and confirmations survive a swap | `TestAgentSwapResumeUsesOriginalBackend`, `TestAgentSwapMidStream` or `TestAgentSwapKeepsPendingConfirmation` fails | Block `mcp-agent-hot-reload` |
-| Absent secrets are never fatal | `ipfs mcp` exits or the settings route 500s with a principal token file or LLM key file absent | Block; violates CRITICAL-2 |
+| An absent secret disables only its feature | `ipfs mcp` exits with some principal credentials resolved, or the settings route 500s with a principal token file or LLM key file absent. (Exiting when principals are configured and none resolved, with no operator token, is the amended rule, not a failure.) | Block; violates CRITICAL-2 |
 | `admin` is settings-scoped | An `admin` token is accepted on `/mcp`, `/agui` or `/a2a`, or a tool token on the settings route | Block (G9-4 pattern) |
 | CORS is not the fix | OG-6 shows a credentialed request with the gateway origin succeeding against `/api/v0` after isolation | Origin isolation failed; revert per OG-6 and reassess D1 |
 | Precedence holds | A test shows overlay beating a flag, or config beating the overlay | Block |

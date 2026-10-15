@@ -297,7 +297,32 @@ xberg 1.3.10 has no authentication option and no Unix socket support. Its epheme
 
 ### When a supervised process dies
 
-If the embedded xberg or the embedded SurrealDB exits after it started, `ipfs mcp` fails closed (Round 7, vector L2). The xberg proxy stops at once, so nothing is forwarded to the freed port, and extraction reports `extractor_unavailable`; the store client refuses every call with "the embedded store process has exited; restart ipfs mcp" instead of sending its credential to whatever now listens on that port. Restart `ipfs mcp` (Desktop restarts the sidecar) to bring the process back.
+If the embedded xberg or the embedded SurrealDB exits after it started, `ipfs mcp` fails closed (Round 7, vector L2). The two cases recover differently.
+
+- **Embedded xberg.** The xberg proxy stops at once, so nothing is forwarded to the freed port, and extraction reports `extractor_unavailable`. The embedded xberg is still not restarted: restart `ipfs mcp` (Desktop restarts the sidecar) to bring it back.
+- **Embedded SurrealDB.** The store client refuses every call while the process is gone, instead of sending its credential to whatever now listens on that port. The next use after the exit reopens the store: `ipfs mcp` starts a new `surreal` process, with a 2 s backoff between attempts, and searches and indexing answer `index_unavailable` (retryable) until it is up. No restart of `ipfs mcp` is needed. The old message "the embedded store process has exited; restart ipfs mcp" therefore no longer describes SurrealDB; it applies to xberg only.
+
+### Startup errors, degraded starts and the store deadline
+
+- **A missing binary is a configuration error.** An `embedded.surreal_binary` or `extractor.embedded.xberg_binary` that does not exist, is not a regular file or is not executable stops startup with an error that names the key. This is the same class as an invalid setting.
+- **A binary that fails to start degrades.** A binary that exists and is executable but fails to start (a crash, a refused version, a port that cannot be bound) does not stop startup: the stage is reported unavailable with the reason `not_started` and the rest of `ipfs mcp` runs.
+- **The store open has its own deadline**: 10 s for a remote store and 40 s for an embedded one (which includes starting `surreal`). The deadline belongs to the open, not to the caller: a cancelled `ipfs_index_status` or `GET /index/status` call does not abort an open in progress, and the next call sees its result.
+
+### Stage reason codes
+
+When a stage in the `stages` map of `ipfs_index_status` (and `GET /index/status`) is unavailable, its `reason` is exactly one of seven codes:
+
+| Code | Meaning |
+|------|---------|
+| `unreachable` | The service did not answer or the connection failed. |
+| `not_started` | The supervised process was never started or failed to start. |
+| `starting` | The supervised process was started and is not ready yet. |
+| `exited` | The supervised process started and has since exited. |
+| `auth_failed` | The service refused the credential. |
+| `timeout` | The service did not answer within its deadline. |
+| `unavailable` | Anything else. |
+
+The status carries the code only. The full error detail goes to the server log at Warn, once per change of a stage's state (not once per call), so a polling client does not flood the log and the response does not leak paths or messages.
 
 ### What the confirmation says
 
@@ -369,7 +394,7 @@ With `policy.auto` set to `true`, every successful `ipfs_add` from `ipfs mcp` is
 
 | Tool | Class | What it does |
 |------|-------|--------------|
-| `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts the embedder or a remote extractor only when the caller's `egress_ack` covers its host: one bare GET, no credential, no content. An optional `stages` map (`store`, `embedder`, `extractor`, each `available` plus an optional `reason`) appears only when a stage is unavailable. |
+| `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts the embedder or a remote extractor only when the caller's `egress_ack` covers its host: one bare GET, no credential, no content. An optional `stages` map (`store`, `embedder`, `extractor`, each `available` plus an optional `reason`, one of the seven [stage reason codes](#stage-reason-codes)) appears only when a stage is unavailable. |
 | `ipfs_index_search` | read, content egress, untrusted content | Embeds `query`, returns the `top_k` (default 5, at most 50) nearest chunks with CID, path, chunk index, score (1 minus cosine distance) and text, plus `kind`, `source`, `mime_type` and, for descriptions, `described_by`. `cid` restricts the search to one CID; the optional `kinds` and `sources` filters restrict it to those content kinds or chunk sources. |
 | `ipfs_index_cid` | write (confirmed) | Indexes one UnixFS file by CID: `files/stat`, then `cat` of at most `max_bytes`, routed through the stages of its [content kind](#content-kinds). `force: true` re-indexes a CID that already has entries. |
 | `ipfs_index_reconcile` | write (confirmed), `destructiveHint` | Deletes the entries of indexed CIDs that no pin covers and that are no longer in the MFS, one page per call; unknown coverage keeps entries. See [Reconciliation](#reconciliation). |
@@ -477,7 +502,7 @@ Embedding settings are read when `ipfs mcp` starts; changing them restarts `ipfs
 
 ## Limitations
 
-- **Unreachable search services.** Startup no longer fails when the store, embedder or extractor is unreachable. The store is opened on first use, with backoff from 2 s up to 1 min; search and indexing answer `index_unavailable` (retryable) until the store is reached, and `GET /index/status` reports the unavailable stages. Startup still fails on configuration errors: invalid settings, a credential over plain `http`, rejected store credentials (`ErrAuth`) and an embedding dimension mismatch. Known limits: an embedded xberg that fails to start is not retried until restart, and a bulk run left `running` by a crash is marked paused only when the store is reachable at startup.
+- **Unreachable search services.** Startup no longer fails when the store, embedder or extractor is unreachable. The store is opened on first use, with backoff from 2 s up to 1 min; search and indexing answer `index_unavailable` (retryable) until the store is reached, and `GET /index/status` reports the unavailable stages. Startup still fails on configuration errors: invalid settings, a credential over plain `http`, rejected store credentials (`ErrAuth`) and an embedding dimension mismatch. Known limits: an embedded xberg that fails to start or exits is not retried until restart (an embedded SurrealDB that exits is reopened on next use, see [When a supervised process dies](#when-a-supervised-process-dies)), and a bulk run left `running` by a crash is marked paused only when the store is reachable at startup.
 - **The operator identity cannot index.** Stdio and `--auth-token-*` carry no `egress_ack`, so indexing and search need a configured HTTP principal. This keeps content from reaching an embedder by default, at the cost of one more config entry.
 - **Video description has no Mac path.** On Desktop, video search covers only the audio transcript unless you configure a hosted describer, which receives the video's bytes.
 - **Derived text is stored.** Extracted text, OCR output, transcripts and descriptions sit in SurrealDB next to their vectors (natively indexed text is not stored). Deletion follows pins and the MFS: an unpin through `ipfs mcp` drops the entries of every indexed file no longer covered, including the files under an unpinned directory, but between an out-of-band unpin and the next reconciliation that text stays readable to anyone with the store.
