@@ -1,0 +1,10 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run-2"}
+
+data: {"type":"TEXT_MESSAGE_START","messageId":"m-2","role":"assistant"}
+
+data: {"type":"TEXT_MESSAGE_CONTENT","messageId":"m-2","delta":"Not run: the change was denied."}
+
+data: {"type":"TEXT_MESSAGE_END","messageId":"m-2"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run-2","outcome":{"type":"success"}}
+

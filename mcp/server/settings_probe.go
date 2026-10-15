@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ipfs/kubo/mcp/contract"
 	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
 
@@ -94,6 +95,10 @@ func (h *settingsHandler) testConnection(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if req.Kind == BackendKindUAR {
+		writeSettingsJSON(w, http.StatusOK, "", probeUAR(r.Context(), req.BaseURL))
+		return
+	}
 	key, sent, withheld := h.probeKey(req.BaseURL)
 	_, err := probeOpenAIModels(r.Context(), req.BaseURL, key)
 	writeSettingsJSON(w, http.StatusOK, "", probeResult(err, key, sent, withheld, true))
@@ -122,6 +127,12 @@ func (h *settingsHandler) listModels(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := checkProbeKind(q.Get("kind")); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if q.Get("kind") == BackendKindUAR {
+		// A UAR agent's model is configured on the instance; there is no list
+		// to offer, and the failure shape tells the client so.
+		writeSettingsJSON(w, http.StatusOK, "", testConnectionResult{Detail: "a UAR backend has no model list; its model is configured on the UAR instance"})
 		return
 	}
 	key, sent, withheld := h.probeKey(base)
@@ -176,15 +187,11 @@ func probeResult(err error, key secret, sent, withheld, reachableOK bool) testCo
 	return res
 }
 
-// checkProbeKind validates the kind field of a probe request. uar is a
-// contract kind this build does not serve, the same refusal as a settings
-// write.
+// checkProbeKind validates the kind field of a probe request.
 func checkProbeKind(kind string) error {
 	switch kind {
-	case "", "openai":
+	case "", BackendKindOpenAI, BackendKindUAR:
 		return nil
-	case "uar":
-		return errors.New("backend kind uar is not served by this build")
 	default:
 		return errors.New("backend kind must be openai or uar")
 	}
@@ -323,4 +330,21 @@ func probeDetail(err error, key secret) string {
 		msg = strings.ReplaceAll(msg, key.reveal(), "<redacted>")
 	}
 	return clipRunes(msg, maxProbeDetail)
+}
+
+// probeUAR reports whether the candidate URL answers as a UAR instance: its
+// public agent card names a published release at or above the pinned minimum.
+// It sends no credential, so the probe cannot hand the stored key to a
+// candidate host, and persists nothing.
+func probeUAR(ctx context.Context, baseURL string) testConnectionResult {
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	pre, err := contract.LoadUARPreflight()
+	if err != nil || pre.MinVersion == nil {
+		return testConnectionResult{Detail: "no published UAR release is pinned in the contract"}
+	}
+	if _, err := newUARClient(baseURL, nil, nil).checkRelease(ctx, *pre.MinVersion); err != nil {
+		return testConnectionResult{Detail: probeDetail(err, "")}
+	}
+	return testConnectionResult{OK: true}
 }

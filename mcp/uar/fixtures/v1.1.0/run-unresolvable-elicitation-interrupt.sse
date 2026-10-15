@@ -1,0 +1,4 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run","outcome":{"type":"interrupt","interrupts":[{"id":"int-gone-1","reason":"mcp_elicitation","message":"Pin bafy-example to this node?","expiresAt":"2030-01-01T00:00:00Z","responseSchema":{"type":"object","properties":{"action":{"type":"string","enum":["accept","decline","cancel"]},"content":{"type":"object","properties":{"confirm":{"type":"boolean","title":"pin_add"}},"required":["confirm"]}},"required":["action"],"additionalProperties":false},"metadata":{"uar":{"serverName":"kubo-ipfs","request":{"mode":"form","message":"Pin bafy-example to this node?","requestedSchema":{"type":"object","properties":{"confirm":{"type":"boolean","title":"pin_add"}},"required":["confirm"]}},"resolvable":false}}}]}}
+

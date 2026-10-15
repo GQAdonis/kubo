@@ -27,7 +27,7 @@
 
 The loop runs inside `ipfs mcp` and calls the model server you configure. A token for one path's principal kind does not open another path.
 
-**Topology B (deferred).** UAR would host AG-UI and A2A and call `ipfs mcp --http` as a configured principal of kind `uar`. It is deferred because no published UAR release met the conformance gate ([ADR-0008](0008-topology-b-gate-no-go.md)). `ipfs mcp check-uar` and the `uar` principal block exist, but a `uar` principal with `"check": "verify"` is refused while no UAR settings endpoint is pinned in the contract. UAR can still be used in topology A as an ordinary OpenAI-compatible model backend (next section).
+**Topology B (not built).** UAR would host AG-UI and A2A itself and call `ipfs mcp --http` as a configured principal of kind `uar`, with the Web UI and Desktop talking to UAR directly. It stays unbuilt ([ADR-0008](0008-topology-b-gate-no-go.md), [ADR-0010](0010-uar-agent-behind-agui.md)): the island keeps one endpoint, `/agui`, and one token model. `ipfs mcp check-uar` and the `uar` principal block still apply to a UAR agent that calls this server. UAR can be used as an ordinary OpenAI-compatible model backend (next section) or as an agent behind `/agui` ([UAR agent backend](#uar-agent-backend)).
 
 ## The model backend
 
@@ -58,8 +58,53 @@ Or in the config file (flags win over the file):
 - `llm.api_key` (or `--llm-api-key-env NAME` / `--llm-api-key-file /abs/path`) is a reference; a literal key is rejected and never echoed. The key is never sent over plain `http` to a non-loopback host. Any `https` to `http` downgrade needs typed confirmation whatever the port, and a same-host scheme change in either direction also needs confirmation; an `http` to `https` move to a new, acknowledged host does not. The same rule covers the settings API: a settings write or a Test connection probe accepts a plain `http` backend URL only for a loopback host (`localhost` or a literal loopback address; a `*.localhost` name does not count) or a host listed in `embeddings.insecure_http_hosts`, and changing the scheme of the backend URL needs the `egress_confirmation` for that host.
 - `llm.base_url` must not carry credentials, a query or a fragment. Redirects are not followed.
 - `llm.timeout` bounds each model request (default `60s`).
-- The loop has been run against Ollama with `qwen3:8b` (tool calling worked in 5 of 5 runs) and `llama3.2:1b` (3 of 6). Small models call tools unreliably; prefer a model with good tool-calling support. UAR as the backend was not tested.
+- The loop has been run against Ollama with `qwen3:8b` (tool calling worked in 5 of 5 runs) and `llama3.2:1b` (3 of 6). Small models call tools unreliably; prefer a model with good tool-calling support. UAR as an OpenAI-compatible backend was not tested; UAR as an agent is the next section.
 - On start, `ipfs mcp` prints `agent loop enabled: ...` to stderr with the backend it will use.
+
+## UAR agent backend
+
+`llm.kind: "uar"` makes the backend a Universal Agent Runtime (UAR) instance that you run. `ipfs mcp` creates one agent on it, with kubo's system prompt (the fixed safety prefix included), a binding to this server and the IPFS skills, and proxies each `/agui` run to that agent. The Web UI and Desktop chat are unchanged: same endpoint, same token, same approval card. The design and the release gate are in [ADR-0010](0010-uar-agent-behind-agui.md); the UAR side is the pinned contract `mcp/uar/v1.1.0-kubo.md`.
+
+It is off by default (`llm.kind` is `openai`), and nothing contacts a UAR instance unless you configure one. It is accepted only while `mcp/contract/agentic/uar-preflight.json` pins a published UAR release; this build pins `v1.1.0` (image digest `sha256:064f5004...`, see `mcp/uar/spike/REPORT.md`).
+
+```json
+{
+  "http": { "enabled": true },
+  "principals": [
+    { "name": "webui-chat", "kind": "ui", "credential": { "env": "IPFS_MCP_UI_TOKEN" } },
+    { "name": "uar-agent", "kind": "uar", "credential": { "env": "IPFS_MCP_UAR_TOKEN" },
+      "write_groups": ["pin"], "egress_ack": ["liter.example.com"],
+      "uar": { "card_url": "https://uar.example.com/.well-known/agent-card.json",
+               "admin_credential": { "env": "UAR_ADMIN_TOKEN" } } }
+  ],
+  "llm": {
+    "kind": "uar",
+    "base_url": "https://uar.example.com",
+    "model": "qwen3:8b",
+    "api_key": { "env": "UAR_TRUSTED_HOST_JWT" },
+    "uar": {
+      "agent_id": "kubo-ipfs",
+      "provider": "liter-llm",
+      "mcp_name": "kubo-ipfs",
+      "mcp_principal": "uar-agent",
+      "mcp_credential_revision": "operator-issued-revision",
+      "skills_dir": "/opt/kubo/mcp/skills"
+    }
+  },
+  "agent": { "agui": true, "origin_allowlist": ["http://localhost:3000"] }
+}
+```
+
+- `llm.base_url` is the UAR instance (no default). `llm.api_key` is the credential `ipfs mcp` presents to UAR, by reference: for provisioning and runs it is the issuer-signed JWT of a UAR trusted host (`uar_credential_kind: "issuer"`, matching an entry in UAR's `security.trusted_host_principals`). It is read at every request, so a rotated token in a mounted file takes effect without a restart. `llm.model` (required in the configuration file; a settings write may leave it empty) and `llm.uar.provider` (optional) set the agent's default model and provider on UAR; the model provider itself (for example liter-llm) is configured on UAR, not here.
+- **What kubo creates.** On the first run after start, or after a settings change, `ipfs mcp` checks the instance's agent card (a published release at or above the pinned minimum, else the run fails and nothing is created), uploads each `SKILL.md` under `llm.uar.skills_dir`, creates or updates the agent `llm.uar.agent_id`, and makes its skill bindings exactly those skills. A skill already on the instance is not overwritten (UAR's upload never overwrites): rename it or ask the UAR administrator. Only `SKILL.md` is uploaded; the contract accepts a single manifest, not supporting files. Leave `skills_dir` unset to upload no skills.
+- **What the UAR administrator does** (kubo cannot, it needs an admin credential): register the destination `llm.uar.mcp_name` with `PUT /api/uar/mcp/servers/{name}`, `transport: remote_http`, the `/mcp` URL of this server, and a `grant_policy` with `trusted_hosts`, `required_scopes` (default `["ipfs"]`) and `allowed_agent_ids: ["<agent_id>"]`, so that only this agent can reach it.
+- **The tool credential.** `llm.uar.mcp_principal` names a principal of kind `uar`. Its credential is sent to UAR with each run as the run grant (`forwardedProps.uar.mcp_servers`: `credential_revision` from `llm.uar.mcp_credential_revision`, `scopes`, an expiry `llm.uar.mcp_grant_ttl` ahead, and the `Authorization` header), never stored on UAR. The principal's own grants, `egress_ack` and `check-uar` preflight apply to every tool call the agent makes, as for any `uar` principal ([Principals and `egress_ack`](#principals-and-egress_ack)). Without `mcp_principal` the agent is created with no kubo tools.
+- **Approvals.** UAR asks for approval as an interrupt (`tool_approval`, or `mcp_elicitation`). `ipfs mcp` shows it in the chat in the same card as its own confirmations, and the answer goes back to UAR; if the person denies, every other interrupt of that run is denied with it and nothing runs. This approval is UAR's, not kubo's. A write the agent then calls on this server is still confirmed by the confirmation gate, and a `uar` principal never answers by elicitation, so it needs the system prompt, the Desktop window or `--confirm=cli` on this machine. Interrupts the chat cannot show are never approved: a URL elicitation is declined, a form that asks for anything but one yes or no and an interrupt whose connection is gone are cancelled.
+- **Egress.** Content leaves the node only through tool results to the `uar` principal, under its `egress_ack` and `check-uar`. The UAR instance itself is the backend host for the settings API's typed host confirmation (D4), and its upstream model provider must be covered by the `uar` principal's `egress_ack` (or be local) for `check-uar` to pass; where `check-uar` cannot read it, content tools are refused.
+- **Limits.** `/agui` only: `--a2a` is ignored with a UAR backend and `/a2a` answers 503 if a settings write switches to it. No A2UI surfaces are emitted on a proxied stream (the island's tool-call cards render). A resume of one interrupt among several is held until all are answered, because UAR rejects a partial resume.
+- **Settings API.** `PUT /agent/settings` with `{"backend": {"kind": "uar", "base_url": "https://uar.example.com", "model": "qwen3:8b", "api_key": "<jwt>"}}` switches to UAR and `{"backend": {"kind": "openai", ...}}` switches back; the read shape reports `backend.kind`. `llm.uar.*` is configuration-file only. Test connection with `kind: "uar"` reads the public agent card and sends no credential.
+- **Off.** Set `llm.kind` to `openai` or remove it, remove `llm.uar`, or `make build GOTAGS=noagent`. With a UAR backend and no key that resolves, runs fail with a clear 502 and nothing else changes.
+- **Checked against the published image?** Not yet. The fixtures in `mcp/uar/fixtures/v1.1.0/` follow the contract field for field for the interrupts, but the agent artifact, skill record and binding bodies are inferred from the contract's paths, and `test/cli/mcp_uar_backend_test.go` is the first run against the image (see its header for how to run it).
 
 ## Principals and `egress_ack`
 

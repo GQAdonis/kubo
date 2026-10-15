@@ -1,0 +1,4 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run","outcome":{"type":"interrupt","interrupts":[{"id":"int-url-1","reason":"mcp_elicitation","message":"Open the link to sign in.","expiresAt":"2030-01-01T00:00:00Z","responseSchema":{"type":"object","properties":{"action":{"type":"string","enum":["accept","decline","cancel"]}},"required":["action"],"additionalProperties":false},"metadata":{"uar":{"serverName":"kubo-ipfs","request":{"mode":"url","message":"Open the link to sign in.","url":"https://login.example.test/auth","elicitationId":"el-9"},"resolvable":true}}}]}}
+

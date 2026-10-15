@@ -44,6 +44,8 @@ type SettingsOverlay struct {
 
 // OverlayBackend is the overlay's backend section.
 type OverlayBackend struct {
+	// Kind is the backend kind a write chose ("openai" or "uar").
+	Kind    *string `json:"kind,omitempty"`
 	BaseURL *string `json:"base_url,omitempty"`
 	Model   *string `json:"model,omitempty"`
 	// APIKey is absent when no write touched the key, "null" when a write
@@ -124,6 +126,9 @@ func (c *Config) WithSettingsOverlay(ov *SettingsOverlay) *Config {
 		llm = *c.LLM
 	}
 	b := ov.Backend
+	if b.Kind != nil {
+		llm.Kind = *b.Kind
+	}
 	if b.BaseURL != nil {
 		llm.BaseURL = *b.BaseURL
 	}
@@ -183,6 +188,10 @@ func (ov *SettingsOverlay) withWrite(wr settingsWriteBody, keySet bool, keyClear
 	if b := wr.Backend; b != nil {
 		if out.Backend == nil {
 			out.Backend = &OverlayBackend{}
+		}
+		if b.Kind != "" {
+			v := b.Kind
+			out.Backend.Kind = &v
 		}
 		if b.BaseURL != nil {
 			v := *b.BaseURL

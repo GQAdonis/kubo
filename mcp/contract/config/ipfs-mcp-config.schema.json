@@ -284,6 +284,109 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "openai",
+            "uar"
+          ],
+          "default": "openai",
+          "offSwitch": "Leave unset or set openai: the backend is an OpenAI-compatible server and nothing contacts a UAR instance. Remove the llm section for no backend at all; make build GOTAGS=noagent removes the code. kind uar is accepted only while mcp/contract/agentic/uar-preflight.json pins a published UAR release.",
+          "ownerChange": "agent-backend-uar"
+        },
+        "uar": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+              "default": "kubo-ipfs",
+              "offSwitch": "Read only when llm.kind is uar; set llm.kind back to openai.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "provider": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null,
+              "offSwitch": "Read only when llm.kind is uar; unset leaves the provider of the agent's default model to UAR.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_name": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+              "default": "kubo-ipfs",
+              "offSwitch": "Read only when llm.kind is uar and mcp_principal is set; unset mcp_principal and the agent is created without a kubo MCP binding.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_principal": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 64,
+              "default": null,
+              "offSwitch": "null (default): the UAR agent is created with no kubo MCP binding and no run grant, so it has no kubo tools. Names a principal of kind uar in principals; its credential is the bearer UAR presents to ipfs mcp and is sent to UAR with each run, never stored there.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_credential_revision": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null,
+              "offSwitch": "Required when mcp_principal is set (the credential_revision the UAR operator issued for the run grant). Unset mcp_principal to drop the binding.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_scopes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "default": [
+                "ipfs"
+              ],
+              "offSwitch": "Read only with mcp_principal; unset mcp_principal to send no run grant.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_grant_ttl": {
+              "$ref": "#/$defs/Duration",
+              "default": "10m",
+              "offSwitch": "Read only with mcp_principal. A short value limits how long a grant that leaks stays usable; at least 30s and at most 1h.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "skills_dir": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/AbsolutePath"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "offSwitch": "null (default): no skill is uploaded or bound, and the agent has none. Name a directory of agentskills.io skill directories (mcp/skills in a checkout) to upload each SKILL.md and bind it to the agent.",
+              "ownerChange": "agent-backend-uar"
+            }
+          },
+          "default": null,
+          "offSwitch": "null (default): every llm.uar key takes its default. The section is read only when llm.kind is uar.",
+          "ownerChange": "agent-backend-uar"
+        },
         "base_url": {
           "type": "string",
           "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
@@ -298,7 +401,7 @@
           "minLength": 1,
           "maxLength": 256,
           "default": null,
-          "offSwitch": "Remove the llm section.",
+          "offSwitch": "Remove the llm section. With llm.kind uar it names the default model of the UAR agent.",
           "ownerChange": "mcp-llm-proxy-loop",
           "flag": "--llm-model"
         },

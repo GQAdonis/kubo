@@ -148,6 +148,12 @@ func (h *aguiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeAGUIError(w, http.StatusForbidden, CodePermissionDenied, "this endpoint serves the chat principal only", false)
 		return
 	}
+	if ub := h.srv.UARBackend(); ub != nil {
+		// The backend is a UAR agent: kubo proxies the run and translates its
+		// interrupts (ADR-0010).
+		ub.serve(h, w, r, id)
+		return
+	}
 	if h.srv.Agent() == nil {
 		// Mounted without a backend: the chat's empty state. Nothing is dialed.
 		writeAGUIError(w, http.StatusServiceUnavailable, CodeBackendNotConfigured, "no model backend is configured", false)

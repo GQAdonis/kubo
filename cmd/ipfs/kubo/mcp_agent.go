@@ -51,6 +51,17 @@ admin principal's egress_ack does not cover is refused with
 egress_confirmation_required unless it carries egress_confirmation naming
 exactly that host, and then extends that egress_ack with that host only.
 
+UAR backend. "kind": "uar" in the llm section makes the backend a Universal
+Agent Runtime instance instead of an OpenAI-compatible server: llm.base_url is
+the UAR instance, llm.api_key the credential ipfs mcp presents to it, and the
+llm.uar section names the agent, the kubo principal UAR calls back as, and the
+skills directory. On the first run ipfs mcp creates or updates that agent
+(kubo's system prompt, a binding to this server, the skills) and proxies each
+/agui run to it; a write still needs your confirmation. It is accepted only
+while the contract pins a published UAR release, never contacts UAR unless
+configured, and serves /agui only (not --a2a). Set "kind" back to "openai" or
+remove it to turn it off.
+
 AG-UI. --agui (or "agui": true under "agent" in the config file) also
 serves POST /agui on the --http listener, for chat UIs such as the Web UI
 chat. It is off by default and mounted only with --http; without --agui the
@@ -159,6 +170,18 @@ func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
 		if wantA2A {
 			fmt.Fprintln(os.Stderr, "ipfs mcp: --a2a is ignored: no model backend is configured (--llm-base-url and --llm-model), so its routes are not served")
 			wantA2A = false
+		}
+	} else if s.resolved.IsUAR() {
+		if wantA2A {
+			fmt.Fprintln(os.Stderr, "ipfs mcp: --a2a is ignored: the backend is a UAR agent, which is served on /agui only")
+			wantA2A = false
+		}
+		if err := srv.EnableAgent(s.resolved); err != nil {
+			return fmt.Errorf("agent backend: %w", err)
+		}
+		fmt.Fprintln(os.Stderr, "ipfs mcp: UAR agent backend enabled: "+s.resolved.Describe()+"; the agent is provisioned on its first run")
+		if s.resolved.UAR.MCPCredential == nil {
+			fmt.Fprintln(os.Stderr, "ipfs mcp: warning: llm.uar.mcp_principal is not set, so the UAR agent gets no kubo tools")
 		}
 	} else {
 		if err := srv.EnableAgent(s.resolved); err != nil {

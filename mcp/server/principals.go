@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/ipfs/kubo/mcp/server/embeddings"
 )
@@ -28,6 +29,60 @@ type LLMConfig struct {
 	APIKey  *SecretRef `json:"api_key"`
 	// Timeout is the per-request limit as a duration string ("60s" by default).
 	Timeout string `json:"timeout"`
+	// Kind is llm.kind: "openai" (the default; empty means openai) or "uar".
+	Kind string `json:"kind"`
+	// UAR is llm.uar, read only when Kind is "uar".
+	UAR *UARBackendConfig `json:"uar"`
+}
+
+// Backend kinds of llm.kind and of the settings API's backend.kind.
+const (
+	BackendKindOpenAI = "openai"
+	BackendKindUAR    = "uar"
+)
+
+// Defaults of llm.uar.
+const (
+	// DefaultUARAgentID names the agent kubo creates on the UAR instance.
+	DefaultUARAgentID = "kubo-ipfs"
+	// DefaultUARMCPName names the UAR-side destination of the kubo MCP server.
+	DefaultUARMCPName = "kubo-ipfs"
+	// DefaultUARGrantTTL is how long the run grant of one proxied run lives.
+	DefaultUARGrantTTL = 10 * time.Minute
+)
+
+// DefaultUARScopes are the scopes of the run grant when llm.uar.mcp_scopes is
+// absent; the UAR administrator's destination lists the same value in
+// required_scopes (mcp/uar/v1.1.0-kubo.md, "Trusted-host MCP setup").
+var DefaultUARScopes = []string{"ipfs"}
+
+// UARBackendConfig is the llm.uar section: what kubo needs besides the UAR
+// base URL (llm.base_url) and credential (llm.api_key) to provision and run a
+// UAR agent. Every key is optional; an absent section takes the defaults, and
+// the agent then has no kubo tools until mcp_principal is named.
+type UARBackendConfig struct {
+	// AgentID is the UAR agent kubo creates or updates.
+	AgentID string `json:"agent_id"`
+	// Provider is the UAR provider id of the agent's default model
+	// (llm.model); empty leaves the provider to UAR.
+	Provider string `json:"provider"`
+	// MCPName is the name of the UAR-side destination that points at this
+	// ipfs mcp server. The UAR administrator registers it; the agent binds it.
+	MCPName string `json:"mcp_name"`
+	// MCPPrincipal names a principal of kind uar in this file. Its credential is
+	// the bearer UAR presents to ipfs mcp, supplied to UAR per run. Empty: the
+	// agent gets no kubo tools.
+	MCPPrincipal string `json:"mcp_principal"`
+	// MCPCredentialRevision is the credential_revision of the run grant, as the
+	// UAR operator issued it.
+	MCPCredentialRevision string `json:"mcp_credential_revision"`
+	// MCPScopes are the scopes of the run grant.
+	MCPScopes []string `json:"mcp_scopes"`
+	// MCPGrantTTL is the lifetime of one run grant, as a duration string.
+	MCPGrantTTL string `json:"mcp_grant_ttl"`
+	// SkillsDir is an absolute directory of agentskills.io skill directories
+	// (mcp/skills in a checkout). Empty uploads and binds no skills.
+	SkillsDir string `json:"skills_dir"`
 }
 
 // AgentConfig is the agent section: the loop limits, the AG-UI and A2A switches

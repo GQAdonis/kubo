@@ -373,14 +373,12 @@ func TestSettingsProbeRouteAuth(t *testing.T) {
 func TestSettingsProbeKind(t *testing.T) {
 	e := newSettingsEnv(t, settingsBackendJSON)
 	for name, body := range map[string]string{
-		"uar":     `{"base_url":"http://127.0.0.1:1/v1","kind":"uar"}`,
 		"unknown": `{"base_url":"http://127.0.0.1:1/v1","kind":"ollama"}`,
 	} {
 		resp := e.doPath(t, http.MethodPost, RouteSettingsTestConnection, tokSettingsAdmin, body)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode, name)
 	}
 	for name, path := range map[string]string{
-		"uar":     RouteSettingsModels + "?base_url=http://127.0.0.1:1/v1&kind=uar",
 		"unknown": RouteSettingsModels + "?kind=ollama",
 	} {
 		resp := e.doPath(t, http.MethodGet, path, tokSettingsAdmin, "")

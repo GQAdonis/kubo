@@ -44,6 +44,16 @@ ipfs mcp --mcp-config ./ipfs-mcp.json
 - An acknowledged host does not receive your model key. `egress_ack` governs node content only. The stored key goes only to the current backend's host and port (ADR-0012). If you change the backend host or port in the settings page, a key stored through the page is cleared and you enter it again; a key supplied by environment variable or file follows the move to the new host. On a node with `agent.settings.accept_secrets: false` a provider change through the API therefore succeeds and the server-held key goes with it (accepted residual, ADR-0012).
 - The default listen address is `127.0.0.1:5050`, so the endpoint is `http://127.0.0.1:5050/agui`.
 
+## UAR as the backend
+
+The chat can run its agent on a Universal Agent Runtime (UAR) instance instead of an OpenAI-compatible model server. The chat does not change: it still talks to `/agui` of `ipfs mcp` with the same token and shows UAR's approval requests in the same card. Setup, what kubo creates on UAR, and what the UAR administrator must register are in the [agentic guide](agentic.md#uar-agent-backend).
+
+- **Settings page.** Choose the backend kind *UAR*, enter the UAR address, optionally a model, and the credential `ipfs mcp` presents to UAR. The page sends `PUT /agent/settings` with `{"backend": {"kind": "uar", "base_url": "...", "model": "...", "api_key": "..."}}`; moving to a new host needs the typed host confirmation like any backend. The `llm.uar` options (agent id, tool principal, skills directory) are set in the configuration file.
+- **Approvals.** UAR asks for approval of a tool call; you answer in the chat. A change to the node is then still confirmed by `ipfs mcp` itself (system prompt, Desktop window or `--confirm=cli`): approving in the chat does not replace that.
+- **Not available with UAR:** A2A, and A2UI surfaces on the stream.
+- **Off.** Switch the kind back to *OpenAI-compatible*, or remove `llm.kind` from the configuration. Nothing contacts UAR unless it is configured.
+- **State.** Checked against the fixtures of the pinned UAR release; not yet run against the published image.
+
 ## Web UI side
 
 Open **Settings** and find the **Agent chat** section.
