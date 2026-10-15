@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1858,
-  "derivedRevision": 1858,
+  "sourceRevision": 1863,
+  "derivedRevision": 1863,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1858
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1863
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-15T20:15:18.686979Z",
+  "last_updated": "2026-10-15T20:23:03.403299Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
   "changes_completed": 27,
@@ -328,10 +328,10 @@
       "title": "kubo-candidate-image",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 5,
-      "tasks_done": 3,
-      "last_task_completed": "Container smoke with its own `IPFS_PATH` on non-default ports. Acceptance: `ipfs version --commit` equals the branch commit; `ipfs mcp --help` lists `--settings-dir`; with the principal tokens and the",
-      "next_task_pending": "Image-only know-me-cluster PR (the `image:` line set to the digest from 1.3; no flag or config change) and the OG-12 runbook (planned single-replica restart under the 2026-10-13 gotcha; rollback image",
+      "tasks_total": 6,
+      "tasks_done": 5,
+      "last_task_completed": "Security-reviewer read of the image PR before OG-12. Acceptance: findings file; no open CRITICAL.",
+      "next_task_pending": "Security read and rollout follow-ups",
       "blockers": []
     },
     {
