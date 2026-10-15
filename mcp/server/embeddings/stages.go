@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -20,8 +22,55 @@ const (
 // stageProbeTimeout bounds the reachability probe of one stage.
 const stageProbeTimeout = 3 * time.Second
 
+// Reasons a stage cannot be used. They are fixed codes: a reason never carries
+// a dial address, a path or process output, which only the server log gets.
+const (
+	// ReasonUnreachable: nothing answered at the stage's address.
+	ReasonUnreachable = "unreachable"
+	// ReasonNotStarted: the embedded process could not be started.
+	ReasonNotStarted = "not_started"
+	// ReasonStarting: the stage is still starting; ask again shortly.
+	ReasonStarting = "starting"
+	// ReasonExited: the embedded process ended after it had started.
+	ReasonExited = "exited"
+	// ReasonAuthFailed: the service rejected the credentials.
+	ReasonAuthFailed = "auth_failed"
+	// ReasonTimeout: the stage did not answer in time.
+	ReasonTimeout = "timeout"
+	// ReasonUnavailable: any other cause.
+	ReasonUnavailable = "unavailable"
+)
+
+// errNotStarted marks the failure to start an embedded process.
+var errNotStarted = errors.New("the embedded process could not be started")
+
+// errExtractorExited: the embedded extractor ended after it had started.
+var errExtractorExited = errors.New("the embedded xberg process has exited")
+
+// reasonOf maps the cause of an unavailable stage to a Reason code.
+func reasonOf(err error) string {
+	var ne net.Error
+	var op *net.OpError
+	var dns *net.DNSError
+	switch {
+	case errors.Is(err, ErrStoreExited), errors.Is(err, errExtractorExited):
+		return ReasonExited
+	case errors.Is(err, ErrAuth):
+		return ReasonAuthFailed
+	case errors.Is(err, errNotStarted):
+		return ReasonNotStarted
+	case errors.Is(err, errOpening):
+		return ReasonStarting
+	case errors.As(err, &ne) && ne.Timeout():
+		return ReasonTimeout
+	case errors.As(err, &op), errors.As(err, &dns):
+		return ReasonUnreachable
+	}
+	return ReasonUnavailable
+}
+
 // StageStatus is whether one stage of the pipeline can be used now. Reason is
-// set when it cannot.
+// set when it cannot, and is one of the Reason codes.
 type StageStatus struct {
 	Available bool   `json:"available"`
 	Reason    string `json:"reason,omitempty"`
@@ -58,7 +107,7 @@ func (e *Extractor) Probe(ctx context.Context) error {
 	if e.sup != nil {
 		select {
 		case <-e.sup.Done():
-			return errors.New("the embedded xberg process has exited")
+			return errExtractorExited
 		default:
 			return nil
 		}
@@ -84,30 +133,39 @@ func (s *Service) Ready(ctx context.Context) error {
 // text: a caller whose egress_ack does not cover a host gets no entry for that
 // stage, and the host is not contacted. A nil covers acknowledges nothing.
 func (s *Service) Stages(ctx context.Context, covers func(host string) bool) map[string]StageStatus {
-	out := map[string]StageStatus{StageStore: stageOf(trimUnavailable(s.Ready(ctx)))}
+	out := map[string]StageStatus{StageStore: s.stageOf(StageStore, s.Ready(ctx))}
 	if covers != nil && covers(s.embedder.Host()) {
-		out[StageEmbedder] = stageOf(s.embedder.Probe(ctx))
+		out[StageEmbedder] = s.stageOf(StageEmbedder, s.embedder.Probe(ctx))
 	}
 	switch x := s.extractor; {
 	case x != nil && (!x.remote || (covers != nil && covers(x.host))):
-		out[StageExtractor] = stageOf(x.Probe(ctx))
+		out[StageExtractor] = s.stageOf(StageExtractor, x.Probe(ctx))
 	case x == nil && s.settings.Extractor != nil:
-		out[StageExtractor] = stageOf(cmp.Or(s.extractorErr, errors.New("the extractor is not running")))
+		out[StageExtractor] = s.stageOf(StageExtractor, cmp.Or(s.extractorErr, error(errNotStarted)))
 	}
 	return out
 }
 
-func stageOf(err error) StageStatus {
+// stageOf turns the cause of a stage into its status. The detail goes to the
+// server log at Warn, once each time it changes, so polling does not flood it.
+func (s *Service) stageOf(name string, err error) StageStatus {
+	s.stageLogMu.Lock()
+	defer s.stageLogMu.Unlock()
 	if err == nil {
+		delete(s.stageLogged, name)
 		return StageStatus{Available: true}
 	}
-	return StageStatus{Reason: clip(err.Error())}
-}
-
-// trimUnavailable drops the generic prefix so a stage reason is the cause.
-func trimUnavailable(err error) error {
-	if err == nil {
-		return nil
+	code, detail := reasonOf(err), clip(err.Error())
+	if s.stageLogged[name] != detail {
+		if s.stageLogged == nil {
+			s.stageLogged = map[string]string{}
+		}
+		s.stageLogged[name] = detail
+		log := s.log
+		if log == nil {
+			log = slog.New(slog.DiscardHandler)
+		}
+		log.Warn("embeddings stage is unavailable", "stage", name, "reason", code, "error", detail)
 	}
-	return errors.New(strings.TrimPrefix(err.Error(), ErrStoreUnavailable.Error()+": "))
+	return StageStatus{Reason: code}
 }

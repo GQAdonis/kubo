@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	mcpserver "github.com/ipfs/kubo/mcp/server"
@@ -209,6 +210,14 @@ func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flag
 	if err != nil {
 		return nil, err
 	}
+	// Principals that were configured but resolve to nothing must not turn into
+	// an anonymous listener the operator never asked for. Some resolved, or an
+	// operator token, keeps working with only those enabled.
+	if len(creds) == 0 && len(operator) == 0 {
+		if err := errNoPrincipalResolved(cfg.Principals); err != nil {
+			return nil, err
+		}
+	}
 	creds = append(creds, operator...)
 
 	out := &mcpHTTPSettings{warnings: warnings, opts: mcpserver.HTTPOptions{
@@ -233,6 +242,21 @@ func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flag
 		return nil, err
 	}
 	return out, nil
+}
+
+// errNoPrincipalResolved is the startup error when the config names principals
+// and none of their credential references resolved. It names each principal and
+// the environment variable or file it expects, never a value. It returns nil
+// when no principal is configured: the anonymous loopback default.
+func errNoPrincipalResolved(principals []mcpserver.PrincipalConfig) error {
+	if len(principals) == 0 {
+		return nil
+	}
+	refs := make([]string, 0, len(principals))
+	for _, p := range principals {
+		refs = append(refs, fmt.Sprintf("%s (%s)", p.Name, p.Credential))
+	}
+	return fmt.Errorf("the config names %d principal(s) but none has a credential, so the listener would serve anonymous callers: %s; set the environment variable or create the file for at least one, or remove the principals to run anonymously on loopback", len(principals), strings.Join(refs, ", "))
 }
 
 // destructiveSelector is the contract's --tools selector for destructive tools.

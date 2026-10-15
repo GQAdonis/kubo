@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net"
 	"testing"
 
@@ -47,7 +48,13 @@ func TestServerStartsAndReportsUnavailableStagesWhenDependenciesAreDown(t *testi
 		st, ok := stages[name].(map[string]any)
 		require.True(t, ok, name)
 		assert.Equal(t, false, st["available"], name)
-		assert.NotEmpty(t, st["reason"], name)
+		assert.Contains(t, []any{"unreachable", "not_started", "starting", "exited", "auth_failed", "timeout", "unavailable"}, st["reason"], name)
+		assert.Equal(t, "unreachable", st["reason"], name)
+	}
+	raw, err := json.Marshal(stages)
+	require.NoError(t, err)
+	for _, leak := range []string{"127.0.0.1", "localhost", "dial", "connect", "http", "/"} {
+		assert.NotContains(t, string(raw), leak, "a stage reason carries no address or path")
 	}
 }
 

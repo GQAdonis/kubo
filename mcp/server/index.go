@@ -110,8 +110,8 @@ type indexStatusOutput struct {
 	ByKind map[string]int `json:"by_kind,omitempty"`
 	// Stages says which stage of the pipeline (store, embedder and, when
 	// configured, extractor) cannot be used now, and why. It is present only
-	// when one cannot, so the output of a healthy index is unchanged. The
-	// contract schema of this output does not list it yet.
+	// when one cannot, so the output of a healthy index is unchanged. A reason
+	// is one of the fixed embeddings.Reason codes, never an address or a path.
 	Stages map[string]embeddings.StageStatus `json:"stages,omitempty"`
 }
 

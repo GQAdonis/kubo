@@ -1,12 +1,19 @@
 package embeddings
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -179,7 +186,7 @@ func TestEmbeddedStoreThatCannotStartDoesNotFailOpen(t *testing.T) {
 	dir := t.TempDir()
 	s := Settings{
 		Mode:     ModeEmbedded,
-		Embedded: &EmbeddedSettings{Binary: dir + "/no-such-surreal", DataDir: dir + "/data"},
+		Embedded: &EmbeddedSettings{Binary: failingBinary(t, dir, "surreal"), DataDir: dir + "/data"},
 		Embedder: EmbedderSettings{BaseURL: "http://" + closedAddr(t) + "/v1", Model: "bge-m3", Dimensions: 4},
 	}
 	svc, err := Open(t.Context(), s, Options{})
@@ -187,7 +194,8 @@ func TestEmbeddedStoreThatCannotStartDoesNotFailOpen(t *testing.T) {
 	t.Cleanup(func() { _ = svc.Close() })
 	st := svc.Stages(t.Context(), allHosts)[StageStore]
 	require.False(t, st.Available)
-	require.Contains(t, st.Reason, "surreal_binary")
+	require.Equal(t, ReasonNotStarted, st.Reason)
+	require.NotContains(t, st.Reason, dir)
 	_, err = svc.Search(t.Context(), func(string) bool { return true }, "q", 1)
 	require.ErrorIs(t, err, ErrStoreUnavailable)
 	require.Nil(t, svc.Supervisor())
@@ -197,7 +205,7 @@ func TestEmbeddedExtractorThatCannotStartDoesNotFailOpen(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	s := remoteSettings(closedAddr(t), closedAddr(t))
-	s.Extractor = &ExtractorSettings{Mode: ModeEmbedded, Embedded: &ExtractorEmbedded{Binary: dir + "/no-such-xberg", CacheDir: dir + "/cache"}}
+	s.Extractor = &ExtractorSettings{Mode: ModeEmbedded, Embedded: &ExtractorEmbedded{Binary: failingBinary(t, dir, "xberg"), CacheDir: dir + "/cache"}}
 	svc, err := Open(t.Context(), s, Options{})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = svc.Close() })
@@ -228,4 +236,289 @@ func TestStagesProbeOnlyAcknowledgedHosts(t *testing.T) {
 		require.Empty(t, r.Auth, "the probe sends no credential")
 		require.Empty(t, r.Body, "the probe sends no content")
 	}
+}
+
+// mortalStore is a Store whose process can be made to exit.
+type mortalStore struct {
+	Store
+	id   int
+	dead atomic.Bool
+}
+
+func (f *mortalStore) exited() bool { return f.dead.Load() }
+
+func (f *mortalStore) Count(context.Context) (int, error) {
+	if f.dead.Load() {
+		return 0, ErrStoreExited
+	}
+	return f.id, nil
+}
+
+// gatedOpen is an open function that blocks until released and counts calls.
+type gatedOpen struct {
+	calls   atomic.Int32
+	release chan struct{}
+	ctxErrs chan error
+	fail    error
+}
+
+func newGatedOpen() *gatedOpen {
+	return &gatedOpen{release: make(chan struct{}), ctxErrs: make(chan error, 8)}
+}
+
+func (g *gatedOpen) open(ctx context.Context) (Store, error) {
+	n := g.calls.Add(1)
+	select {
+	case <-g.release:
+		if g.fail != nil {
+			return nil, g.fail
+		}
+		return &mortalStore{id: int(n)}, nil
+	case <-ctx.Done():
+		g.ctxErrs <- ctx.Err()
+		return nil, ctx.Err()
+	}
+}
+
+func TestCancelledCallerDoesNotFailTheOpenOrAdvanceTheBackoff(t *testing.T) {
+	t.Parallel()
+	g := newGatedOpen()
+	l := newLazyStore(g.open, time.Minute)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	err := l.ready(ctx)
+	require.ErrorIs(t, err, ErrStoreUnavailable)
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, ReasonStarting, reasonOf(err))
+
+	close(g.release)
+	require.NoError(t, l.ready(t.Context()))
+	require.EqualValues(t, 1, g.calls.Load(), "the open the cancelled caller started is the one that served")
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	require.Zero(t, l.failures, "a caller's cancellation is not a store failure")
+	require.Empty(t, g.ctxErrs, "the open did not see the caller's cancellation")
+}
+
+func TestSlowEmbeddedOpenSurvivesATenSecondStatusCaller(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		const openTime = 25 * time.Second
+		var calls atomic.Int32
+		l := newLazyStore(func(ctx context.Context) (Store, error) {
+			calls.Add(1)
+			select {
+			case <-time.After(openTime):
+				return &mortalStore{id: 1}, nil
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}, embeddedOpenTimeout)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+		err := l.ready(ctx)
+		require.Equal(t, ReasonStarting, reasonOf(err), "the status caller gives up at 10s")
+
+		time.Sleep(openTime)
+		synctest.Wait()
+		require.NoError(t, l.ready(t.Context()), "the open went on and finished")
+		require.EqualValues(t, 1, calls.Load())
+		l.mu.Lock()
+		require.Zero(t, l.failures)
+		l.mu.Unlock()
+	})
+}
+
+func TestOpenHasItsOwnDeadline(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		g := newGatedOpen()
+		l := newLazyStore(g.open, startupStoreTimeout)
+		// The caller waits longer than the open is allowed to run.
+		err := l.ready(t.Context())
+		require.ErrorIs(t, err, ErrStoreUnavailable)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.Equal(t, ReasonTimeout, reasonOf(err))
+		l.mu.Lock()
+		require.Equal(t, 1, l.failures, "a real open failure counts")
+		l.mu.Unlock()
+	})
+}
+
+func TestWaitersHonorTheirOwnContextWhileOneOpenProceeds(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		g := newGatedOpen()
+		l := newLazyStore(g.open, time.Minute)
+
+		const waiters = 8
+		var wg sync.WaitGroup
+		errs := make([]error, waiters)
+		for i := range waiters {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				ctx, cancel := context.WithTimeout(t.Context(), time.Duration(i+1)*time.Second)
+				defer cancel()
+				errs[i] = l.ready(ctx)
+			}()
+		}
+		wg.Wait()
+		for i, err := range errs {
+			require.ErrorIs(t, err, context.DeadlineExceeded, "waiter %d returned on its own deadline", i)
+		}
+		require.EqualValues(t, 1, g.calls.Load(), "the waiters share one open")
+
+		close(g.release)
+		synctest.Wait()
+		require.NoError(t, l.ready(t.Context()))
+		require.EqualValues(t, 1, g.calls.Load())
+	})
+}
+
+func TestSchemaDefinedOnceUnderConcurrentUse(t *testing.T) {
+	t.Parallel()
+	f := newFlakyStore(t)
+	f.up.Store(true)
+	svc, err := Open(t.Context(), remoteSettings(strings.TrimPrefix(f.URL, "http://"), closedAddr(t)), Options{})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = svc.Close() })
+	var wg sync.WaitGroup
+	for range 16 {
+		wg.Go(func() { require.NoError(t, svc.Ready(t.Context())) })
+	}
+	wg.Wait()
+	require.EqualValues(t, 1, f.defines.Load(), "DEFINE runs once")
+}
+
+func TestExitedStoreIsReopenedAndReportedUnavailableMeanwhile(t *testing.T) {
+	t.Parallel()
+	var opens atomic.Int32
+	var current atomic.Pointer[mortalStore]
+	l := newLazyStore(func(context.Context) (Store, error) {
+		st := &mortalStore{id: int(opens.Add(1))}
+		current.Store(st)
+		return st, nil
+	}, time.Minute)
+	svc := &Service{lazy: l, store: l}
+	now := time.Now()
+	l.now = func() time.Time { return now }
+
+	require.NoError(t, svc.Ready(t.Context()))
+	require.True(t, svc.Stages(t.Context(), nil)[StageStore].Available)
+
+	current.Load().dead.Store(true)
+	st := svc.Stages(t.Context(), nil)[StageStore]
+	require.False(t, st.Available, "an exited store is not reported available")
+	require.Equal(t, ReasonExited, st.Reason)
+	_, err := svc.Store().Count(t.Context())
+	require.ErrorIs(t, err, ErrStoreUnavailable)
+	require.EqualValues(t, 1, opens.Load(), "the backoff holds the reopen")
+
+	now = now.Add(storeRetryInitial + time.Second)
+	n, err := svc.Store().Count(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, 2, n, "the next use went through open and got a new store")
+	require.True(t, svc.Stages(t.Context(), nil)[StageStore].Available)
+}
+
+func TestErrStoreExitedFromACallDropsTheStore(t *testing.T) {
+	t.Parallel()
+	var opens atomic.Int32
+	l := newLazyStore(func(context.Context) (Store, error) { return &exitOnCount{id: int(opens.Add(1))}, nil }, time.Minute)
+	now := time.Now()
+	l.now = func() time.Time { return now }
+	_, err := l.Count(t.Context())
+	require.ErrorIs(t, err, ErrStoreExited)
+	_, err = l.Count(t.Context())
+	require.ErrorIs(t, err, ErrStoreUnavailable)
+	now = now.Add(storeRetryInitial + time.Second)
+	_, err = l.Count(t.Context())
+	require.ErrorIs(t, err, ErrStoreExited, "the first store's replacement was opened")
+	require.EqualValues(t, 2, opens.Load())
+}
+
+// exitOnCount reports its process gone through the error of a call only.
+type exitOnCount struct {
+	Store
+	id int
+}
+
+func (*exitOnCount) Count(context.Context) (int, error) { return 0, ErrStoreExited }
+
+func TestStageReasonsAreCodesWithoutPathsOrAddresses(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	storeAddr, embAddr, extAddr := closedAddr(t), closedAddr(t), closedAddr(t)
+	var logs bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&logs, nil))
+
+	remote := remoteSettings(storeAddr, embAddr)
+	remote.Extractor = &ExtractorSettings{Mode: ModeRemote, Remote: &ExtractorRemote{BaseURL: "http://" + extAddr}}
+	svc, err := Open(t.Context(), remote, Options{Logger: log})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = svc.Close() })
+	embedded := Settings{
+		Mode:     ModeEmbedded,
+		Embedded: &EmbeddedSettings{Binary: failingBinary(t, dir, "surreal"), DataDir: dir + "/data"},
+		Embedder: EmbedderSettings{BaseURL: "http://" + embAddr + "/v1", Model: "bge-m3", Dimensions: 4},
+		Extractor: &ExtractorSettings{Mode: ModeEmbedded, Embedded: &ExtractorEmbedded{
+			Binary: failingBinary(t, dir, "xberg"), CacheDir: dir + "/cache"}},
+	}
+	esvc, err := Open(t.Context(), embedded, Options{Logger: log})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = esvc.Close() })
+
+	allowed := []string{ReasonUnreachable, ReasonNotStarted, ReasonStarting, ReasonExited, ReasonAuthFailed, ReasonTimeout, ReasonUnavailable}
+	for _, stages := range []map[string]StageStatus{svc.Stages(t.Context(), allHosts), esvc.Stages(t.Context(), allHosts)} {
+		require.Len(t, stages, 3)
+		for name, st := range stages {
+			require.False(t, st.Available, name)
+			require.Contains(t, allowed, st.Reason, name)
+			for _, leak := range []string{dir, storeAddr, embAddr, extAddr, "127.0.0.1", "/"} {
+				require.NotContains(t, st.Reason, leak, name)
+			}
+		}
+	}
+	require.Equal(t, ReasonUnreachable, svc.Stages(t.Context(), allHosts)[StageStore].Reason)
+	require.Equal(t, ReasonNotStarted, esvc.Stages(t.Context(), allHosts)[StageStore].Reason)
+	require.Equal(t, ReasonNotStarted, esvc.Stages(t.Context(), allHosts)[StageExtractor].Reason)
+
+	// The detail is in the server log, once per change and not per poll.
+	require.Contains(t, logs.String(), "surreal_binary: running")
+	before := strings.Count(logs.String(), "embeddings stage is unavailable")
+	for range 3 {
+		svc.Stages(t.Context(), allHosts)
+		esvc.Stages(t.Context(), allHosts)
+	}
+	require.Equal(t, before, strings.Count(logs.String(), "embeddings stage is unavailable"), "polling does not flood the log")
+}
+
+// failingBinary writes an executable that exits 1 and returns its path: a
+// binary that exists but cannot start a store.
+func failingBinary(t *testing.T, dir, name string) string {
+	t.Helper()
+	p := filepath.Join(dir, name)
+	require.NoError(t, os.WriteFile(p, []byte("#!/bin/sh\nexit 1\n"), 0o755))
+	return p
+}
+
+func TestMissingOrUnrunnableBinaryIsAConfigurationError(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	plain := filepath.Join(dir, "plain")
+	require.NoError(t, os.WriteFile(plain, []byte("x"), 0o644))
+	for name, bin := range map[string]string{"missing": filepath.Join(dir, "nope"), "directory": dir, "not executable": plain} {
+		s := Settings{
+			Mode:     ModeEmbedded,
+			Embedded: &EmbeddedSettings{Binary: bin, DataDir: filepath.Join(dir, "data")},
+			Embedder: EmbedderSettings{BaseURL: "http://" + closedAddr(t) + "/v1", Model: "bge-m3", Dimensions: 4},
+		}
+		svc, err := Open(t.Context(), s, Options{})
+		require.ErrorContains(t, err, "embeddings.embedded.surreal_binary", name)
+		require.Nil(t, svc, name)
+	}
+	s := remoteSettings(closedAddr(t), closedAddr(t))
+	s.Extractor = &ExtractorSettings{Mode: ModeEmbedded, Embedded: &ExtractorEmbedded{Binary: filepath.Join(dir, "nope"), CacheDir: dir + "/c"}}
+	_, err := Open(t.Context(), s, Options{})
+	require.ErrorContains(t, err, "embeddings.extractor.embedded.xberg_binary")
 }

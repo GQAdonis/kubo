@@ -155,19 +155,28 @@ func (t *tailBuffer) String() string {
 	return strings.TrimSpace(string(t.buf))
 }
 
+// checkBinaryPath refuses a path that is missing, not a regular file or not
+// executable. It is a configuration error: startup fails, naming key.
+func checkBinaryPath(key, path string) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("%s: %w", key, err)
+	}
+	if !fi.Mode().IsRegular() {
+		return fmt.Errorf("%s %s is not a regular file", key, path)
+	}
+	if runtime.GOOS != "windows" && fi.Mode().Perm()&0o111 == 0 {
+		return fmt.Errorf("%s %s is not executable", key, path)
+	}
+	return nil
+}
+
 // checkBinary refuses a binary that is missing, not a regular executable file
 // or older than the minimum version. The path is absolute (validated) and is
 // never resolved through PATH.
 func checkBinary(ctx context.Context, cfg EmbeddedSettings) error {
-	fi, err := os.Stat(cfg.Binary)
-	if err != nil {
-		return fmt.Errorf("embeddings.embedded.surreal_binary: %w", err)
-	}
-	if !fi.Mode().IsRegular() {
-		return fmt.Errorf("embeddings.embedded.surreal_binary %s is not a regular file", cfg.Binary)
-	}
-	if runtime.GOOS != "windows" && fi.Mode().Perm()&0o111 == 0 {
-		return fmt.Errorf("embeddings.embedded.surreal_binary %s is not executable", cfg.Binary)
+	if err := checkBinaryPath("embeddings.embedded.surreal_binary", cfg.Binary); err != nil {
+		return err
 	}
 	min := cfg.MinVersion
 	if min == "" {

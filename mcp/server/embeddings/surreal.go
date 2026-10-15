@@ -59,8 +59,9 @@ type surrealClient struct {
 }
 
 // ErrStoreExited: the embedded store process ended after it had started. The
-// client fails closed instead of sending to its port.
-var ErrStoreExited = errors.New("the embedded store process has exited; restart ipfs mcp")
+// client fails closed instead of sending to its port; the next use of the
+// store starts a new process.
+var ErrStoreExited = errors.New("the embedded store process has exited")
 
 func newSurrealClient(endpoint, ns, db string, a auth, hc *http.Client) *surrealClient {
 	if hc == nil {

@@ -236,7 +236,12 @@ func runMCP(req *cmds.Request, cfg *mcpserver.Config, gate confirm.Config) error
 	if err != nil {
 		return fmt.Errorf("ipfs mcp: %w", err)
 	}
+	daemonWait, err := cfg.Daemon.WaitDuration()
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
 	srv, err := mcpserver.New(req.Context, daemon, mcpserver.Options{
+		DaemonWait:   daemonWait,
 		Tools:        settings.tools,
 		ReadOnly:     settings.readOnly,
 		Disabled:     settings.disabled,

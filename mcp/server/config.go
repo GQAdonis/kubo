@@ -33,6 +33,8 @@ type Config struct {
 	Embeddings *EmbeddingsConfig `json:"embeddings"`
 	// Agent holds the loop limits (agent.loop).
 	Agent AgentConfig `json:"agent"`
+	// Daemon is the daemon section (daemon.wait).
+	Daemon DaemonConfig `json:"daemon"`
 	// TrustedPeers is trusted_peers: peer IDs whose peer-supplied data is
 	// marked trusted. Default empty.
 	TrustedPeers []string `json:"trusted_peers"`
@@ -94,6 +96,36 @@ func (c ConfirmationConfig) validate() error {
 		return errors.New(`confirmation.cli is false but confirmation.modes contains "cli"; remove "cli" from confirmation.modes or set confirmation.cli to true`)
 	}
 	return nil
+}
+
+// DaemonConfig is the daemon section. Wait is empty when absent
+// (DefaultDaemonWait).
+type DaemonConfig struct {
+	Wait string `json:"wait"`
+}
+
+// Bounds of daemon.wait. DefaultDaemonWait covers a sidecar that starts a few
+// seconds to a minute before the daemon container is ready; "0s" disables the
+// wait.
+const (
+	DefaultDaemonWait = 60 * time.Second
+	MaxDaemonWait     = 10 * time.Minute
+)
+
+// WaitDuration is how long startup keeps retrying an unreachable daemon:
+// daemon.wait, or DefaultDaemonWait when it is absent. Zero means do not wait.
+func (c DaemonConfig) WaitDuration() (time.Duration, error) {
+	if c.Wait == "" {
+		return DefaultDaemonWait, nil
+	}
+	d, err := time.ParseDuration(c.Wait)
+	if err != nil {
+		return 0, fmt.Errorf("daemon.wait %q is not a valid duration", c.Wait)
+	}
+	if d < 0 || d > MaxDaemonWait {
+		return 0, fmt.Errorf("daemon.wait %q is out of range: it must be 0s or at most %s", c.Wait, MaxDaemonWait)
+	}
+	return d, nil
 }
 
 // HTTPConfig is the http section.
@@ -169,6 +201,9 @@ func ParseConfig(data []byte) (*Config, error) {
 	}
 	cfg.applyDefaults()
 	if err := cfg.Confirmation.validate(); err != nil {
+		return nil, err
+	}
+	if _, err := cfg.Daemon.WaitDuration(); err != nil {
 		return nil, err
 	}
 	if _, err := parseTrustedPeers(cfg.TrustedPeers); err != nil {
@@ -258,9 +293,11 @@ func (c *Config) SessionTimeoutDuration() (time.Duration, error) {
 // credentials of the principals whose reference resolves, plus one warning per
 // principal it disables. An absent credential — an unset or empty environment
 // variable, a missing, unreadable or empty file — disables only that
-// principal, with a warning, and never stops startup (ADR-0009 section 3,
-// CRITICAL-2): the principal authenticates nothing until the reference
-// resolves. A warning names the principal and the reference, never a secret.
+// principal, with a warning (ADR-0009 section 3, CRITICAL-2): the principal
+// authenticates nothing until the reference resolves. A warning names the
+// principal and the reference, never a secret. Credentials does not stop
+// startup; the HTTP caller does when principals are configured and none
+// resolved (S5), so the listener never turns anonymous by accident.
 func (c *Config) Credentials() (creds []StaticCredential, warnings []string) {
 	for _, p := range c.Principals {
 		token, err := p.Credential.Read()

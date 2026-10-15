@@ -49,6 +49,11 @@ type Options struct {
 	// means DefaultConfirmTTL; otherwise it must be between MinConfirmTTL and
 	// MaxConfirmTTL. Expiry is denial.
 	ConfirmTTL time.Duration
+	// DaemonWait is how long New keeps retrying a daemon that is not
+	// reachable (connection refused, no api file) before it fails. Zero, the
+	// zero value, does not wait. `ipfs mcp` passes daemon.wait, default
+	// DefaultDaemonWait. An RPC refusal or an unsupported version never waits.
+	DaemonWait time.Duration
 	// Version is the server version reported to clients.
 	Version string
 	// Logger receives diagnostics. It must write to stderr or a file, never
@@ -57,6 +62,10 @@ type Options struct {
 
 	// now is the clock of the confirmation gate; tests replace it.
 	now func() time.Time
+
+	// daemonSleep replaces the real sleep of the DaemonWait backoff; tests
+	// advance a fake clock with it.
+	daemonSleep func(ctx context.Context, d time.Duration) error
 
 	// awaitRecheck is how often AwaitConfirmation looks at the clock; zero
 	// keeps the default. Tests shorten it per server instead of changing a
@@ -230,7 +239,12 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 		return nil, fmt.Errorf("startup contract check: tool %q is registered twice", dup)
 	}
 
-	info, err := probe(ctx, d, cat, func(msg string) { s.log.Warn(msg) })
+	info, err := probeWithWait(ctx, d, cat, func(msg string) { s.log.Warn(msg) }, daemonWait{
+		total: opts.DaemonWait,
+		now:   now,
+		sleep: opts.daemonSleep,
+		info:  s.log.Info,
+	})
 	if err != nil {
 		return nil, err
 	}

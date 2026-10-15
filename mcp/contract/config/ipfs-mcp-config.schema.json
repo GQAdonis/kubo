@@ -274,7 +274,7 @@
         ]
       },
       "default": [],
-      "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no credential configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused.",
+      "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no principal and no operator token configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused. When principals are configured but none of them has a credential that resolves (and no --auth-token-* operator token is given), startup fails and names the principals and the environment variables or files it expected; it does not fall back to the anonymous listener. When some resolve, only those are enabled.",
       "ownerChange": "mcp-agent-principal-enforcement"
     },
     "llm": {
@@ -510,6 +510,22 @@
       "default": {},
       "offSwitch": "Per-call confirmation of write and destructive tools cannot be turned off; it can only become stricter. The out-of-band human gate can: confirmation.modes [] or IPFS_MCP_CONFIRM=none, after which only eliciting clients can confirm.",
       "ownerChange": "native-confirmation-prompt"
+    },
+    "daemon": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wait": {
+          "$ref": "#/$defs/Duration",
+          "default": "60s",
+          "description": "How long ipfs mcp keeps retrying at startup while the Kubo RPC API refuses connections or cannot be reached, for example a sidecar that starts before the daemon container is ready. Retries use a bounded backoff and one Info log line is written per attempt. After this duration startup fails with the same error as without a wait. A daemon that answers with an error (an API.Authorizations refusal, an unsupported version) fails at once and is never retried. At most 10m.",
+          "offSwitch": "0s: no wait; a daemon that is not reachable at startup fails at once.",
+          "ownerChange": "mcp-server-core-stdio"
+        }
+      },
+      "default": {},
+      "offSwitch": "Omit the section for the 60s default, or set daemon.wait to 0s to fail at once.",
+      "ownerChange": "mcp-server-core-stdio"
     },
     "embeddings": {
       "type": [

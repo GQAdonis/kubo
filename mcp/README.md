@@ -52,7 +52,7 @@ This README describes the **tool contract** in [`contract/`](contract/): the sin
   - `parentMessageId` messages are introduced before the turn's first result.
   - There is no default client endpoint.
   - Browser origins need `agent.origin_allowlist` (CORS without credentials).
-- An HTTP loopback listener with no credential configured serves the read-only `anonymous-loopback` principal; no write or destructive group can reach it.
+- An HTTP loopback listener with no principal and no operator token configured serves the read-only `anonymous-loopback` principal; no write or destructive group can reach it.
 - The out-of-band human gate is on by default (`confirmation.modes` `["native"]` since 2026-10-12, `desktop` opt-in; `--confirm`, `IPFS_MCP_CONFIRM`); `IPFS_MCP_CONFIRM=none` turns it off, after which only eliciting clients can confirm writes. Per-call confirmation itself cannot be turned off.
 - Config credentials are `{"env": ...}` or `{"file": "/absolute/path"}`, never literals. The default HTTP listen address is `127.0.0.1:5050`; ports of other local services are rejected. No key has a default network endpoint.
 

@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1863,
-  "derivedRevision": 1863,
+  "sourceRevision": 1870,
+  "derivedRevision": 1870,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1863
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1870
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-15T20:23:03.403299Z",
+  "last_updated": "2026-10-15T20:46:46.827133Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 27,
+  "changes_completed": 28,
   "implementation_total": 36,
-  "implementation_completed": 27,
+  "implementation_completed": 28,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 27,
+      "completed": 28,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 61,
+      "completed": 62,
       "total": 76,
       "status": "IN_PROGRESS"
     },
@@ -95,12 +95,12 @@
     {
       "id": "uar-conformance-release",
       "title": "uar-conformance-release",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 3,
-      "tasks_done": 2,
-      "last_task_completed": "After the operator files it (OG-3), record the URL and poll with read-only `gh issue view` until it is visible. Acceptance: URL in the request file; `gh issue view` output saved.",
-      "next_task_pending": "When OG-4 confirms a release, record tag and digest. Acceptance: tag and digest present; the change stays open until then.",
+      "tasks_done": 3,
+      "last_task_completed": "When OG-4 confirms a release, record tag and digest. Acceptance: tag and digest present; the change stays open until then.",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -307,8 +307,8 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 6,
-      "tasks_done": 1,
-      "last_task_completed": "Mark the two superseded changes and write ADR-0010. Acceptance: both old `tasks.md` carry a superseded note; the ADR lists the release gate.",
+      "tasks_done": 3,
+      "last_task_completed": "Pin `uar-preflight.json` to the release tag and digest; set `check-uar` minimum version. Acceptance: no `null` in the preflight file.",
       "next_task_pending": "`backend.kind: uar`: provision the agent against the released API (W9). Acceptance: a fixture test against recorded release responses, and the real-service run of 1.5 shows `GET /api/agents/{id}` retu",
       "blockers": []
     },
@@ -326,8 +326,8 @@
     {
       "id": "kubo-candidate-image",
       "title": "kubo-candidate-image",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "IN_PROGRESS",
+      "implementation_status": "IN_PROGRESS",
       "tasks_total": 6,
       "tasks_done": 5,
       "last_task_completed": "Security-reviewer read of the image PR before OG-12. Acceptance: findings file; no open CRITICAL.",

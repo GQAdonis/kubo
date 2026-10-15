@@ -398,7 +398,10 @@ func TestMCP(t *testing.T) {
 		node := harness.NewT(t).NewNode().Init()
 		addr := freeAddr(t)
 
-		stdout, stderr, code := runMCP(t, node.IPFSBin, node.Dir, "--api", addr)
+		// daemon.wait is 0s here: this case is the fail-at-once path. The
+		// default 60s wait has its own tests in mcp_daemon_wait_test.go.
+		cfg := daemonWaitConfig(t, "0s")
+		stdout, stderr, code := runMCP(t, node.IPFSBin, node.Dir, "--api", addr, "--mcp-config", cfg)
 		assert.NotZero(t, code)
 		assert.Empty(t, stdout)
 		assert.Contains(t, stderr, addr)

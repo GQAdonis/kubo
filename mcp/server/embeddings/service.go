@@ -38,6 +38,12 @@ type Service struct {
 	describer *Describer
 	// extractorErr is why a configured extractor could not be started.
 	extractorErr error
+	// log receives the detail that stage reasons leave out. Nil discards.
+	log *slog.Logger
+	// stageLogMu guards stageLogged, the detail last logged per stage, so a
+	// stage that stays down is logged once and not on every status call.
+	stageLogMu  sync.Mutex
+	stageLogged map[string]string
 }
 
 // Options are test seams of Open. The zero value is the production behavior.
@@ -58,6 +64,18 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
+	// A binary path that cannot run is a configuration error. A binary that
+	// exists but fails to start or become healthy only degrades the stage.
+	if s.Mode == ModeEmbedded {
+		if err := checkBinaryPath("embeddings.embedded.surreal_binary", s.Embedded.Binary); err != nil {
+			return nil, err
+		}
+	}
+	if x := s.Extractor; x != nil && x.Mode == ModeEmbedded {
+		if err := checkBinaryPath("embeddings.extractor.embedded.xberg_binary", x.Embedded.Binary); err != nil {
+			return nil, err
+		}
+	}
 	emb, err := NewEmbedder(s.Embedder, opts.HTTPClient)
 	if err != nil {
 		return nil, err
@@ -66,10 +84,10 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	svc := &Service{settings: s, embedder: emb, policy: s.Policy.Effective()}
+	svc := &Service{settings: s, embedder: emb, policy: s.Policy.Effective(), log: log}
 	switch s.Mode {
 	case ModeEmbedded:
-		svc.lazy = newLazyStore(func(ctx context.Context) (Store, error) { return svc.openEmbeddedStore(ctx, opts, log) })
+		svc.lazy = newLazyStore(func(ctx context.Context) (Store, error) { return svc.openEmbeddedStore(ctx, opts, log) }, embeddedOpenTimeout)
 	case ModeRemote:
 		r := s.Remote
 		c := newSurrealClient(r.Endpoint, r.Namespace, r.Database, parseCredential(r.Credential), opts.HTTPClient)
@@ -82,16 +100,11 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 				return nil, err
 			}
 			return st, nil
-		})
+		}, startupStoreTimeout)
 	}
 	svc.store = svc.lazy
-	sctx, cancel := ctx, context.CancelFunc(func() {})
-	if s.Mode == ModeRemote {
-		// The embedded start has its own deadline (startTimeout).
-		sctx, cancel = context.WithTimeout(ctx, startupStoreTimeout)
-	}
-	err = svc.lazy.ready(sctx)
-	cancel()
+	// The open has its own deadline; this waits for it under ctx.
+	err = svc.lazy.ready(ctx)
 	switch {
 	case errors.Is(err, ErrAuth), errors.Is(err, ErrDimensionMismatch):
 		_ = svc.Close()
@@ -102,7 +115,7 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 	if s.Extractor != nil {
 		x, err := OpenExtractor(ctx, *s.Extractor, opts.HTTPClient, opts)
 		if err != nil {
-			svc.extractorErr = err
+			svc.extractorErr = fmt.Errorf("%w: %w", errNotStarted, err)
 			log.Warn("embeddings extractor is unavailable; files that need it are not extracted until ipfs mcp restarts", "error", clip(err.Error()))
 		}
 		svc.extractor = x
@@ -136,7 +149,7 @@ func (s *Service) openEmbeddedStore(ctx context.Context, opts Options, log *slog
 		if sup, err = StartSupervisor(ctx, *s.settings.Embedded, log); err != nil {
 			s.sup = nil
 			s.mu.Unlock()
-			return nil, err
+			return nil, fmt.Errorf("%w: %w", errNotStarted, err)
 		}
 	}
 	s.sup = sup

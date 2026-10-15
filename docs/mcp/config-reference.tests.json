@@ -63,6 +63,10 @@
     "confirmation.ttl": {
       "tests": ["TestConfirmationKeyDefaults", "TestConfirmationTTLBounds", "TestBrokerConfiguredTTLExpiryIsDenial", "TestConfirmationTTLIsReadFromTheConfigFile", "TestConfirmationTTLDurationReportsInvalidValues", "TestBrokerKeepsExpiredRecordsForTheDefaultGrace", "TestExpiredConfirmationIsDenial", "TestBrokerExpiryIsDenial", "TestMCPConfirmationConfigKeys"]
     },
+    "daemon": { "tests": ["TestDaemonWaitConfig", "TestStartupWaitsForADaemonThatComesUp"] },
+    "daemon.wait": {
+      "tests": ["TestDaemonWaitConfig", "TestStartupWaitsForADaemonThatComesUp", "TestStartupFailsAfterTheWaitBoundWithTheSameError", "TestStartupWaitZeroFailsAtOnce", "TestStartupDoesNotRetryAnAuthRefusal", "TestStartupDoesNotRetryAVersionMismatch", "TestStartupWaitStopsWhenTheContextEnds", "TestMCPDaemonWaitServesOnceTheDaemonComesUp", "TestMCPDaemonWaitFailsAfterTheBound", "TestMCPDaemonWaitDoesNotRetryAnAuthRefusal"]
+    },
     "embeddings": { "tests": ["TestEmbeddingsOffByDefault", "TestIndexToolsAreOffUntilEmbeddingsAreConfigured", "TestMCPEmbeddingsStoreDisabled", "TestMCPEmbeddingIndexOffByDefault"] },
     "embeddings.mode": { "tests": ["TestEmbeddingsModeWithoutItsBlockIsRefused"] },
     "embeddings.embedded": { "tests": ["TestMCPEmbeddingsStoreEmbedded"] },
