@@ -1,0 +1,11 @@
+## mcp log
+Error response from daemon: container 93a6bce4f2fb079ccdce98fc5d0c4e36abc8f84797cff2f3dd891fe50d642660 is not running
+
+## raw GET /index/status
+Error response from daemon: container 93a6bce4f2fb079ccdce98fc5d0c4e36abc8f84797cff2f3dd891fe50d642660 is not running
+
+## raw POST /index/search
+Error response from daemon: container 93a6bce4f2fb079ccdce98fc5d0c4e36abc8f84797cff2f3dd891fe50d642660 is not running
+
+## tools/list
+Error response from daemon: container 93a6bce4f2fb079ccdce98fc5d0c4e36abc8f84797cff2f3dd891fe50d642660 is not running

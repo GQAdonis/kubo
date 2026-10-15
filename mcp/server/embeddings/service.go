@@ -10,6 +10,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // embedBatch is how many chunks go to the embedder in one request.
@@ -21,8 +22,13 @@ const embedBatch = 16
 type Service struct {
 	settings Settings
 	store    Store
+	// lazy is the store when Open built it, nil for a store passed to
+	// NewService. It defines the schema once the store is reachable.
+	lazy     *lazyStore
 	embedder *Embedder
-	sup      *Supervisor
+	// mu guards sup, which a lazy store start sets after Open returns.
+	mu  sync.Mutex
+	sup *Supervisor
 	// storeHost is the host:port of the store when it is not on this machine.
 	storeHost string
 	policy    Policy
@@ -30,6 +36,8 @@ type Service struct {
 	extractor *Extractor
 	// describer is the chat-model client, nil when no describer is configured.
 	describer *Describer
+	// extractorErr is why a configured extractor could not be started.
+	extractorErr error
 }
 
 // Options are test seams of Open. The zero value is the production behavior.
@@ -39,10 +47,13 @@ type Options struct {
 	HTTPClient *http.Client
 }
 
-// Open validates the settings, starts the embedded store if configured,
-// connects to the store and creates the schema. A failure leaves nothing
-// running. Without settings there is no Open: callers do not construct a
-// Service for an absent embeddings section.
+// Open validates the settings and builds the service. Configuration errors
+// (invalid settings, rejected credentials, an index of another dimension) fail
+// here with nothing left running. A store that cannot be reached, and an
+// embedded store or extractor that cannot start, do not: the service opens, the
+// stage reports unavailable (Stages) and the store is tried again on use, at
+// most once per backoff, until its schema is defined. Without settings there is
+// no Open: callers do not construct a Service for an absent embeddings section.
 func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -51,34 +62,48 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+	log := opts.Logger
+	if log == nil {
+		log = slog.New(slog.DiscardHandler)
+	}
 	svc := &Service{settings: s, embedder: emb, policy: s.Policy.Effective()}
-	var c *surrealClient
 	switch s.Mode {
 	case ModeEmbedded:
-		sup, err := StartSupervisor(ctx, *s.Embedded, opts.Logger)
-		if err != nil {
-			return nil, err
-		}
-		svc.sup = sup
-		c = newSurrealClient(sup.Endpoint(), embeddedNamespace, embeddedDatabase, parseCredential(sup.Credential()), opts.HTTPClient)
-		c.gone = sup.Done()
+		svc.lazy = newLazyStore(func(ctx context.Context) (Store, error) { return svc.openEmbeddedStore(ctx, opts, log) })
 	case ModeRemote:
 		r := s.Remote
-		c = newSurrealClient(r.Endpoint, r.Namespace, r.Database, parseCredential(r.Credential), opts.HTTPClient)
+		c := newSurrealClient(r.Endpoint, r.Namespace, r.Database, parseCredential(r.Credential), opts.HTTPClient)
 		if u, err := url.Parse(r.Endpoint); err == nil {
 			svc.storeHost = u.Host
 		}
+		st := newSurrealStore(c, s.Embedder.Dimensions)
+		svc.lazy = newLazyStore(func(ctx context.Context) (Store, error) {
+			if err := st.Bootstrap(ctx); err != nil {
+				return nil, err
+			}
+			return st, nil
+		})
 	}
-	svc.store = newSurrealStore(c, s.Embedder.Dimensions)
-	if err := svc.store.Bootstrap(ctx); err != nil {
+	svc.store = svc.lazy
+	sctx, cancel := ctx, context.CancelFunc(func() {})
+	if s.Mode == ModeRemote {
+		// The embedded start has its own deadline (startTimeout).
+		sctx, cancel = context.WithTimeout(ctx, startupStoreTimeout)
+	}
+	err = svc.lazy.ready(sctx)
+	cancel()
+	switch {
+	case errors.Is(err, ErrAuth), errors.Is(err, ErrDimensionMismatch):
 		_ = svc.Close()
 		return nil, fmt.Errorf("embeddings store: %w", err)
+	case err != nil:
+		log.Warn("embeddings store is unavailable; searching and indexing fail until it is reached, and it is tried again on use", "error", clip(err.Error()))
 	}
 	if s.Extractor != nil {
 		x, err := OpenExtractor(ctx, *s.Extractor, opts.HTTPClient, opts)
 		if err != nil {
-			_ = svc.Close()
-			return nil, fmt.Errorf("embeddings extractor: %w", err)
+			svc.extractorErr = err
+			log.Warn("embeddings extractor is unavailable; files that need it are not extracted until ipfs mcp restarts", "error", clip(err.Error()))
 		}
 		svc.extractor = x
 	}
@@ -91,6 +116,38 @@ func Open(ctx context.Context, s Settings, opts Options) (*Service, error) {
 		svc.describer = d
 	}
 	return svc, nil
+}
+
+// openEmbeddedStore starts the supervised store if it is not running, then
+// defines the schema. A supervisor that has exited is replaced.
+func (s *Service) openEmbeddedStore(ctx context.Context, opts Options, log *slog.Logger) (Store, error) {
+	s.mu.Lock()
+	sup := s.sup
+	if sup != nil {
+		select {
+		case <-sup.Done():
+			_ = sup.Close()
+			sup = nil
+		default:
+		}
+	}
+	if sup == nil {
+		var err error
+		if sup, err = StartSupervisor(ctx, *s.settings.Embedded, log); err != nil {
+			s.sup = nil
+			s.mu.Unlock()
+			return nil, err
+		}
+	}
+	s.sup = sup
+	s.mu.Unlock()
+	c := newSurrealClient(sup.Endpoint(), embeddedNamespace, embeddedDatabase, parseCredential(sup.Credential()), opts.HTTPClient)
+	c.gone = sup.Done()
+	st := newSurrealStore(c, s.settings.Embedder.Dimensions)
+	if err := st.Bootstrap(ctx); err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 // NewService assembles a service from parts that are already open: the store
@@ -114,12 +171,15 @@ func (s *Service) Close() error {
 	if s == nil {
 		return nil
 	}
+	if s.lazy != nil {
+		s.lazy.close()
+	}
 	var errs []error
 	if s.extractor != nil {
 		errs = append(errs, s.extractor.Close())
 	}
-	if s.sup != nil {
-		errs = append(errs, s.sup.Close())
+	if sup := s.Supervisor(); sup != nil {
+		errs = append(errs, sup.Close())
 	}
 	return errors.Join(errs...)
 }
@@ -158,13 +218,20 @@ func (s *Service) Store() Store { return s.store }
 func (s *Service) Embedder() *Embedder { return s.embedder }
 
 // Supervisor is the embedded store's supervisor, nil in remote mode.
-func (s *Service) Supervisor() *Supervisor { return s.sup }
+func (s *Service) Supervisor() *Supervisor {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.sup
+}
 
 // Describe is a one-line, secret-free summary for the startup log.
 func (s *Service) Describe() string {
 	where := "remote store " + s.storeHost
-	if s.sup != nil {
-		where = "embedded store on " + s.sup.Addr()
+	if s.settings.Mode == ModeEmbedded {
+		where = "embedded store (not started)"
+	}
+	if sup := s.Supervisor(); sup != nil {
+		where = "embedded store on " + sup.Addr()
 	}
 	desc := fmt.Sprintf("%s, embedder %s model %s (%d dimensions)", where, s.embedder.Host(), s.embedder.Model(), s.embedder.Dimensions())
 	switch x := s.extractor; {
@@ -328,6 +395,10 @@ func (s *Service) Index(ctx context.Context, covers func(host string) bool, doc 
 	if err := s.CheckEgress(covers); err != nil {
 		return 0, err
 	}
+	// Fail before any text goes to the embedder when it could not be stored.
+	if err := s.Ready(ctx); err != nil {
+		return 0, fmt.Errorf("index %s: %w", doc.CID, err)
+	}
 	rows := make([]Row, 0, total)
 	for _, seg := range segs {
 		for start := 0; start < len(seg.Chunks); start += embedBatch {
@@ -404,6 +475,10 @@ func (s *Service) SearchFiltered(ctx context.Context, covers func(host string) b
 	}
 	if err := s.CheckEgress(covers); err != nil {
 		return nil, err
+	}
+	// Fail closed before the query goes to the embedder.
+	if err := s.Ready(ctx); err != nil {
+		return nil, fmt.Errorf("search: %w", err)
 	}
 	vecs, err := s.embedder.Embed(ctx, covers, []string{query})
 	if err != nil {

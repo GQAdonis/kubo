@@ -1,0 +1,19 @@
+# POST /agui
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 403 Forbidden
+wget: server returned error: HTTP/1.1 403 Forbidden
+
+# GET /agent/settings
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+
+# POST /index/search
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+
+# GET /index/status
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found

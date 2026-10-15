@@ -108,6 +108,21 @@ type indexStatusOutput struct {
 	CIDIndexed     *bool  `json:"cid_indexed,omitempty"`
 	// ByKind counts distinct indexed files per content kind.
 	ByKind map[string]int `json:"by_kind,omitempty"`
+	// Stages says which stage of the pipeline (store, embedder and, when
+	// configured, extractor) cannot be used now, and why. It is present only
+	// when one cannot, so the output of a healthy index is unchanged. The
+	// contract schema of this output does not list it yet.
+	Stages map[string]embeddings.StageStatus `json:"stages,omitempty"`
+}
+
+// anyUnavailable reports whether a stage cannot be used.
+func anyUnavailable(stages map[string]embeddings.StageStatus) bool {
+	for _, st := range stages {
+		if !st.Available {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) indexStatus(ctx context.Context, raw json.RawMessage) (any, error) {
@@ -128,6 +143,9 @@ func (s *Server) indexStatus(ctx context.Context, raw json.RawMessage) (any, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, statusProbeTimeout)
 	defer cancel()
+	if stages := svc.Stages(ctx, callerCovers(ctx)); anyUnavailable(stages) {
+		out.Stages = stages
+	}
 	chunks, err := svc.Store().Count(ctx)
 	if err != nil {
 		s.log.Debug("index status: store unreachable", "error", err)

@@ -369,7 +369,7 @@ With `policy.auto` set to `true`, every successful `ipfs_add` from `ipfs mcp` is
 
 | Tool | Class | What it does |
 |------|-------|--------------|
-| `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts no embedder. |
+| `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts the embedder or a remote extractor only when the caller's `egress_ack` covers its host: one bare GET, no credential, no content. An optional `stages` map (`store`, `embedder`, `extractor`, each `available` plus an optional `reason`) appears only when a stage is unavailable. |
 | `ipfs_index_search` | read, content egress, untrusted content | Embeds `query`, returns the `top_k` (default 5, at most 50) nearest chunks with CID, path, chunk index, score (1 minus cosine distance) and text, plus `kind`, `source`, `mime_type` and, for descriptions, `described_by`. `cid` restricts the search to one CID; the optional `kinds` and `sources` filters restrict it to those content kinds or chunk sources. |
 | `ipfs_index_cid` | write (confirmed) | Indexes one UnixFS file by CID: `files/stat`, then `cat` of at most `max_bytes`, routed through the stages of its [content kind](#content-kinds). `force: true` re-indexes a CID that already has entries. |
 | `ipfs_index_reconcile` | write (confirmed), `destructiveHint` | Deletes the entries of indexed CIDs that no pin covers and that are no longer in the MFS, one page per call; unknown coverage keeps entries. See [Reconciliation](#reconciliation). |
@@ -477,6 +477,7 @@ Embedding settings are read when `ipfs mcp` starts; changing them restarts `ipfs
 
 ## Limitations
 
+- **Unreachable search services.** Startup no longer fails when the store, embedder or extractor is unreachable. The store is opened on first use, with backoff from 2 s up to 1 min; search and indexing answer `index_unavailable` (retryable) until the store is reached, and `GET /index/status` reports the unavailable stages. Startup still fails on configuration errors: invalid settings, a credential over plain `http`, rejected store credentials (`ErrAuth`) and an embedding dimension mismatch. Known limits: an embedded xberg that fails to start is not retried until restart, and a bulk run left `running` by a crash is marked paused only when the store is reachable at startup.
 - **The operator identity cannot index.** Stdio and `--auth-token-*` carry no `egress_ack`, so indexing and search need a configured HTTP principal. This keeps content from reaching an embedder by default, at the cost of one more config entry.
 - **Video description has no Mac path.** On Desktop, video search covers only the audio transcript unless you configure a hosted describer, which receives the video's bytes.
 - **Derived text is stored.** Extracted text, OCR output, transcripts and descriptions sit in SurrealDB next to their vectors (natively indexed text is not stored). Deletion follows pins and the MFS: an unpin through `ipfs mcp` drops the entries of every indexed file no longer covered, including the files under an unpinned directory, but between an out-of-band unpin and the next reconciliation that text stays readable to anyone with the store.

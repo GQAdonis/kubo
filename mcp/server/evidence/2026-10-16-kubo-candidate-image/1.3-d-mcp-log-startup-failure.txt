@@ -1,0 +1,1 @@
+Error: ipfs mcp: embeddings: embeddings store: define schema: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused (defining the namespace and database also failed: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused)

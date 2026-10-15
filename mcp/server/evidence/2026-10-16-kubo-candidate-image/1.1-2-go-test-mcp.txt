@@ -1,0 +1,7 @@
+ok  	github.com/ipfs/kubo/mcp/app	(cached)
+ok  	github.com/ipfs/kubo/mcp/contract	(cached)
+ok  	github.com/ipfs/kubo/mcp/server	105.174s
+ok  	github.com/ipfs/kubo/mcp/server/confirm	3.399s
+ok  	github.com/ipfs/kubo/mcp/server/embeddings	5.763s
+?   	github.com/ipfs/kubo/mcp/ui/catalog	[no test files]
+exit=0

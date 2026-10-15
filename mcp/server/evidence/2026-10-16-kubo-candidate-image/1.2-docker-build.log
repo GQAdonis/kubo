@@ -1,0 +1,262 @@
+#0 building with "orbstack" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 4.30kB 0.1s done
+#1 DONE 0.6s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 2.0s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.1s done
+#3 sha256:e291cde6b1429712d3951bca77be92338719212df6654812f1a55874a481742d 1.13kB / 1.13kB done
+#3 sha256:6fd0aed5103f5db618989de6a2a3e801d8bd77dd60aee7194a696544ae33fe0a 1.41kB / 1.41kB done
+#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 0B / 13.13MB 0.1s
+#3 sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 9.08kB / 9.08kB done
+#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 3.15MB / 13.13MB 0.3s
+#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 13.13MB / 13.13MB 0.5s
+#3 extracting sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550
+#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 13.13MB / 13.13MB 0.8s done
+#3 extracting sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 0.8s done
+#3 DONE 2.2s
+
+#4 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#4 ...
+
+#5 [internal] load metadata for docker.io/library/busybox:stable-glibc
+#5 DONE 0.5s
+
+#6 [internal] load metadata for docker.io/library/golang:1.26.5
+#6 DONE 1.1s
+
+#4 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#4 DONE 1.2s
+
+#7 [internal] load .dockerignore
+#7 transferring context:
+#7 transferring context: 297B done
+#7 DONE 0.1s
+
+#8 [stage-2  1/10] FROM docker.io/library/busybox:stable-glibc@sha256:7e567dff0fbaa48cddc5f52ae5201a7f417436aa20e70c8750814692043dfa38
+#8 CACHED
+
+#9 [internal] load build context
+#9 transferring context:
+#9 transferring context: 81.54MB 5.1s
+#9 ...
+
+#10 [builder 1/6] FROM docker.io/library/golang:1.26.5@sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678
+#10 resolve docker.io/library/golang:1.26.5@sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678 0.3s done
+#10 sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678 9.70kB / 9.70kB done
+#10 sha256:04b188c2db8449ea15c09355dfab9ce9ed4ecf9414e94674104e316bda7d1996 2.32kB / 2.32kB done
+#10 sha256:137f0abf688b41314e4a616eaaea49ab50d6556cafcd468090438172f7dd0957 3.06kB / 3.06kB done
+#10 sha256:90725215fc9329f897d713a0f3b88b69d337f4408372722c181d951dae01897d 98.47MB / 98.47MB 5.7s done
+#10 sha256:9e4d5c89bdd324edeb5721c09064e2659473bba39ae9d84fae53c9cc0181cf15 64.18MB / 64.18MB 2.7s done
+#10 sha256:43321a09d6189c4981e6a830a3e4b3af25295115acd4c369414652f1ba3d59bb 127B / 127B 2.0s done
+#10 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 3.4s done
+#10 extracting sha256:90725215fc9329f897d713a0f3b88b69d337f4408372722c181d951dae01897d 0.8s
+#10 ...
+
+#9 [internal] load build context
+#9 ...
+
+#11 [utilities 1/2] FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+#11 resolve docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 0.4s done
+#11 sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 5.65kB / 5.65kB done
+#11 sha256:a4672c0cb26fbdde88e38fa2dfb6c681942306680e41e4378b28770b6e79ee91 1.02kB / 1.02kB done
+#11 sha256:d4c45f66efc59f89b0597d343a9bd72808493c0eacecde5285961743252cee23 453B / 453B done
+#11 sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39 28.25MB / 28.25MB 1.1s done
+#11 extracting sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39 5.9s done
+#11 DONE 9.1s
+
+#9 [internal] load build context
+#9 transferring context: 463.32MB 10.2s
+#9 transferring context: 866.63MB 15.2s
+#9 ...
+
+#10 [builder 1/6] FROM docker.io/library/golang:1.26.5@sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678
+#10 extracting sha256:90725215fc9329f897d713a0f3b88b69d337f4408372722c181d951dae01897d 7.7s done
+#10 extracting sha256:9e4d5c89bdd324edeb5721c09064e2659473bba39ae9d84fae53c9cc0181cf15 2.9s
+#10 ...
+
+#9 [internal] load build context
+#9 ...
+
+#12 [utilities 2/2] RUN set -eux; 	apt-get update; 	apt-get install -y --no-install-recommends 		tini 		gosu     fuse     ca-certificates 	; 	apt-get clean; 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#12 0.739 + apt-get update
+#12 1.134 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+#12 1.242 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+#12 1.306 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+#12 2.243 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+#12 4.427 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+#12 4.428 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [353 kB]
+#12 6.181 Fetched 9392 kB in 5s (1802 kB/s)
+#12 6.181 Reading package lists...
+#12 7.412 + apt-get install -y --no-install-recommends tini gosu fuse ca-certificates
+#12 7.484 Reading package lists...
+#12 9.031 Building dependency tree...
+#12 9.314 Reading state information...
+#12 9.839 The following additional packages will be installed:
+#12 9.840   libfuse2 libssl3 openssl
+#12 9.933 The following NEW packages will be installed:
+#12 9.934   ca-certificates fuse gosu libfuse2 libssl3 openssl tini
+#12 10.13 0 upgraded, 7 newly installed, 0 to remove and 1 not upgraded.
+#12 10.13 Need to get 4857 kB of archives.
+#12 10.13 After this operation, 12.4 MB of additional disk space will be used.
+#12 10.13 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u1 [2039 kB]
+#12 ...
+
+#9 [internal] load build context
+#9 transferring context: 1.08GB 20.2s
+#9 transferring context: 1.39GB 25.3s
+#9 ...
+
+#10 [builder 1/6] FROM docker.io/library/golang:1.26.5@sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678
+#10 extracting sha256:9e4d5c89bdd324edeb5721c09064e2659473bba39ae9d84fae53c9cc0181cf15 13.6s
+#10 ...
+
+#9 [internal] load build context
+#9 ...
+
+#12 [utilities 2/2] RUN set -eux; 	apt-get update; 	apt-get install -y --no-install-recommends 		tini 		gosu     fuse     ca-certificates 	; 	apt-get clean; 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#12 10.96 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u1 [1442 kB]
+#12 11.36 Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u1 [162 kB]
+#12 11.44 Get:4 http://deb.debian.org/debian bookworm/main amd64 libfuse2 amd64 2.9.9-6+b1 [119 kB]
+#12 11.47 Get:5 http://deb.debian.org/debian bookworm/main amd64 fuse amd64 2.9.9-6+b1 [61.3 kB]
+#12 11.48 Get:6 http://deb.debian.org/debian bookworm/main amd64 gosu amd64 1.14-1+b10 [766 kB]
+#12 11.62 Get:7 http://deb.debian.org/debian bookworm/main amd64 tini amd64 0.19.0-1+b3 [267 kB]
+#12 12.27 debconf: delaying package configuration, since apt-utils is not installed
+#12 12.39 Fetched 4857 kB in 2s (2800 kB/s)
+#12 12.53 Selecting previously unselected package libssl3:amd64.
+#12 12.53 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6096 files and directories currently installed.)
+#12 12.55 Preparing to unpack .../0-libssl3_3.0.22-1~deb12u1_amd64.deb ...
+#12 14.52 Unpacking libssl3:amd64 (3.0.22-1~deb12u1) ...
+#12 15.56 Selecting previously unselected package openssl.
+#12 15.56 Preparing to unpack .../1-openssl_3.0.22-1~deb12u1_amd64.deb ...
+#12 15.57 Unpacking openssl (3.0.22-1~deb12u1) ...
+#12 15.90 Selecting previously unselected package ca-certificates.
+#12 15.90 Preparing to unpack .../2-ca-certificates_20250419~deb12u1_all.deb ...
+#12 15.92 Unpacking ca-certificates (20250419~deb12u1) ...
+#12 16.45 Selecting previously unselected package libfuse2:amd64.
+#12 16.46 Preparing to unpack .../3-libfuse2_2.9.9-6+b1_amd64.deb ...
+#12 16.48 Unpacking libfuse2:amd64 (2.9.9-6+b1) ...
+#12 16.99 Selecting previously unselected package fuse.
+#12 16.99 Preparing to unpack .../4-fuse_2.9.9-6+b1_amd64.deb ...
+#12 17.02 Unpacking fuse (2.9.9-6+b1) ...
+#12 17.22 Selecting previously unselected package gosu.
+#12 17.23 Preparing to unpack .../5-gosu_1.14-1+b10_amd64.deb ...
+#12 17.24 Unpacking gosu (1.14-1+b10) ...
+#12 17.66 Selecting previously unselected package tini.
+#12 17.66 Preparing to unpack .../6-tini_0.19.0-1+b3_amd64.deb ...
+#12 17.67 Unpacking tini (0.19.0-1+b3) ...
+#12 18.14 Setting up libssl3:amd64 (3.0.22-1~deb12u1) ...
+#12 18.17 Setting up libfuse2:amd64 (2.9.9-6+b1) ...
+#12 18.18 Setting up gosu (1.14-1+b10) ...
+#12 18.19 Setting up tini (0.19.0-1+b3) ...
+#12 18.20 Setting up openssl (3.0.22-1~deb12u1) ...
+#12 18.24 Setting up fuse (2.9.9-6+b1) ...
+#12 18.40 Setting up ca-certificates (20250419~deb12u1) ...
+#12 18.88 debconf: unable to initialize frontend: Dialog
+#12 18.88 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#12 18.88 debconf: falling back to frontend: Readline
+#12 18.88 debconf: unable to initialize frontend: Readline
+#12 18.88 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+#12 18.88 debconf: falling back to frontend: Teletype
+#12 ...
+
+#9 [internal] load build context
+#9 transferring context: 1.79GB 30.3s
+#9 ...
+
+#10 [builder 1/6] FROM docker.io/library/golang:1.26.5@sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678
+#10 extracting sha256:9e4d5c89bdd324edeb5721c09064e2659473bba39ae9d84fae53c9cc0181cf15 15.5s done
+#10 extracting sha256:43321a09d6189c4981e6a830a3e4b3af25295115acd4c369414652f1ba3d59bb 0.0s done
+#10 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.0s done
+#10 DONE 33.4s
+
+#9 [internal] load build context
+#9 transferring context: 2.01GB 35.4s
+#9 transferring context: 2.26GB 39.0s done
+#9 DONE 39.5s
+
+#12 [utilities 2/2] RUN set -eux; 	apt-get update; 	apt-get install -y --no-install-recommends 		tini 		gosu     fuse     ca-certificates 	; 	apt-get clean; 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#12 27.80 Updating certificates in /etc/ssl/certs...
+#12 ...
+
+#13 [builder 2/6] COPY go.mod go.sum /kubo/
+#13 DONE 2.4s
+
+#14 [builder 3/6] WORKDIR /kubo
+#14 DONE 0.4s
+
+#12 [utilities 2/2] RUN set -eux; 	apt-get update; 	apt-get install -y --no-install-recommends 		tini 		gosu     fuse     ca-certificates 	; 	apt-get clean; 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#12 ...
+
+#15 [builder 4/6] RUN --mount=type=cache,target=/go/pkg/mod   go mod download
+#15 ...
+
+#12 [utilities 2/2] RUN set -eux; 	apt-get update; 	apt-get install -y --no-install-recommends 		tini 		gosu     fuse     ca-certificates 	; 	apt-get clean; 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#12 38.82 150 added, 0 removed; done.
+#12 39.23 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+#12 39.32 Processing triggers for ca-certificates (20250419~deb12u1) ...
+#12 39.39 Updating certificates in /etc/ssl/certs...
+#12 49.62 0 added, 0 removed; done.
+#12 49.62 Running hooks in /etc/ca-certificates/update.d...
+#12 49.65 done.
+#12 50.86 + apt-get clean
+#12 50.96 + rm -rf /var/lib/apt/lists/auxfiles /var/lib/apt/lists/deb.debian.org_debian-security_dists_bookworm-security_InRelease /var/lib/apt/lists/deb.debian.org_debian-security_dists_bookworm-security_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm-updates_InRelease /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm-updates_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm_InRelease /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/lock /var/lib/apt/lists/partial /tmp/* /var/tmp/*
+#12 DONE 57.6s
+
+#15 [builder 4/6] RUN --mount=type=cache,target=/go/pkg/mod   go mod download
+#15 DONE 24.6s
+
+#16 [builder 5/6] COPY . /kubo
+#16 ...
+
+#17 [stage-2  2/10] COPY --from=utilities /usr/sbin/gosu /sbin/gosu
+#17 DONE 0.2s
+
+#18 [stage-2  3/10] COPY --from=utilities /usr/bin/tini /sbin/tini
+#18 DONE 0.2s
+
+#16 [builder 5/6] COPY . /kubo
+#16 ...
+
+#19 [stage-2  4/10] COPY --from=utilities /bin/fusermount /usr/local/bin/fusermount
+#19 DONE 0.2s
+
+#20 [stage-2  5/10] COPY --from=utilities /etc/ssl/certs /etc/ssl/certs
+#20 DONE 0.3s
+
+#16 [builder 5/6] COPY . /kubo
+#16 DONE 18.5s
+
+#21 [builder 6/6] RUN --mount=type=cache,target=/go/pkg/mod   --mount=type=cache,target=/root/.cache/go-build   mkdir -p .git/objects   && GOOS=linux GOARCH=amd64 GOFLAGS=-buildvcs=false make build IPFS_PLUGINS=$IPFS_PLUGINS
+#21 1.496 plugin/loader/preload.sh > plugin/loader/preload.go
+#21 1.518 go fmt plugin/loader/preload.go >/dev/null
+#21 2.062 go build -buildvcs=false "-trimpath" -ldflags="-X "github.com/ipfs/kubo".CurrentCommit=ff1d66e -X "github.com/ipfs/kubo".taggedRelease= -X "github.com/ipfs/kubo".buildOrigin=" -o "cmd/ipfs/ipfs" "github.com/ipfs/kubo/cmd/ipfs"
+#21 DONE 43.4s
+
+#22 [stage-2  6/10] COPY --from=builder /kubo/cmd/ipfs/ipfs /usr/local/bin/ipfs
+#22 DONE 0.2s
+
+#23 [stage-2  7/10] COPY --from=builder --chmod=755 /kubo/bin/container_daemon /usr/local/bin/start_ipfs
+#23 DONE 0.2s
+
+#24 [stage-2  8/10] COPY --from=builder /kubo/bin/container_init_run /usr/local/bin/container_init_run
+#24 DONE 0.1s
+
+#25 [stage-2  9/10] RUN chmod 4755 /usr/local/bin/fusermount
+#25 DONE 0.5s
+
+#26 [stage-2 10/10] RUN mkdir -p /data/ipfs /ipfs /ipns /mfs /container-init.d   && adduser -D -h /data/ipfs -u 1000 -G users ipfs   && chown ipfs:users /data/ipfs /ipfs /ipns /mfs /container-init.d
+#26 DONE 0.4s
+
+#27 exporting to image
+#27 exporting layers
+#27 exporting layers 0.4s done
+#27 writing image sha256:87a34626a9f31ef01f5aa05ae291176b64803cc393af6375ea2c938aca9a068a 0.0s done
+#27 naming to ghcr.io/gqadonis/kubo:ff1d66e0f 0.0s done
+#27 DONE 0.5s
+exit=0

@@ -1,0 +1,28 @@
+## raw POST /agui (ui throwaway token)
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Date: Thu, 15 Oct 2026 19:32:09 GMT
+Content-Length: 105
+Connection: close
+
+{"error":{"code":"backend_not_configured","message":"no model backend is configured","retryable":false}}
+
+## raw POST /index/search
+HTTP/1.1 404 Not Found
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Thu, 15 Oct 2026 19:32:09 GMT
+Content-Length: 19
+Connection: close
+
+404 page not found
+
+## raw GET /agent/settings
+HTTP/1.1 404 Not Found
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Thu, 15 Oct 2026 19:32:09 GMT
+Content-Length: 19
+Connection: close
+
+404 page not found

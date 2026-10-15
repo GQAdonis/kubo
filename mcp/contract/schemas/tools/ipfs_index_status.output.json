@@ -49,6 +49,58 @@
         "type": "integer",
         "minimum": 0
       }
+    },
+    "stages": {
+      "type": "object",
+      "description": "Optional. Present only when a stage is unavailable. The embedder, and a remote extractor, appear only when the caller's egress_ack covers their host; the probe is then one bare GET with no credential and no content. Absent from servers that predate it; clients treat absence as all stages available.",
+      "additionalProperties": false,
+      "properties": {
+        "store": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        },
+        "embedder": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        },
+        "extractor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   },
   "required": [

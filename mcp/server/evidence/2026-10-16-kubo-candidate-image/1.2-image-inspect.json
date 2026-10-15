@@ -1,0 +1,80 @@
+[
+    {
+        "Id": "sha256:87a34626a9f31ef01f5aa05ae291176b64803cc393af6375ea2c938aca9a068a",
+        "RepoTags": [
+            "ghcr.io/gqadonis/kubo:ff1d66e0f"
+        ],
+        "RepoDigests": [],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-10-15T14:30:10.932237621-05:00",
+        "Config": {
+            "ExposedPorts": {
+                "4001/tcp": {},
+                "4001/udp": {},
+                "5001/tcp": {},
+                "8080/tcp": {},
+                "8081/tcp": {}
+            },
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "SRC_DIR=/kubo",
+                "IPFS_PATH=/data/ipfs",
+                "GOLOG_LOG_LEVEL="
+            ],
+            "Entrypoint": [
+                "/sbin/tini",
+                "--",
+                "/usr/local/bin/start_ipfs"
+            ],
+            "Cmd": [
+                "daemon",
+                "--migrate=true",
+                "--agent-version-suffix=docker"
+            ],
+            "Volumes": {
+                "/data/ipfs": {}
+            },
+            "ArgsEscaped": true,
+            "Healthcheck": {
+                "Test": [
+                    "CMD-SHELL",
+                    "ipfs --api=/ip4/127.0.0.1/tcp/5001 diag healthy > /dev/null 2>&1 || exit 1"
+                ],
+                "Interval": 30000000000,
+                "Timeout": 3000000000,
+                "StartPeriod": 5000000000,
+                "Retries": 3
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 108292433,
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/5r90mqxbo6j3aghetsub4npqf/diff:/var/lib/docker/overlay2/ion1bn9zkjyx23kh9dma8x7to/diff:/var/lib/docker/overlay2/mrt2txuhzn2yulk9exp934js8/diff:/var/lib/docker/overlay2/uzp9s098ffaivenlbm7e3ghz7/diff:/var/lib/docker/overlay2/2tggwotxdoag45hxt21h8uh24/diff:/var/lib/docker/overlay2/yhgi88xdkhz7zk33a1ch4d9yl/diff:/var/lib/docker/overlay2/nd69qzv5edotom3j1r0a2u0li/diff:/var/lib/docker/overlay2/4xk15axj63rz50hw2ejggsqcl/diff:/var/lib/docker/overlay2/c90de791fa5e92820930446954047395e59a1f80370dab430d9223ebec0ee0a4/diff",
+                "MergedDir": "/var/lib/docker/overlay2/zlutw95irtractug4z9z3i13g/merged",
+                "UpperDir": "/var/lib/docker/overlay2/zlutw95irtractug4z9z3i13g/diff",
+                "WorkDir": "/var/lib/docker/overlay2/zlutw95irtractug4z9z3i13g/work"
+            },
+            "Name": "overlay2"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:97e4ece8f8a4d01b66df2c55c1f1e8a2860597b54dffbbc0df2f9942062cb34d",
+                "sha256:a175d063121468418054b7c691e79714e613abdb3df88b00b5d2f7e5e29998fa",
+                "sha256:94fbe35a0a7717ecf7b45c61652e7bec03a093dbf9776bb07134a3b7ee6510a6",
+                "sha256:9b7f9f3086b7b05d967655e2f0659e24e55461a4534c08bdd01647768a0ca767",
+                "sha256:586f0f3cec28b07f98d18d95b35cbffdce8179b6090923921617bb4c7695d51a",
+                "sha256:22489d5b7067687b9ea20c907376b2338160f58d029fe5f569ef3ad1951768b9",
+                "sha256:1d95c2b385710d411eb069c26bdb27c35a40000a56a4411b2ab79f2713fba911",
+                "sha256:61c3d84da6e024f59d98834ad90dd471490a7f017dbf82390b5bbad15768247e",
+                "sha256:39c23800f859934b900f769a683aab4078a6ead9e5bdb6dba5f5d71d1713f81a",
+                "sha256:f04b4f6d687cf9372ed5e6bcf7f39763ad2cecc6c229b8c0dc86a1b9102931b5"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-10-15T14:30:11.423889306-05:00"
+        }
+    }
+]

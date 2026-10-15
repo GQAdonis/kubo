@@ -14,3 +14,13 @@ Change-level prerequisites (plan revision 3): every task in this change also req
 ## Plan revision 4 amendment (OG-16, 2026-10-14)
 
 - Task 1.3 adds two container smoke checks: with no `embeddings` section, `POST /index/search` answers 404 and no `ipfs_index_bulk_*` tool is listed; with an `embeddings` section whose store, extractor and embedder are unreachable, the container still starts and `GET /index/status` reports those stages unavailable (ADR-0009 absent-dependency rule). Change-level dependencies do not grow (O-10).
+
+## Amendment (2026-10-16, lead ruling): task 1.3 disabled-state codes
+
+The 1.3 acceptance text above is wrong for the no-principal case; the server behavior is correct (an absent secret disables the principal and fails closed; `mcp/server/agui.go:145-149` requires an authenticated `ui` principal before the backend check at `agui.go:150-153`). The corrected expectations, which supersede the 503 wording in 1.3:
+
+- With the principal tokens absent (or a `ui` principal configured but its credential env var unset), `/agui` refuses every request with 403.
+- With a throwaway `ui` token, `/agui` answers 503 `backend_not_configured`.
+- The settings route answers 404 (it is not mounted without `EnableAgentSettings`; `mcp/server/settings.go:165-168`).
+
+Second note (2026-10-16, lead ruling): the unreachable-dependencies smoke uses a `ui` principal with `egress_ack: ["local"]`. The store, embedder and extractor stages then all report unavailable in `GET /index/status`, and `POST /index/search` answers 503 `index_unavailable`. `ipfs mcp` still starts, because startup no longer fails on unreachable search services.
