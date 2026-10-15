@@ -4,6 +4,7 @@ package server
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -103,6 +104,34 @@ func TestSettingsSchemeChangeNeedsConfirmationEvenWhenHostAcknowledged(t *testin
 	etag2, _ := getSettings(t, e)
 	resp = e.do(t, http.MethodPut, tokSettingsAdmin, `{"backend":{"model":"m2"}}`, map[string]string{"If-Match": etag2})
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// A downgrade from https to http on the same hostname needs the typed
+// confirmation whatever the port: a bare egress_ack host covers every port, so
+// a port that differs must not turn the downgrade into an acknowledged move (N1).
+func TestSettingsHTTPSDowngradeNeedsConfirmationWhateverThePort(t *testing.T) {
+	for _, base := range []string{
+		"http://models.example.com/v1",
+		"http://models.example.com:80/v1",
+		"http://models.example.com:8080/v1",
+	} {
+		t.Run(base, func(t *testing.T) {
+			e := newSettingsEnvWith(t, hardenedHTTPSConfig, "", adminVerifierWithAck(t, []string{"models.example.com"}))
+			etag, before := getSettings(t, e)
+			write := `{"backend":{"base_url":"` + base + `"}`
+
+			resp := e.do(t, http.MethodPut, tokSettingsAdmin, write+`}`, map[string]string{"If-Match": etag})
+			requireSettingsError(t, resp, http.StatusConflict, "egress_confirmation_required")
+			_, after := getSettings(t, e)
+			assert.Equal(t, before, after, "the unconfirmed downgrade changed nothing")
+
+			u, err := url.Parse(base)
+			require.NoError(t, err)
+			resp = e.do(t, http.MethodPut, tokSettingsAdmin, write+`,"egress_confirmation":{"host":"`+u.Host+`"}}`, map[string]string{"If-Match": etag})
+			require.Equal(t, http.StatusOK, resp.StatusCode, bodyString(t, resp))
+			assert.Equal(t, base, currentBaseURL(t, e))
+		})
+	}
 }
 
 // ---- L2: audit line ----
@@ -278,6 +307,19 @@ func TestSettingsLimiterIsPerPrincipalAndCapsConcurrency(t *testing.T) {
 	require.NotNil(t, again)
 	assert.Zero(t, retry)
 	again()
+}
+
+// A refusal whose computed wait rounds to zero is still a refusal: it never
+// returns a nil release function together with a zero retry (N3).
+func TestSettingsLimiterRefusalNeverRoundsToZero(t *testing.T) {
+	l := newSettingsLimiter(1, 1, 2)
+	clock := &stepClock{t: time.Unix(1_000_000, 0)}
+	l.now = clock.now
+	l.buckets["a"] = &limiterBucket{tokens: 1 - 1e-12, last: clock.now()}
+
+	done, retry := l.take("a")
+	assert.Nil(t, done)
+	assert.Positive(t, retry, "a token short by 1e-12 is a refusal with a positive retry")
 }
 
 func TestSettingsEventSubscriberCap(t *testing.T) {

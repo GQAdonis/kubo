@@ -389,6 +389,29 @@ func (b *Broker) Resolve(id, resolver string, approve bool) error {
 	return nil
 }
 
+// Cancel ends a confirmation that has not run: a pending or approved one
+// becomes denied and no longer matches a repeated call, so an approval that
+// can no longer be used is never claimed later. A confirmation that already
+// ended (denied, expired, executed) is left as it is.
+func (b *Broker) Cancel(id string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	r, ok := b.byID[id]
+	if !ok {
+		return
+	}
+	b.refresh(r)
+	if r.State != StatePending && r.State != StateApproved {
+		return
+	}
+	r.State = StateDenied
+	r.ResolvedAt = b.now()
+	if b.active[r.dedupe] == id {
+		delete(b.active, r.dedupe)
+	}
+	b.signal()
+}
+
 // Pending lists the confirmations that still wait for a decision.
 func (b *Broker) Pending() []Pending {
 	b.mu.Lock()

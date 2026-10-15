@@ -336,6 +336,12 @@ func (s *Server) readChunks(ctx context.Context, path string, pol embeddings.Pol
 	ctx, cancel := context.WithTimeout(ctx, chunkReadTimeout)
 	defer cancel()
 	want := int64(pol.MaxBytes) + 1
+	// upto comes from the store. A file that policy.max_bytes allows has at most
+	// MaxBytes/ChunkChars+1 chunks, so a larger index cannot name a real chunk;
+	// clamping it keeps the product below from overflowing.
+	if pol.ChunkChars > 0 {
+		upto = min(max(upto, 0), pol.MaxBytes/pol.ChunkChars)
+	}
 	if need := (int64(upto) + 2) * int64(pol.ChunkChars) * utf8.UTFMax; need < want {
 		want = need
 	}

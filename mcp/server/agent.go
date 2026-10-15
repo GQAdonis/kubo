@@ -492,7 +492,10 @@ func (a *Agent) denyRevoked(s *agentSession, entries []ResumeEntry) {
 	}
 	for _, e := range entries {
 		if e.InterruptID == s.interrupt.ID {
-			_ = a.srv.ResolveConfirmation(s.interrupt.ConfirmationID, "", false)
+			// Cancel, not Resolve: an already approved confirmation must end
+			// too, or the session stays blocked until it expires and a model
+			// that repeats the call could still claim the approval.
+			a.srv.CancelConfirmation(s.interrupt.ConfirmationID)
 			return
 		}
 	}

@@ -404,6 +404,12 @@ func (s *Server) ResolveConfirmation(id, resolver string, approve bool) error {
 	return s.gate.broker.Resolve(id, resolver, approve)
 }
 
+// CancelConfirmation ends a pending or approved confirmation that will not run,
+// so it cannot be claimed later. It is not a decision by a person.
+func (s *Server) CancelConfirmation(id string) {
+	s.gate.broker.Cancel(id)
+}
+
 // AwaitConfirmation blocks until the confirmation is no longer pending and
 // returns its state (approved, denied, expired or executed), or returns ctx's
 // error when ctx ends first. It records no decision: a transport that watches a

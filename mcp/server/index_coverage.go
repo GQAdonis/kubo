@@ -60,6 +60,17 @@ func (s *Server) childrenLocal(ctx context.Context, c string) ([]string, error) 
 // walk stopped short: it reached coverWalkNodes or coverWalkDepth, or a block
 // was not on the node, in which case err is the first such failure.
 func (s *Server) walkFiles(ctx context.Context, root string, visit func(c string)) (complete bool, err error) {
+	return s.walkNodes(ctx, root, func(c string, dir bool) {
+		if !dir {
+			visit(c)
+		}
+	})
+}
+
+// walkNodes is walkFiles for callers that also want the directories: visit
+// gets the CID of every file and every directory under root, root included,
+// with dir telling which.
+func (s *Server) walkNodes(ctx context.Context, root string, visit func(c string, dir bool)) (complete bool, err error) {
 	type item struct {
 		cid   string
 		depth int
@@ -90,8 +101,9 @@ func (s *Server) walkFiles(ctx context.Context, root string, visit func(c string
 		}
 		switch st.Type {
 		case "file":
-			visit(it.cid)
+			visit(it.cid, false)
 		case "directory":
+			visit(it.cid, true)
 			if it.depth >= coverWalkDepth {
 				complete = false
 				continue
@@ -112,7 +124,7 @@ func (s *Server) walkFiles(ctx context.Context, root string, visit func(c string
 	return complete, err
 }
 
-// mfsCoverage answers whether the MFS holds a file, by walking the MFS once on
+// mfsCoverage answers whether the MFS holds a file or directory, by walking the MFS once on
 // first use. The walk starts from the CID of the MFS root, which is a node the
 // daemon holds in memory, and reads everything below it offline (files/ls and
 // files/stat on an MFS path would load directories through the online DAG
@@ -120,7 +132,7 @@ func (s *Server) walkFiles(ctx context.Context, root string, visit func(c string
 type mfsCoverage struct {
 	s        *Server
 	loaded   bool
-	hashes   map[string]struct{} // multihashes of the files in the MFS
+	hashes   map[string]struct{} // multihashes of the files and directories in the MFS
 	complete bool
 	err      error
 }
@@ -138,14 +150,16 @@ func (m *mfsCoverage) load(ctx context.Context) {
 		m.err = err
 		return
 	}
-	m.complete, m.err = m.s.walkFiles(ctx, root.Hash, func(c string) {
+	// Directories count too: ipfs_add wraps a named file in a directory and
+	// indexes the wrapper, so a directory the MFS holds can carry entries.
+	m.complete, m.err = m.s.walkNodes(ctx, root.Hash, func(c string, _ bool) {
 		if parsed, err := cid.Decode(c); err == nil {
 			m.hashes[string(parsed.Hash())] = struct{}{}
 		}
 	})
 }
 
-// covers reports whether the MFS holds the file c, and whether that answer is
+// covers reports whether the MFS holds the file or directory c, and whether that answer is
 // known: a file not found in a walk that did not finish may still be in the
 // part that was not read, so it is reported as unknown and kept.
 func (m *mfsCoverage) covers(ctx context.Context, c string) (in, known bool) {

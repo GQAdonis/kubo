@@ -48,3 +48,11 @@ No tracking was added. The audit line carries no content (`settings.go:739-747`)
 ## Lead disposition
 
 1.3 accepted (no open CRITICAL or HIGH). The Round 7 correction cycle is spent, so N1, N2 and N3 are carried as follow-up task 1.4 of `settings-security-review` for Round 8.
+
+## Disposition (1.4)
+
+| Finding | Status | Fix | Test |
+|---|---|---|---|
+| N1 | fixed | `settings.go` downgrade rule | `TestSettingsHTTPSDowngradeNeedsConfirmationWhateverThePort` |
+| N2 | fixed | `Broker.Cancel` plus `denyRevoked` | `TestAgentSwapRevokesOpenInterrupt` (extended), `TestAgentSwapApprovedRevokedResumeAcceptsNewMessage` |
+| N3 | fixed | retry floor in `settings_limits.go` | `TestSettingsLimiterRefusalNeverRoundsToZero` |

@@ -22,6 +22,7 @@ func (e *indexEnv) indexed(cid string) bool {
 func TestPinRmDeletesVectorsOfAnUnpinnedCID(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
 	a, b := testCID(t, 1), testCID(t, 2)
+	e.files["/ipfs/"+a] = []byte("a") // the unpinned root is walked, whatever entries it has
 	e.pins.pins[a] = fakePin{Type: "recursive"}
 	e.pins.pins[b] = fakePin{Type: "recursive"}
 	e.seed(a, 2)
@@ -55,6 +56,7 @@ func TestPinRmKeepsVectorsWhileAnotherPinCovers(t *testing.T) {
 func TestPinRmKeepsVectorsWhenThePinCheckFails(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
 	a := testCID(t, 4)
+	e.files["/ipfs/"+a] = []byte("a") // the unpinned root is walked, whatever entries it has
 	e.pins.pins[a] = fakePin{Type: "recursive"}
 	e.seed(a, 2)
 	e.pinLsErr[a] = true
@@ -71,6 +73,7 @@ func TestPinRmKeepsVectorsWhenThePinCheckFails(t *testing.T) {
 func TestPinRmKeepsVectorsWhenTheStoreFails(t *testing.T) {
 	e := newIndexEnv(t, indexEnvOptions{})
 	a := testCID(t, 5)
+	e.files["/ipfs/"+a] = []byte("a") // the unpinned root is walked, whatever entries it has
 	e.pins.pins[a] = fakePin{Type: "recursive"}
 	e.seed(a, 1)
 	e.store.failCount.Store(true)

@@ -636,6 +636,11 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// egress_ack, which names hosts, already covers it (L1). A write that moves
 	// to another host is judged by that host alone, as before.
 	schemeChanged := set != nil && st.current != nil && !strings.EqualFold(schemeOf(set.BaseURL), schemeOf(st.current.BaseURL))
+	// A downgrade from https is confirmed whatever else changes, the port
+	// included: a bare egress_ack host covers every port, so a host:port that
+	// differs from the old one must not turn the downgrade into an ordinary,
+	// already acknowledged move.
+	downgraded := schemeChanged && strings.EqualFold(schemeOf(st.current.BaseURL), "https")
 	moved := hostChanged || schemeChanged
 	switch {
 	case wr.EgressConfirmation != nil && !moved:
@@ -647,13 +652,13 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			"egress_confirmation.host must be exactly the newly chosen model host "+newHost+"; no other host can be acknowledged through a settings write",
 			map[string]string{"host": newHost})
 		return
-	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (!hostChanged && schemeChanged):
+	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (schemeChanged && (!hostChanged || downgraded)):
 		// id.ID empty means the request carried no authenticated identity (the
 		// kind gate makes that unreachable today); the extension could not be
 		// attributed to a principal, so it cannot be confirmed.
 		if wr.EgressConfirmation == nil || id.ID == "" {
 			var msg string
-			if hostChanged {
+			if hostChanged && !AckCovers(st.effectiveAck(id), newHost) {
 				msg = "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; "
 			} else {
 				msg = "the write changes the scheme of the model backend at " + newHost + " from " + schemeOf(st.current.BaseURL) + " to " + schemeOf(set.BaseURL) + "; "

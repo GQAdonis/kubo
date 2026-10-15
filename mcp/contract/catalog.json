@@ -381,7 +381,9 @@
         "pin/update"
       ],
       "rpcOptional": [
-        "pin/ls"
+        "pin/ls",
+        "files/stat",
+        "ls"
       ],
       "minKuboVersion": "0.29.0",
       "paginated": false,
@@ -415,7 +417,9 @@
         "pin/rm"
       ],
       "rpcOptional": [
-        "pin/ls"
+        "pin/ls",
+        "files/stat",
+        "ls"
       ],
       "minKuboVersion": "0.29.0",
       "paginated": false,
@@ -1329,7 +1333,7 @@
       "name": "ipfs_index_reconcile",
       "group": "index",
       "title": "Reconcile index",
-      "description": "Delete index entries of CIDs that no longer have any pin (direct, recursive or indirect), one page of indexed CIDs at a time; dry_run lists what would be deleted. Vectors are kept, with a warning, when the pin check or the delete fails. Contacts no embedder. An unreachable vector store is index_unavailable, which is retryable.",
+      "description": "Delete index entries of CIDs that no pin covers (direct, recursive or indirect) and that are no longer in the MFS either, one page of indexed CIDs at a time; dry_run lists what would be deleted. Content still in the MFS counts as coverage. Vectors are kept, with a warning, when coverage is unknown: the pin check, the MFS check or the delete fails, or the MFS walk reaches its limit. Contacts no embedder. An unreachable vector store is index_unavailable, which is retryable.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true,
@@ -1341,6 +1345,10 @@
       "contentEgress": false,
       "rpc": [
         "pin/ls"
+      ],
+      "rpcOptional": [
+        "files/stat",
+        "ls"
       ],
       "minKuboVersion": "0.29.0",
       "paginated": true,

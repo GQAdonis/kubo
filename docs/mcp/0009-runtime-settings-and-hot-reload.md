@@ -134,7 +134,7 @@ Design notes from the review for the Kratos and `flint-gate` ADR. They are not f
 
 ### Settings fixes now in code
 
-- **L1: plain-http backends.** A settings write or probe accepts a plain `http` backend URL only for a loopback host or a host listed in `embeddings.insecure_http_hosts` (before, a write accepted `http` to any host when no key went with it). A scheme change (`https` to `http` on the same host) is treated as a host change and needs `egress_confirmation`, like a host or port move.
+- **L1: plain-http backends.** A settings write or probe accepts a plain `http` backend URL only for a loopback host or a host listed in `embeddings.insecure_http_hosts` (before, a write accepted `http` to any host when no key went with it). Round 8 (N1) widened the scheme rule: any `https` to `http` downgrade needs typed confirmation (`egress_confirmation`) whatever the port, and a same-host scheme change in either direction also needs confirmation; an `http` to `https` move to a new, acknowledged host does not. (Round 7 text: "a scheme change on the same host is treated as a host change".)
 - **L2: audit log.** Settings writes log at `Info`, or `Warn` for a host move or an egress extension, with the principal ID, the field names, the old and new host and whether a key was not carried; never a key, prompt, model or path.
 - **L3: strict CORS** on the settings route, as in section 4.
 - **L4: limits.** Route 60 requests a minute with a burst of 60 per principal; probes 10 a minute with a burst of 10 and 2 in flight; 16 open change streams. A refusal is `429` with `Retry-After`.
