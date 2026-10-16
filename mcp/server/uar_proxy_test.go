@@ -163,7 +163,12 @@ func requireKuboInterrupt(t *testing.T, in map[string]any, tool string) {
 	assert.Equal(t, []any{"approved"}, rs["required"])
 	meta := in["metadata"].(map[string]any)["ipfs-mcp"].(map[string]any)
 	assert.ElementsMatch(t, []string{"confirmation_id", "tool", "class", "requires_native_prompt"}, keysOf(meta))
-	assert.Regexp(t, confirmationIDPattern, meta["confirmation_id"])
+	assert.Regexp(t, confirmationIDPattern, meta["confirmation_id"], "the island's schema")
+	assert.True(t, strings.HasPrefix(meta["confirmation_id"].(string), "cf_uar_"), "an id no broker confirmation has")
+	assert.True(t, strings.HasPrefix(in["message"].(string), uarApprovalLabel), "the card says it is UAR's approval")
+	uar := in["metadata"].(map[string]any)["uar"].(map[string]any)
+	assert.Equal(t, "uar", uar["source"])
+	assert.Equal(t, false, uar["node_confirmation"])
 	assert.Equal(t, tool, meta["tool"])
 	assert.Equal(t, "write", meta["class"])
 	assert.Equal(t, false, meta["requires_native_prompt"])
@@ -203,9 +208,21 @@ func TestUARProvisionsAgentOnFirstRun(t *testing.T) {
 	require.NotNil(t, art)
 	assert.Equal(t, composeSystemPrompt("Answer in one line."), art["prompt"].(map[string]any)["system"])
 	assert.True(t, strings.HasPrefix(art["prompt"].(map[string]any)["system"].(string), systemPromptSafetyPrefix))
-	assert.Equal(t, []any{"kubo-ipfs"}, art["extensions"].(map[string]any)["mcp_servers"])
-	def := art["policy"].(map[string]any)["provider"].(map[string]any)["default"].(map[string]any)
+	// The artifact has the shape the acceptance posted (acc. 419-436): the kubo
+	// tools are the only tools the agent may use, by their UAR names.
+	assert.Equal(t, "agent", art["kind"])
+	assert.Equal(t, "1.0.0", art["version"])
+	pol := art["policy"].(map[string]any)
+	def := pol["provider"].(map[string]any)["default"].(map[string]any)
 	assert.Equal(t, map[string]any{"provider": "liter-llm", "model": "qwen3:8b"}, def)
+	allow := pol["tools"].(map[string]any)["allow"].([]any)
+	require.NotEmpty(t, allow)
+	for _, a := range allow {
+		assert.True(t, strings.HasPrefix(a.(string), "kubo-ipfs__"), "tool %v is a tool of the kubo MCP server", a)
+	}
+	assert.Contains(t, allow, "kubo-ipfs__pin_add")
+	assert.NotNil(t, art["extensions"], "extensions is a required object, empty")
+	assert.Empty(t, art["extensions"])
 
 	// Skill bindings equal the directory names under mcp/skills.
 	entries, err := os.ReadDir(repoSkillsDir(t))
@@ -213,7 +230,7 @@ func TestUARProvisionsAgentOnFirstRun(t *testing.T) {
 	var want []string
 	for _, ent := range entries {
 		if _, err := os.Stat(filepath.Join(repoSkillsDir(t), ent.Name(), "SKILL.md")); err == nil {
-			want = append(want, "sk-"+ent.Name())
+			want = append(want, ent.Name())
 		}
 	}
 	require.NotEmpty(t, want)
@@ -224,33 +241,61 @@ func TestUARProvisionsAgentOnFirstRun(t *testing.T) {
 	for _, run := range []uarRun{e.fake.run(0)} {
 		assert.Equal(t, "Bearer "+fakeUARToken, run.Auth)
 	}
+	prefer := pol["skills"].(map[string]any)["prefer"].([]any)
+	assert.Len(t, prefer, len(want), "every uploaded skill is preferred")
+	assert.NotContains(t, e.fake.callLog(), "PUT /api/uar/agents/kubo-ipfs/skills", "bindings are added one by one, never replaced")
 }
 
-func TestUARProvisioningIsIdempotentAndEqualizesBindings(t *testing.T) {
+func TestUARProvisioningIsIdempotentAndLeavesForeignBindings(t *testing.T) {
 	e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{skillsDir: repoSkillsDir(t)})
 	require.Equal(t, http.StatusOK, e.say("t1", "r1", "hello").Status)
-	// The operator (or an older kubo) bound a skill kubo does not ship, and the
-	// agent drifted.
+	// The operator bound a skill kubo did not upload, and the agent drifted.
 	e.fake.edit(func(u *fakeUARRelease) {
-		u.bindings["kubo-ipfs"] = append(u.bindings["kubo-ipfs"], "sk-stray")
+		u.bindings["kubo-ipfs"] = append(u.bindings["kubo-ipfs"], "operator-skill")
 		u.agents["kubo-ipfs"]["prompt"] = map[string]any{"system": "tampered"}
 	})
-	// A new backend (a settings apply) provisions again: PUT with If-Match, the
-	// skills already exist (409), the stray binding is removed.
+	// A new backend (a settings apply) provisions again: the agent is replaced
+	// in full without If-Match, the skills already exist (409, same digest), and
+	// the operator's binding stays.
 	require.NoError(t, e.s.ApplyAgentSettings(e.set))
 	require.Equal(t, http.StatusOK, e.say("t2", "r2", "hello again").Status)
 
 	art := e.fake.agents["kubo-ipfs"]
 	assert.Equal(t, composeSystemPrompt(""), art["prompt"].(map[string]any)["system"])
-	assert.NotContains(t, e.fake.bindings["kubo-ipfs"], "sk-stray")
+	assert.Contains(t, e.fake.bindings["kubo-ipfs"], "operator-skill", "a binding kubo did not make is left alone")
 	assert.Contains(t, e.fake.callLog(), "PUT /api/agents/kubo-ipfs")
-	assert.Contains(t, e.fake.callLog(), "DELETE /api/uar/agents/kubo-ipfs/skills/sk-stray")
+	for _, c := range e.fake.callLog() {
+		assert.False(t, strings.HasPrefix(c, "DELETE /api/uar/agents/"), "nothing is unbound: %s", c)
+	}
+}
+
+// R8-07: a skill kubo bound earlier and no longer ships is unbound; nothing else is.
+func TestUARUnbindsOnlyWhatKuboBound(t *testing.T) {
+	dir := t.TempDir()
+	for _, n := range []string{"alpha", "beta"} {
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, n), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, n, "SKILL.md"), []byte("---\nname: "+n+"\ndescription: d\n---\nbody "+n+"\n"), 0o600))
+	}
+	e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{skillsDir: dir})
+	b := e.s.UARBackend()
+	require.Equal(t, http.StatusOK, e.say("t1", "r1", "hello").Status)
+	e.fake.edit(func(u *fakeUARRelease) { u.bindings["kubo-ipfs"] = append(u.bindings["kubo-ipfs"], "operator-skill") })
+	require.ElementsMatch(t, []string{"alpha", "beta"}, b.ownedSkills)
+
+	// The same backend provisions again with one skill fewer.
+	require.NoError(t, os.RemoveAll(filepath.Join(dir, "beta")))
+	b.forgetProvisioned()
+	require.Equal(t, http.StatusOK, e.say("t1", "r2", "hello").Status)
+	assert.ElementsMatch(t, []string{"alpha", "operator-skill"}, e.fake.bindings["kubo-ipfs"])
+	assert.Equal(t, []string{"alpha"}, b.ownedSkills)
+	assert.Contains(t, e.fake.callLog(), "DELETE /api/uar/agents/kubo-ipfs/skills/beta")
+	assert.NotContains(t, e.fake.callLog(), "DELETE /api/uar/agents/kubo-ipfs/skills/operator-skill")
 }
 
 func TestUARWithoutMCPPrincipalHasNoBindingOrGrant(t *testing.T) {
 	e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{noMCP: true})
 	require.Equal(t, http.StatusOK, e.say("t1", "r1", "hello").Status)
-	assert.NotContains(t, e.fake.agents["kubo-ipfs"], "extensions")
+	assert.Empty(t, e.fake.agents["kubo-ipfs"]["policy"].(map[string]any)["tools"].(map[string]any)["allow"])
 	assert.NotContains(t, e.fake.run(0).Body, "forwardedProps")
 	assert.Contains(t, e.logs.String(), "no kubo tools")
 }
@@ -290,7 +335,12 @@ func TestUARRunIsProxiedWithTheGrantAndIDsRewritten(t *testing.T) {
 	run := e.fake.run(0)
 	assert.Equal(t, "kubo-ipfs", run.AgentID)
 	assert.NotEqual(t, "thread-a", run.Body["threadId"], "UAR sees a digest of principal and thread")
-	assert.Equal(t, uarThreadID("chat", "thread-a"), run.Body["threadId"])
+	gen := e.s.UARBackend().gen
+	assert.Equal(t, uarThreadID(gen, 1, "chat", "thread-a"), run.Body["threadId"])
+	// The accepted request shape (fixture initial_request): protocolVersion, no
+	// state, no client tools.
+	assert.Equal(t, "1.0", run.Body["protocolVersion"])
+	assert.NotContains(t, run.Body, "state")
 	assert.Equal(t, "run-a", run.Body["runId"])
 	msgs := run.Body["messages"].([]any)
 	require.Len(t, msgs, 1)
@@ -374,7 +424,7 @@ func TestUARToolApprovalApproved(t *testing.T) {
 	r := e.say("t1", "r1", "pin bafy-example")
 	require.Equal(t, http.StatusOK, r.Status)
 	in := finishedInterrupt(t, r.Events)
-	requireKuboInterrupt(t, in, "pin_add")
+	requireKuboInterrupt(t, in, "uar:pin_add")
 	assert.Equal(t, "int-ta-1", in["id"])
 	assert.Equal(t, "tc-1", in["toolCallId"])
 	assert.Equal(t, "2030-01-01T00:00:00Z", in["expiresAt"])
@@ -433,7 +483,7 @@ func TestUARElicitationApprovedAndDenied(t *testing.T) {
 		e := newUARProxyEnv(t, replay(t, "run-elicitation-interrupt.sse", "run-resumed-executed.sse"), uarProxyOpts{})
 		in := finishedInterrupt(t, e.say("t1", "r1", "pin").Events)
 		requireKuboInterrupt(t, in, "uar:kubo-ipfs")
-		assert.Equal(t, "Pin bafy-example to this node?", in["message"], "the text is kubo's own confirmation summary")
+		assert.Equal(t, uarApprovalLabel+"Pin bafy-example to this node?", in["message"], "UAR's text, labelled")
 
 		r := e.answer("t1", "r2", in["id"].(string), true)
 		require.Equal(t, http.StatusOK, r.Status, r.Body)

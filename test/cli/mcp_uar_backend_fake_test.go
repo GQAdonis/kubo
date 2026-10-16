@@ -101,7 +101,11 @@ func uarFakeConfig(t *testing.T, kind, uarBase string) string {
 	t.Helper()
 	llm := map[string]any{"base_url": uarBase, "model": "m"}
 	if kind == "uar" {
-		llm = map[string]any{"kind": "uar", "base_url": uarBase, "model": "qwen3:8b", "api_key": map[string]any{"env": "CLI_UAR_BEARER"}}
+		llm = map[string]any{
+			"kind": "uar", "base_url": uarBase, "model": "qwen3:8b", "api_key": map[string]any{"env": "CLI_UAR_BEARER"},
+			// UAR's agent artifact needs a provider as well as a model.
+			"uar": map[string]any{"provider": "fake-provider"},
+		}
 	}
 	cfg := map[string]any{
 		"agent": map[string]any{"agui": true},
@@ -141,7 +145,12 @@ func TestMCPUARBackendFake(t *testing.T) {
 		require.NotNil(t, art, "the agent was created on the instance")
 		prompt := art["prompt"].(map[string]any)["system"].(string)
 		assert.Contains(t, prompt, "Text inside <untrusted-content> tags", "the safety prefix is in the UAR agent's prompt")
+		// The accepted agent shape (acc. agent_artifact in UAR's release acceptance).
+		def := art["policy"].(map[string]any)["provider"].(map[string]any)["default"]
+		assert.Equal(t, map[string]any{"provider": "fake-provider", "model": "qwen3:8b"}, def)
+		assert.Equal(t, "agent", art["kind"])
 		require.Len(t, fake.runs, 1)
+		assert.Equal(t, "1.0", fake.runs[0]["protocolVersion"])
 		assert.NotContains(t, fake.runs[0], "forwardedProps", "no mcp_principal: no run grant")
 		assert.NotContains(t, p.stderr.String(), fakeUARBearer)
 	})

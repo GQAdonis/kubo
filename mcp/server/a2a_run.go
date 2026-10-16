@@ -15,18 +15,49 @@ import (
 // through the agent loop (text) or the named tool (data part), and when a write
 // waits for a person it stays to see how the person decided.
 func (h *a2aHandler) drive(t *a2aTask, id Identity, w a2aWork) {
+	defer h.recoverTask(t)
 	var waiting bool
 	if w.call {
 		t.markStarted(nil)
 		t.setStatus(a2aWorking, "", nil, nil)
 		waiting = h.callTool(t, id, w)
 	} else {
-		res, err := h.srv.Agent().Run(t.ctx, id, RunInput{SessionID: t.contextID, Message: w.text, ContinueOnly: w.continueOnly}, h.emitter(t))
-		waiting = h.settleRun(t, res, err)
+		waiting = h.runAgent(t, id, RunInput{SessionID: t.contextID, Message: w.text, ContinueOnly: w.continueOnly})
 	}
 	if waiting {
 		h.awaitApproval(t, id, w)
 	}
+}
+
+// errBackendChanged ends a task whose agent loop is gone: a settings write
+// moved the backend to a UAR agent after the task began (U6). It is never sent
+// to a peer as text.
+var errBackendChanged = errors.New("the agent loop is no longer the model backend")
+
+// runAgent runs one step of the agent loop for the task. The loop is looked up
+// at each step because a settings write can replace it with a UAR backend
+// between steps; a task that finds no loop ends as failed instead of
+// dereferencing nil. It does not run an old loop it no longer owns: that would
+// send content to a model host the operator has since moved away from.
+func (h *a2aHandler) runAgent(t *a2aTask, id Identity, in RunInput) bool {
+	ag := h.srv.Agent()
+	if ag == nil {
+		return h.settleRun(t, nil, errBackendChanged)
+	}
+	res, err := ag.Run(t.ctx, id, in, h.emitter(t))
+	return h.settleRun(t, res, err)
+}
+
+// recoverTask turns a panic on a task goroutine into a failed task, so one bad
+// task cannot end the node's process. It logs the panic's type only.
+func (h *a2aHandler) recoverTask(t *a2aTask) {
+	r := recover()
+	if r == nil {
+		return
+	}
+	h.log.Error("a2a task panicked", "panic_type", fmt.Sprintf("%T", r))
+	t.markStarted(errors.New("the task failed unexpectedly"))
+	t.setStatus(a2aFailed, "The agent could not finish this request.", nil, nil)
 }
 
 // emitter turns loop events into task updates. It carries no model text and no
@@ -181,10 +212,9 @@ func (h *a2aHandler) awaitApproval(t *a2aTask, id Identity, w a2aWork) {
 		}
 		var again bool
 		if p.text {
-			res, rerr := h.srv.Agent().Run(t.ctx, id, RunInput{SessionID: t.contextID, Resume: []ResumeEntry{
+			again = h.runAgent(t, id, RunInput{SessionID: t.contextID, Resume: []ResumeEntry{
 				{InterruptID: p.interruptID, Status: ResumeResolved, Approved: true},
-			}}, h.emitter(t))
-			again = h.settleRun(t, res, rerr)
+			}})
 		} else {
 			t.setStatus(a2aWorking, "", nil, nil)
 			again = h.callTool(t, id, a2aWork{call: true, tool: p.tool, args: p.args})

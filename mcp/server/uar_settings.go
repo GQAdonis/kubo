@@ -13,9 +13,12 @@ import (
 	"github.com/ipfs/kubo/mcp/contract"
 )
 
-// Bounds of llm.uar.mcp_grant_ttl: a grant that leaks is usable until it
-// expires, so the lifetime is short, and never so short that a run outlives it
-// before its first tool call.
+// Bounds of llm.uar.mcp_grant_ttl. The grant is the static bearer of the uar
+// principal named by llm.uar.mcp_principal; the TTL is sent to UAR as
+// expires_at_unix, which is advisory to UAR and not enforced by ipfs mcp. A
+// leaked grant stays usable until that principal's secret is rotated, whatever
+// the TTL says. The bounds only keep the advisory value sensible: never so
+// short that a run outlives it before its first tool call.
 const (
 	minUARGrantTTL = 30 * time.Second
 	maxUARGrantTTL = time.Hour

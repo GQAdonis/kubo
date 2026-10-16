@@ -366,7 +366,7 @@
             "mcp_grant_ttl": {
               "$ref": "#/$defs/Duration",
               "default": "10m",
-              "offSwitch": "Read only with mcp_principal. A short value limits how long a grant that leaks stays usable; at least 30s and at most 1h.",
+              "offSwitch": "Read only with mcp_principal. Advisory: sent to UAR as the grant expiry (expires_at_unix) and not enforced by ipfs mcp, because the grant is the uar principal static bearer. A leaked grant stays usable until that principal secret is rotated, whatever the value; at least 30s and at most 1h.",
               "ownerChange": "agent-backend-uar"
             },
             "skills_dir": {
