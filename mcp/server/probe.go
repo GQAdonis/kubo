@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/ipfs/kubo/mcp/contract"
@@ -98,6 +100,80 @@ func probe(ctx context.Context, d Daemon, cat *contract.Catalog, warn func(strin
 	}
 	info.Commands = flattenCommands(root)
 	return &info, nil
+}
+
+// Backoff of the startup wait for an unreachable daemon: the first retry comes
+// after daemonWaitInitial and each later one after twice the previous delay, up
+// to daemonWaitMax.
+const (
+	daemonWaitInitial = time.Second
+	daemonWaitMax     = 5 * time.Second
+)
+
+// daemonWait is the startup wait for a daemon that is not reachable yet. Total
+// zero turns it off. now and sleep are injected by tests; nil means the real
+// clock.
+type daemonWait struct {
+	total time.Duration
+	now   func() time.Time
+	sleep func(ctx context.Context, d time.Duration) error
+	// warn receives the line for the first failed attempt, so a waiting
+	// process is visible at the default log level; nil falls back to info.
+	warn func(msg string, args ...any)
+	// info receives one line per later failed attempt.
+	info func(msg string, args ...any)
+}
+
+// sleepContext waits for d or until ctx ends.
+func sleepContext(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
+// probeWithWait runs probe and, while the daemon is unreachable (connection
+// refused, no api file yet), retries it with a bounded backoff until w.total
+// has passed. Any other failure, such as an RPC refusal (API.Authorizations)
+// or an unsupported version, is returned at once. When the wait runs out it
+// returns the last probe error, the same error a server without a wait gets.
+func probeWithWait(ctx context.Context, d Daemon, cat *contract.Catalog, warn func(string), w daemonWait) (*DaemonInfo, error) {
+	now, sleep := w.now, w.sleep
+	if now == nil {
+		now = time.Now
+	}
+	if sleep == nil {
+		sleep = sleepContext
+	}
+	deadline := now().Add(w.total)
+	delay := daemonWaitInitial
+	for attempt := 1; ; attempt++ {
+		info, err := probe(ctx, d, cat, warn)
+		if err == nil || w.total <= 0 || !errors.Is(err, ErrDaemonUnreachable) {
+			return info, err
+		}
+		remaining := deadline.Sub(now())
+		if remaining <= 0 {
+			return nil, err
+		}
+		delay = min(delay, remaining)
+		logLine := w.info
+		if attempt == 1 && w.warn != nil {
+			logLine = w.warn
+		}
+		if logLine != nil {
+			logLine("ipfs daemon API is not reachable yet; retrying",
+				"endpoint", d.Endpoint(), "attempt", attempt, "retry_in", delay.String(), "gives_up_in", remaining.String())
+		}
+		if serr := sleep(ctx, delay); serr != nil {
+			return nil, fmt.Errorf("%w (stopped waiting: %w)", err, serr)
+		}
+		delay = min(delay*2, daemonWaitMax)
+	}
 }
 
 // flattenCommands turns the command tree into slash-separated paths without

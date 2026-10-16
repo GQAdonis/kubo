@@ -99,7 +99,7 @@ func TestMCPExtractorFakeXbergIsReapedAfterSIGKILL(t *testing.T) {
 	embed := newCountingEmbed(t)
 	extractor, _ := json.Marshal(map[string]any{"mode": "embedded", "embedded": map[string]any{"xberg_binary": script, "cache_dir": cache}})
 	p := startIndexMCP(t, node, extractorConfig(surreal, filepath.Join(work, "idx"), embed.URL+"/v1", "fake", 8,
-		`{"mime_allowlist": ["text/plain", "application/pdf"]}`, string(extractor)), true)
+		`{"mime_allowlist": ["text/plain", "application/pdf"]}`, string(extractor)))
 	cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 	// The script is a child of ipfs mcp, bound to loopback on a non-default port.

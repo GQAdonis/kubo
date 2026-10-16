@@ -26,6 +26,12 @@ func check(t *testing.T, in UARCheckInput) UARReport {
 	return NewUARChecker(nil, nil, WithSettingsPath(testUARSettingsPath)).Check(t.Context(), in)
 }
 
+// withoutPin drops the contract's pinned minimum version and settings path
+// (v1.1.0 ships pinned), to cover the unpinned behavior.
+func withoutPin() UARCheckerOption {
+	return func(c *UARChecker) { c.pre.MinVersion, c.pre.SettingsPath, c.pre.PinnedFrom = nil, nil, nil }
+}
+
 func TestCheckUARRefusesUARDefaults(t *testing.T) {
 	u := newFakeUAR(t, "defaults")
 	u.set(func(u *fakeUAR) { u.requireAuth = false }) // JWT off, as shipped by the embedded config
@@ -90,7 +96,11 @@ func TestCheckUARVersionMinimumCountsPublishedReleasesOnly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			u := newFakeUAR(t, "profile")
 			u.set(func(u *fakeUAR) { u.version = tc.version })
-			rep := check(t, u.input(tc.min))
+			opts := []UARCheckerOption{WithSettingsPath(testUARSettingsPath)}
+			if tc.min == "" {
+				opts = append([]UARCheckerOption{withoutPin()}, opts...)
+			}
+			rep := NewUARChecker(nil, nil, opts...).Check(t.Context(), u.input(tc.min))
 			assert.Equal(t, tc.want, rep.Verdict(), rep.Summary())
 			if tc.code != "" {
 				assert.Contains(t, codes(rep, SeverityRefuse), tc.code)
@@ -218,13 +228,15 @@ func TestCheckUARCardProblemsRefuse(t *testing.T) {
 // Authorization header of each, so a test can use a non-loopback host name
 // without opening a connection.
 type rewriteTransport struct {
+	t    *testing.T
 	auth []string
 	urls []string
 	body map[string]string
 }
 
 func (r *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	r.auth = append(r.auth, req.Header.Get("Authorization"))
+	assert.Empty(r.t, req.Header.Get("Authorization"), "the admin key is never sent as a bearer")
+	r.auth = append(r.auth, req.Header.Get("X-UAR-Admin-Key"))
 	r.urls = append(r.urls, req.URL.String())
 	body, ok := r.body[req.URL.Path]
 	status := http.StatusOK
@@ -239,7 +251,7 @@ func (r *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 func TestCheckUARNeverSendsTheAdminCredentialInCleartext(t *testing.T) {
 	t.Setenv(fakeUARAdminEnv, fakeUARAdminToken)
-	rt := &rewriteTransport{body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
+	rt := &rewriteTransport{t: t, body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
 	checker := NewUARChecker(&http.Client{Transport: rt}, nil, WithSettingsPath(testUARSettingsPath))
 	min := "1.4.0"
 	rep := checker.Check(t.Context(), UARCheckInput{
@@ -258,7 +270,7 @@ func TestCheckUARNeverSendsTheAdminCredentialInCleartext(t *testing.T) {
 	assert.NotContains(t, string(raw), fakeUARAdminToken)
 
 	// Over https the credential is sent.
-	rt = &rewriteTransport{body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
+	rt = &rewriteTransport{t: t, body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
 	checker = NewUARChecker(&http.Client{Transport: rt}, nil, WithSettingsPath(testUARSettingsPath))
 	checker.Check(t.Context(), UARCheckInput{
 		UAR: UARConfig{
@@ -267,7 +279,7 @@ func TestCheckUARNeverSendsTheAdminCredentialInCleartext(t *testing.T) {
 			MinVersion:      &min,
 		},
 	})
-	assert.Contains(t, rt.auth, "Bearer "+fakeUARAdminToken)
+	assert.Contains(t, rt.auth, fakeUARAdminToken)
 }
 
 func TestCheckUARDoesNotFollowRedirects(t *testing.T) {

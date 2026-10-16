@@ -120,6 +120,16 @@ func newSurrealStore(c *surrealClient, dims int) *surrealStore {
 	return &surrealStore{c: c, dims: dims}
 }
 
+// exited reports whether the embedded store process has ended.
+func (s *surrealStore) exited() bool {
+	select {
+	case <-s.c.gone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Bootstrap implements Store.
 func (s *surrealStore) Bootstrap(ctx context.Context) error {
 	// Defining the namespace and database needs a root or namespace user. A

@@ -87,7 +87,8 @@ func (l *settingsLimiter) take(principal string) (done func(), retry time.Durati
 		return nil, settingsStreamRetry
 	}
 	if b.tokens < 1 {
-		return nil, time.Duration((1 - b.tokens) / l.perSecond * float64(time.Second))
+		// At least a nanosecond: a refusal never reads as an allowed request.
+		return nil, max(time.Duration((1-b.tokens)/l.perSecond*float64(time.Second)), time.Nanosecond)
 	}
 	b.tokens--
 	if l.maxActive == 0 {

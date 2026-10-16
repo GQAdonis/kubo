@@ -1,0 +1,17 @@
+ipfs version 0.44.0-dev-3d8a128
+11:           [--settings-dir=<settings-dir>] [--confirm=<confirm>] [--http]
+49:  --settings-dir             string - Directory for the settings overlay (also
+212:  --settings-dir (or agent.settings.dir; the flag wins) as a 0600 overlay file
+## log
+ipfs mcp: AG-UI endpoint enabled at /agui (0 browser origins allowed)
+ipfs mcp: no model backend is configured (--llm-base-url and --llm-model), so /agui answers 503 backend_not_configured until one is
+ipfs mcp: no bearer token or principal is configured; any local process can use the read-only tools. Configure --auth-token-env, --auth-token-file or principals in --mcp-config for write access.
+ipfs mcp: serving MCP over HTTP on http://127.0.0.1:5151/mcp
+## POST /agui
+HTTP/1.1 403 Forbidden
+## GET /agent/settings
+HTTP/1.1 404 Not Found
+## POST /index/search
+HTTP/1.1 404 Not Found
+## GET /index/status
+HTTP/1.1 404 Not Found

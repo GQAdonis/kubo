@@ -20,6 +20,11 @@ const (
 	// lifecycleTimeout bounds the index housekeeping that follows pin_rm,
 	// pin_update and repo_gc. It runs even when the client has given up.
 	lifecycleTimeout = 60 * time.Second
+	// dropTimeout bounds the drop phase of an unpin: the keep check and the
+	// delete of each candidate CID, after the walks. It starts when the walks
+	// end, so a slow walk cannot leave it without time. On expiry the checks
+	// fail and the entries stay, with a warning.
+	dropTimeout = 60 * time.Second
 	// watchPageSize is how many indexed CIDs are read per store request when
 	// repo_gc loads the set of indexed CIDs.
 	watchPageSize = 500
@@ -134,25 +139,32 @@ func (s *Server) keepEntries(ctx context.Context, c string, mfs *mfsCoverage) (k
 // it is checked too. Vectors stay while another pin or the MFS covers the CID.
 // It returns warnings for the result's _meta.
 func (s *Server) afterUnpin(ctx context.Context, roots []string) []string {
+	return s.afterUnpinWithin(ctx, roots, lifecycleTimeout, dropTimeout)
+}
+
+// afterUnpinWithin is afterUnpin with the deadlines of its two phases: the
+// walks, then the drop of the entries nothing covers any more.
+func (s *Server) afterUnpinWithin(ctx context.Context, roots []string, walkTimeout, dropWithin time.Duration) []string {
 	svc := s.embeddingsExt
 	if svc == nil || len(roots) == 0 {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lifecycleTimeout)
-	defer cancel()
+	ctx = context.WithoutCancel(ctx)
+	walkCtx, cancelWalk := context.WithTimeout(ctx, walkTimeout)
+	defer cancelWalk()
 	roots = slices.Compact(slices.Sorted(slices.Values(roots)))
 	var warnings []string
 	targets := slices.Clone(roots)
-	indexed, err := s.loadIndexed(ctx)
+	indexed, err := s.loadIndexed(walkCtx)
 	switch {
 	case err != nil:
 		warnings = append(warnings, "the files under the unpinned paths were not checked, run ipfs_index_reconcile: "+clipMessage(err.Error()))
 	case len(indexed.byHash) > 0:
 		for _, root := range roots {
-			if _, own := indexed.lookup(root); own {
-				continue // a file with entries of its own: nothing below it
-			}
-			complete, werr := s.walkFiles(ctx, root, indexed.see)
+			// Every root is walked, also one with entries of its own: ipfs_add
+			// indexes the directory it wraps a named file in, and a bulk run
+			// indexes the files below it under their own CIDs.
+			complete, werr := s.walkFiles(walkCtx, root, indexed.see)
 			if complete {
 				continue
 			}
@@ -164,7 +176,10 @@ func (s *Server) afterUnpin(ctx context.Context, roots []string) []string {
 		}
 		targets = append(targets, indexed.found...)
 	}
-	return append(warnings, s.dropUncovered(ctx, svc, targets, &mfsCoverage{s: s})...)
+	cancelWalk()
+	dropCtx, cancelDrop := context.WithTimeout(ctx, dropWithin)
+	defer cancelDrop()
+	return append(warnings, s.dropUncovered(dropCtx, svc, targets, &mfsCoverage{s: s})...)
 }
 
 // dropUncovered runs dropIfUnpinned over the CIDs, each once.

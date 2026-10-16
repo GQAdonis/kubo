@@ -13,6 +13,7 @@ func fakeBinary(t *testing.T, versionOutput string, mode os.FileMode) string {
 	p := filepath.Join(t.TempDir(), "surreal")
 	script := "#!/bin/sh\nif [ \"$1\" = version ]; then echo '" + versionOutput + "'; exit 0; fi\nexit 1\n"
 	require.NoError(t, os.WriteFile(p, []byte(script), mode))
+	require.NoError(t, os.Chmod(p, mode)) // the umask must not hide a group or world bit
 	return p
 }
 
@@ -28,6 +29,8 @@ func TestStartSupervisorRefusals(t *testing.T) {
 		{"missing binary", EmbeddedSettings{Binary: filepath.Join(dir, "nope"), DataDir: dir}, "surreal_binary"},
 		{"directory", EmbeddedSettings{Binary: dir, DataDir: dir}, "not a regular file"},
 		{"not executable", EmbeddedSettings{Binary: fakeBinary(t, "3.3.0 for macos on aarch64", 0o644), DataDir: dir}, "not executable"},
+		{"group writable", EmbeddedSettings{Binary: fakeBinary(t, "3.3.0 for macos on aarch64", 0o775), DataDir: dir}, "writable by its group or by everyone"},
+		{"world writable", EmbeddedSettings{Binary: fakeBinary(t, "3.3.0 for macos on aarch64", 0o757), DataDir: dir}, "writable by its group or by everyone"},
 		{"old version", EmbeddedSettings{Binary: fakeBinary(t, "2.9.1 for macos on aarch64", 0o755), DataDir: dir}, "older than the minimum 3.0.0"},
 		{"older than a raised minimum", EmbeddedSettings{Binary: fakeBinary(t, "3.3.0 for linux on x86_64", 0o755), DataDir: dir, MinVersion: "3.4.0"}, "older than the minimum 3.4.0"},
 		{"no version reported", EmbeddedSettings{Binary: fakeBinary(t, "hello", 0o755), DataDir: dir}, "does not report a version"},

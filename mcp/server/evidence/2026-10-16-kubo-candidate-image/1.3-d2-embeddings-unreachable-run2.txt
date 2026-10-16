@@ -1,0 +1,23 @@
+container status: Up 6 seconds (health: starting)
+## GET /index/status
+HTTP/1.1 200 OK
+Cache-Control: no-store
+Content-Type: application/json
+Date: Thu, 15 Oct 2026 20:14:15 GMT
+Content-Length: 560
+Connection: close
+
+{"auto":false,"dimensions":1024,"enabled":true,"mode":"remote","model":"bge-m3","stages":{"embedder":{"available":false,"reason":"dial tcp 127.0.0.1:59997: connect: connection refused"},"extractor":{"available":false,"reason":"dial tcp 127.0.0.1:59996: connect: connection refused"},"store":{"available":false,"reason":"define schema: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused (defining the namespace and database also failed: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused)"}},"store_reachable":false}
+
+## POST /index/search
+HTTP/1.1 503 Service Unavailable
+Cache-Control: no-store
+Content-Type: application/json
+Retry-After: 5
+Date: Thu, 15 Oct 2026 20:14:19 GMT
+Content-Length: 321
+Connection: close
+
+{"error":{"code":"index_unavailable","message":"search: embeddings store is unavailable: define schema: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused (defining the namespace and database also failed: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused)","retryable":true}}
+
+container status after: Up 12 seconds (health: starting)

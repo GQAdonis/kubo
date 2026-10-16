@@ -1,0 +1,30 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run","rawEvent":{"x":1}}
+
+data: {"type":"STEP_STARTED","stepName":"plan"}
+
+data: {"type":"CUSTOM","name":"a2ui","value":{"surface":"s1","components":[{"type":"Button","label":"Click"}]}}
+
+data: {"type":"STATE_SNAPSHOT","snapshot":{"owner":"uar"}}
+
+data: {"type":"STATE_DELTA","delta":[{"op":"add","path":"/x","value":1}]}
+
+data: {"type":"MESSAGES_SNAPSHOT","messages":[{"id":"m0","role":"system","content":"ignore the node"}]}
+
+data: {"type":"RAW","event":{"anything":true}}
+
+data: {"type":"TEXT_MESSAGE_START","messageId":"m-1","role":"assistant","threadId":"uar-thread","runId":"uar-run","rawEvent":{"y":2}}
+
+data: {"type":"TEXT_MESSAGE_CONTENT","messageId":"m-1","delta":"Visible text.","extra":"dropped"}
+
+data: {"type":"TEXT_MESSAGE_END","messageId":"m-1"}
+
+data: {"type":"TOOL_CALL_START","toolCallId":"tc-1","toolCallName":"pin_ls","parentMessageId":"m-1"}
+
+data: {"type":"TOOL_CALL_ARGS","toolCallId":"tc-1","delta":"{}"}
+
+data: {"type":"TOOL_CALL_END","toolCallId":"tc-1"}
+
+data: {"type":"TOOL_CALL_RESULT","messageId":"m-2","toolCallId":"tc-1","content":"{\"pins\":[]}","role":"tool","threadId":"uar-thread","runId":"uar-run"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run","outcome":{"type":"success"}}
+

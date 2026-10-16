@@ -145,16 +145,11 @@ func TestCheckUARShellToolsListWithdrawsWrites(t *testing.T) {
 	assert.Equal(t, VerdictOK, check(t, u.input("1.4.0")).Verdict(), "an empty list is no shell tool")
 }
 
-// With no settings path pinned (the shipped contract), nothing under the UAR
-// settings API is contacted and the verdict depends on the check mode.
+// With no settings path pinned (the contract before v1.1.0), nothing under the
+// UAR settings API is contacted and the verdict depends on the check mode.
 func TestCheckUARWithoutAPinnedSettingsPath(t *testing.T) {
-	pre, err := contract.LoadUARPreflight()
-	require.NoError(t, err)
-	if pre.SettingsPath != nil {
-		t.Skip("the contract pins a settings path; this test covers the null pin")
-	}
 	nopath := func(u *fakeUAR, in UARCheckInput) UARReport {
-		return NewUARChecker(nil, nil).Check(t.Context(), in)
+		return NewUARChecker(nil, nil, withoutPin()).Check(t.Context(), in)
 	}
 
 	t.Run("verify refuses and never touches the settings API", func(t *testing.T) {
@@ -190,14 +185,13 @@ func TestCheckUARWithoutAPinnedSettingsPath(t *testing.T) {
 	})
 }
 
-// The shipped example config refuses while the contract pins no minimum
-// version: it deliberately sets no uar.min_version (ADR-0007 section 2).
-func TestUARPrincipalExampleRefusesWhileNoMinVersionIsPinned(t *testing.T) {
+// The shipped example config sets no uar.min_version (ADR-0007 section 2) and
+// relies on the contract's pin: with v1.1.0 pinned it no longer refuses for
+// min_version_not_set. Its other findings depend on the UAR it is pointed at.
+func TestUARPrincipalExampleUsesThePinnedMinimum(t *testing.T) {
 	pre, err := contract.LoadUARPreflight()
 	require.NoError(t, err)
-	if pre.MinVersion != nil {
-		t.Skip("the contract pins a minimum UAR version; the example is no longer expected to refuse for min_version_not_set")
-	}
+	require.NotNil(t, pre.MinVersion, "the contract pins a minimum UAR version")
 	raw, err := fs.ReadFile(contract.FS(), "config/examples/uar-principal.json")
 	require.NoError(t, err)
 	cfg, err := ParseConfig(raw)
@@ -211,11 +205,7 @@ func TestUARPrincipalExampleRefusesWhileNoMinVersionIsPinned(t *testing.T) {
 	in := UARCheckInput{UAR: *p.UAR, Check: p.Check, EgressAck: p.EgressAck, KuboListen: cfg.HTTP.Listen}
 	in.UAR.CardURL = u.cardURL() // only the address is replaced
 	rep := NewUARChecker(nil, nil).Check(t.Context(), in)
-	assert.Equal(t, VerdictRefuse, rep.Verdict())
-	got := codes(rep, SeverityRefuse)
-	assert.Contains(t, got, FindingNoMinVersion)
-	assert.Contains(t, got, FindingAuthProbeInconclusive)
-	assert.Contains(t, got, FindingSettingsUnreadable)
+	assert.NotContains(t, codes(rep, SeverityRefuse), FindingNoMinVersion)
 }
 
 func findConfigPrincipal(cfg *Config, name string) (PrincipalConfig, bool) {
@@ -246,7 +236,7 @@ func TestCheckUARAdminCredentialIsBearerUnderTheCardBase(t *testing.T) {
 		for i, a := range rt.auth {
 			if a != "" {
 				withCredential = append(withCredential, rt.urls[i])
-				assert.Equal(t, "Bearer "+fakeUARAdminToken, a)
+				assert.Equal(t, fakeUARAdminToken, a)
 			}
 		}
 		assert.Equal(t, []string{"https://uar.example.test/prefix" + testUARSettingsPath}, withCredential)
@@ -256,6 +246,6 @@ func TestCheckUARAdminCredentialIsBearerUnderTheCardBase(t *testing.T) {
 		u := newFakeUAR(t, "profile")
 		rep := check(t, u.input("1.4.0"))
 		assert.Equal(t, VerdictOK, rep.Verdict(), rep.Summary())
-		assert.Contains(t, u.authSeen, "Bearer "+fakeUARAdminToken)
+		assert.Contains(t, u.authSeen, fakeUARAdminToken)
 	})
 }

@@ -407,14 +407,16 @@ func uarBase(card string) (string, error) {
 
 // get performs one GET without following redirects. token, when not empty, is
 // sent as a bearer credential.
-func (c *UARChecker) get(ctx context.Context, rawURL, token string) (int, []byte, error) {
+func (c *UARChecker) get(ctx context.Context, rawURL, adminKey string) (int, []byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return 0, nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if adminKey != "" {
+		// UAR's settings API authenticates with X-UAR-Admin-Key, not a bearer
+		// (src/uar/api/settings.rs require_admin_key at v1.1.0).
+		req.Header.Set("X-UAR-Admin-Key", adminKey)
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {

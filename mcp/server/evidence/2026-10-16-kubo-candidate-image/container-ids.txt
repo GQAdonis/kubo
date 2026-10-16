@@ -1,0 +1,4 @@
+A=a0f43d4daabdd6fa54c714a9ea7730670e01780331e62552c53e3e0cd7ec4547
+B=72fa6c91b330375f186070636d1c854d85d4c472d2a74654ef506f3ecab42401 (ui principal, credential env unset)
+C=5beb77cc10b8ae38ba83a4d0b1eb8f37e8d9259a1bcad3a3cb7c08fa37eccb2a (ui throwaway token, no embeddings)
+D=93a6bce4f2fb079ccdce98fc5d0c4e36abc8f84797cff2f3dd891fe50d642660 (ui throwaway token, embeddings unreachable)

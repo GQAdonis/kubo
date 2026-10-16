@@ -297,7 +297,32 @@ xberg 1.3.10 has no authentication option and no Unix socket support. Its epheme
 
 ### When a supervised process dies
 
-If the embedded xberg or the embedded SurrealDB exits after it started, `ipfs mcp` fails closed (Round 7, vector L2). The xberg proxy stops at once, so nothing is forwarded to the freed port, and extraction reports `extractor_unavailable`; the store client refuses every call with "the embedded store process has exited; restart ipfs mcp" instead of sending its credential to whatever now listens on that port. Restart `ipfs mcp` (Desktop restarts the sidecar) to bring the process back.
+If the embedded xberg or the embedded SurrealDB exits after it started, `ipfs mcp` fails closed (Round 7, vector L2). The two cases recover differently.
+
+- **Embedded xberg.** The xberg proxy stops at once, so nothing is forwarded to the freed port, and extraction reports `extractor_unavailable`. The embedded xberg is still not restarted: restart `ipfs mcp` (Desktop restarts the sidecar) to bring it back.
+- **Embedded SurrealDB.** The store client refuses every call while the process is gone, instead of sending its credential to whatever now listens on that port. The next use after the exit reopens the store: `ipfs mcp` starts a new `surreal` process, with a 2 s backoff between attempts, and searches and indexing answer `index_unavailable` (retryable) until it is up. No restart of `ipfs mcp` is needed. The old message "the embedded store process has exited; restart ipfs mcp" therefore no longer describes SurrealDB; it applies to xberg only.
+
+### Startup errors, degraded starts and the store deadline
+
+- **A missing binary is a configuration error.** An `embedded.surreal_binary` or `extractor.embedded.xberg_binary` that does not exist, is not a regular file or is not executable stops startup with an error that names the key. This is the same class as an invalid setting.
+- **A binary that fails to start degrades.** A binary that exists and is executable but fails to start (a crash, a refused version, a port that cannot be bound) does not stop startup: the stage is reported unavailable with the reason `not_started` and the rest of `ipfs mcp` runs.
+- **The store open has its own deadline**: 10 s for a remote store and 40 s for an embedded one (which includes starting `surreal`). The deadline belongs to the open, not to the caller: a cancelled `ipfs_index_status` or `GET /index/status` call does not abort an open in progress, and the next call sees its result.
+
+### Stage reason codes
+
+When a stage in the `stages` map of `ipfs_index_status` (and `GET /index/status`) is unavailable, its `reason` is exactly one of seven codes:
+
+| Code | Meaning |
+|------|---------|
+| `unreachable` | The service did not answer or the connection failed. |
+| `not_started` | The supervised process was never started or failed to start. |
+| `starting` | The supervised process was started and is not ready yet. |
+| `exited` | The supervised process started and has since exited. |
+| `auth_failed` | The service refused the credential. |
+| `timeout` | The service did not answer within its deadline. |
+| `unavailable` | Anything else. |
+
+The status carries the code only. The full error detail goes to the server log at Warn, once per change of a stage's state (not once per call), so a polling client does not flood the log and the response does not leak paths or messages.
 
 ### What the confirmation says
 
@@ -369,10 +394,10 @@ With `policy.auto` set to `true`, every successful `ipfs_add` from `ipfs mcp` is
 
 | Tool | Class | What it does |
 |------|-------|--------------|
-| `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts no embedder. |
+| `ipfs_index_status` | read | Reports whether indexing is configured, the mode, store reachability, model, dimensions and counts (optionally for one CID). Contacts the embedder or a remote extractor only when the caller's `egress_ack` covers its host: one bare GET, no credential, no content. An optional `stages` map (`store`, `embedder`, `extractor`, each `available` plus an optional `reason`, one of the seven [stage reason codes](#stage-reason-codes)) appears only when a stage is unavailable. |
 | `ipfs_index_search` | read, content egress, untrusted content | Embeds `query`, returns the `top_k` (default 5, at most 50) nearest chunks with CID, path, chunk index, score (1 minus cosine distance) and text, plus `kind`, `source`, `mime_type` and, for descriptions, `described_by`. `cid` restricts the search to one CID; the optional `kinds` and `sources` filters restrict it to those content kinds or chunk sources. |
 | `ipfs_index_cid` | write (confirmed) | Indexes one UnixFS file by CID: `files/stat`, then `cat` of at most `max_bytes`, routed through the stages of its [content kind](#content-kinds). `force: true` re-indexes a CID that already has entries. |
-| `ipfs_index_reconcile` | write (confirmed), `destructiveHint` | Deletes the entries of indexed CIDs that no pin covers, one page per call. See [Reconciliation](#reconciliation). |
+| `ipfs_index_reconcile` | write (confirmed), `destructiveHint` | Deletes the entries of indexed CIDs that no pin covers and that are no longer in the MFS, one page per call; unknown coverage keeps entries. See [Reconciliation](#reconciliation). |
 | `ipfs_index_bulk_start` | write (confirmed), content egress | Starts (or with `resume: true` resumes) the one bulk run over pins and MFS. See [Bulk indexing](#bulk-indexing). |
 | `ipfs_index_bulk_status` | read | Reports the state and counts of the current or last bulk run. Contacts no daemon endpoint, extractor or embedder. |
 | `ipfs_index_bulk_cancel` | write (confirmed) | Cancels the active or paused run; files already indexed stay indexed. Off switch for all three: `embeddings.bulk.enabled: false`. |
@@ -425,18 +450,18 @@ The check runs after these tools, which are destructive and so are enabled only 
 - `pin_update` with `unpin` (the default): for the old CID;
 - `repo_gc`: for every indexed CID garbage collection removed. Every removed block key is compared with the indexed CIDs, not only the 100 keys in `removed_sample`. The comparison is by multihash, because garbage collection reports block keys with the raw codec while the index holds the dag-pb CID.
 
-The unpin or collection itself has already succeeded when the check runs; its warnings never turn it into a failure. A pinned directory has no entries of its own: a bulk run indexes each file under its own CID. After an unpin, `ipfs mcp` therefore walks the unpinned DAG offline and checks every indexed file in it, so unpinning a directory drops the entries of the files no other pin covers (Round 7, vector M1). A file that a pin still reaches through another path stays. A file still present in the MFS stays too: the MFS counts as coverage, not only pins, so removing a pin never deletes the entries of a file you keep in your MFS tree. If the walk reaches a limit, or the store, the pin check or the MFS check fails, the entries stay and a warning tells you to run `ipfs_index_reconcile`.
+The unpin or collection itself has already succeeded when the check runs; its warnings never turn it into a failure. A bulk run indexes each file under its own CID, so a pinned directory usually has no entries of its own, but some roots do (an `ipfs_add` wrapper directory, for one). After an unpin, `ipfs mcp` walks the DAG of every unpinned root offline, including a root that has entries of its own, and checks every indexed CID in it, so unpinning a directory drops the entries of the files no other pin covers (Round 7, vector M1; Round 8, N2). A file that a pin still reaches through another path stays. Content still present in the MFS stays too, whether it is a file or a directory: the MFS counts as coverage, not only pins, so removing a pin never deletes the entries of anything you keep in your MFS tree. The drop phase (the pin and MFS checks, then the deletes) has its own 60 second deadline, which starts after the walks. If the walk reaches a limit, the deadline passes, or the store, the pin check or the MFS check fails, the entries stay and a warning tells you to run `ipfs_index_reconcile`.
 
-If `ipfs mcp` runs with a scoped `API.Authorizations` entry, print it with `ipfs mcp --print-rpc-allowed-paths` (with the same `--tools` selection): it includes `pin/ls` for these tools and `cat` for `ipfs_index_search`.
+If `ipfs mcp` runs with a scoped `API.Authorizations` entry, print it with `ipfs mcp --print-rpc-allowed-paths` (with the same `--tools` selection): it includes `pin/ls` for these tools, `cat` for `ipfs_index_search`, and `files/stat` and `ls` for `pin_rm`, `pin_update` and `ipfs_index_reconcile`. Those two are the offline walk and MFS check that decide whether an indexed file is still covered; without them under a scoped authorization the check fails and the entries stay (with a warning).
 
 ### Reconciliation
 
 Kubo has no pin event stream, and a daemon-wide hook is refused under the User Agency rules, so `ipfs mcp` does not see content unpinned outside it: by the CLI, the Web UI or another client. `ipfs_index_reconcile` closes that gap when the operator runs it.
 
 - It walks the indexed CIDs in order, `limit` per call, and returns `page.next_cursor` while more remain. The cursor is the last CID of the page, so deleting while paging skips nothing.
-- Each CID gets the same pin check as above, plus an MFS check. Entries of CIDs that no pin covers and no MFS file holds are deleted and listed in `deleted`; the rest are counted in `kept`. A file you keep in the MFS is kept even when nothing pins it.
+- Each CID gets the same pin check as above, plus an MFS check. Entries of CIDs that no pin covers and no MFS file holds are deleted and listed in `deleted`; the rest are counted in `kept`. A file or directory you keep in the MFS is kept even when nothing pins it. Reconcile's checks run under the same 60 second drop deadline; when it passes, the remaining entries are kept with a warning.
 - `dry_run: true` lists what would be deleted and deletes nothing.
-- A CID whose pin check or delete fails is kept, with a warning in `warnings`.
+- A CID whose pin check, MFS check or delete fails, or whose coverage is unknown, is kept, with a warning in `warnings`.
 
 Content added with `pin: false` and indexed is covered by no pin, so the next reconciliation or garbage collection removes its entries unless the file is also in your MFS. Pin what should stay searchable.
 
@@ -477,6 +502,7 @@ Embedding settings are read when `ipfs mcp` starts; changing them restarts `ipfs
 
 ## Limitations
 
+- **Unreachable search services.** Startup no longer fails when the store, embedder or extractor is unreachable. The store is opened on first use, with backoff from 2 s up to 1 min; search and indexing answer `index_unavailable` (retryable) until the store is reached, and `GET /index/status` reports the unavailable stages. Startup still fails on configuration errors: invalid settings, a credential over plain `http`, rejected store credentials (`ErrAuth`) and an embedding dimension mismatch. Known limits: an embedded xberg that fails to start or exits is not retried until restart (an embedded SurrealDB that exits is reopened on next use, see [When a supervised process dies](#when-a-supervised-process-dies)), and a bulk run left `running` by a crash is marked paused only when the store is reachable at startup.
 - **The operator identity cannot index.** Stdio and `--auth-token-*` carry no `egress_ack`, so indexing and search need a configured HTTP principal. This keeps content from reaching an embedder by default, at the cost of one more config entry.
 - **Video description has no Mac path.** On Desktop, video search covers only the audio transcript unless you configure a hosted describer, which receives the video's bytes.
 - **Derived text is stored.** Extracted text, OCR output, transcripts and descriptions sit in SurrealDB next to their vectors (natively indexed text is not stored). Deletion follows pins and the MFS: an unpin through `ipfs mcp` drops the entries of every indexed file no longer covered, including the files under an unpinned directory, but between an out-of-band unpin and the next reconciliation that text stays readable to anyone with the store.

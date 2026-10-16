@@ -190,7 +190,7 @@ func TestSettingsEgressConfirmationSuperfluousWhenAcked(t *testing.T) {
 	dir := t.TempDir()
 	e := newSettingsEnvWith(t, settingsBackendJSON, dir, adminVerifierWithAck(t, []string{"local"}))
 	etag, _ := getSettings(t, e)
-	etag = e.putEgress(t, etag, `{"backend":{"base_url":"http://127.0.0.1:59997/v1"},"egress_confirmation":{"host":"127.0.0.1:59997"}}`)
+	e.putEgress(t, etag, `{"backend":{"base_url":"http://127.0.0.1:59997/v1"},"egress_confirmation":{"host":"127.0.0.1:59997"}}`)
 	assert.Equal(t, "http://127.0.0.1:59997/v1", currentBaseURL(t, e))
 	ov := overlayDoc(t, dir)
 	assert.NotContains(t, ov, "egress_ack", "no extension was needed: the configured ack already covered the host")

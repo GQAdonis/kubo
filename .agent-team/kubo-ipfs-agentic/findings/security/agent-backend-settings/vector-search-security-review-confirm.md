@@ -45,3 +45,13 @@ CRITICAL 0, HIGH 0, MEDIUM 0 open, LOW 2 new (N1, N2), INFO 3 new (N3-N5). Sugge
 ## Lead disposition
 
 1.3 accepted (no open CRITICAL or HIGH). The Round 7 correction cycle is spent, so N1-N4 are carried as follow-up task 1.4 of `vector-search-security-review` for Round 8; N5 is recorded only.
+
+## Disposition (1.4)
+
+| Finding | Status | Fix | Test |
+|---|---|---|---|
+| N1 | fixed | catalog `rpcOptional` (`files/stat`, `ls`) | `go test ./mcp/contract/...` |
+| N2 | fixed | `index_lifecycle.go` and `index_coverage.go` `walkNodes` | `TestPinRmWalksARootThatHasEntriesOfItsOwn`, `TestReconcileKeepsADirectoryTheMFSHolds` |
+| N3 | fixed | `dropTimeout` | `TestAfterUnpinDropPhaseHasItsOwnDeadline` |
+| N4 | fixed | clamp in `index.go` | `TestReadChunksClampsAHugeChunkIndex` |
+| N5 | recorded only | none | none |

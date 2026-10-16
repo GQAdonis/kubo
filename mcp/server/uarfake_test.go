@@ -67,7 +67,7 @@ func (u *fakeUAR) serve(w http.ResponseWriter, r *http.Request) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	u.hits[r.URL.Path]++
-	auth := r.Header.Get("Authorization")
+	auth := r.Header.Get("X-UAR-Admin-Key")
 	if r.URL.Path == testUARSettingsPath {
 		u.authSeen = append(u.authSeen, auth)
 	}
@@ -80,7 +80,7 @@ func (u *fakeUAR) serve(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(u.settingsStatus)
 			return
 		}
-		if auth != "Bearer "+fakeUARAdminToken && u.requireAuth {
+		if auth != fakeUARAdminToken && u.requireAuth {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

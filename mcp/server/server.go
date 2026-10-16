@@ -49,6 +49,13 @@ type Options struct {
 	// means DefaultConfirmTTL; otherwise it must be between MinConfirmTTL and
 	// MaxConfirmTTL. Expiry is denial.
 	ConfirmTTL time.Duration
+	// DaemonWait is how long New keeps retrying a daemon that is not
+	// reachable (connection refused) before it fails. A missing api file is
+	// covered only when d is a DiscoveringDaemon, which reads the file on each
+	// attempt; Discover reads it once. Zero, the zero value, does not wait.
+	// `ipfs mcp` passes daemon.wait, default DefaultDaemonWait with --http and
+	// zero otherwise. An RPC refusal or an unsupported version never waits.
+	DaemonWait time.Duration
 	// Version is the server version reported to clients.
 	Version string
 	// Logger receives diagnostics. It must write to stderr or a file, never
@@ -57,6 +64,10 @@ type Options struct {
 
 	// now is the clock of the confirmation gate; tests replace it.
 	now func() time.Time
+
+	// daemonSleep replaces the real sleep of the DaemonWait backoff; tests
+	// advance a fake clock with it.
+	daemonSleep func(ctx context.Context, d time.Duration) error
 
 	// awaitRecheck is how often AwaitConfirmation looks at the clock; zero
 	// keeps the default. Tests shorten it per server instead of changing a
@@ -99,6 +110,10 @@ type Server struct {
 	// is typed any so this file builds with the noagent tag, which leaves the
 	// agent code out.
 	agentExt any
+	// uarExt is the UAR backend (agent-backend-uar), set when the backend kind
+	// is uar; typed any for the same reason as agentExt. While it is set, Agent
+	// returns nil: the loop and the UAR proxy never both serve a run.
+	uarExt any
 	// agentChange, when set by OnAgentChange, runs once after every successful
 	// ApplyAgentSettings (agent.go).
 	agentChange func()
@@ -230,7 +245,13 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 		return nil, fmt.Errorf("startup contract check: tool %q is registered twice", dup)
 	}
 
-	info, err := probe(ctx, d, cat, func(msg string) { s.log.Warn(msg) })
+	info, err := probeWithWait(ctx, d, cat, func(msg string) { s.log.Warn(msg) }, daemonWait{
+		total: opts.DaemonWait,
+		now:   now,
+		sleep: opts.daemonSleep,
+		warn:  s.log.Warn,
+		info:  s.log.Info,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -402,6 +423,12 @@ func (s *Server) disabledReason(t contract.Tool) string {
 // approve a write or destructive call.
 func (s *Server) ResolveConfirmation(id, resolver string, approve bool) error {
 	return s.gate.broker.Resolve(id, resolver, approve)
+}
+
+// CancelConfirmation ends a pending or approved confirmation that will not run,
+// so it cannot be claimed later. It is not a decision by a person.
+func (s *Server) CancelConfirmation(id string) {
+	s.gate.broker.Cancel(id)
 }
 
 // AwaitConfirmation blocks until the confirmation is no longer pending and

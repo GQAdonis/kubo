@@ -1,8 +1,10 @@
 package server
 
 import (
+	"math"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ipfs/kubo/mcp/server/embeddings"
 	"github.com/stretchr/testify/assert"
@@ -300,4 +302,104 @@ func TestSearchNeverReadsAStoredIPNSPath(t *testing.T) {
 	for _, r := range e.catCalls() {
 		assert.False(t, strings.HasPrefix(r.path, "/ipns/"), "read %s", r.path)
 	}
+}
+
+// N2: a root with entries of its own is walked too. ipfs_add indexes the
+// directory it wraps a named file in, and a bulk run indexes the files below it.
+func TestPinRmWalksARootThatHasEntriesOfItsOwn(t *testing.T) {
+	n := newFakeNode()
+	f := n.file(filler("cats", 20))
+	wrapper := n.dir("wrapper", nodeEntry{"cats.txt", f})
+	n.pinRecursive(wrapper)
+
+	b := newTextBulkEnv(t, n, nil)
+	n.installPinRm(b.indexEnv)
+	b.run(b.principal(), map[string]any{"sources": []any{"pins"}})
+	seedBulk(t, b, wrapper, 1) // what the auto-index of the wrapped add left
+	require.ElementsMatch(t, sortedCIDs(f, wrapper), b.indexedCIDs())
+
+	res := toolCall(t, b.connect(nil), "pin_rm", map[string]any{"path": "/ipfs/" + wrapper})
+	require.False(t, res.IsError, "%+v", res.Content)
+	assert.Empty(t, warningsOf(res))
+	assert.Empty(t, b.indexedCIDs(), "the wrapper and the file below it are both gone")
+}
+
+// N2: a directory the MFS holds is covered, so reconcile keeps its entries.
+func TestReconcileKeepsADirectoryTheMFSHolds(t *testing.T) {
+	n := newFakeNode()
+	f := n.file(filler("cats", 20))
+	held := n.dir("held", nodeEntry{"cats.txt", f})
+	gone := n.dir("gone", nodeEntry{"other.txt", n.file(filler("dogs", 20))})
+	n.mfs["/"] = []nodeMFS{{Name: "held", CID: held}}
+
+	b := newTextBulkEnv(t, n, nil)
+	n.installPinRm(b.indexEnv)
+	seedBulk(t, b, held, 1)
+	seedBulk(t, b, gone, 1)
+
+	res := toolCall(t, b.connect(nil), "ipfs_index_reconcile", nil)
+	require.False(t, res.IsError, "%+v", res.Content)
+	assert.Empty(t, warningsOf(res))
+	assert.ElementsMatch(t, []string{held}, b.indexedCIDs(), "the MFS directory stays, the uncovered one goes")
+}
+
+// N3: the drop phase has a deadline of its own, so a walk that runs out of
+// time does not leave the checks without any.
+func TestAfterUnpinDropPhaseHasItsOwnDeadline(t *testing.T) {
+	n := newFakeNode()
+	f := n.file(filler("cats", 20))
+	wrapper := n.dir("wrapper", nodeEntry{"cats.txt", f})
+
+	b := newTextBulkEnv(t, n, nil)
+	n.installPinRm(b.indexEnv)
+	seedBulk(t, b, wrapper, 1)
+	stat := b.d.handle["files/stat"]
+	b.d.handle["files/stat"] = func(args []string, opts map[string]any) (any, error) {
+		if len(args) == 1 && args[0] == "/ipfs/"+wrapper {
+			time.Sleep(150 * time.Millisecond) // the walk outlives its 30 ms
+		}
+		return stat(args, opts)
+	}
+
+	warnings := b.s.afterUnpinWithin(t.Context(), []string{wrapper}, 30*time.Millisecond, time.Minute)
+	assert.Empty(t, b.indexedCIDs(), "the unpinned wrapper is dropped in the drop phase")
+	for _, w := range warnings {
+		assert.NotContains(t, w, "were kept", "the checks ran with time to spare")
+	}
+
+	seedBulk(t, b, wrapper, 1)
+	warnings = b.s.afterUnpinWithin(t.Context(), []string{wrapper}, time.Minute, time.Nanosecond)
+	assert.ElementsMatch(t, []string{wrapper}, b.indexedCIDs())
+	assert.NotEmpty(t, warnings)
+}
+
+// N4: a chunk index from the store is clamped, so the read stays in its budget.
+func TestReadChunksClampsAHugeChunkIndex(t *testing.T) {
+	pol := embeddings.Policy{ChunkChars: 200, MaxBytes: 1 << 20}
+	e := newIndexEnv(t, indexEnvOptions{policy: pol})
+	c := testCID(t, 4501)
+	e.files["/ipfs/"+c] = []byte(strings.Repeat("cats purr. ", 100))
+	for _, upto := range []int{math.MaxInt, math.MaxInt / 800, 1 << 62, -5} {
+		budget := pol.MaxBytes + 1
+		e.s.readChunks(t.Context(), "/ipfs/"+c, pol, upto, &budget)
+		assert.GreaterOrEqual(t, budget, 0, "upto=%d", upto)
+		assert.LessOrEqual(t, budget, pol.MaxBytes+1, "upto=%d", upto)
+		reads := e.catCalls()
+		last := reads[len(reads)-1]
+		assert.Positive(t, last.length, "upto=%d", upto)
+		assert.LessOrEqual(t, last.length, int64(pol.MaxBytes)+1, "upto=%d", upto)
+	}
+}
+
+// seedBulk gives a CID index entries in the store of a bulk environment (the
+// seed of indexEnv writes to a store the service does not use there).
+func seedBulk(t *testing.T, b *bulkEnv, c string, chunks int) {
+	t.Helper()
+	rows := make([]embeddings.Row, 0, chunks)
+	for i := range chunks {
+		v := make([]float32, indexTestDims)
+		v[i%indexTestDims] = 1
+		rows = append(rows, embeddings.Row{CID: c, Path: "/ipfs/" + c, MIME: "text/plain", ChunkIndex: i, Model: "fake-embed", Vector: v})
+	}
+	require.NoError(t, b.store.Replace(t.Context(), c, rows))
 }

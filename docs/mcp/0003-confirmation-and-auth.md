@@ -224,7 +224,7 @@ Decisions from the Round 4 review of the `ipfs-mcp-server` phase. Where this dis
 
 ### 3. The anonymous loopback principal is read-only
 
-- **Decision.** An HTTP listener on loopback with no credential configured serves every request as `anonymous-loopback`: it reads every group and has no write or destructive grant. Write and destructive tools over HTTP need a configured principal. A non-loopback listener without a verifier is refused (unchanged).
+- **Decision.** An HTTP listener on loopback with no principal and no operator token configured (configured principals whose credentials all fail to resolve stop startup instead) serves every request as `anonymous-loopback`: it reads every group and has no write or destructive grant. Write and destructive tools over HTTP need a configured principal. A non-loopback listener without a verifier is refused (unchanged).
 
 ## Amendment (Round 7, 2026-10-09): destructive calls from A2A peers need a presence resolver
 

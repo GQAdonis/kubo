@@ -92,7 +92,7 @@ func TestMCPBulkIndexNoInjection(t *testing.T) {
 	mfsRootBefore := node.IPFS("files", "stat", "--hash", "/").Stdout.Trimmed()
 
 	embed := newCountingEmbed(t)
-	p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""), true)
+	p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 
@@ -150,7 +150,7 @@ func TestMCPBulkIndexSkipsWhatIsNotLocal(t *testing.T) {
 	refsBefore := sortedLines(localRefs(node))
 
 	embed := newCountingEmbed(t)
-	p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""), true)
+	p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""))
 	cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 	okResult(t, callMCP(t, cs, "ipfs_index_bulk_start", map[string]any{"sources": []any{"pins"}}))
 	run := waitBulk(t, cs)
@@ -195,7 +195,7 @@ func TestMCPBulkIndexMFSLazyCopyIsNeverFetched(t *testing.T) {
 
 	refsBefore := sortedLines(refs)
 	embed := newCountingEmbed(t)
-	p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""), true)
+	p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""))
 	cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 	started := time.Now()
 	okResult(t, callMCP(t, cs, "ipfs_index_bulk_start", map[string]any{"sources": []any{"mfs"}}))
@@ -254,7 +254,7 @@ func TestMCPBulkIndexDisabled(t *testing.T) {
 	defer node.StopDaemon()
 	embed := newCountingEmbed(t)
 	cfg := bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", `"bulk": {"enabled": false}`)
-	p := startIndexMCP(t, node, cfg, true)
+	p := startIndexMCP(t, node, cfg)
 	cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 	listed := mcpListedTools(t, cs)
@@ -323,7 +323,7 @@ func TestMCPIndexSearchRouteDisabled(t *testing.T) {
 
 	t.Run("switched off", func(t *testing.T) {
 		embed := newCountingEmbed(t)
-		p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", `"search_route": {"enabled": false}`), true)
+		p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", `"search_route": {"enabled": false}`))
 		for _, r := range []struct{ method, path, body string }{
 			{http.MethodPost, "/index/search", `{"query":"cats"}`},
 			{http.MethodGet, "/index/status", ""},
@@ -339,7 +339,7 @@ func TestMCPIndexSearchRouteDisabled(t *testing.T) {
 
 	t.Run("on by default", func(t *testing.T) {
 		embed := newCountingEmbed(t)
-		p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""), true)
+		p := startIndexMCP(t, node, bulkConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", ""))
 		code, _ := indexRoute(t, p, http.MethodPost, "/index/search", "", `{"query":"cats"}`)
 		assert.Equal(t, http.StatusUnauthorized, code, "the route is mounted and needs a bearer")
 		code, body := indexRoute(t, p, http.MethodGet, "/index/status", indexTestToken, "")

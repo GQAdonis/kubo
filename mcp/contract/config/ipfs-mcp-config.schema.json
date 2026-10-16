@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ipfs mcp configuration file (--mcp-config)",
-  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint. An absent Secret file or token environment variable named by any SecretRef is never fatal: startup proceeds with a warning and only the dependent feature is disabled (the principal whose credential reference does not resolve authenticates nothing; the agent backend whose key reference does not resolve answers backend_not_configured) until the reference resolves (CRITICAL-2, ADR-0009 section 1).",
+  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint. An absent Secret file or token environment variable named by any SecretRef is never fatal, with one exception: startup proceeds with a warning and only the dependent feature is disabled (the principal whose credential reference does not resolve authenticates nothing; the agent backend whose key reference does not resolve answers backend_not_configured) until the reference resolves (CRITICAL-2, ADR-0009 section 1). The exception: ipfs mcp --http with configured principals none of which resolves a credential, and no --auth-token-* operator token, exits at start instead of serving 403 (S5).",
   "flag": "--mcp-config",
   "env": "IPFS_MCP_CONFIG",
   "type": "object",
@@ -156,7 +156,7 @@
           "credential": {
             "$ref": "#/$defs/SecretRef",
             "default": null,
-            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled, with a warning at start: startup proceeds and the principal authenticates nothing until the reference resolves (CRITICAL-2).",
+            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled and the start logs a warning, as long as at least one other principal (or a --auth-token-* operator token) resolves; the disabled principal authenticates nothing until the reference resolves (CRITICAL-2). If none of the configured principals resolves and no operator token is given, ipfs mcp --http exits at start naming the missing variables or files.",
             "ownerChange": "mcp-http-transport-auth"
           },
           "groups": {
@@ -245,7 +245,7 @@
                   }
                 ],
                 "default": null,
-                "offSwitch": "null (default): settings cannot be read, so check verify fails closed.",
+                "offSwitch": "null (default): settings cannot be read, so check verify fails closed. Sent to UAR as the X-UAR-Admin-Key header (not as a bearer), only to the settings path under the card URL's base, over https or to loopback.",
                 "ownerChange": "mcp-agent-principal-enforcement"
               },
               "min_version": {
@@ -274,7 +274,7 @@
         ]
       },
       "default": [],
-      "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no credential configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused.",
+      "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no principal and no operator token configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused. When principals are configured but none of them has a credential that resolves (and no --auth-token-* operator token is given), startup fails and names the principals and the environment variables or files it expected; it does not fall back to the anonymous listener. When some resolve, only those are enabled.",
       "ownerChange": "mcp-agent-principal-enforcement"
     },
     "llm": {
@@ -284,6 +284,109 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "openai",
+            "uar"
+          ],
+          "default": "openai",
+          "offSwitch": "Leave unset or set openai: the backend is an OpenAI-compatible server and nothing contacts a UAR instance. Remove the llm section for no backend at all; make build GOTAGS=noagent removes the code. kind uar is accepted only while mcp/contract/agentic/uar-preflight.json pins a published UAR release.",
+          "ownerChange": "agent-backend-uar"
+        },
+        "uar": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+              "default": "kubo-ipfs",
+              "offSwitch": "Read only when llm.kind is uar; set llm.kind back to openai. Must be unique per node on a shared UAR (the default collides across nodes): an agent with the same id is overwritten, system prompt included. Kubo binds and unbinds only skills it bound itself.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "provider": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null,
+              "offSwitch": "Read only when llm.kind is uar; required for llm.kind uar unless llm.model is written as provider/model (resolve and settings writes refuse a uar backend with neither); set llm.kind back to openai to drop it.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_name": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+              "default": "kubo-ipfs",
+              "offSwitch": "Read only when llm.kind is uar and mcp_principal is set; unset mcp_principal and the agent is created without a kubo MCP binding.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_principal": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 64,
+              "default": null,
+              "offSwitch": "Required when llm.kind is uar (with mcp_credential_revision); null only while llm.kind is openai. UAR v1.1.0 resolves an empty tool allowlist to automatic selection and would expose the instance's native tools, so a uar backend without it is refused rather than created without a kubo binding. Names a principal of kind uar in principals; its credential is the static bearer sent to UAR with each run as the grant, never stored there. Plain http to a non-loopback host is refused unless the host is listed in embeddings.insecure_http_hosts. Set llm.kind back to openai to turn the UAR backend off.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_credential_revision": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 128,
+              "default": null,
+              "offSwitch": "Required with llm.kind uar, as for mcp_principal (the credential_revision the UAR operator issued for the run grant). Set llm.kind back to openai to turn the UAR backend off.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_scopes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "default": [
+                "ipfs"
+              ],
+              "offSwitch": "Read only when llm.kind is uar (mcp_principal is required there); set llm.kind back to openai to send no run grant.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "mcp_grant_ttl": {
+              "$ref": "#/$defs/Duration",
+              "default": "10m",
+              "offSwitch": "Read only when llm.kind is uar. Advisory: sent to UAR as the grant expiry (expires_at_unix) and not enforced by ipfs mcp, because the grant is the uar principal static bearer. A leaked grant stays usable until that principal secret is rotated, whatever the value; at least 30s and at most 1h.",
+              "ownerChange": "agent-backend-uar"
+            },
+            "skills_dir": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/AbsolutePath"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "offSwitch": "null (default): no skill is uploaded or bound by kubo, and it unbinds only skills it bound earlier in this process. Name a directory of agentskills.io skill directories (mcp/skills in a checkout) to upload each SKILL.md and bind it to the agent. A skill removed from skills_dir stays bound on UAR after a restart (kubo remembers what it bound only inside one running process). A skill of the same name already on UAR is bound only if its artifact_digest equals the digest of the local SKILL.md; a different or missing digest fails provisioning.",
+              "ownerChange": "agent-backend-uar"
+            }
+          },
+          "default": null,
+          "offSwitch": "null (default): every llm.uar key takes its default. The section is read only when llm.kind is uar.",
+          "ownerChange": "agent-backend-uar"
+        },
         "base_url": {
           "type": "string",
           "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$",
@@ -298,7 +401,7 @@
           "minLength": 1,
           "maxLength": 256,
           "default": null,
-          "offSwitch": "Remove the llm section.",
+          "offSwitch": "Remove the llm section. With llm.kind uar it names the default model of the UAR agent, and either llm.uar.provider is set or this value is written as provider/model (a uar backend with neither is refused).",
           "ownerChange": "mcp-llm-proxy-loop",
           "flag": "--llm-model"
         },
@@ -312,7 +415,7 @@
             }
           ],
           "default": null,
-          "offSwitch": "null (default): requests carry no key (local servers). An api_key reference whose environment variable or file is absent is never fatal: startup proceeds with a warning, only the dependent agent backend is disabled, and /agui answers 503 backend_not_configured until the reference resolves (CRITICAL-2).",
+          "offSwitch": "null (default): requests carry no key (local servers). With llm.kind uar this must be a trusted-host JWT of the UAR instance, not an ordinary API key. An api_key reference whose environment variable or file is absent is never fatal: startup proceeds with a warning, only the dependent agent backend is disabled, and /agui answers 503 backend_not_configured until the reference resolves (CRITICAL-2).",
           "ownerChange": "mcp-llm-proxy-loop",
           "flag": "--llm-api-key-env, --llm-api-key-file"
         },
@@ -510,6 +613,22 @@
       "default": {},
       "offSwitch": "Per-call confirmation of write and destructive tools cannot be turned off; it can only become stricter. The out-of-band human gate can: confirmation.modes [] or IPFS_MCP_CONFIRM=none, after which only eliciting clients can confirm.",
       "ownerChange": "native-confirmation-prompt"
+    },
+    "daemon": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wait": {
+          "$ref": "#/$defs/Duration",
+          "default": "60s",
+          "description": "How long ipfs mcp keeps retrying at startup while the Kubo RPC API refuses connections or cannot be reached, for example a sidecar that starts before the daemon container is ready. Without --api the api file in the repo directory is read again on each attempt, so a daemon that starts later or restarts on another port is found. Retries use a bounded backoff; the first retry is logged at Warn and each later one at Info. The 60s default applies only with --http: plain stdio ipfs mcp defaults to no wait, because an MCP host has its own startup timeout. An explicit value is always honored. After this duration startup fails with the same error as without a wait. A daemon that answers with an error (an API.Authorizations refusal, an unsupported version) fails at once and is never retried. At most 10m.",
+          "offSwitch": "The schema default 60s is the --http default only (the annotation requires a Duration default); plain stdio has no wait unless this is set, so a daemon that is not reachable fails at once. 0s: no wait on either transport.",
+          "ownerChange": "mcp-server-core-stdio"
+        }
+      },
+      "default": {},
+      "offSwitch": "Omit the section for the transport default (60s with --http, none for stdio), or set daemon.wait to 0s to fail at once.",
+      "ownerChange": "mcp-server-core-stdio"
     },
     "embeddings": {
       "type": [

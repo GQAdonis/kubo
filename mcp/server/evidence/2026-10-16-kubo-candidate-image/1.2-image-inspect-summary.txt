@@ -1,0 +1,1 @@
+Os=linux Arch=amd64 ID=sha256:87a34626a9f31ef01f5aa05ae291176b64803cc393af6375ea2c938aca9a068a Tags=[ghcr.io/gqadonis/kubo:ff1d66e0f] RepoDigests=[]

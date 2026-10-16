@@ -128,7 +128,7 @@ func TestMCPExtractorDisabled(t *testing.T) {
 		dataDir := filepath.Join(t.TempDir(), "idx")
 		// The PDF type is allowlisted: only the missing extractor can skip it.
 		p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8,
-			`{"mime_allowlist": ["text/plain", "application/pdf"]}`), true)
+			`{"mime_allowlist": ["text/plain", "application/pdf"]}`))
 		cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 		out := okResult(t, callMCP(t, cs, "ipfs_index_cid", map[string]any{"cid": pdf}))
@@ -148,7 +148,7 @@ func TestMCPExtractorDisabled(t *testing.T) {
 		xberg, xbergRequests := countingXberg(t)
 		dataDir := filepath.Join(t.TempDir(), "idx")
 		p := startIndexMCP(t, node, extractorConfig(bin, dataDir, embed.URL+"/v1", "fake", 8, `{}`,
-			fmt.Sprintf(`{"mode": "remote", "remote": {"base_url": %q}}`, xberg)), true)
+			fmt.Sprintf(`{"mode": "remote", "remote": {"base_url": %q}}`, xberg)))
 		cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 		out := okResult(t, callMCP(t, cs, "ipfs_index_cid", map[string]any{"cid": pdf}))

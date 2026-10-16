@@ -225,18 +225,31 @@ func runMCP(req *cmds.Request, cfg *mcpserver.Config, gate confirm.Config) error
 		fmt.Fprintln(os.Stderr, "ipfs mcp: warning: --api-auth puts the RPC secret on the command line, where other local users can read it; use --"+mcpAPIAuthEnvOptionName+" or --"+mcpAPIAuthFileOptionName+" instead")
 	}
 
-	daemon, err := mcpserver.Discover(mcpserver.DiscoverOptions{
+	discoverOpts := mcpserver.DiscoverOptions{
 		API:           apiAddr,
 		Authorization: config.ConvertAuthSecret(apiAuth),
-	})
-	if err != nil {
-		return fmt.Errorf("ipfs mcp: %w", err)
+	}
+	// Without --api the api file is read on each attempt, so the startup
+	// wait finds a daemon that starts later or restarts on another port.
+	var daemon mcpserver.Daemon
+	if apiAddr == "" {
+		daemon = mcpserver.NewDiscoveringDaemon(discoverOpts)
+	} else {
+		daemon, err = mcpserver.Discover(discoverOpts)
+		if err != nil {
+			return fmt.Errorf("ipfs mcp: %w", err)
+		}
 	}
 	confirmTTL, err := cfg.Confirmation.TTLDuration()
 	if err != nil {
 		return fmt.Errorf("ipfs mcp: %w", err)
 	}
+	daemonWait, err := cfg.Daemon.WaitDuration(settings.http != nil)
+	if err != nil {
+		return fmt.Errorf("ipfs mcp: %w", err)
+	}
 	srv, err := mcpserver.New(req.Context, daemon, mcpserver.Options{
+		DaemonWait:   daemonWait,
 		Tools:        settings.tools,
 		ReadOnly:     settings.readOnly,
 		Disabled:     settings.disabled,

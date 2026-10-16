@@ -398,6 +398,8 @@ func TestMCP(t *testing.T) {
 		node := harness.NewT(t).NewNode().Init()
 		addr := freeAddr(t)
 
+		// Plain stdio defaults to no daemon wait; the waits have their own
+		// tests in mcp_daemon_wait_test.go.
 		stdout, stderr, code := runMCP(t, node.IPFSBin, node.Dir, "--api", addr)
 		assert.NotZero(t, code)
 		assert.Empty(t, stdout)

@@ -1,0 +1,38 @@
+container status: Up 7 seconds (health: starting)
+## log
+time=2026-10-15T20:13:54.173Z level=WARN msg="embeddings store is unavailable; searching and indexing fail until it is reached, and it is tried again on use" error="embeddings store is unavailable: define schema: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused (defining the namespace and database also failed: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused)"
+time=2026-10-15T20:13:54.183Z level=WARN msg="bulk index: cannot check the stored run" error="index_unavailable: embeddings store is unavailable: define schema: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused (defining the namespace and database also failed: surrealdb request: dial tcp 127.0.0.1:59998: connect: connection refused)"
+ipfs mcp: embeddings enabled: remote store 127.0.0.1:59998, embedder 127.0.0.1:59997 model bge-m3 (1024 dimensions), extractor xberg at 127.0.0.1:59996
+ipfs mcp: AG-UI endpoint enabled at /agui (0 browser origins allowed)
+ipfs mcp: no model backend is configured (--llm-base-url and --llm-model), so /agui answers 503 backend_not_configured until one is
+ipfs mcp: serving MCP over HTTP on http://127.0.0.1:5151/mcp
+## GET /index/status
+HTTP/1.1 200 OK
+Cache-Control: no-store
+Content-Type: application/json
+Date: Thu, 15 Oct 2026 20:13:58 GMT
+Content-Length: 412
+Connection: close
+
+{"auto":false,"dimensions":1024,"enabled":true,"mode":"remote","model":"bge-m3","stages":{"embedder":{"available":false,"reason":"context canceled"},"extractor":{"available":false,"reason":"context canceled"},"store":{"available":false,"reason":"define schema: surrealdb request: context canceled (defining the namespace and database also failed: surrealdb request: context canceled)"}},"store_reachable":false}
+
+## POST /index/search
+HTTP/1.1 500 Internal Server Error
+Cache-Control: no-store
+Content-Type: application/json
+Date: Thu, 15 Oct 2026 20:13:59 GMT
+Content-Length: 240
+Connection: close
+
+{"error":{"code":"cancelled","message":"search: embeddings store is unavailable: define schema: surrealdb request: context canceled (defining the namespace and database also failed: surrealdb request: context canceled)","retryable":false}}
+
+## tools
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+"name":"ipfs_cat"
+"name":"ipfs_get"
+"name":"ipfs_index_bulk_status"
+"name":"ipfs_index_search"
+"name":"ipfs_index_status"
+"name":"ipfs_ls"
+"name":"ipfs_node_info"
+"name":"ipfs_node_status"

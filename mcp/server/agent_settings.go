@@ -90,7 +90,16 @@ type AgentSettings struct {
 
 	// HTTPClient replaces the default client; tests use it to observe dialing.
 	HTTPClient *http.Client
+
+	// Kind is BackendKindOpenAI (also the empty value) or BackendKindUAR. For
+	// uar, BaseURL is the UAR instance, APIKey the credential kubo presents to
+	// it, Model the agent's default model (optional) and UAR the rest.
+	Kind string
+	UAR  *UARSettings
 }
+
+// IsUAR reports whether the backend is a UAR agent.
+func (a *AgentSettings) IsUAR() bool { return a != nil && a.Kind == BackendKindUAR }
 
 // LLMOverrides are the --llm-* flags. A non-empty value replaces the config
 // file's.
@@ -116,6 +125,20 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 	}
 	base := firstNonEmpty(o.BaseURL, llm.BaseURL)
 	model := firstNonEmpty(o.Model, llm.Model)
+	// The kind is validated before the "nothing configured" return, so an
+	// invalid kind, or kind uar without a base URL, fails instead of silently
+	// leaving the agent off.
+	kind := llm.Kind
+	switch kind {
+	case "":
+		kind = BackendKindOpenAI
+	case BackendKindOpenAI, BackendKindUAR:
+	default:
+		return nil, errors.New("llm.kind must be openai or uar")
+	}
+	if kind == BackendKindUAR && base == "" {
+		return nil, errors.New("llm.kind uar needs llm.base_url")
+	}
 	if base == "" && model == "" {
 		if o.keyGiven() {
 			return nil, errors.New("--llm-api-key-env or --llm-api-key-file is set but no model backend is configured; name --llm-base-url and --llm-model, or remove the key flag")
@@ -125,7 +148,7 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 	switch {
 	case base == "":
 		return nil, errors.New("llm.model is set without llm.base_url (--llm-base-url): the agent has no default endpoint")
-	case model == "":
+	case model == "" && kind == BackendKindOpenAI:
 		return nil, errors.New("llm.base_url is set without llm.model (--llm-model): the agent has no default model")
 	}
 	if err := validateBackendURL(base); err != nil {
@@ -160,7 +183,30 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 		}
 		limits.WallClock = d
 	}
-	return &AgentSettings{BaseURL: base, Model: model, APIKey: key, Timeout: timeout, Limits: limits.withDefaults()}, nil
+	set := &AgentSettings{BaseURL: base, Model: model, APIKey: key, Timeout: timeout, Limits: limits.withDefaults(), Kind: kind}
+	if kind == BackendKindUAR {
+		u, err := c.resolveUAR(llm)
+		if err != nil {
+			return nil, err
+		}
+		if _, _, err := uarProviderModel(&AgentSettings{Model: model, UAR: u}); err != nil {
+			return nil, fmt.Errorf("llm.kind uar: %w", err)
+		}
+		set.UAR = u
+		// The run grant is the principal's bearer; it must not cross the
+		// network in clear text either. Plain http is allowed to loopback or
+		// to a host the operator listed in embeddings.insecure_http_hosts.
+		if u.MCPCredential != nil && strings.EqualFold(schemeOf(base), "http") && !IsLocalHost(HostFromURL(base)) {
+			var listed []string
+			if c.Embeddings != nil {
+				listed = c.Embeddings.InsecureHTTPHosts
+			}
+			if pu, perr := url.Parse(base); perr != nil || !insecureHostListed(pu, listed) {
+				return nil, errors.New("refusing to send the llm.uar.mcp_principal grant over plain http to a non-loopback host; use https, a loopback backend, or list the host in embeddings.insecure_http_hosts")
+			}
+		}
+	}
+	return set, nil
 }
 
 func keyRefFromFlags(o LLMOverrides) (SecretRef, error) {
@@ -222,6 +268,9 @@ func (a *AgentSettings) Describe() string {
 	key := "no api key"
 	if a.APIKey != nil {
 		key = "api key from " + a.APIKey.where()
+	}
+	if a.IsUAR() {
+		return fmt.Sprintf("agent backend UAR %s, agent %s, %s", HostFromURL(a.BaseURL), a.UAR.AgentID, key)
 	}
 	return fmt.Sprintf("agent backend %s, model %s, %s", HostFromURL(a.BaseURL), a.Model, key)
 }

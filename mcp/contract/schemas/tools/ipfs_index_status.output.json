@@ -49,6 +49,88 @@
         "type": "integer",
         "minimum": 0
       }
+    },
+    "stages": {
+      "type": "object",
+      "description": "Optional. Present only when a stage is unavailable. The embedder, and a remote extractor, appear only when the caller's egress_ack covers their host; the probe is then one bare GET with no credential and no content. Absent from servers that predate it; clients treat absence as all stages available.",
+      "additionalProperties": false,
+      "properties": {
+        "store": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why the stage is unavailable: a fixed code, never an address, a path or process output (the server log has the detail). unreachable: nothing answered at its address. not_started: the embedded process could not be started. starting: still starting, ask again shortly. exited: the embedded process ended after it had started. auth_failed: credentials rejected. timeout: no answer in time. unavailable: any other cause.",
+              "enum": [
+                "unreachable",
+                "not_started",
+                "starting",
+                "exited",
+                "auth_failed",
+                "timeout",
+                "unavailable"
+              ]
+            }
+          }
+        },
+        "embedder": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why the stage is unavailable: a fixed code, never an address, a path or process output (the server log has the detail). unreachable: nothing answered at its address. not_started: the embedded process could not be started. starting: still starting, ask again shortly. exited: the embedded process ended after it had started. auth_failed: credentials rejected. timeout: no answer in time. unavailable: any other cause.",
+              "enum": [
+                "unreachable",
+                "not_started",
+                "starting",
+                "exited",
+                "auth_failed",
+                "timeout",
+                "unavailable"
+              ]
+            }
+          }
+        },
+        "extractor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why the stage is unavailable: a fixed code, never an address, a path or process output (the server log has the detail). unreachable: nothing answered at its address. not_started: the embedded process could not be started. starting: still starting, ask again shortly. exited: the embedded process ended after it had started. auth_failed: credentials rejected. timeout: no answer in time. unavailable: any other cause.",
+              "enum": [
+                "unreachable",
+                "not_started",
+                "starting",
+                "exited",
+                "auth_failed",
+                "timeout",
+                "unavailable"
+              ]
+            }
+          }
+        }
+      }
     }
   },
   "required": [

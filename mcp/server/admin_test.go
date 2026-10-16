@@ -104,10 +104,11 @@ func TestAbsentCredentialDisablesOnlyThatPrincipal(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, e.do(t, rawReq{path: settingsTestRoute, token: tokReader}).StatusCode)
 }
 
-// TestAllCredentialsAbsentServerStarts: with every configured credential
-// absent the server still starts, and the empty verifier authenticates no
-// token at all.
-func TestAllCredentialsAbsentServerStarts(t *testing.T) {
+// TestAllCredentialsAbsentVerifierAuthenticatesNothing: with every configured
+// credential absent the empty verifier is valid and authenticates no token at
+// all. Whether `ipfs mcp --http` starts in that case is decided by the command
+// (it fails; see cmd/ipfs/kubo/mcp_http_principals_test.go), not by this package.
+func TestAllCredentialsAbsentVerifierAuthenticatesNothing(t *testing.T) {
 	cfg, err := ParseConfig([]byte(`{"principals":[
 		{"name":"settings-admin","kind":"admin","credential":{"file":"/nonexistent/ipfs-mcp-test/admin.token"}}
 	]}`))

@@ -32,11 +32,15 @@ const indexTestToken = "cli-index-token-0123456789abcdef"
 
 // countingEmbed is an OpenAI-compatible embeddings endpoint whose vectors are
 // one-hot on an axis chosen by the first word of the text. It counts the
-// requests it gets and can be switched off.
+// embedding requests (POSTs) it gets and can be switched off. The reachability
+// probe of ipfs_index_status, one bare GET with no body, is counted apart in
+// probes and is not an embedding request.
 type countingEmbed struct {
 	*httptest.Server
-	requests atomic.Int32
-	down     atomic.Bool
+	requests  atomic.Int32
+	probes    atomic.Int32
+	probeBody atomic.Int32
+	down      atomic.Bool
 }
 
 var countingAxes = map[string]int{"cats": 0, "dogs": 1, "fish": 2, "birds": 3}
@@ -45,6 +49,14 @@ func newCountingEmbed(t *testing.T) *countingEmbed {
 	t.Helper()
 	e := &countingEmbed{}
 	e.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			e.probes.Add(1)
+			if r.ContentLength > 0 {
+				e.probeBody.Add(1)
+			}
+			_, _ = w.Write([]byte(`{}`))
+			return
+		}
 		e.requests.Add(1)
 		if e.down.Load() {
 			http.Error(w, `{"error":{"message":"model not loaded"}}`, http.StatusInternalServerError)
@@ -89,7 +101,7 @@ func indexConfig(surrealBin, dataDir, embedBase, model string, dims int, policy 
 
 // startIndexMCP starts `ipfs mcp --http` with the config in its own process
 // group, waits for it to listen, and stops it (and so its surreal) on cleanup.
-func startIndexMCP(t *testing.T, node *harness.Node, cfgJSON string, withEmbeddings bool) *mcpHTTPProc {
+func startIndexMCP(t *testing.T, node *harness.Node, cfgJSON string) *mcpHTTPProc {
 	t.Helper()
 	cfg := writeEmbeddingsConfig(t, cfgJSON)
 	cmd := exec.Command(node.IPFSBin, "mcp", "--http=127.0.0.1:0", "--mcp-config", cfg,
@@ -185,7 +197,7 @@ func TestMCPEmbeddingIndexOffByDefault(t *testing.T) {
 	defer node.StopDaemon()
 	// Principals only: no embeddings section.
 	p := startIndexMCP(t, node, `{"principals":[{"name":"indexer","kind":"human-mcp","credential":{"env":"CLI_IDX_TOKEN"},
-	  "write_groups":["content"],"egress_ack":["local"]}]}`, false)
+	  "write_groups":["content"],"egress_ack":["local"]}]}`)
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 
@@ -222,7 +234,7 @@ func TestMCPEmbeddingIndexAutoOffStillIndexesExplicitly(t *testing.T) {
 	defer node.StopDaemon()
 	embed := newCountingEmbed(t)
 	dataDir := filepath.Join(t.TempDir(), "idx")
-	p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8, `{}`), true)
+	p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8, `{}`))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 
@@ -235,6 +247,8 @@ func TestMCPEmbeddingIndexAutoOffStillIndexesExplicitly(t *testing.T) {
 	assert.Empty(t, added["warnings"])
 	assert.Zero(t, embed.requests.Load(), "no embedder request when auto is off")
 	assert.EqualValues(t, 0, indexStatus(t, cs, cid)["indexed_cids"])
+	assert.Zero(t, embed.probeBody.Load(), "a status probe sends no body")
+	assert.LessOrEqual(t, embed.probes.Load(), int32(2), "each status call sends at most one probe")
 
 	refsBefore := localRefs(node)
 	res := callMCP(t, cs, "ipfs_index_cid", map[string]any{"cid": cid})
@@ -274,7 +288,7 @@ func TestMCPEmbeddingIndexLifecycle(t *testing.T) {
 	embed := newCountingEmbed(t)
 	dataDir := filepath.Join(t.TempDir(), "idx")
 	p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8,
-		`{"auto": true, "max_bytes": 4096}`), true)
+		`{"auto": true, "max_bytes": 4096}`))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 	surrealPID, ok := surrealProcess(t, dataDir)

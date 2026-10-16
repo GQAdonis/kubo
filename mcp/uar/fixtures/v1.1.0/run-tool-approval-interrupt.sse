@@ -1,0 +1,10 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run"}
+
+data: {"type":"TOOL_CALL_START","toolCallId":"tc-1","toolCallName":"pin_add","parentMessageId":"m-calls"}
+
+data: {"type":"TOOL_CALL_ARGS","toolCallId":"tc-1","delta":"{\"path\": \"/ipfs/bafy-example\"}"}
+
+data: {"type":"TOOL_CALL_END","toolCallId":"tc-1"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run","outcome":{"type":"interrupt","interrupts":[{"id":"int-ta-1","reason":"tool_approval","message":"Approve running pin_add?","toolCallId":"tc-1","expiresAt":"2030-01-01T00:00:00Z","responseSchema":{"type":"object","properties":{"approved":{"type":"boolean"}},"required":["approved"],"additionalProperties":false}}]}}
+

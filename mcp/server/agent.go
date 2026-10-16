@@ -279,20 +279,28 @@ func (s *Server) EnableAgent(set *AgentSettings) error {
 	if set == nil {
 		return nil
 	}
+	if set.IsUAR() {
+		return s.installUAR(set)
+	}
 	a, err := newAgent(s, *set)
 	if err != nil {
 		return err
 	}
 	s.agentMu.Lock()
 	s.agentExt = a
+	s.uarExt = nil
 	s.agentMu.Unlock()
 	return nil
 }
 
-// Agent returns the loop, or nil when no model backend is configured.
+// Agent returns the loop, or nil when no model backend is configured or the
+// backend is a UAR agent (UARBackend serves those runs).
 func (s *Server) Agent() *Agent {
 	s.agentMu.RLock()
 	defer s.agentMu.RUnlock()
+	if s.uarExt != nil {
+		return nil
+	}
 	a, _ := s.agentExt.(*Agent)
 	return a
 }
@@ -312,6 +320,18 @@ func (s *Server) ApplyAgentSettings(set *AgentSettings) error {
 	if set == nil {
 		return errors.New("agent settings apply needs a configured backend; turning the agent off is a restart without one")
 	}
+	if set.IsUAR() {
+		if err := s.installUAR(set); err != nil {
+			return err
+		}
+		s.agentMu.RLock()
+		hook := s.agentChange
+		s.agentMu.RUnlock()
+		if hook != nil {
+			hook()
+		}
+		return nil
+	}
 	snap, err := newSnapshot(*set)
 	if err != nil {
 		return err
@@ -327,6 +347,7 @@ func (s *Server) ApplyAgentSettings(set *AgentSettings) error {
 		}
 		s.agentExt = na
 	}
+	s.uarExt = nil
 	hook := s.agentChange
 	s.agentMu.Unlock()
 	if hook != nil {
@@ -492,7 +513,10 @@ func (a *Agent) denyRevoked(s *agentSession, entries []ResumeEntry) {
 	}
 	for _, e := range entries {
 		if e.InterruptID == s.interrupt.ID {
-			_ = a.srv.ResolveConfirmation(s.interrupt.ConfirmationID, "", false)
+			// Cancel, not Resolve: an already approved confirmation must end
+			// too, or the session stays blocked until it expires and a model
+			// that repeats the call could still claim the approval.
+			a.srv.CancelConfirmation(s.interrupt.ConfirmationID)
 			return
 		}
 	}

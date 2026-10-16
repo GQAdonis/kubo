@@ -68,6 +68,10 @@ type llmValues struct {
 	model   string
 	key     *SecretRef
 	timeout string
+	// kind and uar are llm.kind and llm.uar: the backend kind a write can
+	// switch, and the UAR section only the config file sets.
+	kind string
+	uar  *UARBackendConfig
 }
 
 // settingsState is the state behind the settings route: the writable values,
@@ -75,10 +79,13 @@ type llmValues struct {
 // mutex serializes reads and writes, so an If-Match check and the apply it
 // guards cannot interleave with another write.
 type settingsState struct {
-	mu            sync.Mutex
-	base          llmValues
-	prompt        string
-	loop          LoopConfig
+	mu     sync.Mutex
+	base   llmValues
+	prompt string
+	loop   LoopConfig
+	// principals are the configured principals; a UAR backend resolves its
+	// mcp_principal against them.
+	principals    []PrincipalConfig
 	over          LLMOverrides
 	acceptSecrets bool
 	dir           string
@@ -126,6 +133,7 @@ func (s *Server) EnableAgentSettings(c AgentSettingsAPIConfig) error {
 		// part of base and win at every resolve.
 		merged := c.Cfg.WithSettingsOverlay(c.Overlay)
 		st.loop = merged.Agent.Loop
+		st.principals = c.Cfg.Principals
 		st.acceptSecrets = c.Cfg.Agent.SettingsAcceptSecrets()
 		if merged.LLM != nil {
 			st.base = llmValues{
@@ -133,6 +141,8 @@ func (s *Server) EnableAgentSettings(c AgentSettingsAPIConfig) error {
 				model:   merged.LLM.Model,
 				key:     merged.LLM.APIKey,
 				timeout: merged.LLM.Timeout,
+				kind:    merged.LLM.Kind,
+				uar:     merged.LLM.UAR,
 			}
 		}
 	}
@@ -179,9 +189,13 @@ func mountAgentSettings(s *Server, m RouteMounter) error {
 // a flag always wins over a written value. The system prompt has no config key;
 // it is attached after the resolve.
 func (st *settingsState) resolve() (*AgentSettings, error) {
-	cfg := &Config{Agent: AgentConfig{Loop: st.loop}}
+	cfg := &Config{Agent: AgentConfig{Loop: st.loop}, Principals: st.principals}
 	if st.base.baseURL != "" || st.base.model != "" || st.base.key != nil || st.base.timeout != "" {
-		cfg.LLM = &LLMConfig{BaseURL: st.base.baseURL, Model: st.base.model, APIKey: st.base.key, Timeout: st.base.timeout}
+		cfg.LLM = &LLMConfig{BaseURL: st.base.baseURL, Model: st.base.model, APIKey: st.base.key, Timeout: st.base.timeout,
+			Kind: st.base.kind, UAR: st.base.uar}
+	}
+	if len(st.insecureHTTP) > 0 {
+		cfg.Embeddings = &EmbeddingsConfig{InsecureHTTPHosts: st.insecureHTTP}
 	}
 	set, err := cfg.ResolveAgent(st.over)
 	if err != nil {
@@ -239,9 +253,14 @@ func revisionOf(set *AgentSettings, prompt, dir string) string {
 		Timeout   string     `json:"timeout,omitempty"`
 		Limits    LoopLimits `json:"limits"`
 		Prompt    string     `json:"prompt"`
+		Kind      string     `json:"kind,omitempty"`
+		UAR       string     `json:"uar,omitempty"`
 	}{Prompt: prompt}
 	if set != nil {
 		doc.BaseURL, doc.Model, doc.Timeout, doc.Limits = set.BaseURL, set.Model, set.Timeout.String(), set.Limits.withDefaults()
+		if set.IsUAR() {
+			doc.Kind, doc.UAR = BackendKindUAR, set.UAR.digestText()
+		}
 		if ks := keyStatusOf(set, dir); ks.Set {
 			doc.KeySet, doc.KeySource = true, ks.Source
 		}
@@ -283,10 +302,12 @@ type keyNotCarriedBody struct {
 }
 
 type backendReadBody struct {
-	Kind    string           `json:"kind"`
-	BaseURL string           `json:"base_url"`
-	Model   string           `json:"model"`
-	APIKey  apiKeyStatusBody `json:"api_key"`
+	Kind    string `json:"kind"`
+	BaseURL string `json:"base_url"`
+	// Model is empty for a UAR backend that names none (the contract makes it
+	// optional for kind uar).
+	Model  string           `json:"model,omitempty"`
+	APIKey apiKeyStatusBody `json:"api_key"`
 }
 
 type apiKeyStatusBody struct {
@@ -441,8 +462,12 @@ func (h *settingsHandler) writeReadWithNotice(w http.ResponseWriter, notice *key
 		},
 	}
 	if st.current != nil {
+		kind := BackendKindOpenAI
+		if st.current.IsUAR() {
+			kind = BackendKindUAR
+		}
 		body.Backend = &backendReadBody{
-			Kind:    "openai",
+			Kind:    kind,
 			BaseURL: st.current.BaseURL,
 			Model:   st.current.Model,
 			APIKey:  st.keyStatus(),
@@ -512,10 +537,10 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	var keyClear bool
 	if b := wr.Backend; b != nil {
 		switch b.Kind {
-		case "", "openai":
-		case "uar":
-			http.Error(w, "backend kind uar is not served by this build", http.StatusBadRequest)
-			return
+		case "":
+		case BackendKindOpenAI, BackendKindUAR:
+			next.kind = b.Kind
+			fields = append(fields, "kind")
 		default:
 			http.Error(w, "backend kind must be openai or uar", http.StatusBadRequest)
 			return
@@ -582,7 +607,7 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 
 	// Validate the candidate with the same function startup uses: the written
 	// values as the config base, the run's flags still winning over them.
-	cand := settingsState{base: next, prompt: prompt, loop: st.loop, over: st.over}
+	cand := settingsState{base: next, prompt: prompt, loop: st.loop, over: st.over, principals: st.principals, insecureHTTP: st.insecureHTTP}
 	set, err := cand.resolve()
 	if err != nil {
 		// ResolveAgent errors name the offending key, never a value.
@@ -598,11 +623,22 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// stored through this API. Unless the same write supplies api_key (a new key
 	// or null), the stored key is cleared; a key supplied by reference (file or
 	// environment variable) is the operator's and stays as configured.
+	//
+	// A change of backend kind is a move too (Round 8, U2): no key follows
+	// across kinds, stored or referenced from the config file. A key given by a
+	// run flag is the run's own and cannot be removed by a write; the
+	// confirmation below names it.
 	var notice *keyNotCarriedBody
 	carriesKey := wr.Backend != nil && len(wr.Backend.APIKey) > 0
-	if !carriesKey && set != nil && st.current != nil && backendMoved(st.current.BaseURL, set.BaseURL) &&
-		st.dir != "" && st.current.APIKey != nil && st.current.APIKey.File == st.keyFilePath() {
-		wasSet := keyStatusOf(st.current, st.dir).Set
+	kindChanged := set != nil && st.current != nil && set.IsUAR() != st.current.IsUAR()
+	storedKey := st.dir != "" && st.current != nil && st.current.APIKey != nil && st.current.APIKey.File == st.keyFilePath()
+	hostMoved := set != nil && st.current != nil && backendMoved(st.current.BaseURL, set.BaseURL)
+	dropStored := hostMoved && storedKey
+	dropAny := kindChanged && (storedKey || next.key != nil)
+	if !carriesKey && (dropStored || dropAny) {
+		// A kind change drops a key the config file references too, so that one
+		// is reported as well (Round 8 N3); the reason stays host_changed.
+		wasSet := (storedKey && keyStatusOf(st.current, st.dir).Set) || (kindChanged && next.key != nil)
 		next.key = nil
 		keyClear = true
 		cand.base = next
@@ -636,7 +672,16 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// egress_ack, which names hosts, already covers it (L1). A write that moves
 	// to another host is judged by that host alone, as before.
 	schemeChanged := set != nil && st.current != nil && !strings.EqualFold(schemeOf(set.BaseURL), schemeOf(st.current.BaseURL))
-	moved := hostChanged || schemeChanged
+	// A downgrade from https is confirmed whatever else changes, the port
+	// included: a bare egress_ack host covers every port, so a host:port that
+	// differs from the old one must not turn the downgrade into an ordinary,
+	// already acknowledged move.
+	downgraded := schemeChanged && strings.EqualFold(schemeOf(st.current.BaseURL), "https")
+	moved := hostChanged || schemeChanged || kindChanged
+	// The kubo MCP grant goes to a UAR host with every run. A grant that reaches
+	// a new host (a first UAR backend, or a uar backend that moves) needs the
+	// typed confirmation even when egress_ack already covers the host (Round 8 N2).
+	grantMoved := hostChanged && set != nil && set.IsUAR() && set.UAR != nil && set.UAR.MCPCredential != nil
 	switch {
 	case wr.EgressConfirmation != nil && !moved:
 		h.writeError(w, http.StatusConflict, "egress_confirmation_required",
@@ -647,18 +692,29 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			"egress_confirmation.host must be exactly the newly chosen model host "+newHost+"; no other host can be acknowledged through a settings write",
 			map[string]string{"host": newHost})
 		return
-	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (!hostChanged && schemeChanged):
+	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (schemeChanged && (!hostChanged || downgraded)) || kindChanged || grantMoved:
 		// id.ID empty means the request carried no authenticated identity (the
 		// kind gate makes that unreachable today); the extension could not be
 		// attributed to a principal, so it cannot be confirmed.
 		if wr.EgressConfirmation == nil || id.ID == "" {
 			var msg string
-			if hostChanged {
+			if hostChanged && !AckCovers(st.effectiveAck(id), newHost) {
 				msg = "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; "
+			} else if grantMoved && !kindChanged && !(schemeChanged && (!hostChanged || downgraded)) {
+				msg = "the write sends the kubo MCP grant to the UAR host " + newHost + ", which the calling principal's egress_ack already covers but which has not received it before; "
+			} else if kindChanged && !(schemeChanged && (!hostChanged || downgraded)) {
+				msg = "the write changes the kind of the model backend at " + newHost + " from " + kindName(st.current) + " to " + kindName(set) + "; "
 			} else {
 				msg = "the write changes the scheme of the model backend at " + newHost + " from " + schemeOf(st.current.BaseURL) + " to " + schemeOf(set.BaseURL) + "; "
 			}
 			msg += "resend with egress_confirmation {\"host\": \"" + newHost + "\"} to acknowledge that node content will be sent to that host"
+			if carriesKey && !bytes.Equal(bytes.TrimSpace(wr.Backend.APIKey), []byte("null")) {
+				msg += "; the API key supplied in this write will be sent to that host too"
+			}
+			if set.IsUAR() && set.UAR != nil && set.UAR.MCPCredential != nil {
+				msg += "; the kubo MCP grant (the credential of llm.uar.mcp_principal " + set.UAR.MCPPrincipal +
+					") will be sent to that host with each run, so that host can call this node's tools"
+			}
 			if referencedKey(set, st.keyFilePath()) {
 				// Operator ruling 2026-10-15: a key supplied by reference follows
 				// a host move, so the confirmation names it.
@@ -805,6 +861,14 @@ func (h *settingsHandler) removeClearedKeyFile(st *settingsState, cleared bool) 
 	if err := os.Remove(st.keyFilePath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		h.log.Warn("the old settings key file could not be removed", "error", err)
 	}
+}
+
+// kindName is the backend kind of resolved settings, for messages.
+func kindName(set *AgentSettings) string {
+	if set != nil && set.IsUAR() {
+		return BackendKindUAR
+	}
+	return BackendKindOpenAI
 }
 
 // referencedKey reports whether the resolved backend carries a key supplied by

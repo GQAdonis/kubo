@@ -101,3 +101,14 @@ Open points (resolved):
 
 - Sending the key only over HTTPS: already enforced for remote hosts (`TestKeyNotSentOverPlainHTTPToRemoteHost`); it limits eavesdropping, not the choice of recipient.
 - Per-key host binding stored beside the key (key bound to the host it was entered for): equivalent to B with a persistent record; more state for the same effect, revisit if open point 1 moves toward "retained".
+
+## Amendment (2026-10-16, Round 8: a backend kind change is a move)
+
+Lead ruling after the Round 8 security read (U1, U2). Rule B was written for a change of host. A change of `backend.kind` (`openai` to `uar` or back) is a move too, because the new kind sends the node's content and a credential to a backend the earlier confirmation did not cover: a write of `{"backend":{"kind":"uar"}}` with no host change would otherwise send the API-stored OpenAI key, or the `uar` principal's grant, to a host confirmed only as a model host.
+
+- **Typed confirmation.** A kind change needs the typed `egress_confirmation` even when the host is unchanged. The server enforces it; a client that skips it gets the confirmation error.
+- **No key crosses kinds.** No stored key, whether stored through the API or supplied by reference, is carried across a change of kind. An OpenAI key is not a UAR trusted-host JWT, and the reverse. The new kind starts without a key until the same write supplies one.
+- **`key_not_carried` is unchanged.** The write response reports a withheld API-stored key with `reason: "host_changed"` for a kind change as well. No contract change this round (lead ruling); a client that wants a kind-specific message reads `backend.kind` from the same response. A `reason` of `kind_changed` would be an additive value and is a follow-up if a client needs it.
+- **A key given by a run flag still follows.** A key given by a run flag is the operator's own deployment choice and still follows the move as configured (the 2026-10-15 ruling); the confirmation text names it, as it names a referenced key on a host move.
+- **Save key and Remove key never change the kind.** They act on the current backend only (U1). The kind changes only through Apply.
+- **Referenced keys are reported too (fixed in `agent-backend-uar` 1.7).** A kind change reports `key_not_carried` with reason `host_changed` for a config-referenced key as well as an API-stored one, so the client is told in both cases. (Before 1.7 the referenced case dropped the key silently, finding N3 of the confirmation read.)

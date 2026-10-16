@@ -1,0 +1,32 @@
+## mcp log
+ipfs mcp: AG-UI endpoint enabled at /agui (0 browser origins allowed)
+ipfs mcp: no model backend is configured (--llm-base-url and --llm-model), so /agui answers 503 backend_not_configured until one is
+ipfs mcp: serving MCP over HTTP on http://127.0.0.1:5151/mcp
+
+## POST /agui
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 503 Service Unavailable
+wget: server returned error: HTTP/1.1 503 Service Unavailable
+
+## GET /agent/settings
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+
+## POST /index/search
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+
+## GET /index/status
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+
+## tools/list (ipfs_* names)
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+"name":"ipfs_cat"
+"name":"ipfs_get"
+"name":"ipfs_ls"
+"name":"ipfs_node_info"
+"name":"ipfs_node_status"

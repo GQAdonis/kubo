@@ -123,6 +123,13 @@ func TestAgentSwapRevokesOpenInterrupt(t *testing.T) {
 			// message starts a fresh run on the current backend.
 			_, _, err = e.resume(id, res.SessionID, ResumeEntry{InterruptID: in.ID, Status: ResumeResolved, Approved: true})
 			require.ErrorIs(t, err, ErrBackendChanged)
+
+			// The confirmation was approved before the revoked resume; the session
+			// still accepts a new message at once, on the current backend (N2).
+			res2, err := e.a.Run(t.Context(), id, RunInput{SessionID: res.SessionID, Message: "carry on"}, nil)
+			require.NoError(t, err)
+			assert.Equal(t, OutcomeSuccess, res2.Outcome)
+			assert.Zero(t, e.d.count("pin/add"), "the approved write never ran")
 		})
 	}
 }
@@ -182,6 +189,31 @@ func TestAgentSwapRevokedResumeDeniesConfirmation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "fresh start on the new backend", res2.Final)
 	assert.Zero(t, e.d.count("pin/add"))
+}
+
+// The confirmation of a revoked resume may already be approved. The session
+// accepts a new message at once, and the approved call never runs, even if the
+// model repeats it (N2).
+func TestAgentSwapApprovedRevokedResumeAcceptsNewMessage(t *testing.T) {
+	e := newAgentEnv(t, agentEnvOpts{}, callStep(10, pinAddCall(t)), sayStep("must not run"))
+	id := uiID(nil, "pin")
+	res, _ := e.run(id, "pin it")
+	require.Equal(t, OutcomeInterrupt, res.Outcome)
+	in := res.Interrupts[0]
+
+	newModel := newScriptedModel(t, callStep(10, pinAddCall(t)), sayStep("done on the new backend"))
+	e.swapTo(t, newModel)
+	_, resolve := e.resolver.last(t)
+	require.NoError(t, resolve(true))
+	_, _, err := e.resume(id, res.SessionID, ResumeEntry{InterruptID: in.ID, Status: ResumeResolved, Approved: true})
+	require.ErrorIs(t, err, ErrBackendChanged)
+	assert.Zero(t, e.d.count("pin/add"))
+
+	res2, err := e.a.Run(t.Context(), id, RunInput{SessionID: res.SessionID, Message: "carry on"}, nil)
+	require.NoError(t, err, "a new message is accepted at once, not after the confirmation expires")
+	require.Equal(t, OutcomeInterrupt, res2.Outcome, "the repeated call opens a new confirmation")
+	assert.NotEqual(t, in.ConfirmationID, res2.Interrupts[0].ConfirmationID, "the revoked approval was not reused")
+	assert.Zero(t, e.d.count("pin/add"), "the approved call never ran")
 }
 
 func TestAgentSwapMidStream(t *testing.T) {

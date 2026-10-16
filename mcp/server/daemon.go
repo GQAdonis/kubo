@@ -5,14 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/kubo/client/rpc"
 	ma "github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 // Daemon is the narrow view of a Kubo daemon that tool handlers use. The
@@ -121,7 +125,7 @@ func Discover(opts DiscoverOptions) (*RPCDaemon, error) {
 	var err error
 	switch {
 	case strings.HasPrefix(opts.API, "http://") || strings.HasPrefix(opts.API, "https://"):
-		endpoint = opts.API
+		endpoint = redactEndpoint(opts.API)
 		api, err = rpc.NewURLApiWithClient(opts.API, &http.Client{Transport: &http.Transport{
 			Proxy:             http.ProxyFromEnvironment,
 			DisableKeepAlives: true,
@@ -160,4 +164,146 @@ func Discover(opts DiscoverOptions) (*RPCDaemon, error) {
 		api.Headers.Set("Authorization", opts.Authorization)
 	}
 	return NewRPCDaemon(api, endpoint), nil
+}
+
+// redactEndpoint drops the userinfo of an http(s) URL so a secret given as
+// http://user:pass@host never reaches a log line or an error message.
+func redactEndpoint(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		// The text may still carry a secret; say nothing about it.
+		return "(unparsable URL)"
+	}
+	u.User = nil
+	return u.String()
+}
+
+// DiscoveringDaemon is a Daemon for a daemon whose API address is found in the
+// repo's api file. It reads the file on first use and again after a call finds
+// the daemon unreachable, so a daemon that starts after this process, or
+// restarts on another port, is found without a restart. With an explicit API
+// address there is nothing to rediscover; use Discover.
+type DiscoveringDaemon struct {
+	opts DiscoverOptions
+
+	mu  sync.Mutex
+	cur *RPCDaemon
+	// read is true once the api file has been read successfully.
+	read bool
+}
+
+// NewDiscoveringDaemon returns a DiscoveringDaemon for opts, which must not
+// name an API address. It does not read the api file or contact the daemon.
+func NewDiscoveringDaemon(opts DiscoverOptions) *DiscoveringDaemon {
+	return &DiscoveringDaemon{opts: opts}
+}
+
+// current returns the daemon the api file names now, reading the file when no
+// daemon is cached.
+func (d *DiscoveringDaemon) current() (*RPCDaemon, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.cur != nil {
+		return d.cur, nil
+	}
+	cur, err := Discover(d.opts)
+	if err != nil {
+		return nil, err
+	}
+	// The RPC Authorization header goes to whatever address the file names. A
+	// file that changed to a non-loopback address after the first read is not
+	// trusted with it: the call fails as unreachable and the file is read again
+	// on the next call.
+	if d.read && d.opts.Authorization != "" && !apiAddrIsLoopback(cur.Endpoint()) {
+		return nil, fmt.Errorf("%w: the api file in %s now names %s, which is not a loopback address, and --api-auth is set; the RPC credential is not sent there",
+			ErrDaemonUnreachable, d.apiDir(), cur.Endpoint())
+	}
+	d.read = true
+	d.cur = cur
+	return cur, nil
+}
+
+// forget drops cur when err says the daemon is unreachable, so the next call
+// re-reads the api file.
+func (d *DiscoveringDaemon) forget(cur *RPCDaemon, err error) error {
+	if errors.Is(err, ErrDaemonUnreachable) {
+		d.mu.Lock()
+		if d.cur == cur {
+			d.cur = nil
+		}
+		d.mu.Unlock()
+	}
+	return err
+}
+
+// Endpoint implements Daemon.
+func (d *DiscoveringDaemon) Endpoint() string {
+	d.mu.Lock()
+	cur := d.cur
+	d.mu.Unlock()
+	if cur != nil {
+		return cur.Endpoint()
+	}
+	return "the api file in " + d.apiDir()
+}
+
+func (d *DiscoveringDaemon) apiDir() string {
+	dir := d.opts.IPFSPath
+	if dir == "" {
+		dir = os.Getenv(rpc.EnvDir)
+	}
+	if dir == "" {
+		dir = rpc.DefaultPathRoot
+	}
+	return dir
+}
+
+// Call implements Daemon.
+func (d *DiscoveringDaemon) Call(ctx context.Context, command string, args []string, opts map[string]any, out any) error {
+	cur, err := d.current()
+	if err != nil {
+		return err
+	}
+	return d.forget(cur, cur.Call(ctx, command, args, opts, out))
+}
+
+// Stream implements Daemon.
+func (d *DiscoveringDaemon) Stream(ctx context.Context, command string, args []string, opts map[string]any, fn func(*json.Decoder) error) error {
+	cur, err := d.current()
+	if err != nil {
+		return err
+	}
+	return d.forget(cur, cur.Stream(ctx, command, args, opts, fn))
+}
+
+// CallRaw implements rawDaemon.
+func (d *DiscoveringDaemon) CallRaw(ctx context.Context, command string, args []string, opts map[string]any, upload []byte, fn func(io.Reader) error) error {
+	cur, err := d.current()
+	if err != nil {
+		return err
+	}
+	return d.forget(cur, cur.CallRaw(ctx, command, args, opts, upload, fn))
+}
+
+// CallUpload implements uploadDaemon.
+func (d *DiscoveringDaemon) CallUpload(ctx context.Context, command string, args []string, opts map[string]any, name string, data []byte, fn func(io.Reader) error) error {
+	cur, err := d.current()
+	if err != nil {
+		return err
+	}
+	return d.forget(cur, cur.CallUpload(ctx, command, args, opts, name, data, fn))
+}
+
+var (
+	_ rawDaemon    = (*DiscoveringDaemon)(nil)
+	_ uploadDaemon = (*DiscoveringDaemon)(nil)
+)
+
+// apiAddrIsLoopback reports whether an api multiaddr names a loopback IP.
+func apiAddrIsLoopback(endpoint string) bool {
+	addr, err := ma.NewMultiaddr(endpoint)
+	if err != nil {
+		return false
+	}
+	return manet.IsIPLoopback(addr)
 }

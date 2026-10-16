@@ -1,0 +1,12 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run-2"}
+
+data: {"type":"TOOL_CALL_RESULT","messageId":"m-res","toolCallId":"tc-1","role":"tool","content":"{\"pinned\":true}"}
+
+data: {"type":"TEXT_MESSAGE_START","messageId":"m-2","role":"assistant"}
+
+data: {"type":"TEXT_MESSAGE_CONTENT","messageId":"m-2","delta":"Pinned bafy-example."}
+
+data: {"type":"TEXT_MESSAGE_END","messageId":"m-2"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run-2","outcome":{"type":"success"}}
+

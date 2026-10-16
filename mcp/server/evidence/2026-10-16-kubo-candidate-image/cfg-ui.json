@@ -1,0 +1,14 @@
+{
+  "principals": [
+    {
+      "name": "webui-chat",
+      "kind": "ui",
+      "credential": {
+        "env": "IPFS_MCP_UI_TOKEN"
+      },
+      "groups": [
+        "*"
+      ]
+    }
+  ]
+}

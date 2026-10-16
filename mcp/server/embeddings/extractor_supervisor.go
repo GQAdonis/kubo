@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -180,15 +179,8 @@ func (s *ExtractorSupervisor) startProxy(maxFile int) error {
 // file or older than the minimum version. The path is absolute (validated) and
 // is never resolved through PATH.
 func checkXbergBinary(ctx context.Context, cfg ExtractorEmbedded) (version, error) {
-	fi, err := os.Stat(cfg.Binary)
-	if err != nil {
-		return version{}, fmt.Errorf("embeddings.extractor.embedded.xberg_binary: %w", err)
-	}
-	if !fi.Mode().IsRegular() {
-		return version{}, fmt.Errorf("embeddings.extractor.embedded.xberg_binary %s is not a regular file", cfg.Binary)
-	}
-	if runtime.GOOS != "windows" && fi.Mode().Perm()&0o111 == 0 {
-		return version{}, fmt.Errorf("embeddings.extractor.embedded.xberg_binary %s is not executable", cfg.Binary)
+	if err := checkBinaryPath("embeddings.extractor.embedded.xberg_binary", cfg.Binary); err != nil {
+		return version{}, err
 	}
 	minVer := cfg.MinVersion
 	if minVer == "" {

@@ -113,7 +113,7 @@ func TestMCPDescriberDisabled(t *testing.T) {
 			if block != "" {
 				block = fmt.Sprintf(block, chat.URL)
 			}
-			p := startIndexMCP(t, node, describerConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", block), true)
+			p := startIndexMCP(t, node, describerConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", block))
 			cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 			out := okResult(t, callMCP(t, cs, "ipfs_index_cid", map[string]any{"cid": pngCID}))
@@ -128,7 +128,7 @@ func TestMCPDescriberDisabled(t *testing.T) {
 		chat := newFakeChat(t, "cats asleep on a red sofa")
 		embed := newCountingEmbed(t)
 		block := fmt.Sprintf(`{"base_url": "%s/v1", "model": "vision-test"}`, chat.URL)
-		p := startIndexMCP(t, node, describerConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", block), true)
+		p := startIndexMCP(t, node, describerConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", block))
 		cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 		out := okResult(t, callMCP(t, cs, "ipfs_index_cid", map[string]any{"cid": pngCID}))
@@ -211,7 +211,7 @@ func TestMCPDescriberRealService(t *testing.T) {
 	embed := newBagEmbed(t, 256)
 	cfg := strings.Replace(describerConfig(bin, filepath.Join(t.TempDir(), "idx"), embed.URL+"/v1", block), `"dimensions": 8`, `"dimensions": 256`, 1)
 	cfg = strings.Replace(cfg, `"egress_ack": ["local"]`, fmt.Sprintf(`"egress_ack": ["local", %q]`, u.Host), 1)
-	p := startIndexMCP(t, node, cfg, true)
+	p := startIndexMCP(t, node, cfg)
 	cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 	out := okResult(t, callMCP(t, cs, "ipfs_index_cid", map[string]any{"cid": pngCID}))

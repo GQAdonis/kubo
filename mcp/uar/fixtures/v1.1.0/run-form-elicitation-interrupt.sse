@@ -1,0 +1,4 @@
+data: {"type":"RUN_STARTED","threadId":"uar-thread","runId":"uar-run"}
+
+data: {"type":"RUN_FINISHED","threadId":"uar-thread","runId":"uar-run","outcome":{"type":"interrupt","interrupts":[{"id":"int-form-1","reason":"mcp_elicitation","message":"Which name should the pin get?","expiresAt":"2030-01-01T00:00:00Z","responseSchema":{"type":"object","properties":{"action":{"type":"string","enum":["accept","decline","cancel"]},"content":{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}},"required":["action"],"additionalProperties":false},"metadata":{"uar":{"serverName":"kubo-ipfs","request":{"mode":"form","message":"Which name should the pin get?","requestedSchema":{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}},"resolvable":true}}}]}}
+

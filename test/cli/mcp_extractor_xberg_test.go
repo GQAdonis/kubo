@@ -67,7 +67,7 @@ func TestMCPExtractorXberg(t *testing.T) {
 	allow, _ := json.Marshal([]string{"text/plain", "application/pdf", fixtures["docx"].mime, "text/csv"})
 	extractor, _ := json.Marshal(map[string]any{"mode": "embedded", "embedded": map[string]any{"xberg_binary": xbergBin, "cache_dir": cache}})
 	p := startIndexMCP(t, node, extractorConfig(surreal, dataDir, base, "bge-m3", 1024,
-		`{"mime_allowlist": `+string(allow)+`}`, string(extractor)), true)
+		`{"mime_allowlist": `+string(allow)+`}`, string(extractor)))
 	cs := p.mustClient(indexTestToken, (&elicitor{action: "accept"}).options())
 
 	// xberg is a child of ipfs mcp, on loopback only, on a non-default port.

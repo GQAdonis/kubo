@@ -1,0 +1,54 @@
+=== RUN   TestTelemetry
+=== PAUSE TestTelemetry
+=== CONT  TestTelemetry
+=== RUN   TestTelemetry/opt-out_via_environment_variable
+=== PAUSE TestTelemetry/opt-out_via_environment_variable
+=== RUN   TestTelemetry/opt-out_via_config
+=== PAUSE TestTelemetry/opt-out_via_config
+=== RUN   TestTelemetry/opt-out_removes_existing_UUID_file
+=== PAUSE TestTelemetry/opt-out_removes_existing_UUID_file
+=== RUN   TestTelemetry/opt-out_via_DO_NOT_TRACK
+=== PAUSE TestTelemetry/opt-out_via_DO_NOT_TRACK
+=== RUN   TestTelemetry/IPFS_TELEMETRY_overrides_DO_NOT_TRACK
+=== PAUSE TestTelemetry/IPFS_TELEMETRY_overrides_DO_NOT_TRACK
+=== RUN   TestTelemetry/no_endpoint_by_default:_nothing_is_sent_and_no_identifier_is_kept
+=== PAUSE TestTelemetry/no_endpoint_by_default:_nothing_is_sent_and_no_identifier_is_kept
+=== RUN   TestTelemetry/endpoint_answering_410_Gone_stops_telemetry_for_good
+=== PAUSE TestTelemetry/endpoint_answering_410_Gone_stops_telemetry_for_good
+=== RUN   TestTelemetry/telemetry_schema_regression_guard
+=== PAUSE TestTelemetry/telemetry_schema_regression_guard
+=== CONT  TestTelemetry/opt-out_via_environment_variable
+=== CONT  TestTelemetry/IPFS_TELEMETRY_overrides_DO_NOT_TRACK
+=== CONT  TestTelemetry/endpoint_answering_410_Gone_stops_telemetry_for_good
+=== CONT  TestTelemetry/telemetry_schema_regression_guard
+=== CONT  TestTelemetry/no_endpoint_by_default:_nothing_is_sent_and_no_identifier_is_kept
+=== CONT  TestTelemetry/opt-out_removes_existing_UUID_file
+=== CONT  TestTelemetry/opt-out_via_DO_NOT_TRACK
+=== CONT  TestTelemetry/opt-out_via_config
+=== NAME  TestTelemetry/telemetry_schema_regression_guard
+    telemetry_test.go:419: Telemetry field validation passed: 28 fields verified
+--- PASS: TestTelemetry (0.00s)
+    --- PASS: TestTelemetry/no_endpoint_by_default:_nothing_is_sent_and_no_identifier_is_kept (1.80s)
+    --- PASS: TestTelemetry/telemetry_schema_regression_guard (2.01s)
+    --- PASS: TestTelemetry/opt-out_via_DO_NOT_TRACK (2.29s)
+    --- PASS: TestTelemetry/opt-out_removes_existing_UUID_file (2.30s)
+    --- PASS: TestTelemetry/opt-out_via_environment_variable (2.31s)
+    --- PASS: TestTelemetry/opt-out_via_config (2.37s)
+    --- PASS: TestTelemetry/IPFS_TELEMETRY_overrides_DO_NOT_TRACK (2.38s)
+    --- PASS: TestTelemetry/endpoint_answering_410_Gone_stops_telemetry_for_good (4.59s)
+PASS
+ok  	github.com/ipfs/kubo/test/cli	4.655s
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/autoconf	(cached) [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/fuse	(cached) [no tests to run]
+?   	github.com/ipfs/kubo/test/cli/harness	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/migrations	(cached) [no tests to run]
+?   	github.com/ipfs/kubo/test/cli/testutils	[no test files]
+?   	github.com/ipfs/kubo/test/cli/testutils/httprouting	[no test files]
+?   	github.com/ipfs/kubo/test/cli/testutils/pinningservice	[no test files]
+exit=0
