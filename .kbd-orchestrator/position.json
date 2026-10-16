@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1871,
-  "derivedRevision": 1871,
+  "sourceRevision": 1872,
+  "derivedRevision": 1872,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1871
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1872
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-15T20:59:39.461352Z",
+  "updatedAt": "2026-10-16T09:30:54.892400Z",
   "cursor": [
     "agent-backend-settings",
     "lke-origin-isolation",
@@ -268,7 +268,7 @@
             "status": "PENDING",
             "progress": {
               "done": 3,
-              "total": 6
+              "total": 7
             }
           },
           {

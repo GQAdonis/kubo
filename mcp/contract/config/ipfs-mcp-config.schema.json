@@ -379,7 +379,7 @@
                 }
               ],
               "default": null,
-              "offSwitch": "null (default): no skill is uploaded or bound by kubo, and it unbinds only skills it bound earlier in this process. Name a directory of agentskills.io skill directories (mcp/skills in a checkout) to upload each SKILL.md and bind it to the agent. A skill of the same name already on UAR is bound only if its artifact_digest equals the digest of the local SKILL.md; a different or missing digest fails provisioning.",
+              "offSwitch": "null (default): no skill is uploaded or bound by kubo, and it unbinds only skills it bound earlier in this process. Name a directory of agentskills.io skill directories (mcp/skills in a checkout) to upload each SKILL.md and bind it to the agent. A skill removed from skills_dir stays bound on UAR after a restart (kubo remembers what it bound only inside one running process). A skill of the same name already on UAR is bound only if its artifact_digest equals the digest of the local SKILL.md; a different or missing digest fails provisioning.",
               "ownerChange": "agent-backend-uar"
             }
           },
@@ -622,7 +622,7 @@
           "$ref": "#/$defs/Duration",
           "default": "60s",
           "description": "How long ipfs mcp keeps retrying at startup while the Kubo RPC API refuses connections or cannot be reached, for example a sidecar that starts before the daemon container is ready. Without --api the api file in the repo directory is read again on each attempt, so a daemon that starts later or restarts on another port is found. Retries use a bounded backoff; the first retry is logged at Warn and each later one at Info. The 60s default applies only with --http: plain stdio ipfs mcp defaults to no wait, because an MCP host has its own startup timeout. An explicit value is always honored. After this duration startup fails with the same error as without a wait. A daemon that answers with an error (an API.Authorizations refusal, an unsupported version) fails at once and is never retried. At most 10m.",
-          "offSwitch": "0s: no wait; a daemon that is not reachable at startup fails at once.",
+          "offSwitch": "The schema default 60s is the --http default only (the annotation requires a Duration default); plain stdio has no wait unless this is set, so a daemon that is not reachable fails at once. 0s: no wait on either transport.",
           "ownerChange": "mcp-server-core-stdio"
         }
       },
