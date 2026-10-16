@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -21,7 +21,8 @@ import (
 // uarReleaseFixtureDir holds the recorded-shape responses of the UAR v1.1.0 contract
 // (mcp/uar/v1.1.0-kubo.md). The AG-UI streams and interrupts follow its
 // "Complete AG-UI interrupt contract" field for field; the management replies
-// follow the paths it names.
+// follow the route handlers and the release acceptance program at the tag
+// (mcp/uar/v1.1.0-image-config.md).
 var uarReleaseFixtureDir = filepath.Join("..", "uar", "fixtures", "v1.1.0")
 
 func uarReleaseFixture(t *testing.T, name string) []byte {
@@ -49,11 +50,14 @@ type fakeUARRelease struct {
 	mu       sync.Mutex
 	version  string
 	agents   map[string]map[string]any
-	etag     int
 	skills   map[string]string
 	bindings map[string][]string
 	runs     []uarRun
 	calls    []string
+	// noDigest and digestOverride make the skill record report no
+	// artifact_digest, or a different one, for a name.
+	noDigest       map[string]bool
+	digestOverride map[string]string
 	// script chooses the answer of run number n (0-based).
 	script func(n int, body map[string]any) (status int, stream []byte)
 }
@@ -63,6 +67,7 @@ func newFakeUARRelease(t *testing.T, script func(n int, body map[string]any) (in
 	u := &fakeUARRelease{
 		version: "1.1.0", agents: map[string]map[string]any{}, skills: map[string]string{},
 		bindings: map[string][]string{}, script: script,
+		noDigest: map[string]bool{}, digestOverride: map[string]string{},
 	}
 	u.srv = httptest.NewServer(http.HandlerFunc(u.serve))
 	t.Cleanup(u.srv.Close)
@@ -101,6 +106,34 @@ func writeJSONReply(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// agentArtifactErrors lists what UAR's serde parse of an AgentArtifact
+// (src/uar/domain/artifact.rs:37-50, :213-354 at v1.1.0) would reject: a missing
+// required field. The fake answers 422 for it, as the axum Json extractor does.
+func agentArtifactErrors(art map[string]any) []string {
+	var errs []string
+	need := func(path ...string) {
+		var cur any = art
+		for _, k := range path {
+			m, _ := cur.(map[string]any)
+			v, ok := m[k]
+			if !ok {
+				errs = append(errs, strings.Join(path, "."))
+				return
+			}
+			cur = v
+		}
+	}
+	for _, p := range [][]string{
+		{"version"}, {"kind"}, {"id"}, {"metadata", "title"}, {"metadata", "description"}, {"runtime", "entry"},
+		{"policy", "provider", "default", "provider"}, {"policy", "provider", "default", "model"},
+		{"policy", "tools"}, {"policy", "skills"}, {"schemas"}, {"prompt", "system"}, {"memory", "conversation", "enabled"},
+		{"memory", "kb", "enabled"}, {"tools", "bundles"}, {"ui", "forms", "enabled"}, {"ui", "artifacts", "enabled"},
+	} {
+		need(p...)
+	}
+	return errs
+}
+
 func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
@@ -119,12 +152,15 @@ func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 	case path == "/api/agents" && r.Method == http.MethodPost:
 		var art map[string]any
 		_ = json.Unmarshal(body, &art)
+		if errs := agentArtifactErrors(art); len(errs) > 0 {
+			http.Error(w, "missing "+strings.Join(errs, ","), http.StatusUnprocessableEntity)
+			return
+		}
 		id, _ := art["id"].(string)
 		if _, dup := u.agents[id]; dup {
 			writeJSONReply(w, http.StatusConflict, map[string]any{"error": "exists"})
 			return
 		}
-		u.etag++
 		u.agents[id] = art
 		writeJSONReply(w, http.StatusCreated, art)
 	case strings.HasPrefix(path, "/api/agents/") && !strings.Contains(strings.TrimPrefix(path, "/api/agents/"), "/"):
@@ -134,16 +170,19 @@ func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 		case !ok:
 			writeJSONReply(w, http.StatusNotFound, map[string]any{"error": "not found"})
 		case r.Method == http.MethodGet:
-			w.Header().Set("ETag", `"`+strconv.Itoa(u.etag)+`"`)
 			writeJSONReply(w, http.StatusOK, art)
 		case r.Method == http.MethodPut:
-			if r.Header.Get("If-Match") != `"`+strconv.Itoa(u.etag)+`"` {
-				writeJSONReply(w, http.StatusPreconditionFailed, map[string]any{"error": "stale"})
+			// Discovery.rs:326: an If-Match must be a catalog sha256 revision.
+			if m := r.Header.Get("If-Match"); m != "" && !strings.HasPrefix(strings.Trim(m, `"`), "sha256:") {
+				http.Error(w, "If-Match must contain a catalog SHA-256 revision", http.StatusBadRequest)
 				return
 			}
 			var next map[string]any
 			_ = json.Unmarshal(body, &next)
-			u.etag++
+			if errs := agentArtifactErrors(next); len(errs) > 0 {
+				http.Error(w, "missing "+strings.Join(errs, ","), http.StatusUnprocessableEntity)
+				return
+			}
 			u.agents[id] = next
 			writeJSONReply(w, http.StatusOK, next)
 		}
@@ -154,23 +193,22 @@ func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 		_ = json.Unmarshal(body, &in)
 		m := skillNameLine.FindStringSubmatch(in.SkillMarkdown)
 		if m == nil {
-			writeJSONReply(w, http.StatusBadRequest, map[string]any{"error": "no name"})
+			writeJSONReply(w, http.StatusBadRequest, map[string]any{"error": "skill_markdown_invalid"})
 			return
 		}
 		if _, dup := u.skills[m[1]]; dup {
-			writeJSONReply(w, http.StatusConflict, map[string]any{"error": "conflict"})
+			writeJSONReply(w, http.StatusConflict, map[string]any{"error": "skill_id_conflict"})
 			return
 		}
 		u.skills[m[1]] = in.SkillMarkdown
-		writeJSONReply(w, http.StatusCreated, map[string]any{"skill_id": "sk-" + m[1], "name": m[1], "artifact_digest": skillDigest(in.SkillMarkdown)})
+		writeJSONReply(w, http.StatusCreated, u.skillRecord(m[1]))
 	case strings.HasPrefix(path, uarSkillsPath+"/") && r.Method == http.MethodGet:
 		name := strings.TrimPrefix(path, uarSkillsPath+"/")
-		md, ok := u.skills[name]
-		if !ok {
+		if _, ok := u.skills[name]; !ok {
 			writeJSONReply(w, http.StatusNotFound, map[string]any{"error": "not found"})
 			return
 		}
-		writeJSONReply(w, http.StatusOK, map[string]any{"skill_id": "sk-" + name, "name": name, "skill_markdown": md, "artifact_digest": skillDigest(md)})
+		writeJSONReply(w, http.StatusOK, u.skillRecord(name))
 	case strings.HasPrefix(path, "/api/uar/agents/") && strings.Contains(path, "/skills"):
 		u.serveBindings(w, r, path, body)
 	case strings.HasPrefix(path, "/api/uar/ag-ui/agents/") && r.Method == http.MethodPost:
@@ -196,39 +234,60 @@ func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// skillRecord is the reply of the skill routes: SkillResponse at
+// src/uar/api/skills.rs:132-148, the fields kubo reads. UAR derives skill_id
+// from the manifest name; for a lowercase-hyphen name it is the name.
+func (u *fakeUARRelease) skillRecord(name string) map[string]any {
+	md := u.skills[name]
+	rec := map[string]any{"skill_id": name, "title": name, "skill_markdown": md}
+	if !u.noDigest[name] {
+		rec["artifact_digest"] = skillDigest(md)
+	}
+	if d, ok := u.digestOverride[name]; ok {
+		rec["artifact_digest"] = d
+	}
+	return rec
+}
+
+// serveBindings is the agent-skills router (src/uar/api/skills.rs:123-126):
+// GET answers a JSON array of ids, PUT replaces them from {"skill_ids"}, POST
+// /{id} binds one (201) and DELETE /{id} unbinds it (204).
 func (u *fakeUARRelease) serveBindings(w http.ResponseWriter, r *http.Request, path string, body []byte) {
 	rest := strings.TrimPrefix(path, "/api/uar/agents/")
 	agent, after, _ := strings.Cut(rest, "/skills")
-	switch r.Method {
-	case http.MethodGet:
-		list := make([]map[string]string, 0, len(u.bindings[agent]))
-		for _, id := range u.bindings[agent] {
-			list = append(list, map[string]string{"skill_id": id})
+	sid := strings.TrimPrefix(after, "/")
+	if _, ok := u.agents[agent]; !ok {
+		writeJSONReply(w, http.StatusNotFound, map[string]any{"error": "agent not found"})
+		return
+	}
+	switch {
+	case r.Method == http.MethodGet && sid == "":
+		list := u.bindings[agent]
+		if list == nil {
+			list = []string{}
 		}
 		writeJSONReply(w, http.StatusOK, list)
-	case http.MethodPost:
+	case r.Method == http.MethodPut && sid == "":
 		var in struct {
-			SkillID string `json:"skill_id"`
+			SkillIDs []string `json:"skill_ids"`
 		}
 		_ = json.Unmarshal(body, &in)
-		for _, id := range u.bindings[agent] {
-			if id == in.SkillID {
-				writeJSONReply(w, http.StatusConflict, map[string]any{"error": "bound"})
-				return
-			}
+		u.bindings[agent] = in.SkillIDs
+		w.WriteHeader(http.StatusOK)
+	case r.Method == http.MethodPost && sid != "":
+		if _, ok := u.skills[sid]; !ok {
+			writeJSONReply(w, http.StatusNotFound, map[string]any{"error": "skill not found"})
+			return
 		}
-		u.bindings[agent] = append(u.bindings[agent], in.SkillID)
-		writeJSONReply(w, http.StatusCreated, map[string]any{"skill_id": in.SkillID})
-	case http.MethodDelete:
-		sid := strings.TrimPrefix(after, "/")
-		kept := u.bindings[agent][:0]
-		for _, id := range u.bindings[agent] {
-			if id != sid {
-				kept = append(kept, id)
-			}
+		if !slices.Contains(u.bindings[agent], sid) {
+			u.bindings[agent] = append(u.bindings[agent], sid)
 		}
-		u.bindings[agent] = kept
+		w.WriteHeader(http.StatusCreated)
+	case r.Method == http.MethodDelete && sid != "":
+		u.bindings[agent] = slices.DeleteFunc(u.bindings[agent], func(id string) bool { return id == sid })
 		w.WriteHeader(http.StatusNoContent)
+	default:
+		http.NotFound(w, r)
 	}
 }
 

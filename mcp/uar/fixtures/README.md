@@ -13,5 +13,7 @@ They are derived from the pinned contract `mcp/uar/v1.1.0-kubo.md` ("Complete AG
 | `run-url-elicitation-interrupt.sse`, `run-form-elicitation-interrupt.sse`, `run-unresolvable-elicitation-interrupt.sse` | interrupts the chat cannot show |
 | `run-resumed-executed.sse`, `run-resumed-denied.sse` | the segment after an approving and a denying resume |
 | `run-error.sse` | `RUN_ERROR` |
+| `run-hostile-events.sse` | event types and fields the proxy must not relay (`CUSTOM` with an A2UI surface, `STATE_*`, `MESSAGES_SNAPSHOT`, `RAW`, `STEP_*`, UAR thread and run ids on non-`RUN_*` events) |
+| `run-leaks-secrets.sse`, `run-leaks-secrets-interrupt.sse` | the UAR key and the run grant in text, tool names and results, `RUN_ERROR` and an approval message; the two secrets are the constants of `uar_proxy_test.go` |
 
-The agent, skill and binding replies that the contract does not show are built by the test double in `mcp/server/uar_fake_test.go`; `agent-backend-uar` 1.5 (`test/cli/mcp_uar_backend_test.go`) is the first check of them against the published image.
+The agent, skill and binding replies are built by the test double in `mcp/server/uar_fake_test.go` from the shapes UAR v1.1.0 accepted in its own release acceptance and from its route handlers (`mcp/uar/v1.1.0-image-config.md`; every shape in `mcp/server/uar_provision.go` cites the UAR file and line at the tag). They are still a double: `agent-backend-uar` 1.5 (`test/cli/mcp_uar_backend_test.go`, opt-in with the UAR and liter-llm environment) is the first run against the published image, and it has not run.

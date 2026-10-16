@@ -25,8 +25,13 @@ import (
 const (
 	// maxUAREventBytes bounds one SSE line.
 	maxUAREventBytes = 4 << 20
-	// maxUAREvents bounds the events relayed for one request.
+	// maxUAREvents bounds the events read from UAR for one island request,
+	// across all its hops.
 	maxUAREvents = 100000
+	// maxUARRequestBytes bounds the bytes read from UAR for one island request,
+	// across all its hops (a single hop is also bounded by maxUAREventBytes per
+	// line).
+	maxUARRequestBytes = 32 << 20
 	// maxUARHops bounds the UAR requests one island request makes: interrupts
 	// that need no person (a URL elicitation, a form kubo cannot render) are
 	// answered and the run continues; a peer that keeps raising them is cut off.
@@ -37,7 +42,33 @@ const (
 	maxUARInterrupts = 16
 	// maxUARRunError bounds the message of a relayed RUN_ERROR.
 	maxUARRunError = 500
+	// maxUARCardText bounds the text of an approval card taken from UAR.
+	maxUARCardText = 500
+	// maxUARLabelLen bounds a tool or server name taken from UAR.
+	maxUARLabelLen = 64
 )
+
+// uarApprovalLabel opens the message of every approval card that comes from
+// UAR. The card is answered by the person in the chat, but it is UAR's approval
+// of UAR's tool call: it is not a confirmation of this node, which the gate
+// decides separately when the tool runs.
+const uarApprovalLabel = "UAR approval, not a node confirmation: "
+
+// uarEventFields is, per AG-UI event type, the fields of an event relayed from
+// UAR. These are the types the island renders from a run (agui.schema.json
+// Event) minus RUN_*: the proxy writes RUN_STARTED, RUN_FINISHED and RUN_ERROR
+// itself, with the island's thread and run ids. Every other type (CUSTOM,
+// including any A2UI surface UAR sends, STATE_*, MESSAGES_SNAPSHOT, RAW, STEP_*
+// and the rest) is dropped, and so is any field not listed.
+var uarEventFields = map[string][]string{
+	"TEXT_MESSAGE_START":   {"messageId", "role"},
+	"TEXT_MESSAGE_CONTENT": {"messageId", "delta"},
+	"TEXT_MESSAGE_END":     {"messageId"},
+	"TOOL_CALL_START":      {"toolCallId", "toolCallName", "parentMessageId"},
+	"TOOL_CALL_ARGS":       {"toolCallId", "delta"},
+	"TOOL_CALL_END":        {"toolCallId"},
+	"TOOL_CALL_RESULT":     {"messageId", "toolCallId", "content", "role"},
+}
 
 // UAR interrupt reasons and elicitation actions (pinned contract, "Complete
 // AG-UI interrupt contract").
@@ -47,8 +78,11 @@ const (
 )
 
 // uarBackendError is a failure of the UAR instance or the path to it. Its text
-// is fixed per cause: a reply or an error from the peer can quote the
-// conversation, so it is never forwarded.
+// is fixed per cause: an HTTP reply or a transport error from the peer can
+// quote the conversation, so it is never forwarded. The one peer-written text
+// that is relayed is the message of a RUN_ERROR event the agent raised itself:
+// it is the only explanation of why a run failed, so it is shown after the UAR
+// key and the run grant are removed from it and cut to maxUARRunError.
 type uarBackendError struct{ msg string }
 
 func (e *uarBackendError) Error() string { return e.msg }
@@ -56,8 +90,16 @@ func (e *uarBackendError) Error() string { return e.msg }
 // uarFailure turns an error of a UAR call into the error clients see, and logs
 // its type and status.
 func (b *uarBackend) uarFailure(err error) error {
-	var he *uarHTTPError
+	var (
+		he       *uarHTTPError
+		be       *uarBackendError
+		conflict *uarSkillConflictError
+	)
 	switch {
+	case errors.As(err, &be):
+		return be
+	case errors.As(err, &conflict):
+		return &uarBackendError{fmt.Sprintf("The UAR instance holds a different version of the skill %q; remove it there or rename it.", conflict.Name)}
 	case errors.Is(err, context.DeadlineExceeded):
 		return &uarBackendError{"The run reached the time limit."}
 	case errors.As(err, &he):
@@ -99,7 +141,10 @@ type uarPending struct {
 // uarThread is the proxy's record of one chat thread on the UAR instance.
 type uarThread struct {
 	owner string
-	uarID string
+	// client is the thread id the island chose; uarID is the id UAR sees. uarID
+	// changes when the thread is abandoned (see abandonThread).
+	client string
+	uarID  string
 	// lastRun is the run id of the UAR segment that raised the open interrupts;
 	// the resume names it as its parent.
 	lastRun string
@@ -175,7 +220,7 @@ func (b *uarBackend) acquireThread(principal, thread string, create bool) (*uarT
 		if err := b.makeRoomLocked(principal); err != nil {
 			return nil, nil, err
 		}
-		t = &uarThread{owner: principal, uarID: uarThreadID(principal, thread)}
+		t = &uarThread{owner: principal, client: thread, uarID: uarThreadID(b.gen, b.nextThreadSeqLocked(), principal, thread)}
 		b.threads[key] = t
 	}
 	t.running, t.touched = true, now
@@ -228,12 +273,16 @@ func (b *uarBackend) serve(h *aguiHandler, w http.ResponseWriter, r *http.Reques
 		h.reject(w, &RateLimitedError{RetryAfter: retry})
 		return
 	}
+	// One wall-clock deadline for the whole island request: provisioning, every
+	// UAR hop and the relay share it.
+	ctx, cancel := context.WithTimeout(r.Context(), b.set.Limits.WallClock)
+	defer cancel()
 	st := newAGUIStream(w, in, nil, eff.EgressAck)
 	if in.Resume != nil {
-		b.resume(r.Context(), h, st, eff, in)
+		b.resume(ctx, h, st, eff, in)
 		return
 	}
-	b.message(r.Context(), h, st, eff, in)
+	b.message(ctx, h, st, eff, in)
 }
 
 // message starts a run from the thread's last user message.
@@ -328,19 +377,22 @@ func (s *aguiStream) startOnce() {
 	s.send(evRunStarted(s.threadID, s.runID))
 }
 
-// runBody builds a RunAgentInput for the UAR path. messages is empty on a
-// resume. The run grant (the credential UAR presents to this server's MCP
-// endpoint) goes in forwardedProps.uar and is supplied per run, so it is never
-// stored on the instance (contract, "Trusted-host MCP setup").
+// runBody builds a RunAgentInput for the UAR path, in the shape the acceptance
+// posted (tests/fixtures/uar_1_1_mcp_contract.py:95-110 initial_request and
+// continuation; docs/AGUI_V1.md at the tag): protocolVersion "1.0", empty tools
+// and context, no state (UAR appends state to the prompt as untrusted text, and
+// kubo has none), and messages empty on a resume. The run grant (the credential
+// UAR presents to this server's MCP endpoint) goes in forwardedProps.uar and is
+// supplied per run, so it is never stored on the instance (contract,
+// "Trusted-host MCP setup"); the fixture sends it on the resume as well.
 func (b *uarBackend) runBody(th *uarThread, runID, parent string, messages []any, resume []any) map[string]any {
-	th.lastRun = runID
 	body := map[string]any{
-		"threadId": th.uarID,
-		"runId":    runID,
-		"state":    map[string]any{},
-		"messages": messages,
-		"tools":    []any{},
-		"context":  []any{},
+		"threadId":        th.uarID,
+		"runId":           runID,
+		"protocolVersion": "1.0",
+		"messages":        messages,
+		"tools":           []any{},
+		"context":         []any{},
 	}
 	if parent != "" {
 		body["parentRunId"] = parent
@@ -356,7 +408,12 @@ func (b *uarBackend) runBody(th *uarThread, runID, parent string, messages []any
 
 // runGrant is the explicit run grant for the kubo MCP destination, or nil when
 // no principal is configured or its credential does not resolve (the agent then
-// runs without kubo tools; the startup and provisioning warnings say so).
+// runs without kubo tools; the startup and provisioning warnings say so). The
+// shape is the one the acceptance sent (acc. 597-599; docs/releases/
+// v1.1.0-kubo.md "Restricted destinations ..."): name, and grant with
+// credential_revision, scopes, expires_at_unix and headers.Authorization. The
+// expiry is advisory on UAR's side, and the credential is the principal's
+// static bearer; a leaked grant is usable until that credential is rotated.
 func (b *uarBackend) runGrant() map[string]any {
 	u := b.set.UAR
 	if u.MCPCredential == nil {
@@ -380,7 +437,7 @@ func (b *uarBackend) runGrant() map[string]any {
 
 // resumeBody builds the resume request: the same thread, a new run id, the
 // preceding run as parent, empty messages, and one entry per pending interrupt
-// in the order UAR raised them.
+// in the order UAR raised them (fixture continuation).
 func (b *uarBackend) resumeBody(th *uarThread, runID string) map[string]any {
 	entries := make([]any, 0, len(th.pending))
 	for _, p := range th.pending {
@@ -411,9 +468,14 @@ func (p *uarPending) answerFor(approve, cancelled bool) *uarAnswer {
 // relayResult is how one UAR request ended.
 type relayResult struct {
 	err error
-	// responded is true once UAR answered the request with a status: whatever
-	// the answer, the interrupts it was resuming are settled on its side.
+	// responded is true once UAR answered the request with a 200 event stream:
+	// the interrupts it was resuming are settled on its side. Any other outcome
+	// leaves them open there (see settle).
 	responded bool
+	// refused is true when UAR refused the request with a status that says the
+	// thread cannot be continued (400, 404, 409, 410, 422): its interrupts are
+	// gone or never will match.
+	refused bool
 	// interrupts are the raw interrupts of a segment that ended with an interrupt
 	// outcome (not yet relayed to the island).
 	interrupts []any
@@ -422,16 +484,17 @@ type relayResult struct {
 	done bool
 }
 
+// uarBudget is what one island request may read from UAR across all its hops.
+type uarBudget struct{ events, bytes int }
+
 // execute sends body to UAR and relays the run, looping over the interrupts
-// that need no person. It ends the island's stream or HTTP request.
+// that need no person. It ends the island's stream or HTTP request. The
+// context carries the request's one wall-clock deadline.
 func (b *uarBackend) execute(ctx context.Context, h *aguiHandler, st *aguiStream, th *uarThread, in *aguiInput, body map[string]any) {
+	bud := &uarBudget{}
 	for hop := 0; hop < maxUARHops; hop++ {
-		res := b.relay(ctx, st, th, in, body)
-		if res.responded || res.err != nil {
-			// UAR settled the interrupts this request resumed, or the request
-			// failed: either way the person starts over with a new message.
-			th.pending, th.shown = nil, ""
-		}
+		res := b.relay(ctx, st, th, body, bud)
+		b.settle(th, res)
 		if res.err != nil {
 			b.fail(h, st, res.err)
 			return
@@ -455,32 +518,75 @@ func (b *uarBackend) execute(ctx context.Context, h *aguiHandler, st *aguiStream
 	b.fail(h, st, &uarBackendError{"The UAR run kept raising interrupts that need no person."})
 }
 
+// settle updates the thread's record of its open interrupts after one UAR
+// request. The interrupts are forgotten only when UAR answered with a 200 event
+// stream (it consumed the resume) or refused the thread outright. A transport
+// error, a 401 or 403, a 5xx or a rate limit leaves them open on UAR, so the
+// thread keeps them: the answers the person gave are withdrawn and the same
+// interrupt is asked again, and a new message is refused until it is answered.
+// Forgetting them would let the next message reach a UAR thread that still
+// holds them.
+func (b *uarBackend) settle(th *uarThread, res relayResult) {
+	switch {
+	case res.responded:
+		th.pending, th.shown = nil, ""
+	case res.refused && len(th.pending) > 0:
+		b.abandonThread(th)
+	case res.err != nil && len(th.pending) > 0:
+		b.reopen(th)
+	}
+}
+
+// reopen withdraws the answers of the interrupts a person gave, so the failed
+// resume can be tried again. Interrupts kubo answered by itself keep their
+// answers. When no interrupt needs a person, nothing could ever clear the
+// thread: it is abandoned.
+func (b *uarBackend) reopen(th *uarThread) {
+	for _, p := range th.pending {
+		if p.NeedsUser {
+			p.Answer = nil
+		}
+	}
+	if next := th.nextToAsk(); next != nil {
+		th.shown = next.ShownID
+		return
+	}
+	b.abandonThread(th)
+}
+
+// abandonThread forgets the thread's open interrupts and moves it to a fresh
+// UAR thread, so a later message does not meet the old one.
+func (b *uarBackend) abandonThread(th *uarThread) {
+	th.pending, th.shown, th.lastRun = nil, "", ""
+	b.mu.Lock()
+	th.uarID = uarThreadID(b.gen, b.nextThreadSeqLocked(), th.owner, th.client)
+	b.mu.Unlock()
+}
+
 // fail ends the island's request after a failure: an HTTP error before the
 // stream began, RUN_ERROR after.
 func (b *uarBackend) fail(h *aguiHandler, st *aguiStream, err error) {
-	var be *uarBackendError
-	if !errors.As(err, &be) {
-		be = b.uarFailure(err).(*uarBackendError)
-		err = be
-	}
+	be, _ := b.uarFailure(err).(*uarBackendError)
 	if st.started {
 		st.closeText()
 		st.send(evRunError(be.msg, "backend_error"))
 		return
 	}
-	h.reject(st.w, err)
+	h.reject(st.w, be)
 }
+
+// refusedStatuses are the UAR statuses that end a thread's open interrupts.
+var refusedStatuses = []int{http.StatusBadRequest, http.StatusNotFound, http.StatusConflict, http.StatusGone, http.StatusUnprocessableEntity}
 
 // relay performs one UAR request and relays its events to the island. A
 // RUN_FINISHED with an interrupt outcome is not relayed: it is returned, so the
 // caller can translate and, where no person is needed, continue.
-func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, in *aguiInput, body map[string]any) relayResult {
-	ctx, cancel := context.WithTimeout(ctx, b.set.Limits.WallClock)
-	defer cancel()
+func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, body map[string]any, bud *uarBudget) relayResult {
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return relayResult{err: err}
 	}
+	// /api/uar/ag-ui nest: src/server.rs:1756; run body and events: docs/AGUI_V1.md.
 	req, err := b.cli.newRequest(ctx, http.MethodPost, "/api/uar/ag-ui/agents/"+url.PathEscape(b.set.UAR.AgentID), raw)
 	if err != nil {
 		return relayResult{err: err}
@@ -491,7 +597,7 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, i
 		return relayResult{err: b.uarFailure(unwrapURLError(err))}
 	}
 	defer resp.Body.Close()
-	res := relayResult{responded: true}
+	var res relayResult
 	if resp.StatusCode == http.StatusNotFound {
 		// The instance lost the agent (or never had it): provision again on the
 		// next run.
@@ -499,6 +605,7 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, i
 	}
 	if resp.StatusCode != http.StatusOK {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxUARReply))
+		res.refused = slices.Contains(refusedStatuses, resp.StatusCode)
 		res.err = b.uarFailure(&uarHTTPError{Op: "run", Status: resp.StatusCode})
 		return res
 	}
@@ -506,15 +613,25 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, i
 		res.err = b.uarFailure(errors.New("UAR answered a run with a body that is not an event stream"))
 		return res
 	}
+	// UAR accepted the request: what it resumed is settled, and this run is the
+	// one a later resume names as its parent.
+	res.responded = true
+	if id, _ := body["runId"].(string); id != "" {
+		th.lastRun = id
+	}
+	scrub := b.newScrubber()
 	sc := bufio.NewScanner(resp.Body)
 	sc.Buffer(make([]byte, 0, 64<<10), maxUAREventBytes)
-	for n := 0; sc.Scan(); {
-		data, ok := strings.CutPrefix(sc.Text(), "data:")
+	for sc.Scan() {
+		line := sc.Text()
+		data, ok := strings.CutPrefix(line, "data:")
 		if !ok {
 			continue // comments, keepalives and other SSE fields
 		}
-		if n++; n > maxUAREvents {
-			res.err = b.uarFailure(errors.New("UAR run sent too many events"))
+		bud.events++
+		bud.bytes += len(line)
+		if bud.events > maxUAREvents || bud.bytes > maxUARRequestBytes {
+			res.err = &uarBackendError{"The UAR run sent more data than one request allows."}
 			return res
 		}
 		var ev aguiEvent
@@ -550,17 +667,21 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, i
 			st.startOnce()
 			st.closeText()
 			msg, _ := ev["message"].(string)
-			st.send(evRunError(trimSnippet(msg, maxUARRunError), "backend_error"))
+			st.send(evRunError(trimSnippet(scrub.text(msg), maxUARRunError), "backend_error"))
 			res.done = true
 			return res
-		case "TOOL_CALL_START":
-			id, _ := ev["toolCallId"].(string)
-			name, _ := ev["toolCallName"].(string)
-			th.rememberTool(id, name)
-			fallthrough
 		default:
+			clean, ok := relayedEvent(ev, typ, scrub)
+			if !ok {
+				continue
+			}
+			if typ == "TOOL_CALL_START" {
+				id, _ := clean["toolCallId"].(string)
+				name, _ := clean["toolCallName"].(string)
+				th.rememberTool(id, name)
+			}
 			st.startOnce()
-			st.send(ev)
+			st.send(clean)
 		}
 	}
 	if err := sc.Err(); err != nil {
@@ -571,17 +692,95 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, i
 	return res
 }
 
+// relayedEvent returns the event the island is shown for a UAR event: only the
+// allowlisted types, only their listed fields, every string cleaned of the UAR
+// key and the run grant. ok is false for a type that is not relayed.
+func relayedEvent(ev aguiEvent, typ string, scrub *uarScrubber) (aguiEvent, bool) {
+	fields, ok := uarEventFields[typ]
+	if !ok {
+		return nil, false
+	}
+	out := aguiEvent{"type": typ}
+	for _, f := range fields {
+		if v, present := ev[f]; present {
+			out[f] = scrub.value(v)
+		}
+	}
+	if ts, ok := ev["timestamp"].(float64); ok {
+		out["timestamp"] = ts
+	}
+	return out, true
+}
+
+// uarScrubber removes the secrets kubo holds for UAR from text that came back
+// from it: the UAR credential and the credential of the run grant. It matches
+// each secret whole inside one string; a secret that UAR splits across two
+// events is not recognised.
+type uarScrubber struct{ secrets []string }
+
+// minScrubbedSecret is the shortest secret the scrubber replaces: a shorter
+// value would rewrite ordinary text.
+const minScrubbedSecret = 8
+
+// newScrubber reads the secrets as they are now (both can be rotated).
+func (b *uarBackend) newScrubber() *uarScrubber {
+	var secrets []string
+	add := func(s string) {
+		if len(s) >= minScrubbedSecret && !slices.Contains(secrets, s) {
+			secrets = append(secrets, s)
+		}
+	}
+	add(b.cli.token())
+	if cred := b.set.UAR.MCPCredential; cred != nil {
+		if tok, err := cred.Read(); err == nil {
+			add(tok)
+		}
+	}
+	return &uarScrubber{secrets: secrets}
+}
+
+func (s *uarScrubber) text(in string) string {
+	for _, sec := range s.secrets {
+		in = strings.ReplaceAll(in, sec, "[redacted]")
+	}
+	return in
+}
+
+// value cleans every string inside a decoded JSON value.
+func (s *uarScrubber) value(v any) any {
+	switch x := v.(type) {
+	case string:
+		return s.text(x)
+	case []any:
+		out := make([]any, len(x))
+		for i, e := range x {
+			out[i] = s.value(e)
+		}
+		return out
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, e := range x {
+			out[s.text(k)] = s.value(e)
+		}
+		return out
+	}
+	return v
+}
+
 // parseInterrupts reads the interrupts of an interrupt outcome. An interrupt
 // kubo cannot show is answered by kubo, and is never approved.
 func (b *uarBackend) parseInterrupts(th *uarThread, list []any) ([]*uarPending, error) {
 	out := make([]*uarPending, 0, len(list))
 	seen := map[string]struct{}{}
+	scrub := b.newScrubber()
 	for _, raw := range list {
 		m, _ := raw.(map[string]any)
 		p, ok := classifyUARInterrupt(m, th.tools)
 		if !ok {
 			return nil, &uarBackendError{"UAR sent an interrupt without an id."}
 		}
+		p.Message = trimSnippet(scrub.text(p.Message), maxUARCardText)
+		p.Tool = scrub.text(p.Tool)
 		if _, dup := seen[p.ID]; dup {
 			return nil, &uarBackendError{"UAR sent the same interrupt twice."}
 		}
@@ -619,11 +818,11 @@ func classifyUARInterrupt(m map[string]any, tools map[string]string) (*uarPendin
 	switch p.Reason {
 	case uarReasonToolApproval:
 		p.NeedsUser = true
-		p.Tool = firstNonEmpty(tools[p.ToolCallID], "uar_tool")
+		p.Tool = uarLabel(tools[p.ToolCallID], "tool")
 	case uarReasonElicitation:
 		uar, _ := nested(m, "metadata", "uar").(map[string]any)
 		server, _ := uar["serverName"].(string)
-		p.Tool = "uar:" + firstNonEmpty(server, "mcp")
+		p.Tool = uarLabel(server, "mcp")
 		req, _ := uar["request"].(map[string]any)
 		if msg, _ := req["message"].(string); msg != "" {
 			p.Message = msg
@@ -685,30 +884,52 @@ func confirmationKey(schema map[string]any) (string, bool) {
 	return "", false
 }
 
+var uarLabelDrop = regexp.MustCompile(`[^A-Za-z0-9._-]`)
+
+// uarLabel is the tool name the island shows for a UAR approval: "uar:" and the
+// name UAR gave, reduced to letters, digits, dot, dash and underscore and cut
+// to maxUARLabelLen, because the name is the peer's choice. The prefix keeps a
+// UAR tool from looking like a tool of this node.
+func uarLabel(name, fallback string) string {
+	name = uarLabelDrop.ReplaceAllString(name, "")
+	if len(name) > maxUARLabelLen {
+		name = name[:maxUARLabelLen]
+	}
+	if name == "" {
+		name = fallback
+	}
+	return "uar:" + name
+}
+
 // aguiInterrupt is the kubo-shaped interrupt (contract fixtures/agui.schema.json,
 // Interrupt) for a UAR interrupt: reason tool_call, the standard
 // {approved: boolean} response, and the ipfs-mcp metadata the island reads. The
 // class is write, the more cautious of the two: UAR does not say what a tool
-// does. confirmation_id is a stable digest of UAR's id; no kubo confirmation
-// exists for it, and the island's approval only answers UAR, whose agent then
-// calls this server's MCP endpoint, where the confirmation gate still decides
-// every write.
+// does.
+//
+// The card is UAR's approval of UAR's tool call, not a confirmation of this
+// node, and says so three ways: the message opens with uarApprovalLabel, the
+// tool name carries the "uar:" prefix, and metadata.uar names the source. The
+// island's schema requires ipfs-mcp.confirmation_id to match ^cf_...$, so the id
+// keeps the cf_ prefix, but it is "cf_uar_" and a digest of UAR's interrupt id:
+// no confirmation of the broker has that id, and the answer only goes to UAR,
+// whose agent then calls this server's MCP endpoint, where the confirmation
+// gate still decides every write.
 func (p *uarPending) aguiInterrupt() map[string]any {
 	msg := strings.TrimSpace(p.Message)
 	if len(msg) < 5 {
 		msg = "The assistant asks to run " + p.Tool + "."
 	}
 	sum := sha256.Sum256([]byte(p.ID))
+	callID := p.ToolCallID
+	if callID == "" {
+		callID = p.ShownID
+	}
 	out := map[string]any{
-		"id":      p.ShownID,
-		"reason":  "tool_call",
-		"message": msg,
-		"toolCallId": func() string {
-			if p.ToolCallID != "" {
-				return p.ToolCallID
-			}
-			return p.ShownID
-		}(),
+		"id":         p.ShownID,
+		"reason":     "tool_call",
+		"message":    uarApprovalLabel + msg,
+		"toolCallId": callID,
 		"responseSchema": map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"approved": map[string]any{"type": "boolean"}},
@@ -716,12 +937,12 @@ func (p *uarPending) aguiInterrupt() map[string]any {
 		},
 		"metadata": map[string]any{
 			"ipfs-mcp": map[string]any{
-				"confirmation_id":        "cf_" + hex.EncodeToString(sum[:16]),
+				"confirmation_id":        "cf_uar_" + hex.EncodeToString(sum[:16]),
 				"tool":                   p.Tool,
 				"class":                  "write",
 				"requires_native_prompt": false,
 			},
-			"uar": map[string]any{"reason": p.Reason},
+			"uar": map[string]any{"reason": p.Reason, "source": "uar", "node_confirmation": false},
 		},
 	}
 	if t, err := time.Parse(time.RFC3339, p.ExpiresAt); err == nil {
