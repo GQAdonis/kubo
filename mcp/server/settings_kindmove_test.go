@@ -21,7 +21,7 @@ func kindMoveConfig() string {
 	return `{"principals":[{"name":"uar","kind":"uar","credential":{"env":"` + uarTestMCPEnv + `"},` +
 		`"uar":{"card_url":"http://127.0.0.1:59990/.well-known/agent-card.json"}}],` +
 		`"llm":{"base_url":"http://` + kindMoveHost + `/v1","model":"m-old",` +
-		`"uar":{"mcp_principal":"uar","mcp_credential_revision":"r1"}}}`
+		`"uar":{"provider":"p","mcp_principal":"uar","mcp_credential_revision":"r1"}}}`
 }
 
 func (e *settingsEnv) putRaw(t *testing.T, etag, body string) (int, map[string]any) {
@@ -94,7 +94,8 @@ func TestKindChangeDoesNotCarryTheStoredKey(t *testing.T) {
 func TestKindChangeDoesNotCarryAReferencedKey(t *testing.T) {
 	cfg := `{"principals":[{"name":"uar","kind":"uar","credential":{"env":"` + uarTestMCPEnv + `"},` +
 		`"uar":{"card_url":"http://127.0.0.1:59990/.well-known/agent-card.json"}}],` +
-		`"llm":{"base_url":"http://` + kindMoveHost + `/v1","model":"m-old","api_key":{"env":"` + settingsKeyEnv + `"}}}`
+		`"llm":{"base_url":"http://` + kindMoveHost + `/v1","model":"m-old","api_key":{"env":"` + settingsKeyEnv + `"},` +
+		`"uar":{"provider":"p","mcp_principal":"uar","mcp_credential_revision":"r1"}}}`
 	e, _, etag := keyMoveEnv(t, cfg)
 	_, before := getSettings(t, e)
 	assert.Equal(t, map[string]any{"set": true, "source": "environment"}, apiKeyOf(t, before))
@@ -108,7 +109,7 @@ func TestKindChangeDoesNotCarryAReferencedKey(t *testing.T) {
 func TestPlainHTTPRefusesTheGrant(t *testing.T) {
 	principal := `"principals":[{"name":"uar","kind":"uar","credential":{"env":"` + uarTestMCPEnv + `"},` +
 		`"uar":{"card_url":"http://127.0.0.1:59990/.well-known/agent-card.json"}}]`
-	grant := `"uar":{"mcp_principal":"uar","mcp_credential_revision":"r1"}`
+	grant := `"uar":{"provider":"p","mcp_principal":"uar","mcp_credential_revision":"r1"}`
 
 	t.Run("config", func(t *testing.T) {
 		cfg := mustParse(t, `{`+principal+`,"llm":{"kind":"uar","base_url":"http://uar.example.test","model":"m",`+grant+`}}`)
@@ -124,10 +125,6 @@ func TestPlainHTTPRefusesTheGrant(t *testing.T) {
 		loop := mustParse(t, `{`+principal+`,"llm":{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"m",`+grant+`}}`)
 		_, err = loop.ResolveAgent(LLMOverrides{})
 		require.NoError(t, err, "loopback may use http")
-
-		nogrant := mustParse(t, `{"llm":{"kind":"uar","base_url":"http://uar.example.test","model":"m"}}`)
-		_, err = nogrant.ResolveAgent(LLMOverrides{})
-		require.NoError(t, err, "without a grant nothing credential-bearing is sent")
 	})
 
 	t.Run("settings API", func(t *testing.T) {

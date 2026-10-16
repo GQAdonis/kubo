@@ -104,13 +104,15 @@ func uarFakeConfig(t *testing.T, kind, uarBase string) string {
 		llm = map[string]any{
 			"kind": "uar", "base_url": uarBase, "model": "qwen3:8b", "api_key": map[string]any{"env": "CLI_UAR_BEARER"},
 			// UAR's agent artifact needs a provider as well as a model.
-			"uar": map[string]any{"provider": "fake-provider"},
+			"uar": map[string]any{"provider": "fake-provider", "mcp_principal": "uar", "mcp_credential_revision": "r1"},
 		}
 	}
 	cfg := map[string]any{
 		"agent": map[string]any{"agui": true},
 		"principals": []any{
 			map[string]any{"name": "chat", "kind": "ui", "credential": map[string]any{"env": "CLI_UAR_CHAT_TOKEN"}, "egress_ack": []string{"local"}},
+			map[string]any{"name": "uar", "kind": "uar", "credential": map[string]any{"env": "CLI_UAR_MCP_TOKEN"},
+				"uar": map[string]any{"card_url": "http://127.0.0.1:1/.well-known/agent-card.json"}},
 		},
 		"llm": llm,
 	}
@@ -123,7 +125,7 @@ func uarFakeConfig(t *testing.T, kind, uarBase string) string {
 
 func TestMCPUARBackendFake(t *testing.T) {
 	t.Parallel()
-	env := []string{"CLI_UAR_CHAT_TOKEN=" + uarTestChatToken, "CLI_UAR_BEARER=" + fakeUARBearer}
+	env := []string{"CLI_UAR_MCP_TOKEN=kubo-uar-principal-token-0123456789", "CLI_UAR_CHAT_TOKEN=" + uarTestChatToken, "CLI_UAR_BEARER=" + fakeUARBearer}
 
 	t.Run("llm.kind uar provisions the agent and proxies a run", func(t *testing.T) {
 		t.Parallel()
@@ -151,7 +153,7 @@ func TestMCPUARBackendFake(t *testing.T) {
 		assert.Equal(t, "agent", art["kind"])
 		require.Len(t, fake.runs, 1)
 		assert.Equal(t, "1.0", fake.runs[0]["protocolVersion"])
-		assert.NotContains(t, fake.runs[0], "forwardedProps", "no mcp_principal: no run grant")
+		assert.Contains(t, fake.runs[0], "forwardedProps", "the run carries the grant")
 		assert.NotContains(t, p.stderr.String(), fakeUARBearer)
 	})
 
@@ -167,6 +169,22 @@ func TestMCPUARBackendFake(t *testing.T) {
 		require.Equal(t, http.StatusOK, r.Status, r.Body)
 		assert.Zero(t, fake.total(), "the UAR stand-in was never contacted")
 		assert.Equal(t, 1, model.hits())
+	})
+
+	t.Run("llm.kind uar without mcp_principal refuses to start", func(t *testing.T) {
+		t.Parallel()
+		node := agentLLMNode(t)
+		cfg := map[string]any{
+			"agent": map[string]any{"agui": true},
+			"llm":   map[string]any{"kind": "uar", "base_url": "http://127.0.0.1:1", "model": "p/m"},
+		}
+		raw, err := json.Marshal(cfg)
+		require.NoError(t, err)
+		path := filepath.Join(t.TempDir(), "noprincipal.json")
+		require.NoError(t, os.WriteFile(path, raw, 0o600))
+		_, stderr, code := runMCP(t, node.IPFSBin, node.Dir, "--http=127.0.0.1:0", "--mcp-config", path)
+		assert.NotZero(t, code)
+		assert.Contains(t, stderr, "llm.uar.mcp_principal")
 	})
 
 	t.Run("llm.kind uar with an unknown principal refuses to start", func(t *testing.T) {

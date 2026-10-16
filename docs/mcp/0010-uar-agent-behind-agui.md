@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed**, 2026-10-15, by `ipfs-agent-architect`. Records the assumed defaults D13 and D14 of `.kbd-orchestrator/phases/agent-backend-settings/plan.md` revision 4 (section 1) and plan item 22 (`agent-backend-uar` task 1.1). It stays `Proposed` until the operator answers OG-1 for D13 and D14 and OG-4 confirms a release. If OG-1 overrides D14, the "Alternatives" section names what is built instead.
+**Accepted (2026-10-16), OG-4 met; real-service verification (`agent-backend-uar` 1.5) open.** Proposed 2026-10-15 by `ipfs-agent-architect`, recording the assumed defaults D13 and D14 of `.kbd-orchestrator/phases/agent-backend-settings/plan.md` revision 4 (section 1) and plan item 22 (`agent-backend-uar` task 1.1). The published UAR v1.1.0 release is pinned (see the amendment of 2026-10-16), so the section 4 gate is met; what has not run is the test against the published image (task 1.5), and the amendment lists what only that run can show.
 
 This ADR supersedes the topology-B design of `agentic-uar-integration` (all tasks) and `uar-integration-spike` tasks 1.2-1.5. It does not supersede ADR-0008, whose recorded NO-GO stands as history; it replaces the topology that ADR deferred.
 
@@ -40,7 +40,7 @@ The binding UAR makes to `ipfs mcp` uses a run-time credential that is scoped to
 ### 3. Off switch and defaults
 
 - Default: `backend.kind` is `openai` (or no backend). The `uar` kind is selected only by the operator through the settings API, the config file or the settings page. Nothing contacts a UAR instance unless it is configured.
-- Off switches: set `backend.kind` back to `openai`, remove the UAR URL, or leave `llm` unset (`backend_not_configured`); `make build GOTAGS=noagent` removes all agent code. Disabled-state test: the existing `TestAgentOffWhenUnconfigured` and `TestAgentHasNoDefaultEndpointOrModel` cover the unconfigured state; `agent-backend-uar` 1.5 adds the `uar`-kind disabled test when the release lands.
+- Off switches: set `backend.kind` back to `openai`, remove the UAR URL, or leave `llm` unset (`backend_not_configured`); `make build GOTAGS=noagent` removes all agent code. Disabled-state tests: `TestAgentOffWhenUnconfigured` and `TestAgentHasNoDefaultEndpointOrModel` cover the unconfigured state, `TestResolveUARDefaultsAndRefusals` and `TestSettingsWriteSwitchesToAndFromUAR` cover the `uar` kind defaulting to `openai` and switching back, and `TestUARWithoutMCPPrincipalIsRefused` covers the fail-closed rule that a `uar` backend without `llm.uar.mcp_principal` is refused. They exist; `agent-backend-uar` 1.5 adds only the run against the published image.
 
 ### 4. The release gate (OG-4)
 
@@ -88,9 +88,9 @@ Rejected under D13: it would delay goals 1, 3, 4 and 5 on an external team's sch
 
 Section 1 item 4 and the Consequences say the UAR credential is by reference and never a literal in the settings API. The implementation follows the settings schema instead, as the OpenAI backend does: `settings-write.schema.json` carries a write-only `api_key`, which the settings API stores as a 0600 file in the settings directory (never returned by a read; the read shape reports only `api_key: {set, source}`), and the credential can equally be given by reference (`llm.api_key` as an environment name or file) in the configuration file. This is consistent with ADR-0012: the key scope rules (a key stored through the API is cleared on a host move, a key supplied by reference stays) apply to the `uar` kind unchanged, because the UAR instance is the backend host. The by-reference statement still holds for the configuration file and for LKE, where `agent.settings.accept_secrets: false` refuses a key in a write. `llm.uar.*` (`agent_id`, `mcp_principal`, `mcp_credential_revision`, `skills_dir`, and the other keys in that object) is configuration-file only; the settings API neither reads nor writes it.
 
-### Not yet verified against the running release
+### Not yet verified against the running release (narrowed 2026-10-16)
 
-The request bodies below were inferred from the pinned contract (`mcp/uar/v1.1.0-kubo.md`) and the paths it names, not observed against the running v1.1.0 image: the agent-create body, the skill-record body, the MCP-server binding body, and the placement of the run grant at `forwardedProps.uar.mcp_servers`. The interrupt fixtures in `mcp/uar/fixtures/v1.1.0/` follow the contract field for field, but they are fixtures, not captures. `test/cli/mcp_uar_backend_test.go` (task 1.5 of `agent-backend-uar`) is the first run against the published image and checks these four points first. Until it has run, treat them as unverified; a mismatch is a bug in kubo's request bodies, not in the contract, unless the image contradicts the contract itself.
+The agent-create, skill-import, skill-bind and run/resume request shapes no longer rest on inference alone: they come from UAR's own release acceptance program at v1.1.0, recorded in `mcp/uar/v1.1.0-image-config.md` and cited in `mcp/server/uar_provision.go` and `mcp/server/uar_proxy.go`. What only a real run can show is narrower: that the published image accepts these bodies from kubo's HTTP client as it does from UAR's program, the placement of the run grant at `forwardedProps.uar.mcp_servers` in a live run, and that the interrupt fixtures in `mcp/uar/fixtures/v1.1.0/` (fixtures, not captures) match a live stream. `test/cli/mcp_uar_backend_test.go` (task 1.5) is that run and has not been done; a mismatch is a bug in kubo's request bodies unless the image contradicts the contract.
 
 ### Shipped skills need `llm.uar.skills_dir`
 
@@ -99,3 +99,52 @@ Section 1 item 1 says the skill bindings equal the directory names under `mcp/sk
 ### Gate state
 
 The section 4 line "State on 2026-10-15: not met" is superseded. `mcp/contract/agentic/uar-preflight.json` now pins the published release v1.1.0, and the `llm.kind: uar` backend is implemented behind that pin.
+
+## Amendment (2026-10-16, Round 8 corrections: lead rulings)
+
+Rulings from the Round 8 security, Go and UI reviews (`.agent-team/kubo-ipfs-agentic/findings/`). IDs refer to those reviews.
+
+### Registering kubo's MCP server on UAR is an operator step
+
+Registering `ipfs mcp` as a destination on UAR (`PUT /api/uar/mcp/servers/{name}` with a `grant_policy` that carries `trusted_hosts`) is done by the operator after the first provisioning. Kubo does not do it, because kubo's configuration has no UAR-reachable URL for itself and no trusted host id: `ipfs mcp` listens on loopback by default and has no way to know the address UAR would use. Follow-up: `llm.uar.mcp_url` and `llm.uar.host_id`, so that kubo can register itself. Until then `docs/mcp/agentic.md` lists the step.
+
+### The credential is a trusted-host JWT
+
+`llm.api_key` for the `uar` kind must be a trusted-host JWT (the issuer-signed token of an entry in UAR's `security.trusted_host_principals`), not an ordinary API key. The settings page and the docs say so.
+
+### Ownership of the remote agent (R8-07)
+
+- Kubo owns the agent's system prompt and the skills it uploads. A `PUT` of an agent with the same `llm.uar.agent_id` overwrites its prompt.
+- `llm.uar.mcp_principal` is required for the `uar` kind. An agent with an empty tool allowlist gets UAR's own native tools (Auto selection), so kubo refuses the backend instead of creating an agent without a kubo binding.
+- Kubo binds and unbinds only skill ids it bound in this process. It does not unbind a skill someone else bound, and with `llm.uar.skills_dir` unset it unbinds nothing it did not bind.
+- `llm.uar.agent_id` must be unique per node on a shared UAR. The default `kubo-ipfs` collides across nodes: two nodes with the default overwrite each other's agent.
+- A skill with the same name already on UAR is bound in place of kubo's only if its `artifact_digest` equals the digest of the bytes kubo holds. A different or missing digest fails provisioning closed (U7), and nothing is bound.
+
+### The relay is an allowlist (U3)
+
+The proxy relays only `TEXT_MESSAGE_*` and `TOOL_CALL_*` events and, within them, only the listed fields. It writes `RUN_STARTED`, `RUN_FINISHED` and `RUN_ERROR` itself, with the island's thread and run ids, never UAR's. Everything else is dropped: `CUSTOM` (including an A2UI surface), `STATE_*`, `MESSAGES_SNAPSHOT`, `RAW`, `STEP_*` and the `*_CHUNK` events. A UAR agent therefore cannot make the island render a surface that kubo did not produce.
+
+### Secrets are scrubbed from relayed strings (U8)
+
+The UAR credential and the run grant are replaced in every relayed string, including a relayed `RUN_ERROR` message and approval card text. Residual: a secret split across two events is not detected, because each string is scrubbed on its own. Accepted; the secrets are by-reference tokens that rotate, and the exposure is to the same island session that holds the run.
+
+### Approval cards are labelled (U9)
+
+A UAR approval card is labelled "UAR approval, not a node confirmation" and carries a `cf_uar_` confirmation id. The island schema requires the `cf_` prefix, so the id cannot drop it. Residual: the card still shares the confirmation-card shape and prefix. Telling them apart in structure needs a contract change (a distinct kind or a field the island schema defines); it is recorded as a follow-up, not made this round.
+
+### The grant is the principal's static bearer (U4)
+
+The run grant sent in `forwardedProps.uar.mcp_servers` is the `uar` principal's static bearer. `expires_at_unix` is advisory: UAR may honour it, `ipfs mcp` does not enforce it, and a leaked grant stays usable until that principal's secret is rotated, whatever `llm.uar.mcp_grant_ttl` says. Lead ruling: accepted residual. Follow-up: mint short-lived tokens that `ipfs mcp` verifies itself.
+
+### Plain http is refused for the grant too (U5)
+
+The refusal to send a credential over plain http to a non-loopback host covers the grant as well as `llm.api_key`. The exemption is the operator's `embeddings.insecure_http_hosts` list, as for the key. The typed confirmation names the kubo MCP grant, not only the model key.
+
+### Interrupts survive a failed resume (R8-03)
+
+An open UAR interrupt is forgotten only after a resume stream that returned 200. A transport error, a 401 or a 5xx on resume leaves it pending, so the person can answer again. Idle eviction and a settings apply still drop it, and the UAR thread id then changes (a per-backend generation) so a new message cannot land on the thread where UAR still holds the interrupt.
+
+### Other consequences
+
+- A2A answers 503 to every method while UAR is the backend (U6); see `docs/mcp/agentic.md`.
+- A backend kind change is a move for the key-scope rule of ADR-0012 (U2); see its amendment.

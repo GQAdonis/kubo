@@ -236,7 +236,7 @@ func TestCheckUARAdminCredentialIsBearerUnderTheCardBase(t *testing.T) {
 		for i, a := range rt.auth {
 			if a != "" {
 				withCredential = append(withCredential, rt.urls[i])
-				assert.Equal(t, "Bearer "+fakeUARAdminToken, a)
+				assert.Equal(t, fakeUARAdminToken, a)
 			}
 		}
 		assert.Equal(t, []string{"https://uar.example.test/prefix" + testUARSettingsPath}, withCredential)
@@ -246,6 +246,6 @@ func TestCheckUARAdminCredentialIsBearerUnderTheCardBase(t *testing.T) {
 		u := newFakeUAR(t, "profile")
 		rep := check(t, u.input("1.4.0"))
 		assert.Equal(t, VerdictOK, rep.Verdict(), rep.Summary())
-		assert.Contains(t, u.authSeen, "Bearer "+fakeUARAdminToken)
+		assert.Contains(t, u.authSeen, fakeUARAdminToken)
 	})
 }

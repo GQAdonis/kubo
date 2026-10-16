@@ -25,3 +25,11 @@ The 1.3 acceptance text above is wrong for the no-principal case; the server beh
 
 Second note (2026-10-16, lead ruling): the unreachable-dependencies smoke uses a `ui` principal with `egress_ack: ["local"]`. The store, embedder and extractor stages then all report unavailable in `GET /index/status`, and `POST /index/search` answers 503 `index_unavailable`. `ipfs mcp` still starts, because startup no longer fails on unreachable search services.
 - [x] 1.6 Follow-ups from the 1.5 security read (`kubo-candidate-image-security-read.md`) and the OG-12 rollout: S1 store open must not depend on the caller's context (own deadline, caller cancellation not counted as a failure); S2 waiters honor their own context during an open; S3 an exited store is reopened and status does not report it available; S4 `stages.*.reason` gives non-operator principals a fixed reason code; S5 startup fails when principals are configured but none resolved a credential; S6 stale comment in `index.go`; and the `ipfs-mcp` sidecar exits while the daemon API is not yet up (two restarts at every pod start on LKE) — wait for the API with a bounded retry instead. Acceptance: each fixed with a pinning test, or rebutted in writing.
+
+## Amendment (2026-10-16, Round 8 review R8-05): the S5 startup rule and the 1.3 evidence
+
+With the S5 startup rule of 1.6, `ipfs mcp --http` with configured principals whose credentials all fail to resolve now exits with an error naming the missing environment variables or files, instead of serving 403 on `/agui`. The 1.3 expectations above (and the amendment of 2026-10-16 that fixed the no-principal codes) describe a start that no longer happens for that case; a partial resolution still starts with only the principals that resolved, and no principals on loopback stays anonymous and read-only.
+
+- Before the next image-only cluster PR, run a read-only cluster check (`kubectl --context know-me`, per the cluster-PR rule) that every configured principal's environment variable or mounted file is present in the pod spec and its Secret. A configured principal whose secret is not mounted will crash-loop the new image at start.
+- The LKE sidecar runs with `--auth-token-env` and no principals, so it is unaffected today. The check matters the day principals are added to its configuration.
+

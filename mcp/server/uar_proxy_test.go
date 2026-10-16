@@ -292,12 +292,14 @@ func TestUARUnbindsOnlyWhatKuboBound(t *testing.T) {
 	assert.NotContains(t, e.fake.callLog(), "DELETE /api/uar/agents/kubo-ipfs/skills/operator-skill")
 }
 
-func TestUARWithoutMCPPrincipalHasNoBindingOrGrant(t *testing.T) {
-	e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{noMCP: true})
-	require.Equal(t, http.StatusOK, e.say("t1", "r1", "hello").Status)
-	assert.Empty(t, e.fake.agents["kubo-ipfs"]["policy"].(map[string]any)["tools"].(map[string]any)["allow"])
-	assert.NotContains(t, e.fake.run(0).Body, "forwardedProps")
-	assert.Contains(t, e.logs.String(), "no kubo tools")
+// Fail closed on tools: an agent with no tool allowlist would get UAR's own
+// native tools (Auto selection), so kind uar without a principal is refused.
+func TestUARWithoutMCPPrincipalIsRefused(t *testing.T) {
+	t.Setenv(uarTestCredEnv, fakeUARToken)
+	cfg := mustParse(t, uarConfigJSON("http://127.0.0.1:1", uarProxyOpts{noMCP: true}))
+	_, err := cfg.ResolveAgent(LLMOverrides{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "llm.uar.mcp_principal")
 }
 
 func TestUARRefusesAnOldOrUnpublishedRelease(t *testing.T) {

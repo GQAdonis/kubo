@@ -44,7 +44,7 @@
     "llm.uar.agent_id": { "tests": ["TestResolveUARDefaultsAndRefusals", "TestUARProvisionsAgentOnFirstRun"] },
     "llm.uar.provider": { "tests": ["TestUARProvisionsAgentOnFirstRun"] },
     "llm.uar.mcp_name": { "tests": ["TestResolveUARDefaultsAndRefusals", "TestUARProvisionsAgentOnFirstRun"] },
-    "llm.uar.mcp_principal": { "tests": ["TestUARWithoutMCPPrincipalHasNoBindingOrGrant", "TestResolveUARDefaultsAndRefusals"] },
+    "llm.uar.mcp_principal": { "tests": ["TestUARWithoutMCPPrincipalIsRefused", "TestResolveUARDefaultsAndRefusals"] },
     "llm.uar.mcp_credential_revision": { "tests": ["TestUARRunIsProxiedWithTheGrantAndIDsRewritten", "TestResolveUARDefaultsAndRefusals"] },
     "llm.uar.mcp_scopes": { "tests": ["TestUARRunIsProxiedWithTheGrantAndIDsRewritten", "TestResolveUARDefaultsAndRefusals"] },
     "llm.uar.mcp_grant_ttl": { "tests": ["TestUARRunIsProxiedWithTheGrantAndIDsRewritten", "TestResolveUARDefaultsAndRefusals"] },

@@ -74,8 +74,12 @@ func (c *Config) resolveUAR(llm LLMConfig) (*UARSettings, error) {
 		Pin:        *pre.PinnedFrom,
 	}
 	cfg := llm.UAR
-	if cfg == nil {
-		return u, nil
+	// Fail closed on tools: without a principal the provisioned agent has an
+	// empty policy.tools.allow, which UAR resolves to Auto selection and may
+	// expose the instance's own native tools (policy.rs at v1.1.0 has no
+	// deny-all for an empty allow list).
+	if cfg == nil || cfg.MCPPrincipal == "" {
+		return nil, errors.New("llm.kind uar needs llm.uar.mcp_principal (and llm.uar.mcp_credential_revision): without it the agent has no tool allowlist and UAR could expose its own native tools")
 	}
 	for _, v := range []struct{ key, val string }{{"llm.uar.agent_id", cfg.AgentID}, {"llm.uar.mcp_name", cfg.MCPName}} {
 		if v.val != "" && !uarNamePattern.MatchString(v.val) {
@@ -100,9 +104,6 @@ func (c *Config) resolveUAR(llm LLMConfig) (*UARSettings, error) {
 			return nil, errors.New("llm.uar.skills_dir must be an absolute path")
 		}
 		u.SkillsDir = cfg.SkillsDir
-	}
-	if cfg.MCPPrincipal == "" {
-		return u, nil
 	}
 	i := slices.IndexFunc(c.Principals, func(p PrincipalConfig) bool { return p.Name == cfg.MCPPrincipal })
 	switch {

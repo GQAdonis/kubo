@@ -28,14 +28,14 @@ func TestResolveUARDefaultsAndRefusals(t *testing.T) {
 		return set
 	}
 	t.Run("a bare uar section takes the defaults", func(t *testing.T) {
-		set := ok(t, `{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"m"}`)
-		assert.Equal(t, "m", set.Model)
+		set := ok(t, `{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"p/m",`+`"uar":{"mcp_principal":"uar","mcp_credential_revision":"r1"}}`)
+		assert.Equal(t, "p/m", set.Model)
 		u := set.UAR
 		assert.Equal(t, DefaultUARAgentID, u.AgentID)
 		assert.Equal(t, DefaultUARMCPName, u.MCPName)
 		assert.Equal(t, DefaultUARScopes, u.Scopes)
 		assert.Equal(t, DefaultUARGrantTTL, u.GrantTTL)
-		assert.Nil(t, u.MCPCredential, "no principal: no kubo tools")
+		require.NotNil(t, u.MCPCredential, "the principal is required: no tool-less agent")
 		assert.Empty(t, u.SkillsDir, "no skills dir: no skill is uploaded")
 		assert.Equal(t, "1.1.0", u.MinVersion)
 		assert.Equal(t, "v1.1.0", u.Pin.Tag)
@@ -47,14 +47,34 @@ func TestResolveUARDefaultsAndRefusals(t *testing.T) {
 		assert.Equal(t, BackendKindOpenAI, set.Kind)
 		assert.Nil(t, set.UAR)
 	})
-	t.Run("a settings write may leave the model of a UAR agent empty", func(t *testing.T) {
-		// The settings contract makes model optional for kind uar; only the
-		// configuration file requires it.
-		set, err := (&Config{LLM: &LLMConfig{Kind: BackendKindUAR, BaseURL: "http://127.0.0.1:59990"}}).ResolveAgent(LLMOverrides{})
-		require.NoError(t, err)
-		assert.Empty(t, set.Model)
+	t.Run("a UAR agent may leave the model empty only with a provider", func(t *testing.T) {
+		// The settings contract makes model optional for kind uar, but the
+		// agent artifact needs a provider and a model, so the provider named
+		// by llm.uar.provider and a model are required at resolve.
+		base := mustParse(t, uarLLMConfig(`{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"p/m"}`))
+		cfg := &Config{Principals: base.Principals, LLM: &LLMConfig{Kind: BackendKindUAR, BaseURL: "http://127.0.0.1:59990",
+			UAR: &UARBackendConfig{MCPPrincipal: "uar", MCPCredentialRevision: "r1"}}}
+		_, err := cfg.ResolveAgent(LLMOverrides{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "llm.uar.provider")
 		_, err = (&Config{LLM: &LLMConfig{BaseURL: "http://127.0.0.1:59990"}}).ResolveAgent(LLMOverrides{})
 		require.Error(t, err, "an openai backend still needs a model")
+	})
+	t.Run("kind uar needs a provider", func(t *testing.T) {
+		cfg := mustParse(t, uarLLMConfig(`{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"m",`+`"uar":{"mcp_principal":"uar","mcp_credential_revision":"r1"}}`))
+		_, err := cfg.ResolveAgent(LLMOverrides{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "llm.uar.provider")
+		assert.Contains(t, err.Error(), "provider/model")
+		cfg = mustParse(t, uarLLMConfig(`{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"m",`+`"uar":{"mcp_principal":"uar","mcp_credential_revision":"r1","provider":"p"}}`))
+		_, err = cfg.ResolveAgent(LLMOverrides{})
+		require.NoError(t, err, "llm.uar.provider is enough")
+	})
+	t.Run("kind uar needs the tool principal", func(t *testing.T) {
+		cfg := mustParse(t, uarLLMConfig(`{"kind":"uar","base_url":"http://127.0.0.1:59990","model":"p/m"}`))
+		_, err := cfg.ResolveAgent(LLMOverrides{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "llm.uar.mcp_principal")
 	})
 	t.Run("a full section", func(t *testing.T) {
 		set := ok(t, `{"kind":"uar","base_url":"https://uar.example.test","model":"m","uar":{"agent_id":"a1","mcp_name":"n1","provider":"p",`+
@@ -69,8 +89,8 @@ func TestResolveUARDefaultsAndRefusals(t *testing.T) {
 		"unknown principal":           {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"m","uar":{"mcp_principal":"nobody","mcp_credential_revision":"r"}}`, "names no principal"},
 		"principal of the wrong kind": {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"m","uar":{"mcp_principal":"chat","mcp_credential_revision":"r"}}`, "of kind uar"},
 		"principal without revision":  {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"m","uar":{"mcp_principal":"uar"}}`, "mcp_credential_revision"},
-		"grant ttl too short":         {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"m","uar":{"mcp_grant_ttl":"1s"}}`, "mcp_grant_ttl"},
-		"grant ttl too long":          {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"m","uar":{"mcp_grant_ttl":"2h"}}`, "mcp_grant_ttl"},
+		"grant ttl too short":         {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"p/m","uar":{"mcp_principal":"uar","mcp_credential_revision":"r1","mcp_grant_ttl":"1s"}}`, "mcp_grant_ttl"},
+		"grant ttl too long":          {`{"kind":"uar","base_url":"http://127.0.0.1:1","model":"p/m","uar":{"mcp_principal":"uar","mcp_credential_revision":"r1","mcp_grant_ttl":"2h"}}`, "mcp_grant_ttl"},
 		"plain http key to a remote":  {`{"kind":"uar","base_url":"http://uar.example.test","model":"m","api_key":{"env":"` + uarTestCredEnv + `"}}`, "plain http"},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -107,9 +127,14 @@ func TestResolveUARRefusedWhileNoReleaseIsPinned(t *testing.T) {
 
 // The settings API switches the kind, reports it, and keeps the revision rules.
 func TestSettingsWriteSwitchesToAndFromUAR(t *testing.T) {
+	// The tool principal and a provider are required for kind uar.
+	switchConfig := `{"principals":[{"name":"uar","kind":"uar","credential":{"env":"` + uarTestMCPEnv + `"},` +
+		`"uar":{"card_url":"http://127.0.0.1:59990/.well-known/agent-card.json"}}],` +
+		`"llm":{"base_url":"http://127.0.0.1:59998/v1","model":"m-old","api_key":{"env":"` + settingsKeyEnv + `"},` +
+		`"uar":{"provider":"ollama","mcp_principal":"uar","mcp_credential_revision":"r1"}}}`
 	fake := newFakeUARRelease(t, replay(t, "run-text.sse"))
 	dir := t.TempDir()
-	e := newSettingsEnvDir(t, settingsBackendJSON, dir)
+	e := newSettingsEnvDir(t, switchConfig, dir)
 	etag, before := getSettings(t, e)
 	assert.Equal(t, "openai", before["backend"].(map[string]any)["kind"])
 	require.NotNil(t, e.s.Agent())
@@ -139,7 +164,7 @@ func TestSettingsWriteSwitchesToAndFromUAR(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ov.Backend.Kind)
 	assert.Equal(t, "uar", *ov.Backend.Kind)
-	set, err := mustParse(t, settingsBackendJSON).ResolveAgentWithOverlay(LLMOverrides{}, ov)
+	set, err := mustParse(t, switchConfig).ResolveAgentWithOverlay(LLMOverrides{}, ov)
 	require.NoError(t, err)
 	assert.True(t, set.IsUAR())
 
@@ -150,6 +175,26 @@ func TestSettingsWriteSwitchesToAndFromUAR(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode, bodyString(t, resp))
 	assert.Nil(t, e.s.UARBackend())
 	assert.NotNil(t, e.s.Agent())
+}
+
+// A settings write to kind uar without a provider fails at the write, not at
+// the first chat.
+func TestSettingsWriteToUARNeedsAProvider(t *testing.T) {
+	cfg := `{"principals":[{"name":"uar","kind":"uar","credential":{"env":"` + uarTestMCPEnv + `"},` +
+		`"uar":{"card_url":"http://127.0.0.1:59990/.well-known/agent-card.json"}}],` +
+		`"llm":{"base_url":"http://127.0.0.1:59998/v1","model":"m-old","uar":{"mcp_principal":"uar","mcp_credential_revision":"r1"}}}`
+	e := newSettingsEnv(t, cfg)
+	etag, _ := getSettings(t, e)
+	resp := e.do(t, http.MethodPut, tokSettingsAdmin, `{"backend":{"kind":"uar"},"egress_confirmation":{"host":"127.0.0.1:59998"}}`,
+		map[string]string{"If-Match": etag})
+	body := bodyString(t, resp)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode, body)
+	assert.Contains(t, body, "llm.uar.provider")
+	assert.Nil(t, e.s.UARBackend())
+	// provider/model in the same write is enough.
+	resp = e.do(t, http.MethodPut, tokSettingsAdmin, `{"backend":{"kind":"uar","model":"ollama/qwen3:8b"},"egress_confirmation":{"host":"127.0.0.1:59998"}}`,
+		map[string]string{"If-Match": etag})
+	require.Equal(t, http.StatusOK, resp.StatusCode, bodyString(t, resp))
 }
 
 func TestSettingsRejectsAnUnknownKind(t *testing.T) {

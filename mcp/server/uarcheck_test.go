@@ -228,13 +228,15 @@ func TestCheckUARCardProblemsRefuse(t *testing.T) {
 // Authorization header of each, so a test can use a non-loopback host name
 // without opening a connection.
 type rewriteTransport struct {
+	t    *testing.T
 	auth []string
 	urls []string
 	body map[string]string
 }
 
 func (r *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	r.auth = append(r.auth, req.Header.Get("Authorization"))
+	assert.Empty(r.t, req.Header.Get("Authorization"), "the admin key is never sent as a bearer")
+	r.auth = append(r.auth, req.Header.Get("X-UAR-Admin-Key"))
 	r.urls = append(r.urls, req.URL.String())
 	body, ok := r.body[req.URL.Path]
 	status := http.StatusOK
@@ -249,7 +251,7 @@ func (r *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 func TestCheckUARNeverSendsTheAdminCredentialInCleartext(t *testing.T) {
 	t.Setenv(fakeUARAdminEnv, fakeUARAdminToken)
-	rt := &rewriteTransport{body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
+	rt := &rewriteTransport{t: t, body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
 	checker := NewUARChecker(&http.Client{Transport: rt}, nil, WithSettingsPath(testUARSettingsPath))
 	min := "1.4.0"
 	rep := checker.Check(t.Context(), UARCheckInput{
@@ -268,7 +270,7 @@ func TestCheckUARNeverSendsTheAdminCredentialInCleartext(t *testing.T) {
 	assert.NotContains(t, string(raw), fakeUARAdminToken)
 
 	// Over https the credential is sent.
-	rt = &rewriteTransport{body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
+	rt = &rewriteTransport{t: t, body: map[string]string{uarCardSuffix: `{"version":"1.4.0"}`}}
 	checker = NewUARChecker(&http.Client{Transport: rt}, nil, WithSettingsPath(testUARSettingsPath))
 	checker.Check(t.Context(), UARCheckInput{
 		UAR: UARConfig{
@@ -277,7 +279,7 @@ func TestCheckUARNeverSendsTheAdminCredentialInCleartext(t *testing.T) {
 			MinVersion:      &min,
 		},
 	})
-	assert.Contains(t, rt.auth, "Bearer "+fakeUARAdminToken)
+	assert.Contains(t, rt.auth, fakeUARAdminToken)
 }
 
 func TestCheckUARDoesNotFollowRedirects(t *testing.T) {

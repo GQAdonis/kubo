@@ -189,6 +189,9 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 		if err != nil {
 			return nil, err
 		}
+		if _, _, err := uarProviderModel(&AgentSettings{Model: model, UAR: u}); err != nil {
+			return nil, fmt.Errorf("llm.kind uar: %w", err)
+		}
 		set.UAR = u
 		// The run grant is the principal's bearer; it must not cross the
 		// network in clear text either. Plain http is allowed to loopback or

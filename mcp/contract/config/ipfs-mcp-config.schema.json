@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ipfs mcp configuration file (--mcp-config)",
-  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint. An absent Secret file or token environment variable named by any SecretRef is never fatal: startup proceeds with a warning and only the dependent feature is disabled (the principal whose credential reference does not resolve authenticates nothing; the agent backend whose key reference does not resolve answers backend_not_configured) until the reference resolves (CRITICAL-2, ADR-0009 section 1).",
+  "description": "Configuration read only by `ipfs mcp` (never a Kubo repo config key). The file is named with `ipfs mcp --mcp-config=<path>` or the IPFS_MCP_CONFIG environment variable; the root `--config`/`--config-file` flag keeps its Kubo meaning (the repo config file) and is not this file. Without either, no file is read and every key takes its default. Every key carries default, offSwitch and ownerChange annotations; docs/mcp/config-reference.md is generated from them. Credentials are never literals: they are SecretRef objects naming an environment variable or an absolute file path. No key has a default network endpoint. An absent Secret file or token environment variable named by any SecretRef is never fatal, with one exception: startup proceeds with a warning and only the dependent feature is disabled (the principal whose credential reference does not resolve authenticates nothing; the agent backend whose key reference does not resolve answers backend_not_configured) until the reference resolves (CRITICAL-2, ADR-0009 section 1). The exception: ipfs mcp --http with configured principals none of which resolves a credential, and no --auth-token-* operator token, exits at start instead of serving 403 (S5).",
   "flag": "--mcp-config",
   "env": "IPFS_MCP_CONFIG",
   "type": "object",
@@ -156,7 +156,7 @@
           "credential": {
             "$ref": "#/$defs/SecretRef",
             "default": null,
-            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled, with a warning at start: startup proceeds and the principal authenticates nothing until the reference resolves (CRITICAL-2).",
+            "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled and the start logs a warning, as long as at least one other principal (or a --auth-token-* operator token) resolves; the disabled principal authenticates nothing until the reference resolves (CRITICAL-2). If none of the configured principals resolves and no operator token is given, ipfs mcp --http exits at start naming the missing variables or files.",
             "ownerChange": "mcp-http-transport-auth"
           },
           "groups": {
@@ -245,7 +245,7 @@
                   }
                 ],
                 "default": null,
-                "offSwitch": "null (default): settings cannot be read, so check verify fails closed.",
+                "offSwitch": "null (default): settings cannot be read, so check verify fails closed. Sent to UAR as the X-UAR-Admin-Key header (not as a bearer), only to the settings path under the card URL's base, over https or to loopback.",
                 "ownerChange": "mcp-agent-principal-enforcement"
               },
               "min_version": {
@@ -305,7 +305,7 @@
               "type": "string",
               "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
               "default": "kubo-ipfs",
-              "offSwitch": "Read only when llm.kind is uar; set llm.kind back to openai.",
+              "offSwitch": "Read only when llm.kind is uar; set llm.kind back to openai. Must be unique per node on a shared UAR (the default collides across nodes): an agent with the same id is overwritten, system prompt included. Kubo binds and unbinds only skills it bound itself.",
               "ownerChange": "agent-backend-uar"
             },
             "provider": {
@@ -316,7 +316,7 @@
               "minLength": 1,
               "maxLength": 128,
               "default": null,
-              "offSwitch": "Read only when llm.kind is uar; unset leaves the provider of the agent's default model to UAR.",
+              "offSwitch": "Read only when llm.kind is uar; required for llm.kind uar unless llm.model is written as provider/model (resolve and settings writes refuse a uar backend with neither); set llm.kind back to openai to drop it.",
               "ownerChange": "agent-backend-uar"
             },
             "mcp_name": {
@@ -334,7 +334,7 @@
               "minLength": 1,
               "maxLength": 64,
               "default": null,
-              "offSwitch": "null (default): the UAR agent is created with no kubo MCP binding and no run grant, so it has no kubo tools. Names a principal of kind uar in principals; its credential is the bearer UAR presents to ipfs mcp and is sent to UAR with each run, never stored there.",
+              "offSwitch": "Required when llm.kind is uar (with mcp_credential_revision); null only while llm.kind is openai. UAR v1.1.0 resolves an empty tool allowlist to automatic selection and would expose the instance's native tools, so a uar backend without it is refused rather than created without a kubo binding. Names a principal of kind uar in principals; its credential is the static bearer sent to UAR with each run as the grant, never stored there. Plain http to a non-loopback host is refused unless the host is listed in embeddings.insecure_http_hosts. Set llm.kind back to openai to turn the UAR backend off.",
               "ownerChange": "agent-backend-uar"
             },
             "mcp_credential_revision": {
@@ -345,7 +345,7 @@
               "minLength": 1,
               "maxLength": 128,
               "default": null,
-              "offSwitch": "Required when mcp_principal is set (the credential_revision the UAR operator issued for the run grant). Unset mcp_principal to drop the binding.",
+              "offSwitch": "Required with llm.kind uar, as for mcp_principal (the credential_revision the UAR operator issued for the run grant). Set llm.kind back to openai to turn the UAR backend off.",
               "ownerChange": "agent-backend-uar"
             },
             "mcp_scopes": {
@@ -360,13 +360,13 @@
               "default": [
                 "ipfs"
               ],
-              "offSwitch": "Read only with mcp_principal; unset mcp_principal to send no run grant.",
+              "offSwitch": "Read only when llm.kind is uar (mcp_principal is required there); set llm.kind back to openai to send no run grant.",
               "ownerChange": "agent-backend-uar"
             },
             "mcp_grant_ttl": {
               "$ref": "#/$defs/Duration",
               "default": "10m",
-              "offSwitch": "Read only with mcp_principal. Advisory: sent to UAR as the grant expiry (expires_at_unix) and not enforced by ipfs mcp, because the grant is the uar principal static bearer. A leaked grant stays usable until that principal secret is rotated, whatever the value; at least 30s and at most 1h.",
+              "offSwitch": "Read only when llm.kind is uar. Advisory: sent to UAR as the grant expiry (expires_at_unix) and not enforced by ipfs mcp, because the grant is the uar principal static bearer. A leaked grant stays usable until that principal secret is rotated, whatever the value; at least 30s and at most 1h.",
               "ownerChange": "agent-backend-uar"
             },
             "skills_dir": {
@@ -379,7 +379,7 @@
                 }
               ],
               "default": null,
-              "offSwitch": "null (default): no skill is uploaded or bound, and the agent has none. Name a directory of agentskills.io skill directories (mcp/skills in a checkout) to upload each SKILL.md and bind it to the agent.",
+              "offSwitch": "null (default): no skill is uploaded or bound by kubo, and it unbinds only skills it bound earlier in this process. Name a directory of agentskills.io skill directories (mcp/skills in a checkout) to upload each SKILL.md and bind it to the agent. A skill of the same name already on UAR is bound only if its artifact_digest equals the digest of the local SKILL.md; a different or missing digest fails provisioning.",
               "ownerChange": "agent-backend-uar"
             }
           },
@@ -401,7 +401,7 @@
           "minLength": 1,
           "maxLength": 256,
           "default": null,
-          "offSwitch": "Remove the llm section. With llm.kind uar it names the default model of the UAR agent.",
+          "offSwitch": "Remove the llm section. With llm.kind uar it names the default model of the UAR agent, and either llm.uar.provider is set or this value is written as provider/model (a uar backend with neither is refused).",
           "ownerChange": "mcp-llm-proxy-loop",
           "flag": "--llm-model"
         },
@@ -415,7 +415,7 @@
             }
           ],
           "default": null,
-          "offSwitch": "null (default): requests carry no key (local servers). An api_key reference whose environment variable or file is absent is never fatal: startup proceeds with a warning, only the dependent agent backend is disabled, and /agui answers 503 backend_not_configured until the reference resolves (CRITICAL-2).",
+          "offSwitch": "null (default): requests carry no key (local servers). With llm.kind uar this must be a trusted-host JWT of the UAR instance, not an ordinary API key. An api_key reference whose environment variable or file is absent is never fatal: startup proceeds with a warning, only the dependent agent backend is disabled, and /agui answers 503 backend_not_configured until the reference resolves (CRITICAL-2).",
           "ownerChange": "mcp-llm-proxy-loop",
           "flag": "--llm-api-key-env, --llm-api-key-file"
         },
