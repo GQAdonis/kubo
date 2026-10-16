@@ -2,10 +2,10 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1872,
-  "derivedRevision": 1872,
+  "sourceRevision": 1883,
+  "derivedRevision": 1883,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1872
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1883
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -22,7 +22,7 @@
   "parentPhase": null,
   "childPointer": null,
   "change": "lke-origin-isolation",
-  "currentTask": "1.9",
+  "currentTask": "1.12",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": null,
@@ -31,9 +31,9 @@
   "implementationCompleted": 63,
   "implementationTotal": 76,
   "planRevision": 2,
-  "revision": 1872,
+  "revision": 1883,
   "exactNextCommand": null,
   "nextChange": "lke-origin-isolation",
-  "nextTask": "1.9",
-  "updatedAt": "2026-10-16T09:30:54.892400Z"
+  "nextTask": "1.12",
+  "updatedAt": "2026-10-16T09:53:38.673625Z"
 }

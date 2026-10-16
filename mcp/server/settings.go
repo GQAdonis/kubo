@@ -636,7 +636,9 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	dropStored := hostMoved && storedKey
 	dropAny := kindChanged && (storedKey || next.key != nil)
 	if !carriesKey && (dropStored || dropAny) {
-		wasSet := storedKey && keyStatusOf(st.current, st.dir).Set
+		// A kind change drops a key the config file references too, so that one
+		// is reported as well (Round 8 N3); the reason stays host_changed.
+		wasSet := (storedKey && keyStatusOf(st.current, st.dir).Set) || (kindChanged && next.key != nil)
 		next.key = nil
 		keyClear = true
 		cand.base = next
@@ -676,6 +678,10 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// already acknowledged move.
 	downgraded := schemeChanged && strings.EqualFold(schemeOf(st.current.BaseURL), "https")
 	moved := hostChanged || schemeChanged || kindChanged
+	// The kubo MCP grant goes to a UAR host with every run. A grant that reaches
+	// a new host (a first UAR backend, or a uar backend that moves) needs the
+	// typed confirmation even when egress_ack already covers the host (Round 8 N2).
+	grantMoved := hostChanged && set != nil && set.IsUAR() && set.UAR != nil && set.UAR.MCPCredential != nil
 	switch {
 	case wr.EgressConfirmation != nil && !moved:
 		h.writeError(w, http.StatusConflict, "egress_confirmation_required",
@@ -686,7 +692,7 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			"egress_confirmation.host must be exactly the newly chosen model host "+newHost+"; no other host can be acknowledged through a settings write",
 			map[string]string{"host": newHost})
 		return
-	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (schemeChanged && (!hostChanged || downgraded)) || kindChanged:
+	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (schemeChanged && (!hostChanged || downgraded)) || kindChanged || grantMoved:
 		// id.ID empty means the request carried no authenticated identity (the
 		// kind gate makes that unreachable today); the extension could not be
 		// attributed to a principal, so it cannot be confirmed.
@@ -694,6 +700,8 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			var msg string
 			if hostChanged && !AckCovers(st.effectiveAck(id), newHost) {
 				msg = "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; "
+			} else if grantMoved && !kindChanged && !(schemeChanged && (!hostChanged || downgraded)) {
+				msg = "the write sends the kubo MCP grant to the UAR host " + newHost + ", which the calling principal's egress_ack already covers but which has not received it before; "
 			} else if kindChanged && !(schemeChanged && (!hostChanged || downgraded)) {
 				msg = "the write changes the kind of the model backend at " + newHost + " from " + kindName(st.current) + " to " + kindName(set) + "; "
 			} else {

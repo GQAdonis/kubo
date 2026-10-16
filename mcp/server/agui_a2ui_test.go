@@ -15,7 +15,7 @@ import (
 
 // a2uiDerivationsForTest reads the derivations file. Its component list is the
 // catalog's: mcp/ui/catalog/ipfs-mcp.catalog.json is generated from it, and
-// go:embed cannot reach mcp/ui from this package, so the derivations are the
+// the go:embed directive cannot reach mcp/ui from this package, so the derivations are the
 // server-side source of the catalog's component names.
 func a2uiDerivationsForTest(t *testing.T) a2uiComponentFile {
 	t.Helper()

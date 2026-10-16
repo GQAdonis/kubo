@@ -117,6 +117,9 @@ func (b *uarBackend) uarFailure(err error) error {
 type uarAnswer struct {
 	Status  string
 	Payload map[string]any
+	// filled is true for a denial recorded for an interrupt the person was never
+	// asked, because they denied another one (see reopen).
+	filled bool
 }
 
 // uarPending is one interrupt UAR raised and kubo has not answered yet.
@@ -346,6 +349,7 @@ func (b *uarBackend) resume(ctx context.Context, h *aguiHandler, st *aguiStream,
 		for _, p := range th.pending {
 			if p.Answer == nil {
 				p.Answer = p.answerFor(false, false)
+				p.Answer.filled = true
 			}
 		}
 	}
@@ -407,8 +411,9 @@ func (b *uarBackend) runBody(th *uarThread, runID, parent string, messages []any
 }
 
 // runGrant is the explicit run grant for the kubo MCP destination, or nil when
-// no principal is configured or its credential does not resolve (the agent then
-// runs without kubo tools; the startup and provisioning warnings say so). The
+// the principal's credential does not resolve (the agent then runs without kubo
+// tools). resolveUAR refuses a uar backend without llm.uar.mcp_principal, so
+// MCPCredential is always set here. The
 // shape is the one the acceptance sent (acc. 597-599; docs/releases/
 // v1.1.0-kubo.md "Restricted destinations ..."): name, and grant with
 // credential_revision, scopes, expires_at_unix and headers.Authorization. The
@@ -416,9 +421,6 @@ func (b *uarBackend) runBody(th *uarThread, runID, parent string, messages []any
 // static bearer; a leaked grant is usable until that credential is rotated.
 func (b *uarBackend) runGrant() map[string]any {
 	u := b.set.UAR
-	if u.MCPCredential == nil {
-		return nil
-	}
 	tok, err := u.MCPCredential.Read()
 	if err != nil {
 		b.log.Warn("the credential of llm.uar.mcp_principal does not resolve; the run carries no kubo MCP grant", "principal", u.MCPPrincipal)
@@ -537,21 +539,29 @@ func (b *uarBackend) settle(th *uarThread, res relayResult) {
 	}
 }
 
-// reopen withdraws the answers of the interrupts a person gave, so the failed
-// resume can be tried again. Interrupts kubo answered by itself keep their
-// answers. When no interrupt needs a person, nothing could ever clear the
-// thread: it is abandoned.
+// reopen withdraws the answer to the interrupt the person was answering when
+// the request failed, and the denials that answer filled in for the others, so
+// the failed resume can be tried again. Earlier answers stay, and shown stays
+// on the interrupt the island last displayed, so the island can re-answer it.
+// Interrupts kubo answered by itself keep their answers. When no interrupt needs
+// a person, nothing could ever clear the thread: it is abandoned.
 func (b *uarBackend) reopen(th *uarThread) {
 	for _, p := range th.pending {
-		if p.NeedsUser {
+		if !p.NeedsUser || p.Answer == nil {
+			continue
+		}
+		if p.ShownID == th.shown || p.Answer.filled {
 			p.Answer = nil
 		}
 	}
-	if next := th.nextToAsk(); next != nil {
-		th.shown = next.ShownID
+	next := th.nextToAsk()
+	if next == nil {
+		b.abandonThread(th)
 		return
 	}
-	b.abandonThread(th)
+	if th.shownPending() == nil {
+		th.shown = next.ShownID
+	}
 }
 
 // abandonThread forgets the thread's open interrupts and moves it to a fresh
@@ -624,15 +634,19 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, b
 	sc.Buffer(make([]byte, 0, 64<<10), maxUAREventBytes)
 	for sc.Scan() {
 		line := sc.Text()
+		// Every line counts against the byte budget, comments and keepalives
+		// included, so a peer cannot hold the request open with them.
+		bud.bytes += len(line) + 1
 		data, ok := strings.CutPrefix(line, "data:")
-		if !ok {
-			continue // comments, keepalives and other SSE fields
+		if ok {
+			bud.events++
 		}
-		bud.events++
-		bud.bytes += len(line)
 		if bud.events > maxUAREvents || bud.bytes > maxUARRequestBytes {
 			res.err = &uarBackendError{"The UAR run sent more data than one request allows."}
 			return res
+		}
+		if !ok {
+			continue // comments, keepalives and other SSE fields
 		}
 		var ev aguiEvent
 		if json.Unmarshal([]byte(strings.TrimSpace(data)), &ev) != nil {

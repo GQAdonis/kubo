@@ -16,6 +16,7 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/kubo/client/rpc"
 	ma "github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 // Daemon is the narrow view of a Kubo daemon that tool handlers use. The
@@ -187,6 +188,8 @@ type DiscoveringDaemon struct {
 
 	mu  sync.Mutex
 	cur *RPCDaemon
+	// read is true once the api file has been read successfully.
+	read bool
 }
 
 // NewDiscoveringDaemon returns a DiscoveringDaemon for opts, which must not
@@ -207,6 +210,15 @@ func (d *DiscoveringDaemon) current() (*RPCDaemon, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The RPC Authorization header goes to whatever address the file names. A
+	// file that changed to a non-loopback address after the first read is not
+	// trusted with it: the call fails as unreachable and the file is read again
+	// on the next call.
+	if d.read && d.opts.Authorization != "" && !apiAddrIsLoopback(cur.Endpoint()) {
+		return nil, fmt.Errorf("%w: the api file in %s now names %s, which is not a loopback address, and --api-auth is set; the RPC credential is not sent there",
+			ErrDaemonUnreachable, d.apiDir(), cur.Endpoint())
+	}
+	d.read = true
 	d.cur = cur
 	return cur, nil
 }
@@ -286,3 +298,12 @@ var (
 	_ rawDaemon    = (*DiscoveringDaemon)(nil)
 	_ uploadDaemon = (*DiscoveringDaemon)(nil)
 )
+
+// apiAddrIsLoopback reports whether an api multiaddr names a loopback IP.
+func apiAddrIsLoopback(endpoint string) bool {
+	addr, err := ma.NewMultiaddr(endpoint)
+	if err != nil {
+		return false
+	}
+	return manet.IsIPLoopback(addr)
+}

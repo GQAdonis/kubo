@@ -142,7 +142,7 @@ The refusal to send a credential over plain http to a non-loopback host covers t
 
 ### Interrupts survive a failed resume (R8-03)
 
-An open UAR interrupt is forgotten after a resume stream that returned 200, and also when UAR refuses the thread (400, 404, 409, 410 or 422) or a hop fails where nobody needs to answer; in those two cases the thread moves to a fresh UAR thread id, so a new message cannot land on a thread where UAR still holds the interrupt. A transport error, a 401 or a 5xx on resume leaves it pending, so the person can answer again. After an idle eviction or an abandoned run the id changes through a per-thread sequence number; the per-backend generation explains the change only after a settings apply. Every settings apply rotates the UAR thread ids, so UAR-side conversation history is lost even on a prompt-only change.
+An open UAR interrupt is forgotten after a resume stream that returned 200, and also when UAR refuses the thread (400, 404, 409, 410 or 422) or a hop fails where nobody needs to answer; in those two cases the thread moves to a fresh UAR thread id, so a new message cannot land on a thread where UAR still holds the interrupt. A transport error, a 401 or a 5xx on resume withdraws only the answer to the interrupt shown at the failure, plus any denials it filled in; earlier answers stay and the shown interrupt stays answerable (Go N1). Once the stream has started, a failure settles the interrupts; a failure before it starts is an HTTP 502 and the shown interrupt stays answerable, so no `RUN_ERROR` field was added (N6 rebutted). After an idle eviction or an abandoned run the id changes through a per-thread sequence number; the per-backend generation explains the change only after a settings apply. Every settings apply rotates the UAR thread ids, so UAR-side conversation history is lost even on a prompt-only change.
 
 Residual (N2): a skill removed from `llm.uar.skills_dir` stays bound on UAR after a restart, because the record of what kubo bound (`ownedSkills`) lives on one backend instance only. Unbind it on UAR by hand.
 
@@ -150,3 +150,7 @@ Residual (N2): a skill removed from `llm.uar.skills_dir` stays bound on UAR afte
 
 - A2A with a UAR backend (U6): a non-POST request gets 405 and a non-`a2a` principal 403. If UAR is the backend at startup, `--a2a` is ignored and `/a2a` and the agent card are not mounted (404). The 503 applies only after a runtime switch to UAR, and the public agent card keeps answering 200 then. A task in flight at the switch ends FAILED instead of crashing.
 - A backend kind change is a move for the key-scope rule of ADR-0012 (U2); see its amendment.
+- A `uar` backend with a grant that moves to a new host, or a first UAR backend, needs the typed `egress_confirmation` even when `egress_ack` covers the host (N2).
+- The relay byte budget counts every SSE line, not only `data:` lines (N4).
+- With `--api-auth`, an api file re-read during the daemon wait that names a non-loopback address is refused, so the RPC `Authorization` is not sent to it (N5).
+- The provisioning warning "llm.uar.mcp_principal is not set" is gone: that configuration is refused.

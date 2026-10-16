@@ -2,16 +2,16 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1872,
-  "derivedRevision": 1872,
+  "sourceRevision": 1883,
+  "derivedRevision": 1883,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1872
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1883
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-16T09:30:54.892400Z",
+  "last_updated": "2026-10-16T09:53:38.673625Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
   "changes_completed": 29,
@@ -141,10 +141,10 @@
       "title": "lke-origin-isolation",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 11,
-      "tasks_done": 8,
-      "last_task_completed": "After OG-6, record the operator's credentialed output and run the unauthenticated part (read-only) into a new dated evidence folder. Acceptance: README marks each check pass or fail. OG-0 hygiene is l",
-      "next_task_pending": "After 1.8 passes, prepare a separate redirect PR: on the gateway host, `/webui` and `/api/v0` redirect to the console host, and `ipfs-webui-legacy` is removed. The PR states that cross-host redirects ",
+      "tasks_total": 12,
+      "tasks_done": 11,
+      "last_task_completed": "After OG-15, run the unauthenticated redirect check (read-only). Acceptance: gateway-host `/webui` and `/api/v0/version` answer a redirect to the console host; recorded in a new dated evidence folder.",
+      "next_task_pending": "PR #36 security-read follow-ups",
       "blockers": []
     },
     {
@@ -307,8 +307,8 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 7,
-      "tasks_done": 3,
-      "last_task_completed": "Pin `uar-preflight.json` to the release tag and digest; set `check-uar` minimum version. Acceptance: no `null` in the preflight file.",
+      "tasks_done": 5,
+      "last_task_completed": "Round 8 confirmation follow-ups",
       "next_task_pending": "`backend.kind: uar`: provision the agent against the released API (W9). Acceptance: a fixture test against recorded release responses, and the real-service run of 1.5 shows `GET /api/agents/{id}` retu",
       "blockers": []
     },

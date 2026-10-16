@@ -102,6 +102,8 @@ func TestKindChangeDoesNotCarryAReferencedKey(t *testing.T) {
 
 	doc, _ := e.putChecked(t, etag, `{"backend":{"kind":"uar"},"egress_confirmation":{"host":"`+kindMoveHost+`"}}`)
 	assert.Equal(t, map[string]any{"set": false}, apiKeyOf(t, doc), "the referenced key does not follow to the new kind")
+	// Round 8 N3: the drop is reported, with the same reason as a host move.
+	assert.Equal(t, map[string]any{"reason": "host_changed", "cleared": true}, doc["key_not_carried"])
 }
 
 // U5: the run grant is refused over plain http to a non-loopback host that the

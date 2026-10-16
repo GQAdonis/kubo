@@ -225,13 +225,8 @@ func agentArtifact(set *AgentSettings, systemPrompt string, tools, skillIDs []st
 	}, nil
 }
 
-// uarToolNames are the UAR names of the kubo tools the agent may call: none
-// when no MCP principal is configured, because then the run carries no grant
-// and the tools could not be reached.
+// uarToolNames are the UAR names of the kubo tools the agent may call.
 func (b *uarBackend) uarToolNames() []string {
-	if b.set.UAR.MCPCredential == nil {
-		return nil
-	}
 	names := b.srv.ToolNames()
 	out := make([]string, 0, len(names))
 	for _, n := range names {

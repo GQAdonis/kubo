@@ -38,3 +38,6 @@ Not verified: tests; `git diff` for `/api/v0` and the gateway; real UAR wire sha
 ## Lead disposition
 
 N1 is fixed in the operator-approved targeted Web UI correction. N2-N6 carried as `agent-backend-uar` 1.7.
+
+Update (agent-backend-uar 1.7): N2, N3, N4 and N5 are fixed in 1.7, as are Go review N1 (a failed resume withdraws only the answer to the interrupt shown at the failure, plus the denials it filled in; earlier answers stay and the shown interrupt stays answerable) and nit-1 (no UAR RUN_ERROR message is relayed unscrubbed). N6 is rebutted: after a failure once the stream has started, the interrupts are settled; a failure before the stream starts is an HTTP 502, and Go N1 keeps the shown interrupt answerable. No RUN_ERROR field was added.
+

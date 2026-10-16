@@ -468,7 +468,7 @@ func TestUARThreadIDsDifferAfterABackendRebuildAndAfterEviction(t *testing.T) {
 	now := b.now()
 	b.mu.Unlock()
 	b.now = func() time.Time { return now.Add(2 * sessionIdleTTL) }
-	th, release, err = b.acquireThread("chat", "other", true) // sweeps the idle thread
+	_, release, err = b.acquireThread("chat", "other", true) // sweeps the idle thread
 	require.NoError(t, err)
 	release()
 	th, release, err = b.acquireThread("chat", "evict-me", true)

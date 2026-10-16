@@ -133,9 +133,6 @@ func (b *uarBackend) ensureProvisioned(ctx context.Context) error {
 	if b.provisioned.Load() {
 		return nil
 	}
-	if b.set.UAR.MCPCredential == nil {
-		b.log.Warn("llm.uar.mcp_principal is not set: the UAR agent is provisioned with no kubo tools")
-	}
 	if err := b.provisionUAR(ctx); err != nil {
 		var conflict *uarSkillConflictError
 		if errors.As(err, &conflict) {
