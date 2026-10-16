@@ -2,13 +2,13 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1883,
-  "derivedRevision": 1883,
+  "sourceRevision": 1887,
+  "derivedRevision": 1887,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1883
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1887
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-16T09:53:38.673625Z",
+  "updatedAt": "2026-10-16T10:32:03.512336Z",
   "cursor": [
     "agent-backend-settings",
     "lke-origin-isolation",
@@ -19,7 +19,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 63,
+      "done": 64,
       "total": 76
     },
     "children": [
@@ -29,7 +29,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 29,
+          "done": 30,
           "total": 36
         },
         "children": [
@@ -265,9 +265,9 @@
           {
             "type": "change",
             "id": "agent-backend-uar",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 5,
+              "done": 7,
               "total": 7
             }
           },

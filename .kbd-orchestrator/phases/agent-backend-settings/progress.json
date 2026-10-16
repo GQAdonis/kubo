@@ -2,25 +2,25 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1883,
-  "derivedRevision": 1883,
+  "sourceRevision": 1887,
+  "derivedRevision": 1887,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1883
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1887
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-16T09:53:38.673625Z",
+  "last_updated": "2026-10-16T10:32:03.512336Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 29,
+  "changes_completed": 30,
   "implementation_total": 36,
-  "implementation_completed": 29,
+  "implementation_completed": 30,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 29,
+      "completed": 30,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +49,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 63,
+      "completed": 64,
       "total": 76,
       "status": "IN_PROGRESS"
     },
@@ -304,12 +304,12 @@
     {
       "id": "agent-backend-uar",
       "title": "agent-backend-uar",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 7,
-      "tasks_done": 5,
+      "tasks_done": 7,
       "last_task_completed": "Round 8 confirmation follow-ups",
-      "next_task_pending": "`backend.kind: uar`: provision the agent against the released API (W9). Acceptance: a fixture test against recorded release responses, and the real-service run of 1.5 shows `GET /api/agents/{id}` retu",
+      "next_task_pending": null,
       "blockers": []
     },
     {
