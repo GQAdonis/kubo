@@ -378,6 +378,39 @@ func TestA2ATextWriteWaitsAndApprovalResumesTheRun(t *testing.T) {
 	assert.Equal(t, "Pinned it.", done["artifacts"].([]any)[0].(map[string]any)["parts"].([]any)[0].(map[string]any)["text"])
 }
 
+// U6: a settings write that moves the backend to a UAR agent while a task waits
+// for approval must not crash the process when the approval arrives; the task
+// ends failed and the model is not asked again.
+func TestA2ATaskSurvivesASwitchToUARWhileWaitingForApproval(t *testing.T) {
+	target := testCID(t, 93)
+	e := newA2AEnv(t, a2aEnvOpts{},
+		callStep(40, scriptedCall{ID: "tc-1", Name: "pin_add", Args: map[string]any{"path": "/ipfs/" + target}}),
+		sayStep("Pinned it."))
+	task := taskOf(t, e.send(a2aTokPeer, textPartJSON("pin "+target)))
+	id := task["id"].(string)
+	require.Equal(t, a2aInputRequired, stateOf(task))
+
+	// The settings write: the loop is gone, a UAR backend serves.
+	e.s.agentMu.Lock()
+	e.s.uarExt = &uarBackend{}
+	e.s.agentMu.Unlock()
+	require.Nil(t, e.s.Agent())
+
+	_, resolve := e.presence.last(t)
+	require.NoError(t, resolve(true))
+	// While UAR serves, the endpoint answers 503 (the request-time check), so
+	// the task is read once the approval step has run and the loop is back.
+	require.Eventually(t, func() bool { return strings.Contains(e.logs.String(), "a2a run failed") },
+		5*time.Second, 10*time.Millisecond, "the approved step found no agent loop and failed the task")
+	e.s.agentMu.Lock()
+	e.s.uarExt = nil
+	e.s.agentMu.Unlock()
+	done := e.eventuallyState(a2aTokPeer, id, a2aFailed)
+	validateA2A(t, "Task", done)
+	assert.False(t, e.pins.has(target), "nothing ran after the switch")
+	assert.Equal(t, 1, e.model.hits(), "the old model backend is not asked again")
+}
+
 func TestA2ATextWriteDeniedIsRejectedWithoutAskingTheModelAgain(t *testing.T) {
 	target := testCID(t, 92)
 	e := newA2AEnv(t, a2aEnvOpts{},

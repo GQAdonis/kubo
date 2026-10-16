@@ -125,12 +125,9 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 	}
 	base := firstNonEmpty(o.BaseURL, llm.BaseURL)
 	model := firstNonEmpty(o.Model, llm.Model)
-	if base == "" && model == "" {
-		if o.keyGiven() {
-			return nil, errors.New("--llm-api-key-env or --llm-api-key-file is set but no model backend is configured; name --llm-base-url and --llm-model, or remove the key flag")
-		}
-		return nil, nil
-	}
+	// The kind is validated before the "nothing configured" return, so an
+	// invalid kind, or kind uar without a base URL, fails instead of silently
+	// leaving the agent off.
 	kind := llm.Kind
 	switch kind {
 	case "":
@@ -138,6 +135,15 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 	case BackendKindOpenAI, BackendKindUAR:
 	default:
 		return nil, errors.New("llm.kind must be openai or uar")
+	}
+	if kind == BackendKindUAR && base == "" {
+		return nil, errors.New("llm.kind uar needs llm.base_url")
+	}
+	if base == "" && model == "" {
+		if o.keyGiven() {
+			return nil, errors.New("--llm-api-key-env or --llm-api-key-file is set but no model backend is configured; name --llm-base-url and --llm-model, or remove the key flag")
+		}
+		return nil, nil
 	}
 	switch {
 	case base == "":
@@ -184,6 +190,18 @@ func (c *Config) ResolveAgent(o LLMOverrides) (*AgentSettings, error) {
 			return nil, err
 		}
 		set.UAR = u
+		// The run grant is the principal's bearer; it must not cross the
+		// network in clear text either. Plain http is allowed to loopback or
+		// to a host the operator listed in embeddings.insecure_http_hosts.
+		if u.MCPCredential != nil && strings.EqualFold(schemeOf(base), "http") && !IsLocalHost(HostFromURL(base)) {
+			var listed []string
+			if c.Embeddings != nil {
+				listed = c.Embeddings.InsecureHTTPHosts
+			}
+			if pu, perr := url.Parse(base); perr != nil || !insecureHostListed(pu, listed) {
+				return nil, errors.New("refusing to send the llm.uar.mcp_principal grant over plain http to a non-loopback host; use https, a loopback backend, or list the host in embeddings.insecure_http_hosts")
+			}
+		}
 	}
 	return set, nil
 }

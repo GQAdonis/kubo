@@ -194,6 +194,9 @@ func (st *settingsState) resolve() (*AgentSettings, error) {
 		cfg.LLM = &LLMConfig{BaseURL: st.base.baseURL, Model: st.base.model, APIKey: st.base.key, Timeout: st.base.timeout,
 			Kind: st.base.kind, UAR: st.base.uar}
 	}
+	if len(st.insecureHTTP) > 0 {
+		cfg.Embeddings = &EmbeddingsConfig{InsecureHTTPHosts: st.insecureHTTP}
+	}
 	set, err := cfg.ResolveAgent(st.over)
 	if err != nil {
 		return nil, err
@@ -604,7 +607,7 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 
 	// Validate the candidate with the same function startup uses: the written
 	// values as the config base, the run's flags still winning over them.
-	cand := settingsState{base: next, prompt: prompt, loop: st.loop, over: st.over}
+	cand := settingsState{base: next, prompt: prompt, loop: st.loop, over: st.over, principals: st.principals, insecureHTTP: st.insecureHTTP}
 	set, err := cand.resolve()
 	if err != nil {
 		// ResolveAgent errors name the offending key, never a value.
@@ -620,11 +623,20 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// stored through this API. Unless the same write supplies api_key (a new key
 	// or null), the stored key is cleared; a key supplied by reference (file or
 	// environment variable) is the operator's and stays as configured.
+	//
+	// A change of backend kind is a move too (Round 8, U2): no key follows
+	// across kinds, stored or referenced from the config file. A key given by a
+	// run flag is the run's own and cannot be removed by a write; the
+	// confirmation below names it.
 	var notice *keyNotCarriedBody
 	carriesKey := wr.Backend != nil && len(wr.Backend.APIKey) > 0
-	if !carriesKey && set != nil && st.current != nil && backendMoved(st.current.BaseURL, set.BaseURL) &&
-		st.dir != "" && st.current.APIKey != nil && st.current.APIKey.File == st.keyFilePath() {
-		wasSet := keyStatusOf(st.current, st.dir).Set
+	kindChanged := set != nil && st.current != nil && set.IsUAR() != st.current.IsUAR()
+	storedKey := st.dir != "" && st.current != nil && st.current.APIKey != nil && st.current.APIKey.File == st.keyFilePath()
+	hostMoved := set != nil && st.current != nil && backendMoved(st.current.BaseURL, set.BaseURL)
+	dropStored := hostMoved && storedKey
+	dropAny := kindChanged && (storedKey || next.key != nil)
+	if !carriesKey && (dropStored || dropAny) {
+		wasSet := storedKey && keyStatusOf(st.current, st.dir).Set
 		next.key = nil
 		keyClear = true
 		cand.base = next
@@ -663,7 +675,7 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 	// differs from the old one must not turn the downgrade into an ordinary,
 	// already acknowledged move.
 	downgraded := schemeChanged && strings.EqualFold(schemeOf(st.current.BaseURL), "https")
-	moved := hostChanged || schemeChanged
+	moved := hostChanged || schemeChanged || kindChanged
 	switch {
 	case wr.EgressConfirmation != nil && !moved:
 		h.writeError(w, http.StatusConflict, "egress_confirmation_required",
@@ -674,7 +686,7 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			"egress_confirmation.host must be exactly the newly chosen model host "+newHost+"; no other host can be acknowledged through a settings write",
 			map[string]string{"host": newHost})
 		return
-	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (schemeChanged && (!hostChanged || downgraded)):
+	case (hostChanged && !AckCovers(st.effectiveAck(id), newHost)) || (schemeChanged && (!hostChanged || downgraded)) || kindChanged:
 		// id.ID empty means the request carried no authenticated identity (the
 		// kind gate makes that unreachable today); the extension could not be
 		// attributed to a principal, so it cannot be confirmed.
@@ -682,10 +694,19 @@ func (h *settingsHandler) apply(w http.ResponseWriter, r *http.Request, wr setti
 			var msg string
 			if hostChanged && !AckCovers(st.effectiveAck(id), newHost) {
 				msg = "the write moves the model backend to " + newHost + ", which the calling principal's egress_ack does not cover; "
+			} else if kindChanged && !(schemeChanged && (!hostChanged || downgraded)) {
+				msg = "the write changes the kind of the model backend at " + newHost + " from " + kindName(st.current) + " to " + kindName(set) + "; "
 			} else {
 				msg = "the write changes the scheme of the model backend at " + newHost + " from " + schemeOf(st.current.BaseURL) + " to " + schemeOf(set.BaseURL) + "; "
 			}
 			msg += "resend with egress_confirmation {\"host\": \"" + newHost + "\"} to acknowledge that node content will be sent to that host"
+			if carriesKey && !bytes.Equal(bytes.TrimSpace(wr.Backend.APIKey), []byte("null")) {
+				msg += "; the API key supplied in this write will be sent to that host too"
+			}
+			if set.IsUAR() && set.UAR != nil && set.UAR.MCPCredential != nil {
+				msg += "; the kubo MCP grant (the credential of llm.uar.mcp_principal " + set.UAR.MCPPrincipal +
+					") will be sent to that host with each run, so that host can call this node's tools"
+			}
 			if referencedKey(set, st.keyFilePath()) {
 				// Operator ruling 2026-10-15: a key supplied by reference follows
 				// a host move, so the confirmation names it.
@@ -832,6 +853,14 @@ func (h *settingsHandler) removeClearedKeyFile(st *settingsState, cleared bool) 
 	if err := os.Remove(st.keyFilePath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		h.log.Warn("the old settings key file could not be removed", "error", err)
 	}
+}
+
+// kindName is the backend kind of resolved settings, for messages.
+func kindName(set *AgentSettings) string {
+	if set != nil && set.IsUAR() {
+		return BackendKindUAR
+	}
+	return BackendKindOpenAI
 }
 
 // referencedKey reports whether the resolved backend carries a key supplied by
