@@ -88,9 +88,18 @@ Rejected under D13: it would delay goals 1, 3, 4 and 5 on an external team's sch
 
 Section 1 item 4 and the Consequences say the UAR credential is by reference and never a literal in the settings API. The implementation follows the settings schema instead, as the OpenAI backend does: `settings-write.schema.json` carries a write-only `api_key`, which the settings API stores as a 0600 file in the settings directory (never returned by a read; the read shape reports only `api_key: {set, source}`), and the credential can equally be given by reference (`llm.api_key` as an environment name or file) in the configuration file. This is consistent with ADR-0012: the key scope rules (a key stored through the API is cleared on a host move, a key supplied by reference stays) apply to the `uar` kind unchanged, because the UAR instance is the backend host. The by-reference statement still holds for the configuration file and for LKE, where `agent.settings.accept_secrets: false` refuses a key in a write. `llm.uar.*` (`agent_id`, `mcp_principal`, `mcp_credential_revision`, `skills_dir`, and the other keys in that object) is configuration-file only; the settings API neither reads nor writes it.
 
-### Not yet verified against the running release (narrowed 2026-10-16)
+### Verified against the running release (2026-10-16)
 
-The agent-create, skill-import, skill-bind and run/resume request shapes no longer rest on inference alone: they come from UAR's own release acceptance program at v1.1.0, recorded in `mcp/uar/v1.1.0-image-config.md` and cited in `mcp/server/uar_provision.go` and `mcp/server/uar_proxy.go`. What only a real run can show is narrower: that the published image accepts these bodies from kubo's HTTP client as it does from UAR's program, the placement of the run grant at `forwardedProps.uar.mcp_servers` in a live run, and that the interrupt fixtures in `mcp/uar/fixtures/v1.1.0/` (fixtures, not captures) match a live stream. `test/cli/mcp_uar_backend_test.go` (task 1.5) is that run and has not been done; a mismatch is a bug in kubo's request bodies unless the image contradicts the contract.
+The real-service test passed against UAR v1.1.0 (image digest `sha256:064f5004...`) with the Qwen `qwen3.8-max` model; evidence is in `mcp/server/evidence/2026-10-16-uar-real-service/README.md` (commits `f0eb68447`, `e24e4ff3a`). Verified against the running release: agent create, skill import and bind, run and resume, and the `tool_approval` translation (a write run raises the interrupt, resumes after approval and finishes; a denied write ends with nothing executed).
+
+Findings from that run:
+
+- UAR requires `version` in the `SKILL.md` frontmatter (`src/uar/domain/skills.rs:241-246`; import answers 400 `skill_markdown_invalid` without it). Kubo adds `version: 1.0.0` to uploaded skills that lack one.
+- The operator's MCP destination registration may precede the agent's existence, and must happen before the first run (422 `run_mcp_destination_unregistered` otherwise).
+- UAR refuses a private-HTTP MCP destination whose address is not RFC1918 (422 `run_mcp_destination_invalid`).
+- A failed UAR request now logs op, method, path, status and a 300-byte excerpt of UAR's error, scrubbed of the key and grant. The client-facing error is unchanged.
+
+Still unverified: kubo's own write confirmation answered inside a UAR run (the test leaves it unanswered, by design), the live placement of the interrupt fixtures in `mcp/uar/fixtures/v1.1.0/` beyond the paths the run exercised, and runs on amd64 (the run was arm64).
 
 ### Shipped skills need `llm.uar.skills_dir`
 
