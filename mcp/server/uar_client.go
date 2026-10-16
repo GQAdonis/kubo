@@ -33,9 +33,16 @@ const uarCardPath = "/.well-known/agent-card.json"
 // uarHTTPError is a UAR reply that was not a success. Its text names the
 // operation and the status only: a reply body can carry conversation content
 // or credentials, so it is never copied into an error.
+//
+// Method, Path and Body are for the operator's log only (see uarFailure, which
+// scrubs and cuts the body): they are not part of Error(), so they never reach
+// a client.
 type uarHTTPError struct {
 	Op     string
 	Status int
+	Method string
+	Path   string
+	Body   []byte
 }
 
 func (e *uarHTTPError) Error() string {
@@ -98,9 +105,16 @@ func (c *uarClient) newRequest(ctx context.Context, method, path string, body []
 
 // uarReply is a fully read management reply.
 type uarReply struct {
+	Method string
+	Path   string
 	Status int
 	Header http.Header
 	Body   []byte
+}
+
+// httpErr is the error for a reply that was not a success; op names the step.
+func (r uarReply) httpErr(op string) *uarHTTPError {
+	return &uarHTTPError{Op: op, Status: r.Status, Method: r.Method, Path: r.Path, Body: r.Body}
 }
 
 // ok reports a 2xx status.
@@ -140,7 +154,7 @@ func (c *uarClient) call(ctx context.Context, method, path string, v any, hdr ma
 	if len(data) > maxUARReply {
 		return uarReply{}, errors.New("UAR reply is too large")
 	}
-	return uarReply{Status: resp.StatusCode, Header: resp.Header, Body: data}, nil
+	return uarReply{Method: method, Path: path, Status: resp.StatusCode, Header: resp.Header, Body: data}, nil
 }
 
 // unwrapURLError drops the request URL from a transport error: a URL could
@@ -160,7 +174,7 @@ func (c *uarClient) card(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if !r.ok() {
-		return "", &uarHTTPError{Op: "agent card", Status: r.Status}
+		return "", r.httpErr("agent card")
 	}
 	var card struct {
 		Version string `json:"version"`

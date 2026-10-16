@@ -38,14 +38,18 @@ import (
 // instance: PUT /api/uar/mcp/servers/{name} needs the kubo URL as the instance
 // reaches it and the trusted host id, which are deployment facts kubo does not
 // know (ADR-0010 section 1 and the 2026-10-16 amendment). The operator
-// registers it once, after the agent exists (its grant_policy names the agent).
+// registers it once, and before the first run: a run whose grant names an
+// unregistered destination answers 422 run_mcp_destination_unregistered. The
+// registration may name the agent in grant_policy.allowed_agent_ids before the
+// agent exists (checked against the v1.1.0 image).
 // It does not send X-UAR-Admin-Key: only /api/uar/settings* require it
 // (src/uar/api/settings.rs:364), and kubo calls no settings route.
 const (
 	// uarAgentsPath: GET/POST /api/agents, GET/PUT /api/agents/{id}
 	// (src/server.rs:2013-2017; handlers src/uar/api/discovery.rs:285,309,326).
 	uarAgentsPath = "/api/agents"
-	// uarSkillImportPath: POST, body {"skill_markdown": "<SKILL.md>"}, answers 201
+	// uarSkillImportPath: POST, body {"skill_markdown": "<SKILL.md>"} whose
+	// frontmatter has name, version and description (withUARSkillVersion), answers 201
 	// with the skill record or 409 skill_id_conflict, never an overwrite
 	// (src/uar/api/skills.rs:66 route, :452 handler; acc. 590-591).
 	uarSkillImportPath = "/api/uar/skills/import-content"
@@ -116,13 +120,50 @@ func loadUARSkills(dir string) ([]uarSkill, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read skill %s: %w", e.Name(), err)
 		}
-		out = append(out, uarSkill{Name: e.Name(), Markdown: string(data)})
+		out = append(out, uarSkill{Name: e.Name(), Markdown: withUARSkillVersion(string(data))})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	if len(out) > maxSkillsUploaded {
 		return nil, fmt.Errorf("llm.uar.skills_dir holds %d skills; at most %d are uploaded", len(out), maxSkillsUploaded)
 	}
 	return out, nil
+}
+
+// uarSkillVersion is the version kubo gives a skill whose frontmatter has none.
+const uarSkillVersion = "1.0.0"
+
+// withUARSkillVersion adds the top-level "version" key UAR requires. UAR parses
+// the frontmatter into a manifest whose name, version and description are all
+// required (src/uar/domain/skills.rs:241-246 SkillManifest; parser
+// src/uar/runtime/skills/storage/filesystem.rs:567-581) and answers 400
+// skill_markdown_invalid "missing field `version`" otherwise, while an
+// agentskills.io SKILL.md has no such key. The key goes right after the opening
+// delimiter; every other byte is kept, and a document that already has a
+// top-level version, or no frontmatter, is returned unchanged (UAR then
+// rejects the latter itself).
+func withUARSkillVersion(md string) string {
+	rest, ok := strings.CutPrefix(md, "---")
+	if !ok {
+		return md
+	}
+	nl := "\n"
+	if strings.HasPrefix(rest, "\r\n") {
+		nl = "\r\n"
+	}
+	rest, ok = strings.CutPrefix(rest, nl)
+	if !ok {
+		return md
+	}
+	front, _, found := strings.Cut(rest, "---")
+	if !found {
+		return md
+	}
+	for line := range strings.SplitSeq(front, nl) {
+		if strings.HasPrefix(line, "version:") {
+			return md
+		}
+	}
+	return "---" + nl + "version: " + uarSkillVersion + nl + rest
 }
 
 // readSkillFile reads at most maxSkillBytes+1 bytes of a file that was a
@@ -292,14 +333,14 @@ func (b *uarBackend) uploadSkill(ctx context.Context, sk uarSkill) (string, erro
 		}
 		return rec.SkillID, nil
 	case r.Status != http.StatusConflict:
-		return "", &uarHTTPError{Op: "skill import", Status: r.Status}
+		return "", r.httpErr("skill import")
 	}
 	got, err := b.cli.call(ctx, http.MethodGet, uarSkillsPath+"/"+url.PathEscape(sk.Name), nil, nil)
 	if err != nil {
 		return "", err
 	}
 	if !got.ok() {
-		return "", &uarHTTPError{Op: "skill read", Status: got.Status}
+		return "", got.httpErr("skill read")
 	}
 	var rec uarSkillRecord
 	if json.Unmarshal(got.Body, &rec) != nil || rec.SkillID == "" {
@@ -332,13 +373,13 @@ func (b *uarBackend) putAgent(ctx context.Context, skillIDs []string) error {
 	case cur.ok():
 		r, err = b.cli.call(ctx, http.MethodPut, path, art, nil)
 	default:
-		return &uarHTTPError{Op: "agent read", Status: cur.Status}
+		return cur.httpErr("agent read")
 	}
 	if err != nil {
 		return err
 	}
 	if !r.ok() {
-		return &uarHTTPError{Op: "agent write", Status: r.Status}
+		return r.httpErr("agent write")
 	}
 	return nil
 }
@@ -353,7 +394,7 @@ func (b *uarBackend) bindSkills(ctx context.Context, want []string) error {
 		return err
 	}
 	if !cur.ok() {
-		return &uarHTTPError{Op: "skill bindings read", Status: cur.Status}
+		return cur.httpErr("skill bindings read")
 	}
 	var bound []string
 	if err := json.Unmarshal(cur.Body, &bound); err != nil {
@@ -368,7 +409,7 @@ func (b *uarBackend) bindSkills(ctx context.Context, want []string) error {
 			return err
 		}
 		if !r.ok() && r.Status != http.StatusConflict {
-			return &uarHTTPError{Op: "skill bind", Status: r.Status}
+			return r.httpErr("skill bind")
 		}
 	}
 	for _, id := range b.ownedSkills {
@@ -380,7 +421,7 @@ func (b *uarBackend) bindSkills(ctx context.Context, want []string) error {
 			return err
 		}
 		if !r.ok() && r.Status != http.StatusNotFound {
-			return &uarHTTPError{Op: "skill unbind", Status: r.Status}
+			return r.httpErr("skill unbind")
 		}
 	}
 	b.ownedSkills = slices.Clone(want)

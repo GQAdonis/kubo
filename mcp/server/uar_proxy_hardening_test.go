@@ -152,7 +152,9 @@ func oneSkillDir(t *testing.T, name, body string) string {
 }
 
 func TestUARProvisioningFailsClosedOnASameNameSkill(t *testing.T) {
-	const md = "---\nname: alpha\ndescription: d\n---\nbody\n"
+	const src = "---\nname: alpha\ndescription: d\n---\nbody\n"
+	// What kubo uploads: the source plus the version key UAR requires.
+	md := withUARSkillVersion(src)
 	cases := map[string]func(u *fakeUARRelease){
 		"different content": func(u *fakeUARRelease) { u.skills["alpha"] = md + "tampered\n" },
 		"no digest":         func(u *fakeUARRelease) { u.skills["alpha"] = md; u.noDigest["alpha"] = true },
@@ -160,7 +162,7 @@ func TestUARProvisioningFailsClosedOnASameNameSkill(t *testing.T) {
 	}
 	for name, setup := range cases {
 		t.Run(name, func(t *testing.T) {
-			e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{skillsDir: oneSkillDir(t, "alpha", md)})
+			e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{skillsDir: oneSkillDir(t, "alpha", src)})
 			e.fake.edit(setup)
 			r := e.say("t1", "r1", "hello")
 			assert.Equal(t, http.StatusBadGateway, r.Status, r.Body)
@@ -171,7 +173,7 @@ func TestUARProvisioningFailsClosedOnASameNameSkill(t *testing.T) {
 		})
 	}
 	t.Run("same content is reused", func(t *testing.T) {
-		e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{skillsDir: oneSkillDir(t, "alpha", md)})
+		e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{skillsDir: oneSkillDir(t, "alpha", src)})
 		e.fake.edit(func(u *fakeUARRelease) { u.skills["alpha"] = md })
 		require.Equal(t, http.StatusOK, e.say("t1", "r1", "hello").Status)
 		assert.Equal(t, []string{"alpha"}, e.fake.bindings["kubo-ipfs"])

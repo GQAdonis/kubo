@@ -98,6 +98,7 @@ func (u *fakeUARRelease) callLog() []string {
 	return append([]string(nil), u.calls...)
 }
 
+var skillVersionLine = regexp.MustCompile(`(?m)^version:\s*\S+`)
 var skillNameLine = regexp.MustCompile(`(?m)^name:\s*(\S+)\s*$`)
 
 func writeJSONReply(w http.ResponseWriter, status int, v any) {
@@ -196,6 +197,12 @@ func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 			writeJSONReply(w, http.StatusBadRequest, map[string]any{"error": "skill_markdown_invalid"})
 			return
 		}
+		// UAR parses name, version and description as required keys
+		// (src/uar/domain/skills.rs:241-246) and answers 400 with serde's text.
+		if !skillVersionLine.MatchString(in.SkillMarkdown) {
+			writeJSONReply(w, http.StatusBadRequest, map[string]any{"error": "skill_markdown_invalid", "message": "missing field `version` at line 2 column 1"})
+			return
+		}
 		if _, dup := u.skills[m[1]]; dup {
 			writeJSONReply(w, http.StatusConflict, map[string]any{"error": "skill_id_conflict"})
 			return
@@ -223,6 +230,12 @@ func (u *fakeUARRelease) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		status, stream := u.script(n, in)
 		if status != http.StatusOK {
+			if len(stream) > 0 { // a scripted raw error body
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(status)
+				_, _ = w.Write(stream)
+				return
+			}
 			writeJSONReply(w, status, map[string]any{"error": "scripted"})
 			return
 		}

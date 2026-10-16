@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -58,8 +59,9 @@ import (
 //
 // Registering the kubo MCP server on UAR is an operator step (ADR-0010
 // amendment): the test performs it, as the acceptance does, with the trusted-host
-// token, after the agent exists, because the destination's grant_policy names the
-// persisted agent.
+// token, before the first run (a run that names an unregistered destination is
+// refused with 422). The destination's grant_policy may name the agent before it
+// exists.
 //
 // A write the agent runs after approval still needs kubo's own confirmation: the
 // uar principal never answers by elicitation, so with no resolver the tool
@@ -346,8 +348,9 @@ func startUAR(t *testing.T, s uarRealSetup) *uarStack {
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "docker run: %s", redact(string(out), redactions...))
 	t.Cleanup(func() {
-		logs, _ := exec.Command("docker", "logs", "--tail", "60", st.uar).CombinedOutput()
-		t.Logf("UAR container log tail:\n%s", redact(string(logs), redactions...))
+		logs, _ := exec.Command("docker", "logs", "--tail", "400", st.uar).CombinedOutput()
+		t.Logf("UAR container log tail (warnings, errors and request lines; startup noise dropped):\n%s",
+			uarLogTail(redact(string(logs), redactions...), 60))
 		_ = exec.Command("docker", "rm", "-f", st.uar).Run()
 	})
 
@@ -367,9 +370,54 @@ func startUAR(t *testing.T, s uarRealSetup) *uarStack {
 	st.hostIP = s.hostIP
 	if st.hostIP == "" {
 		st.hostIP = dock("exec", st.uar, "python3", "-c", "import socket; print(socket.gethostbyname('host.docker.internal'))")
+		// Docker Desktop resolves host.docker.internal to an address outside the
+		// private ranges (0.250.250.254 was seen), which UAR refuses for a
+		// private-HTTP destination (422 run_mcp_destination_invalid). Fall back to
+		// a private address of this machine, which ipfs mcp (bound to 0.0.0.0)
+		// answers on.
+		if ip := net.ParseIP(st.hostIP); ip == nil || !ip.IsPrivate() {
+			if own := privateHostIP(); own != "" {
+				t.Logf("host.docker.internal resolved to %s, not a private address; using %s (set %s to choose)", st.hostIP, own, uarHostIPEnv)
+				st.hostIP = own
+			}
+		}
 	}
 	require.Regexp(t, `^\d+\.\d+\.\d+\.\d+$`, st.hostIP, "the address at which UAR reaches this machine must be a literal IP")
 	return st
+}
+
+// uarLogTail keeps the last n lines of a UAR container log that are not the
+// per-table "waiting for first write" startup noise, so a failed request's own
+// line is not pushed out of the tail by it.
+func uarLogTail(logs string, n int) string {
+	var keep []string
+	for _, line := range strings.Split(logs, "\n") {
+		if line == "" || strings.Contains(line, "table not yet created") {
+			continue
+		}
+		keep = append(keep, line)
+	}
+	if len(keep) > n {
+		keep = keep[len(keep)-n:]
+	}
+	return strings.Join(keep, "\n")
+}
+
+// privateHostIP is the first private IPv4 address of an up, non-loopback
+// interface of this machine, or "".
+func privateHostIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, a := range addrs {
+		ipn, ok := a.(*net.IPNet)
+		if !ok || ipn.IP.To4() == nil || !ipn.IP.IsPrivate() {
+			continue
+		}
+		return ipn.IP.String()
+	}
+	return ""
 }
 
 func waitFor(t *testing.T, limit time.Duration, what string, ok func() bool) {
@@ -506,7 +554,7 @@ func uarMCPConfig(t *testing.T, s uarRealSetup, uarBase, skillsDir string) strin
 	return path
 }
 
-var uarListenPort = regexp.MustCompile(`serving MCP over HTTP on http://[^:\s]+:(\d+)`)
+var uarListenPort = regexp.MustCompile(`serving MCP over HTTP on http://\S*:(\d+)/`)
 
 // startKuboMCP starts `ipfs mcp --http=0.0.0.0:0 --agui` (the OS chooses the
 // port; the UAR container must reach it) and returns the process and its port.
@@ -646,6 +694,13 @@ func TestMCPUARBackend(t *testing.T) {
 		}
 	})
 
+	// The kubo destination is registered before the first run: a run whose grant
+	// names an unregistered destination is refused with HTTP 422
+	// run_mcp_destination_unregistered (UAR src/uar/runtime/turn/host/mcp.rs). The
+	// policy may name an agent id that does not exist yet (verified against the
+	// v1.1.0 image: PUT answers 200).
+	registerKuboDestination(t, st, kuboPort)
+
 	// kubo's configured prompt: the fixed prefix plus a custom part the test sets
 	// through the settings API, which the provisioning on the first run reads.
 	etag, prefix := kuboSettings(t, p)
@@ -674,10 +729,6 @@ func TestMCPUARBackend(t *testing.T) {
 	var bound []string
 	require.NoError(t, json.Unmarshal(skillBody, &bound), "the bindings reply is a list of skill ids")
 	assert.ElementsMatch(t, wantSkills, bound, "skill bindings equal the directory names under mcp/skills")
-
-	// The kubo destination is registered after the agent exists (its policy names
-	// the persisted agent id).
-	registerKuboDestination(t, st, kuboPort)
 
 	// A write: the agent asks for approval, the person approves, the run ends.
 	cid := node.IPFSAddStr("uar backend write", "--pin=false", "--cid-version=1")

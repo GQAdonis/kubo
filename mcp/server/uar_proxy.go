@@ -103,7 +103,7 @@ func (b *uarBackend) uarFailure(err error) error {
 	case errors.Is(err, context.DeadlineExceeded):
 		return &uarBackendError{"The run reached the time limit."}
 	case errors.As(err, &he):
-		b.log.Warn("UAR request failed", "op", he.Op, "status", he.Status)
+		b.logHTTPFailure(he)
 		if he.Status == http.StatusUnauthorized || he.Status == http.StatusForbidden {
 			return &uarBackendError{"The UAR instance refused the credential kubo presents (HTTP " + fmt.Sprint(he.Status) + ")."}
 		}
@@ -111,6 +111,25 @@ func (b *uarBackend) uarFailure(err error) error {
 	}
 	b.log.Warn("UAR request failed", "error_type", fmt.Sprintf("%T", err))
 	return &uarBackendError{"The UAR instance could not be reached or failed the run."}
+}
+
+// maxUARLoggedBody bounds the excerpt of a UAR error body that is logged.
+const maxUARLoggedBody = 300
+
+// logHTTPFailure logs at Warn which UAR request failed and a short excerpt of
+// UAR's error body, so an operator can tell why UAR refused it. The excerpt is
+// scrubbed of the UAR key and the run grant before it is cut, so a secret cannot
+// straddle the cut, and it stays out of every error a client sees.
+func (b *uarBackend) logHTTPFailure(he *uarHTTPError) {
+	args := []any{"op", he.Op, "status", he.Status}
+	if he.Method != "" {
+		args = append(args, "method", he.Method, "path", he.Path)
+	}
+	if len(he.Body) > 0 {
+		body := strings.ToValidUTF8(b.newScrubber().text(string(he.Body)), "")
+		args = append(args, "uar_error", trimSnippet(body, maxUARLoggedBody))
+	}
+	b.log.Warn("UAR request failed", args...)
 }
 
 // uarAnswer is the answer recorded for one UAR interrupt.
@@ -614,9 +633,11 @@ func (b *uarBackend) relay(ctx context.Context, st *aguiStream, th *uarThread, b
 		b.forgetProvisioned()
 	}
 	if resp.StatusCode != http.StatusOK {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxUARReply))
+		// The body is read for the operator's log only (uarFailure scrubs and
+		// cuts it); it is never sent to a client.
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxUARReply))
 		res.refused = slices.Contains(refusedStatuses, resp.StatusCode)
-		res.err = b.uarFailure(&uarHTTPError{Op: "run", Status: resp.StatusCode})
+		res.err = b.uarFailure(&uarHTTPError{Op: "run", Status: resp.StatusCode, Method: http.MethodPost, Path: req.URL.Path, Body: errBody})
 		return res
 	}
 	if mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type")); mt != "text/event-stream" {
