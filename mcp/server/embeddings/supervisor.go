@@ -155,8 +155,8 @@ func (t *tailBuffer) String() string {
 	return strings.TrimSpace(string(t.buf))
 }
 
-// checkBinaryPath refuses a path that is missing, not a regular file or not
-// executable. It is a configuration error: startup fails, naming key.
+// checkBinaryPath refuses a path that is missing, not a regular file, not
+// executable or (on unix) writable by its group or by everyone. It is a configuration error: startup fails, naming key.
 func checkBinaryPath(key, path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -167,6 +167,11 @@ func checkBinaryPath(key, path string) error {
 	}
 	if runtime.GOOS != "windows" && fi.Mode().Perm()&0o111 == 0 {
 		return fmt.Errorf("%s %s is not executable", key, path)
+	}
+	// A binary another user can rewrite runs as the operator the next time it
+	// starts, the same bound as the cache_dir and the polkit helpers.
+	if runtime.GOOS != "windows" && fi.Mode().Perm()&0o022 != 0 {
+		return fmt.Errorf("%s %s is writable by its group or by everyone (mode %04o); run chmod go-w on it", key, path, fi.Mode().Perm())
 	}
 	return nil
 }

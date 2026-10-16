@@ -117,7 +117,10 @@ type daemonWait struct {
 	total time.Duration
 	now   func() time.Time
 	sleep func(ctx context.Context, d time.Duration) error
-	// info receives one line per failed attempt.
+	// warn receives the line for the first failed attempt, so a waiting
+	// process is visible at the default log level; nil falls back to info.
+	warn func(msg string, args ...any)
+	// info receives one line per later failed attempt.
 	info func(msg string, args ...any)
 }
 
@@ -158,8 +161,12 @@ func probeWithWait(ctx context.Context, d Daemon, cat *contract.Catalog, warn fu
 			return nil, err
 		}
 		delay = min(delay, remaining)
-		if w.info != nil {
-			w.info("ipfs daemon API is not reachable yet; retrying",
+		logLine := w.info
+		if attempt == 1 && w.warn != nil {
+			logLine = w.warn
+		}
+		if logLine != nil {
+			logLine("ipfs daemon API is not reachable yet; retrying",
 				"endpoint", d.Endpoint(), "attempt", attempt, "retry_in", delay.String(), "gives_up_in", remaining.String())
 		}
 		if serr := sleep(ctx, delay); serr != nil {

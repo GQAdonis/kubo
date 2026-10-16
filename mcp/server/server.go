@@ -50,9 +50,11 @@ type Options struct {
 	// MaxConfirmTTL. Expiry is denial.
 	ConfirmTTL time.Duration
 	// DaemonWait is how long New keeps retrying a daemon that is not
-	// reachable (connection refused, no api file) before it fails. Zero, the
-	// zero value, does not wait. `ipfs mcp` passes daemon.wait, default
-	// DefaultDaemonWait. An RPC refusal or an unsupported version never waits.
+	// reachable (connection refused) before it fails. A missing api file is
+	// covered only when d is a DiscoveringDaemon, which reads the file on each
+	// attempt; Discover reads it once. Zero, the zero value, does not wait.
+	// `ipfs mcp` passes daemon.wait, default DefaultDaemonWait with --http and
+	// zero otherwise. An RPC refusal or an unsupported version never waits.
 	DaemonWait time.Duration
 	// Version is the server version reported to clients.
 	Version string
@@ -247,6 +249,7 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 		total: opts.DaemonWait,
 		now:   now,
 		sleep: opts.daemonSleep,
+		warn:  s.log.Warn,
 		info:  s.log.Info,
 	})
 	if err != nil {

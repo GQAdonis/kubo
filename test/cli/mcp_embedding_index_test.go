@@ -101,7 +101,7 @@ func indexConfig(surrealBin, dataDir, embedBase, model string, dims int, policy 
 
 // startIndexMCP starts `ipfs mcp --http` with the config in its own process
 // group, waits for it to listen, and stops it (and so its surreal) on cleanup.
-func startIndexMCP(t *testing.T, node *harness.Node, cfgJSON string, withEmbeddings bool) *mcpHTTPProc {
+func startIndexMCP(t *testing.T, node *harness.Node, cfgJSON string) *mcpHTTPProc {
 	t.Helper()
 	cfg := writeEmbeddingsConfig(t, cfgJSON)
 	cmd := exec.Command(node.IPFSBin, "mcp", "--http=127.0.0.1:0", "--mcp-config", cfg,
@@ -197,7 +197,7 @@ func TestMCPEmbeddingIndexOffByDefault(t *testing.T) {
 	defer node.StopDaemon()
 	// Principals only: no embeddings section.
 	p := startIndexMCP(t, node, `{"principals":[{"name":"indexer","kind":"human-mcp","credential":{"env":"CLI_IDX_TOKEN"},
-	  "write_groups":["content"],"egress_ack":["local"]}]}`, false)
+	  "write_groups":["content"],"egress_ack":["local"]}]}`)
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 
@@ -234,7 +234,7 @@ func TestMCPEmbeddingIndexAutoOffStillIndexesExplicitly(t *testing.T) {
 	defer node.StopDaemon()
 	embed := newCountingEmbed(t)
 	dataDir := filepath.Join(t.TempDir(), "idx")
-	p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8, `{}`), true)
+	p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8, `{}`))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 
@@ -288,7 +288,7 @@ func TestMCPEmbeddingIndexLifecycle(t *testing.T) {
 	embed := newCountingEmbed(t)
 	dataDir := filepath.Join(t.TempDir(), "idx")
 	p := startIndexMCP(t, node, indexConfig(bin, dataDir, embed.URL+"/v1", "fake", 8,
-		`{"auto": true, "max_bytes": 4096}`), true)
+		`{"auto": true, "max_bytes": 4096}`))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 	surrealPID, ok := surrealProcess(t, dataDir)

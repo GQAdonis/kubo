@@ -74,16 +74,16 @@ func newLazyStore(open func(ctx context.Context) (Store, error), timeout time.Du
 // waiting for the one in flight under ctx.
 func (l *lazyStore) get(ctx context.Context) (Store, error) {
 	l.mu.Lock()
+	if l.closed {
+		l.mu.Unlock()
+		return nil, fmt.Errorf("%w: the service is closed", ErrStoreUnavailable)
+	}
 	if st := l.inner; st != nil {
 		if ex, ok := st.(exiter); !ok || !ex.exited() {
 			l.mu.Unlock()
 			return st, nil
 		}
 		l.dropLocked(st)
-	}
-	if l.closed {
-		l.mu.Unlock()
-		return nil, fmt.Errorf("%w: the service is closed", ErrStoreUnavailable)
 	}
 	c := l.inflight
 	if c == nil {

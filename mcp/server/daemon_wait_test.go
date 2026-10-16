@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -111,9 +113,13 @@ func TestStartupFailsAfterTheWaitBoundWithTheSameError(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	require.Len(t, lines, len(clock.sleeps), "one Info line per failed attempt that is retried")
-	for _, l := range lines {
-		assert.Contains(t, l, "level=INFO")
+	require.Len(t, lines, len(clock.sleeps), "one line per failed attempt that is retried")
+	for i, l := range lines {
+		want := "level=INFO"
+		if i == 0 {
+			want = "level=WARN" // the first retry shows at the default Warn level
+		}
+		assert.Contains(t, l, want, "line %d", i)
 		assert.Contains(t, l, "not reachable yet")
 	}
 }
@@ -180,25 +186,39 @@ func TestSleepContextHonoursCancellation(t *testing.T) {
 }
 
 func TestDaemonWaitConfig(t *testing.T) {
-	t.Run("absent is the 60s default", func(t *testing.T) {
+	t.Run("absent is the 60s default with --http", func(t *testing.T) {
 		cfg, err := ParseConfig([]byte(`{}`))
 		require.NoError(t, err)
-		d, err := cfg.Daemon.WaitDuration()
+		d, err := cfg.Daemon.WaitDuration(true)
 		require.NoError(t, err)
 		assert.Equal(t, 60*time.Second, d)
 		assert.Equal(t, DefaultDaemonWait, d)
 	})
+	t.Run("absent is no wait on stdio", func(t *testing.T) {
+		cfg, err := ParseConfig([]byte(`{}`))
+		require.NoError(t, err)
+		d, err := cfg.Daemon.WaitDuration(false)
+		require.NoError(t, err)
+		assert.Zero(t, d)
+	})
+	t.Run("an explicit value is honored on stdio", func(t *testing.T) {
+		cfg, err := ParseConfig([]byte(`{"daemon":{"wait":"30s"}}`))
+		require.NoError(t, err)
+		d, err := cfg.Daemon.WaitDuration(false)
+		require.NoError(t, err)
+		assert.Equal(t, 30*time.Second, d)
+	})
 	t.Run("0s is the off switch", func(t *testing.T) {
 		cfg, err := ParseConfig([]byte(`{"daemon":{"wait":"0s"}}`))
 		require.NoError(t, err)
-		d, err := cfg.Daemon.WaitDuration()
+		d, err := cfg.Daemon.WaitDuration(true)
 		require.NoError(t, err)
 		assert.Zero(t, d)
 	})
 	t.Run("a value is read", func(t *testing.T) {
 		cfg, err := ParseConfig([]byte(`{"daemon":{"wait":"2m"}}`))
 		require.NoError(t, err)
-		d, err := cfg.Daemon.WaitDuration()
+		d, err := cfg.Daemon.WaitDuration(true)
 		require.NoError(t, err)
 		assert.Equal(t, 2*time.Minute, d)
 	})
@@ -215,4 +235,66 @@ func TestDaemonWaitConfig(t *testing.T) {
 			assert.False(t, strings.Contains(err.Error(), "panic"))
 		})
 	}
+}
+
+func TestRedactEndpointDropsUserinfo(t *testing.T) {
+	assert.Equal(t, "http://127.0.0.1:5001", redactEndpoint("http://user:s3cret@127.0.0.1:5001"))
+	assert.Equal(t, "https://host:1/path", redactEndpoint("https://tok@host:1/path"))
+	assert.NotContains(t, redactEndpoint("http://a:b@%zz"), "b@")
+
+	d, err := Discover(DiscoverOptions{API: "http://user:s3cret@127.0.0.1:1"})
+	require.NoError(t, err)
+	assert.NotContains(t, d.Endpoint(), "s3cret")
+	err = d.Call(t.Context(), "version", nil, nil, nil)
+	require.ErrorIs(t, err, ErrDaemonUnreachable)
+	assert.NotContains(t, err.Error(), "s3cret", "the error text carries no userinfo")
+}
+
+// A DiscoveringDaemon reads the api file on each attempt: absent at first,
+// then found, then re-read when the daemon moves to another port.
+func TestDiscoveringDaemonRereadsTheAPIFile(t *testing.T) {
+	dir := t.TempDir()
+	d := NewDiscoveringDaemon(DiscoverOptions{IPFSPath: dir})
+	assert.Contains(t, d.Endpoint(), dir)
+
+	err := d.Call(t.Context(), "version", nil, nil, nil)
+	require.ErrorIs(t, err, ErrDaemonUnreachable, "no api file yet")
+
+	first := rpcServer(t, "0.44.0-dev", "")
+	writeAPIFile(t, dir, first.URL)
+	var v struct{ Version string }
+	require.NoError(t, d.Call(t.Context(), "version", nil, nil, &v))
+	assert.Equal(t, "0.44.0-dev", v.Version)
+
+	first.Close()
+	second := rpcServer(t, "0.45.0", "")
+	writeAPIFile(t, dir, second.URL)
+	err = d.Call(t.Context(), "version", nil, nil, &v)
+	require.ErrorIs(t, err, ErrDaemonUnreachable, "the old port is gone; this call drops it")
+	require.NoError(t, d.Call(t.Context(), "version", nil, nil, &v), "the next call reads the new api file")
+	assert.Equal(t, "0.45.0", v.Version)
+}
+
+// New with a DiscoveringDaemon waits through a missing api file.
+func TestStartupWaitCoversAMissingAPIFile(t *testing.T) {
+	dir := t.TempDir()
+	srv := rpcServer(t, "0.44.0-dev", "")
+	clock := &waitClock{t: time.Unix(1_700_000_000, 0)}
+	opts := waitOptions(clock, time.Minute)
+	opts.daemonSleep = func(ctx context.Context, d time.Duration) error {
+		if len(clock.sleeps) == 1 {
+			writeAPIFile(t, dir, srv.URL) // the daemon starts during the second backoff
+		}
+		return clock.sleep(ctx, d)
+	}
+	s, err := New(t.Context(), NewDiscoveringDaemon(DiscoverOptions{IPFSPath: dir}), opts)
+	require.NoError(t, err)
+	require.NotNil(t, s)
+	assert.GreaterOrEqual(t, len(clock.sleeps), 2)
+}
+
+func writeAPIFile(t *testing.T, dir, serverURL string) {
+	t.Helper()
+	parts := strings.Split(strings.TrimPrefix(serverURL, "http://"), ":")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "api"), []byte("/ip4/"+parts[0]+"/tcp/"+parts[1]), 0o600))
 }

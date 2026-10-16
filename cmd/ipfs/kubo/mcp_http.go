@@ -101,8 +101,9 @@ type mcpHTTPSettings struct {
 	opts mcpserver.HTTPOptions
 	// anonymous is true when no credential is configured (loopback only).
 	anonymous bool
-	// warnings are the principals whose credential reference did not resolve;
-	// they are disabled, not fatal (ADR-0009 section 3).
+	// warnings are the principals whose credential reference did not resolve.
+	// They are disabled, not fatal, while at least one principal or an operator
+	// token resolves; when none does, startup fails (errNoPrincipalResolved).
 	warnings []string
 }
 

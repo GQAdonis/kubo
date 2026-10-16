@@ -44,7 +44,7 @@ func TestMCPEmbeddingIndexOllama(t *testing.T) {
 	node := harness.NewT(t).NewNode().Init().StartDaemon()
 	defer node.StopDaemon()
 	dataDir := filepath.Join(t.TempDir(), "idx")
-	p := startIndexMCP(t, node, indexConfig(bin, dataDir, base, "bge-m3", 1024, `{"auto": true}`), true)
+	p := startIndexMCP(t, node, indexConfig(bin, dataDir, base, "bge-m3", 1024, `{"auto": true}`))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 

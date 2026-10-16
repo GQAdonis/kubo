@@ -375,6 +375,37 @@ func TestWaitersHonorTheirOwnContextWhileOneOpenProceeds(t *testing.T) {
 	})
 }
 
+// close() ends an open in flight and the store never serves afterwards, even
+// when the open would have succeeded.
+func TestClosedLazyStoreDoesNotServe(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		g := newGatedOpen()
+		l := newLazyStore(g.open, time.Minute)
+
+		var first error
+		var wg sync.WaitGroup
+		wg.Go(func() { first = l.ready(t.Context()) })
+		synctest.Wait()
+		require.EqualValues(t, 1, g.calls.Load())
+
+		l.close() // returns only once the open saw the cancellation
+		require.ErrorIs(t, <-g.ctxErrs, context.Canceled)
+		wg.Wait()
+		require.ErrorIs(t, first, ErrStoreUnavailable)
+
+		err := l.ready(t.Context())
+		require.ErrorIs(t, err, ErrStoreUnavailable)
+		require.ErrorContains(t, err, "closed")
+		require.EqualValues(t, 1, g.calls.Load(), "no second open after close")
+
+		// A store that was already open stops serving too.
+		l2 := newLazyStore(func(context.Context) (Store, error) { return &mortalStore{id: 1}, nil }, time.Minute)
+		require.NoError(t, l2.ready(t.Context()))
+		l2.close()
+		require.ErrorContains(t, l2.ready(t.Context()), "closed")
+	})
+}
+
 func TestSchemaDefinedOnceUnderConcurrentUse(t *testing.T) {
 	t.Parallel()
 	f := newFlakyStore(t)

@@ -49,6 +49,9 @@ func TestStartExtractorSupervisorRefusals(t *testing.T) {
 	dir := t.TempDir()
 	plain := filepath.Join(t.TempDir(), "xberg")
 	require.NoError(t, os.WriteFile(plain, []byte("#!/bin/sh\necho 'xberg 1.3.10'\n"), 0o644))
+	writable := filepath.Join(t.TempDir(), "xberg")
+	require.NoError(t, os.WriteFile(writable, []byte("#!/bin/sh\necho 'xberg 1.3.10'\n"), 0o755))
+	require.NoError(t, os.Chmod(writable, 0o775))
 	tests := []struct {
 		name string
 		cfg  ExtractorEmbedded
@@ -59,6 +62,7 @@ func TestStartExtractorSupervisorRefusals(t *testing.T) {
 		{"missing binary", ExtractorEmbedded{Binary: filepath.Join(dir, "nope"), CacheDir: dir}, "xberg_binary"},
 		{"directory", ExtractorEmbedded{Binary: dir, CacheDir: dir}, "not a regular file"},
 		{"not executable", ExtractorEmbedded{Binary: plain, CacheDir: dir}, "not executable"},
+		{"group writable", ExtractorEmbedded{Binary: writable, CacheDir: dir}, "writable by its group or by everyone"},
 		{"old version", ExtractorEmbedded{Binary: fakeXbergBinary(t, "1.3.9"), CacheDir: dir}, "older than the minimum 1.3.10"},
 		{"older than a raised minimum", ExtractorEmbedded{Binary: fakeXbergBinary(t, "1.3.10"), CacheDir: dir, MinVersion: "1.4.0"}, "older than the minimum 1.4.0"},
 		{"no version reported", ExtractorEmbedded{Binary: fakeXbergBinary(t, "hello"), CacheDir: dir}, "does not report a version"},

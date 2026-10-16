@@ -60,7 +60,7 @@ func TestMCPBulkIndexOllama(t *testing.T) {
 	refsBefore := sortedLines(localRefs(node))
 
 	dataDir := filepath.Join(t.TempDir(), "idx")
-	p := startIndexMCP(t, node, indexConfig(bin, dataDir, base, "bge-m3", 1024, `{}`), true)
+	p := startIndexMCP(t, node, indexConfig(bin, dataDir, base, "bge-m3", 1024, `{}`))
 	e := &elicitor{action: "accept"}
 	cs := p.mustClient(indexTestToken, e.options())
 

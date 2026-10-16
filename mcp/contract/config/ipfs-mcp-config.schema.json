@@ -621,13 +621,13 @@
         "wait": {
           "$ref": "#/$defs/Duration",
           "default": "60s",
-          "description": "How long ipfs mcp keeps retrying at startup while the Kubo RPC API refuses connections or cannot be reached, for example a sidecar that starts before the daemon container is ready. Retries use a bounded backoff and one Info log line is written per attempt. After this duration startup fails with the same error as without a wait. A daemon that answers with an error (an API.Authorizations refusal, an unsupported version) fails at once and is never retried. At most 10m.",
+          "description": "How long ipfs mcp keeps retrying at startup while the Kubo RPC API refuses connections or cannot be reached, for example a sidecar that starts before the daemon container is ready. Without --api the api file in the repo directory is read again on each attempt, so a daemon that starts later or restarts on another port is found. Retries use a bounded backoff; the first retry is logged at Warn and each later one at Info. The 60s default applies only with --http: plain stdio ipfs mcp defaults to no wait, because an MCP host has its own startup timeout. An explicit value is always honored. After this duration startup fails with the same error as without a wait. A daemon that answers with an error (an API.Authorizations refusal, an unsupported version) fails at once and is never retried. At most 10m.",
           "offSwitch": "0s: no wait; a daemon that is not reachable at startup fails at once.",
           "ownerChange": "mcp-server-core-stdio"
         }
       },
       "default": {},
-      "offSwitch": "Omit the section for the 60s default, or set daemon.wait to 0s to fail at once.",
+      "offSwitch": "Omit the section for the transport default (60s with --http, none for stdio), or set daemon.wait to 0s to fail at once.",
       "ownerChange": "mcp-server-core-stdio"
     },
     "embeddings": {

@@ -18,12 +18,12 @@
     "tools.app_views": { "tests": ["TestAppViewsOffSwitch", "TestAppViewsConfigKey", "TestMCPAppViewsOff"] },
     "trusted_peers": {"tests": ["TestConfigExamplesValidate", "TestConfigInvalidExamplesFail", "TestPeerSuppliedFieldsAreMarked", "TestTrustedPeersMarkEntries", "TestTrustedPeersValidation", "TestNodeInfoIsNotPeerSupplied", "TestMCPTrustedPeers"]},
     "principals": {
-      "tests": ["TestHTTPAnonymousLoopbackIsReadOnly", "TestMCPPrincipalUnconfiguredGetsNothing", "TestAnonymousListenerRefusesForwardedRequests"],
+      "tests": ["TestHTTPAnonymousLoopbackIsReadOnly", "TestMCPPrincipalUnconfiguredGetsNothing", "TestAnonymousListenerRefusesForwardedRequests", "TestHTTPStartupFailsWhenNoConfiguredPrincipalResolves", "TestHTTPStartupNeverPrintsASecretWhenNoPrincipalResolves", "TestHTTPStartupKeepsResolvedPrincipalsWhenOthersAreMissing", "TestMCPHTTPStartupFailsWhenNoPrincipalCredentialResolves"],
       "note": "The anonymous listener refuses (403) any request that carries `Forwarded`, `X-Forwarded-For` or `X-Real-IP`: a proxied request did not come from this machine, so behind a reverse proxy a credential (an operator bearer token or configured principals) is required."
     },
     "principals[].name": { "tests": ["TestUnknownTokenGetsNothing", "TestPrincipalConfigRules"] },
     "principals[].kind": { "tests": ["TestHTTPPrincipalKindsAreScopedToRoutes", "TestA2AEndpointRejectsOtherPrincipalKinds", "TestAdminPrincipalScopedToSettingsRoute", "TestAdminPrincipalHasNoToolGrants"] },
-    "principals[].credential": { "tests": ["TestAbsentCredentialDisablesOnlyThatPrincipal", "TestAllCredentialsAbsentServerStarts", "TestConfigCredentialsDisableAPrincipalWhoseSecretIsAbsent", "TestParseConfigRejectsLiteralSecretsAndReservedPorts"] },
+    "principals[].credential": { "tests": ["TestAbsentCredentialDisablesOnlyThatPrincipal", "TestAllCredentialsAbsentVerifierAuthenticatesNothing", "TestConfigCredentialsDisableAPrincipalWhoseSecretIsAbsent", "TestHTTPStartupFailsWhenNoConfiguredPrincipalResolves", "TestHTTPStartupKeepsResolvedPrincipalsWhenOthersAreMissing", "TestMCPHTTPStartupFailsWhenNoPrincipalCredentialResolves", "TestParseConfigRejectsLiteralSecretsAndReservedPorts"] },
     "principals[].groups": { "tests": ["TestHTTPScopesNarrowTheToolList", "TestHTTPToolOutsideGrantsIsRefusedWithoutRunning"] },
     "principals[].write_groups": { "tests": ["TestConfigPrincipalsAreReadOnlyUnlessGranted", "TestReadOnlyPrincipalListsNoWriteTool"] },
     "principals[].destructive_groups": { "tests": ["TestConfigPrincipalsAreReadOnlyUnlessGranted", "TestKeyRmIsOffByDefault"] },
@@ -75,7 +75,7 @@
     },
     "daemon": { "tests": ["TestDaemonWaitConfig", "TestStartupWaitsForADaemonThatComesUp"] },
     "daemon.wait": {
-      "tests": ["TestDaemonWaitConfig", "TestStartupWaitsForADaemonThatComesUp", "TestStartupFailsAfterTheWaitBoundWithTheSameError", "TestStartupWaitZeroFailsAtOnce", "TestStartupDoesNotRetryAnAuthRefusal", "TestStartupDoesNotRetryAVersionMismatch", "TestStartupWaitStopsWhenTheContextEnds", "TestMCPDaemonWaitServesOnceTheDaemonComesUp", "TestMCPDaemonWaitFailsAfterTheBound", "TestMCPDaemonWaitDoesNotRetryAnAuthRefusal"]
+      "tests": ["TestDaemonWaitConfig", "TestStartupWaitsForADaemonThatComesUp", "TestStartupFailsAfterTheWaitBoundWithTheSameError", "TestStartupWaitZeroFailsAtOnce", "TestStartupDoesNotRetryAnAuthRefusal", "TestStartupDoesNotRetryAVersionMismatch", "TestStartupWaitStopsWhenTheContextEnds", "TestMCPDaemonWaitServesOnceTheDaemonComesUp", "TestMCPDaemonWaitFailsAfterTheBound", "TestMCPDaemonWaitDoesNotRetryAnAuthRefusal", "TestMCPDaemonWaitFindsAnAPIFileThatAppearsLater", "TestMCPDaemonWaitStdioDefaultsToFailingAtOnce", "TestMCPDaemonWaitHTTPDefaultWaitsAndSaysSo", "TestStartupWaitCoversAMissingAPIFile"]
     },
     "embeddings": { "tests": ["TestEmbeddingsOffByDefault", "TestIndexToolsAreOffUntilEmbeddingsAreConfigured", "TestMCPEmbeddingsStoreDisabled", "TestMCPEmbeddingIndexOffByDefault"] },
     "embeddings.mode": { "tests": ["TestEmbeddingsModeWithoutItsBlockIsRefused"] },

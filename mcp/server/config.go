@@ -104,19 +104,24 @@ type DaemonConfig struct {
 	Wait string `json:"wait"`
 }
 
-// Bounds of daemon.wait. DefaultDaemonWait covers a sidecar that starts a few
-// seconds to a minute before the daemon container is ready; "0s" disables the
-// wait.
+// Bounds of daemon.wait. DefaultDaemonWait, used only with --http, covers a
+// sidecar that starts a few seconds to a minute before the daemon container is
+// ready. Plain stdio defaults to no wait, because an MCP host has its own
+// startup timeout; an explicit value, "0s" included, is always honored.
 const (
 	DefaultDaemonWait = 60 * time.Second
 	MaxDaemonWait     = 10 * time.Minute
 )
 
 // WaitDuration is how long startup keeps retrying an unreachable daemon:
-// daemon.wait, or DefaultDaemonWait when it is absent. Zero means do not wait.
-func (c DaemonConfig) WaitDuration() (time.Duration, error) {
+// daemon.wait when set; when absent DefaultDaemonWait with the HTTP transport
+// (httpTransport) and zero for stdio. Zero means do not wait.
+func (c DaemonConfig) WaitDuration(httpTransport bool) (time.Duration, error) {
 	if c.Wait == "" {
-		return DefaultDaemonWait, nil
+		if httpTransport {
+			return DefaultDaemonWait, nil
+		}
+		return 0, nil
 	}
 	d, err := time.ParseDuration(c.Wait)
 	if err != nil {
@@ -203,7 +208,7 @@ func ParseConfig(data []byte) (*Config, error) {
 	if err := cfg.Confirmation.validate(); err != nil {
 		return nil, err
 	}
-	if _, err := cfg.Daemon.WaitDuration(); err != nil {
+	if _, err := cfg.Daemon.WaitDuration(false); err != nil {
 		return nil, err
 	}
 	if _, err := parseTrustedPeers(cfg.TrustedPeers); err != nil {
