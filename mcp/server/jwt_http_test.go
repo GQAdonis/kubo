@@ -28,6 +28,8 @@ type sessionEnvOptions struct {
 	principals []SessionPrincipal
 	// origins is the agent.origin_allowlist the verifier enforces.
 	origins []string
+	// issuer, when set, is used instead of a fresh one.
+	issuer *testIssuer
 }
 
 func defaultSessionPrincipals() []SessionPrincipal {
@@ -49,7 +51,10 @@ func defaultSessionPrincipals() []SessionPrincipal {
 
 func newSessionEnv(t *testing.T, o sessionEnvOptions) *sessionEnv {
 	t.Helper()
-	iss := newTestIssuer(t)
+	iss := o.issuer
+	if iss == nil {
+		iss = newTestIssuer(t)
+	}
 	cfg := iss.settings()
 	if o.oidc != nil {
 		o.oidc(&cfg)
@@ -64,7 +69,7 @@ func newSessionEnv(t *testing.T, o sessionEnvOptions) *sessionEnv {
 	}
 	v, err := NewJWTVerifier(JWTOptions{OIDC: cfg, Principals: principals, OriginAllowlist: origins})
 	require.NoError(t, err)
-	e := newHTTPEnv(t, func(h *HTTPOptions) { h.Verifier = v })
+	e := newHTTPEnv(t, func(h *HTTPOptions) { h.Verifier = NewChainVerifier(testVerifier(t), v) })
 	// The real mounts pass agent.origin_allowlist as the route's origins.
 	for _, m := range []struct {
 		route string
@@ -77,6 +82,9 @@ func newSessionEnv(t *testing.T, o sessionEnvOptions) *sessionEnv {
 	} {
 		require.NoError(t, e.hs.Mount(m.route, echoRoute(), m.opts))
 	}
+	// Serve prefetches the key set once; wait for it so request counts are
+	// stable.
+	require.Eventually(t, func() bool { return iss.hits.Load() >= 1 }, 5*time.Second, 5*time.Millisecond)
 	return &sessionEnv{httpEnv: e, iss: iss, jwt: v}
 }
 

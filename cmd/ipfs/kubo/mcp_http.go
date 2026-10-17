@@ -105,6 +105,8 @@ type mcpHTTPSettings struct {
 	// They are disabled, not fatal, while at least one principal or an operator
 	// token resolves; when none does, startup fails (errNoPrincipalResolved).
 	warnings []string
+	// notes are informational startup lines.
+	notes []string
 }
 
 func (s *mcpSettings) transport() string {
@@ -214,7 +216,8 @@ func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flag
 	// Principals that were configured but resolve to nothing must not turn into
 	// an anonymous listener the operator never asked for. Some resolved, or an
 	// operator token, keeps working with only those enabled.
-	if len(creds) == 0 && len(operator) == 0 {
+	sessionOnly := cfg.Auth.OIDC.Enabled && len(cfg.SessionPrincipals()) > 0
+	if len(creds) == 0 && len(operator) == 0 && !sessionOnly {
 		if err := errNoPrincipalResolved(cfg.Principals); err != nil {
 			return nil, err
 		}
@@ -232,16 +235,39 @@ func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flag
 	if err != nil {
 		return nil, err
 	}
-	if len(creds) == 0 {
+	oidc, err := cfg.OIDCSettings()
+	if err != nil {
+		return nil, err
+	}
+	if len(creds) == 0 && oidc == nil {
 		if !l.IsLoopback() {
 			return nil, fmt.Errorf("refusing to listen on non-loopback %s without authentication: set --%s, --%s or a principal in --%s", l, mcpAuthTokenEnvOptionName, mcpAuthTokenFileOptionName, mcpConfigOptionName)
 		}
 		out.anonymous = true
 		return out, nil
 	}
-	if out.opts.Verifier, err = mcpserver.NewStaticVerifier(creds); err != nil {
+	static, err := mcpserver.NewStaticVerifier(creds)
+	if err != nil {
 		return nil, err
 	}
+	if oidc == nil {
+		out.opts.Verifier = static
+		return out, nil
+	}
+	// auth.oidc is on: session tokens are tried after the static bearers. The
+	// key set is read from the configured URL only now, and a failure to read
+	// it never stops startup.
+	jwt, err := mcpserver.NewJWTVerifier(mcpserver.JWTOptions{
+		OIDC:            *oidc,
+		Principals:      cfg.SessionPrincipals(),
+		OriginAllowlist: cfg.Agent.OriginAllowlist,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out.opts.Verifier = mcpserver.NewChainVerifier(static, jwt)
+	out.notes = append(out.notes, fmt.Sprintf("auth.oidc is on: session tokens from %s are accepted on routes %s (keys at %s)",
+		oidc.Issuer, strings.Join(oidc.Routes, ","), jwt.JWKSURL()))
 	return out, nil
 }
 
@@ -255,6 +281,9 @@ func errNoPrincipalResolved(principals []mcpserver.PrincipalConfig) error {
 	}
 	refs := make([]string, 0, len(principals))
 	for _, p := range principals {
+		if !p.HasCredential() {
+			continue
+		}
 		refs = append(refs, fmt.Sprintf("%s (%s)", p.Name, p.Credential))
 	}
 	return fmt.Errorf("the config names %d principal(s) but none has a credential, so the listener would serve anonymous callers: %s; set the environment variable or create the file for at least one, or remove the principals to run anonymously on loopback", len(principals), strings.Join(refs, ", "))
@@ -312,6 +341,9 @@ func (h *mcpHTTPSettings) serveHTTP(ctx context.Context, srv *mcpserver.Server) 
 	}
 	for _, line := range h.warnings {
 		fmt.Fprintln(os.Stderr, "ipfs mcp: warning: "+line)
+	}
+	for _, line := range h.notes {
+		fmt.Fprintln(os.Stderr, "ipfs mcp: "+line)
 	}
 	for _, line := range hs.StartupReport(ctx) {
 		fmt.Fprintln(os.Stderr, "ipfs mcp: "+line)

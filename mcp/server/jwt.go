@@ -92,6 +92,8 @@ type JWTVerifier struct {
 	log      *slog.Logger
 	subjects map[string][]SessionPrincipal
 	origins  []string
+	// ownLog is true when the caller supplied a logger.
+	ownLog bool
 }
 
 // NewJWTVerifier builds the verifier. It fetches nothing: the key set is read
@@ -105,6 +107,7 @@ func NewJWTVerifier(o JWTOptions) (*JWTVerifier, error) {
 		now = time.Now
 	}
 	log := o.Logger
+	ownLog := log != nil
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
@@ -118,12 +121,21 @@ func NewJWTVerifier(o JWTOptions) (*JWTVerifier, error) {
 	}
 	return &JWTVerifier{
 		origins:  origins,
+		ownLog:   ownLog,
 		cfg:      o.OIDC,
 		keys:     newJWKSCache(o.OIDC.JWKSURL, o.OIDC.JWKSCacheTTL, o.Client, now),
 		now:      now,
 		log:      log,
 		subjects: subjects,
 	}, nil
+}
+
+// adoptLogger makes l the verifier's logger unless the caller supplied one. The
+// listener calls it once, before it serves.
+func (v *JWTVerifier) adoptLogger(l *slog.Logger) {
+	if !v.ownLog && l != nil {
+		v.log = l
+	}
 }
 
 // Warm fetches the key set once. An error names the URL (userinfo removed) and

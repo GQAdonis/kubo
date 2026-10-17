@@ -183,9 +183,15 @@ func NewHTTPServer(s *Server, opts HTTPOptions) (*HTTPServer, error) {
 	if h.origins, err = normalizeOrigins(opts.AllowedOrigins); err != nil {
 		return nil, err
 	}
+	var skew time.Duration
+	if c, ok := h.verify.(*ChainVerifier); ok {
+		c.adoptLogger(log)
+		skew = c.ClockSkew()
+	}
 	h.bearer = auth.RequireBearerToken(TokenVerifier(h.verify), &auth.RequireBearerTokenOptions{
 		ResourceMetadataURL: h.resourceMetadataURL(),
 		Scopes:              []string{ScopeRead},
+		ClockSkew:           skew,
 	})
 
 	if md := h.verify.ProtectedResourceMetadata(); md != nil {
@@ -492,6 +498,7 @@ func (h *HTTPServer) Serve(ctx context.Context) error {
 	// Cancel and join the goroutines the endpoints started once the listener
 	// stopped, so none outlives Serve.
 	defer h.mcp.runShutdownHooks()
+	defer h.warmKeys(ctx)()
 	srv := &http.Server{
 		Handler:           h.mux,
 		ReadHeaderTimeout: readHeaderTimeout,
@@ -513,6 +520,24 @@ func (h *HTTPServer) Serve(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+// warmKeys starts the one prefetch of the session key set, when auth.oidc is
+// on, and returns the function that waits for it. A failure only logs: JWT
+// requests get 401 until a key set loads, and static bearers are unaffected.
+func (h *HTTPServer) warmKeys(ctx context.Context) func() {
+	c, ok := h.verify.(*ChainVerifier)
+	if !ok || c.jwt == nil {
+		return func() {}
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := c.Warm(ctx); err != nil && ctx.Err() == nil {
+			h.log.Warn("auth.oidc: the key set could not be fetched; session tokens get 401 until it loads", "jwks_url", c.JWKSURL(), "error", err.Error())
+		}
+	}()
+	return func() { <-done }
 }
 
 // identitied is implemented by verifiers that can list the identities they
