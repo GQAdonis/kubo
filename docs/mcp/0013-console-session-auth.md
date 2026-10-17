@@ -2,7 +2,24 @@
 
 ## Status
 
-**Proposed**, 2026-10-16, by `ipfs-agent-architect`. Nothing in this ADR has been built, deployed or run against the cluster. It becomes `Accepted` only when the operator answers the open points in "Decisions left to the operator". Implementation is tracked as the OpenSpec change `openspec/changes/console-session-auth/`.
+**Accepted**, 2026-10-17, by the operator. Proposed 2026-10-16 by `ipfs-agent-architect`. Nothing in this ADR has been built, deployed or run against the cluster; implementation is tracked as the OpenSpec change `openspec/changes/console-session-auth/`.
+
+Operator words, verbatim, in order:
+
+- "I set `oauth.prometheusags.ai` to `23.239.29.33` IP address and we should use `prometheusags.ai` for this since kratos, etc. are all parked there.  that is the answer to #1, and all the other answers should be as you recommend but adjusted for that."
+- "I set `oauth.know-me.tools` to the same `23.239.29.33`"
+- "know-me.tools, defer IDs"
+
+Recorded answers (the first quote was superseded for point 1 by the second and third, after the lead reported that Kratos, sso-broker, flint-gate, forge and frf are all on `know-me.tools`):
+
+1. Hydra host: `oauth.know-me.tools` (issuer `https://oauth.know-me.tools`). DNS A 23.239.29.33.
+2. Allowlisted identity IDs and the admin: deferred. Required before subjects are wired (group 4 RBAC) and before the cutover (group 6).
+3. Admin path: option (a), TOTP or WebAuthn enabled in Kratos and the admin identity enrolled before cutover.
+4. Non-browser console `/api/v0` clients: none.
+5. go-jose bump to `v4.1.6`: approved.
+6. Soak before deleting the interim credentials: seven days.
+
+Placement (console-session-auth before `lke-agent-settings` and `lke-vector-search`) and the Hydra deployment in `flint-core`: approved.
 
 ## Date
 
@@ -22,7 +39,7 @@
 - **Not deployed.** Hydra, Keto and Oathkeeper are not deployed. The only Dex belongs to ArgoCD.
 - **The console gateway.** The console and `ipfs.prometheusags.ai` are on Gateway `ipfs/ipfs-gateway-gw` (45.56.67.67), which runs Envoy Gateway v1.9.1 with Envoy v1.39.1. HTTPRoute `ipfs-webui` (host `console.prometheusags.ai`, listener `https-console`) sends `/webui`, `/api/v0` and `/ipfs/<WebUIPath CID>` to `ipfs-api:5001`. The only SecurityPolicy is `ipfs/ipfs-webui-auth`. It applies basicAuth with Secret `ipfs-webui-basicauth`, targets `ipfs-webui`, and is annotated `Prune=false` and sync-wave `-1`. `/mcp` is only on the gateway host, through HTTPRoute `ipfs-mcp`. Routes for `/agui` and the settings route are not yet on the console; `lke-agent-settings` adds them.
 - **Network.** The CNI is Calico (`calico-*` pods in `kube-system`). No NetworkPolicy exists in `ipfs` or `flint-core`. Whether Calico enforces one here has not been proven by a probe.
-- **Certificates.** `argocd/wildcard-know-me-tools-tls` covers `*.know-me.tools` (notAfter 2026-12-13). DNS for `know-me.tools` is Cloudflare, and DNS-01 works there (`lke-gitops-change` cluster facts, 2026-10-14).
+- **Certificates.** `argocd/wildcard-know-me-tools-tls` is not a wildcard (corrected 2026-10-17 by a live read): its SANs are `api`, `auth`, `gate`, `rt` and `sso` `.know-me.tools` (notAfter 2026-12-13). DNS for `know-me.tools` is Cloudflare, and DNS-01 works there through ClusterIssuer `letsencrypt-prod` (`lke-gitops-change` cluster facts, 2026-10-14; issuer declared in `know-me-cluster` `cluster/manifests.yaml`).
 - **`ipfs mcp` authentication.** The only verifier is `StaticVerifier` (`mcp/server/auth.go:145-196`). It compares SHA-256 digests of configured bearer tokens in constant time. Principal kinds are `human-mcp`, `ui`, `a2a`, `uar` and `admin` (`mcp/server/principal.go`). The `AuthVerifier` interface (`auth.go:19-35`) was designed as the seam for "Ory Hydra access tokens later, with no change to routes or tool handlers". There is no JWT or JWKS verifier. `agent.origin_allowlist` rejects a listed route's request when its `Origin` is not listed. A request with no `Origin` passes.
 - **Kubo RPC.** Kubo checks `Authorization` only when `API.Authorizations` is configured (`core/corehttp/commands.go:144-147`). LKE does not configure it, so a forwarded bearer header reaches kubo and is ignored.
 
@@ -106,7 +123,7 @@ ipfs-api:5001 (/webui, /ipfs/<WebUIPath>, /api/v0)      ipfs-mcp:5050 (/agui, se
 kubo ignores Authorization (no API.Authorizations)       ipfs mcp JWT verifier maps sub to a principal
 ```
 
-- **Hydra's host is a new `oauth.know-me.tools`.** The issuer is `https://oauth.know-me.tools`. Hydra runs in `flint-core` next to Kratos and is exposed through `argocd/argocd-gateway` with a new listener. No new certificate is needed, because `wildcard-know-me-tools-tls` covers the host. The operator adds one Cloudflare A record (23.239.29.33). Reasons:
+- **Hydra's host is a new `oauth.know-me.tools`.** The issuer is `https://oauth.know-me.tools`. Hydra runs in `flint-core` next to Kratos and is exposed through `argocd/argocd-gateway` with a new listener. The listener needs its own Certificate for `oauth.know-me.tools`, issued by ClusterIssuer `letsencrypt-prod` (DNS-01, Cloudflare zone `know-me.tools`), because `wildcard-know-me-tools-tls` does not cover the host. The operator adds one Cloudflare A record (23.239.29.33). Reasons:
   - Hydra and the Kratos UI on one site (`know-me.tools`) keep Hydra's login and consent round trips same-site, so Hydra's cookies work with `same_site_mode: Lax` rather than the default `None`.
   - A host of its own avoids path-sharing with Kratos on `auth.know-me.tools`. Both serve `/health/*` and `/.well-known/*`, and future releases of either could add colliding paths.
   - The operator's constraint is that IPFS URLs stay on prometheusags.ai. The console does. Only the login hop goes to know-me.tools, which it already does for Kratos.
@@ -244,12 +261,12 @@ Today any pod in the cluster reaches `ipfs-api:5001` (the full RPC API, unauthen
 
 ## Decisions left to the operator
 
-1. **Hydra's host name.** `oauth.know-me.tools` is recommended (section 1). Confirm, or name another `*.know-me.tools` host, and add the Cloudflare A record.
-2. **The allowlists.** The Kratos identity IDs (`sub`) that may use the console (RBAC and `ui`), and which of them is admin. The operator reads them from Kratos; agents never read identities.
-3. **Admin on the console.** Recommended (a): enable TOTP or WebAuthn in Kratos before cutover (`selfservice.methods.totp.enabled: true`, plus `session.whoami.required_aal: highest_available`) and enroll the admin identity. Alternatives: (b) accept password-only admin (`require_amr: []`, a documented weakening); (c) no console admin, with settings changed through `kubectl port-forward` and the static admin bearer. Until (a) or (b), settings on the console answer 403 `step_up_required`.
-4. **Non-browser `/api/v0` clients on the console.** Confirm there are none, or name them.
-5. **The go-jose bump** to `v4.1.6` (section 4), a `go.mod` change.
-6. **The soak period** before deleting `ipfs-webui-basicauth` and the console `ui` token Secret. Seven days is suggested.
+1. **Hydra's host name.** `oauth.know-me.tools` is recommended (section 1). Confirm, or name another `*.know-me.tools` host, and add the Cloudflare A record. **Answered 2026-10-17: `oauth.know-me.tools`; A record 23.239.29.33 set.**
+2. **The allowlists.** The Kratos identity IDs (`sub`) that may use the console (RBAC and `ui`), and which of them is admin. The operator reads them from Kratos; agents never read identities. **Answered 2026-10-17: deferred ("defer IDs"); required before subjects are wired and before the cutover.**
+3. **Admin on the console.** Recommended (a): enable TOTP or WebAuthn in Kratos before cutover (`selfservice.methods.totp.enabled: true`, plus `session.whoami.required_aal: highest_available`) and enroll the admin identity. Alternatives: (b) accept password-only admin (`require_amr: []`, a documented weakening); (c) no console admin, with settings changed through `kubectl port-forward` and the static admin bearer. Until (a) or (b), settings on the console answer 403 `step_up_required`. **Answered 2026-10-17: option (a), TOTP or WebAuthn.**
+4. **Non-browser `/api/v0` clients on the console.** Confirm there are none, or name them. **Answered 2026-10-17: none.**
+5. **The go-jose bump** to `v4.1.6` (section 4), a `go.mod` change. **Answered 2026-10-17: approved, `v4.1.6`.**
+6. **The soak period** before deleting `ipfs-webui-basicauth` and the console `ui` token Secret. Seven days is suggested. **Answered 2026-10-17: seven days.**
 
 ## Alternatives considered
 
