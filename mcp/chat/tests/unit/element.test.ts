@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NOTICE_EVENT, OPEN_CHANGE_EVENT, defineIpfsAgentChat, IpfsAgentChatElement } from '../../src/element';
+import { NOTICE_EVENT, OPEN_CHANGE_EVENT, SESSION_EXPIRED_EVENT, defineIpfsAgentChat, IpfsAgentChatElement } from '../../src/element';
 import { fixture, sseText } from '../helpers/fixtures';
 
 // The custom element as a host page sees it: what it loads, what it adds to the page, and what it does
@@ -236,5 +236,29 @@ describe('<ipfs-agent-chat> and the bearer', () => {
     expect(panel(el).getByRole('textbox', { name: 'Message to the agent' })).toBeDisabled();
     expect(recorded).toHaveLength(0);
     expect(screen.queryByText(TOKEN)).toBeNull();
+  });
+});
+
+describe('<ipfs-agent-chat> in session mode', () => {
+  it('needs no token, sends no Authorization header, and announces a 401 to the host', async () => {
+    const el = create({ endpoint: ENDPOINT, session: '' });
+    expect(el.session).toBe(true);
+    expect(el.tokenSet).toBe(true);
+    const expired: number[] = [];
+    document.addEventListener(SESSION_EXPIRED_EVENT, () => expired.push(1));
+    el.open = true;
+    await mounted(el);
+    const ui = panel(el);
+    const user = userEvent.setup();
+    typeText(ui.getByRole('textbox', { name: 'Message to the agent' }), 'Which recursive pins do I have?');
+    await user.click(ui.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => expect(recorded).toHaveLength(1));
+    expect(recorded[0]!.headers['authorization']).toBeUndefined();
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 401 })));
+    typeText(ui.getByRole('textbox', { name: 'Message to the agent' }), 'again');
+    await user.click(ui.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => expect(expired).toHaveLength(1));
+    await ui.findByText('Your sign-in has ended. Sign in again.');
   });
 });

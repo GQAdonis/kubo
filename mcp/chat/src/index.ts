@@ -4,6 +4,6 @@ import { defineIpfsAgentChat } from './element';
 
 defineIpfsAgentChat();
 
-export { ELEMENT_TAG, IpfsAgentChatElement, NOTICE_EVENT, OPEN_CHANGE_EVENT, defineIpfsAgentChat } from './element';
+export { ELEMENT_TAG, IpfsAgentChatElement, NOTICE_EVENT, OPEN_CHANGE_EVENT, SESSION_EXPIRED_EVENT, defineIpfsAgentChat } from './element';
 export type { ChatTheme } from './element';
 export { SUGGESTED_AGUI_ENDPOINT } from './agui/endpoint';

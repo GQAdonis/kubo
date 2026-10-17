@@ -16,14 +16,19 @@ import type { IslandProps } from './island/IslandApp';
 //                 back, never written to any storage, never in a URL.
 //   tokenProvider PROPERTY ONLY  () => string | Promise<string>, for a host that holds the token elsewhere
 //                 (the Desktop safeStorage bridge). Called per request.
+//   session       attribute or property  session mode (console-session-auth): the page's own cookie session
+//                 is the credential. Requests go same-origin with credentials and carry no Authorization
+//                 header; the token is neither needed nor read.
 //   openPanel(), close(), toggle()
 //   event 'ipfs-agent-chat-openchange' { detail: { open } }, bubbles and composed.
+//   event 'ipfs-agent-chat-session-expired' (session mode only) when the node answers 401, bubbles and composed.
 
 declare const __AC_OPEN_SHADOW__: boolean;
 
 export const ELEMENT_TAG = 'ipfs-agent-chat';
 export const OPEN_CHANGE_EVENT = 'ipfs-agent-chat-openchange';
 export const NOTICE_EVENT = 'ipfs-agent-chat-notice';
+export const SESSION_EXPIRED_EVENT = 'ipfs-agent-chat-session-expired';
 
 export type ChatTheme = 'dark' | 'light' | 'auto';
 const THEMES: readonly ChatTheme[] = ['dark', 'light', 'auto'];
@@ -45,7 +50,7 @@ const afterPaint = (): Promise<void> =>
   });
 
 export class IpfsAgentChatElement extends HTMLElement {
-  static readonly observedAttributes = ['endpoint', 'open', 'theme'] as const;
+  static readonly observedAttributes = ['endpoint', 'open', 'theme', 'session'] as const;
 
   // The bearer and its provider are private fields: no other code, and no page script, can read them.
   #token: string | undefined;
@@ -71,6 +76,13 @@ export class IpfsAgentChatElement extends HTMLElement {
   }
   set open(value: boolean) {
     this.toggleAttribute('open', Boolean(value));
+  }
+
+  get session(): boolean {
+    return this.hasAttribute('session');
+  }
+  set session(value: boolean) {
+    this.toggleAttribute('session', Boolean(value));
   }
 
   get theme(): ChatTheme {
@@ -101,7 +113,7 @@ export class IpfsAgentChatElement extends HTMLElement {
 
   /** Whether the host has supplied a token. Safe to read. */
   get tokenSet(): boolean {
-    return this.#token !== undefined || this.#provider !== undefined;
+    return this.session || this.#token !== undefined || this.#provider !== undefined;
   }
 
   openPanel(): void {
@@ -158,6 +170,10 @@ export class IpfsAgentChatElement extends HTMLElement {
     }
   };
 
+  readonly #onSessionExpired = (): void => {
+    this.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, { bubbles: true, composed: true }));
+  };
+
   #onOpenAttribute(open: boolean): void {
     if (open) {
       const active = document.activeElement;
@@ -175,6 +191,8 @@ export class IpfsAgentChatElement extends HTMLElement {
       endpoint: this.endpoint,
       getToken: this.#getToken,
       tokenSet: this.tokenSet,
+      session: this.session,
+      onSessionExpired: this.#onSessionExpired,
       open,
       theme: this.theme,
       onOpenChange: (next) => {

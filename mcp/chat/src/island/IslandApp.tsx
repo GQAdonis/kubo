@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { UiScope, type UiTheme } from '@gqadonis/ipfs-mcp-ui';
-import { createAguiClient, type AguiClient } from '../agui/client';
+import { AguiError, createAguiClient, type AguiClient } from '../agui/client';
 import { checkEndpoint } from '../agui/endpoint';
 import { SidebarProvider } from '../ui/sidebar';
 import { Conversation, type Readiness } from './Conversation';
@@ -17,6 +17,10 @@ export interface IslandProps {
   readonly getToken: () => string | undefined | Promise<string | undefined>;
   /** Whether the host has supplied a token. A boolean only; used to word the empty state. */
   readonly tokenSet: boolean;
+  /** Session mode: same-origin cookie session, no bearer. The token is neither needed nor read. */
+  readonly session?: boolean;
+  /** Called when the node answers 401 in session mode, so the host can offer "Sign in again". */
+  readonly onSessionExpired?: () => void;
   readonly open: boolean;
   readonly theme: UiTheme;
   readonly onOpenChange: (open: boolean) => void;
@@ -36,15 +40,26 @@ const DEFAULT_IDS: SessionIds = {
   message: () => randomId('msg-u'),
 };
 
-export function IslandApp({ endpoint, getToken, tokenSet, open, theme, onOpenChange, fetchImpl, ids = DEFAULT_IDS, now }: IslandProps) {
+export function IslandApp({ endpoint, getToken, tokenSet, session = false, onSessionExpired, open, theme, onOpenChange, fetchImpl, ids = DEFAULT_IDS, now }: IslandProps) {
   const check = useMemo(() => checkEndpoint(endpoint), [endpoint]);
-  const client = useMemo<AguiClient | null>(
-    () => (check.ok ? createAguiClient({ endpoint: check.url, getToken, ...(fetchImpl && { fetch: fetchImpl }) }) : null),
-    [check, getToken, fetchImpl],
-  );
+  const client = useMemo<AguiClient | null>(() => {
+    if (!check.ok) return null;
+    const inner = createAguiClient({ endpoint: check.url, getToken, session, ...(fetchImpl && { fetch: fetchImpl }) });
+    if (!session || !onSessionExpired) return inner;
+    return {
+      async *run(input, signal) {
+        try {
+          yield* inner.run(input, signal);
+        } catch (error) {
+          if (error instanceof AguiError && error.kind === 'unauthorized') onSessionExpired();
+          throw error;
+        }
+      },
+    };
+  }, [check, getToken, session, onSessionExpired, fetchImpl]);
   const readiness: Readiness = !check.ok
     ? { state: 'no-endpoint', reason: endpoint ? check.reason : '' }
-    : !tokenSet
+    : !tokenSet && !session
       ? { state: 'no-token' }
       : { state: 'ready' };
 

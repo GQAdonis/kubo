@@ -41,6 +41,12 @@ export interface AguiClientOptions {
   readonly endpoint: URL;
   /** Returns the bearer. Called per request; may be async (the Desktop bridge). Never logged. */
   readonly getToken: () => string | undefined | Promise<string | undefined>;
+  /**
+   * Session mode (console-session-auth): the host page is served behind an ingress that holds the sign-in
+   * as a cookie. The request then goes to the page's own origin with same-origin credentials and carries
+   * no Authorization header and no token. getToken is not called.
+   */
+  readonly session?: boolean;
   /** Test seam. Defaults to the global fetch. */
   readonly fetch?: typeof fetch;
   /** Test seam for an HTTP-date Retry-After. Defaults to Date.now. */
@@ -53,6 +59,7 @@ const STATUS_MESSAGE: Record<number, [AguiErrorKind, string]> = {
   404: ['not_found', 'ipfs mcp has no chat endpoint here. The chat is off until an LLM backend is configured.'],
 };
 
+export const SESSION_EXPIRED_MESSAGE = 'Your sign-in has ended. Sign in again.';
 export const SESSION_BUSY_MESSAGE = 'A reply is still streaming. Send again when it ends.';
 export const FAILED_PRECONDITION_MESSAGE = 'Answer the open question first.';
 export const RESOURCE_EXHAUSTED_MESSAGE = 'The node is at its session limit. Try again shortly.';
@@ -102,8 +109,9 @@ export function createAguiClient(options: AguiClientOptions): AguiClient {
   const guarded = originGuardedFetch(endpoint.origin, impl);
 
   async function* run(input: RunAgentInput, signal?: AbortSignal): AsyncGenerator<AguiEvent> {
-    const token = await getToken();
-    if (!token) throw new AguiError('config', 'No token is set. The host page supplies it; the chat does not ask for it here.');
+    const session = options.session === true;
+    const token = session ? undefined : await getToken();
+    if (!session && !token) throw new AguiError('config', 'No token is set. The host page supplies it; the chat does not ask for it here.');
 
     let response: Response;
     try {
@@ -112,11 +120,12 @@ export function createAguiClient(options: AguiClientOptions): AguiClient {
         headers: {
           'content-type': 'application/json',
           accept: 'text/event-stream',
-          authorization: `Bearer ${token}`,
+          ...(!session && { authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify(input),
-        // A bearer header is the only credential. No cookies, no referrer, no cache, no redirect.
-        credentials: 'omit',
+        // A bearer header is the only credential, except in session mode, where the page's own cookie
+        // session is and no header is set. No referrer, no cache, no redirect either way.
+        credentials: session ? 'same-origin' : 'omit',
         redirect: 'error',
         referrerPolicy: 'no-referrer',
         cache: 'no-store',
@@ -130,6 +139,7 @@ export function createAguiClient(options: AguiClientOptions): AguiClient {
     }
 
     if (!response.ok) {
+      if (session && response.status === 401) throw new AguiError('unauthorized', SESSION_EXPIRED_MESSAGE, 401);
       const known = STATUS_MESSAGE[response.status];
       if (known) throw new AguiError(known[0], known[1], response.status);
       if (response.status === 409) throw await conflictError(response);
