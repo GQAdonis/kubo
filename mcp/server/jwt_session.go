@@ -14,6 +14,33 @@ type SessionPrincipal struct {
 	Identity Identity
 	// Subjects are the `sub` values that resolve to it.
 	Subjects []string
+	// RequireAMR is the effective step-up rule: at least one of these must be
+	// in the token's `amr`. Empty requires none.
+	RequireAMR []string
+	// MaxAuthAge is the effective bound on now - auth_time. Zero sets none; a
+	// positive value also makes `auth_time` mandatory.
+	MaxAuthAge time.Duration
+}
+
+// Kind defaults of the step-up rule (ADR-0013 section 5): an admin session
+// needs a second factor and a sign-in within the hour. Other kinds need none.
+var defaultAdminAMR = []string{"totp", "webauthn", "passkey", "lookup_secret"}
+
+const defaultAdminMaxAuthAge = time.Hour
+
+// stepUpOK reports whether the token meets the principal's step-up rule. A
+// token without `auth_time` fails where a bound applies, and so does one whose
+// `auth_time` lies in the future beyond the clock skew.
+func (p SessionPrincipal) stepUpOK(vt VerifiedToken, now time.Time, skew time.Duration) bool {
+	if len(p.RequireAMR) > 0 && !slices.ContainsFunc(vt.AMR, func(m string) bool { return slices.Contains(p.RequireAMR, m) }) {
+		return false
+	}
+	if p.MaxAuthAge > 0 {
+		if vt.AuthTime.IsZero() || vt.AuthTime.After(now.Add(skew)) || now.Sub(vt.AuthTime) > p.MaxAuthAge {
+			return false
+		}
+	}
+	return true
 }
 
 // Session is what the verifier knows about the person behind a session
@@ -29,7 +56,17 @@ type Session struct {
 	// Principals lists every principal the subject maps to (name and kind),
 	// whatever the route.
 	Principals []Principal
+	// Admin is the admin step-up state for the session report: AdminOK,
+	// AdminStepUpRequired or AdminNotEligible.
+	Admin string
 }
+
+// Values of Session.Admin, the admin field of the session report.
+const (
+	AdminOK             = "ok"
+	AdminStepUpRequired = "step_up_required"
+	AdminNotEligible    = "not_eligible"
+)
 
 // Denial is a refusal of a request whose token is valid: the caller is
 // authenticated but this request may not proceed. It carries the HTTP status
@@ -135,12 +172,29 @@ func (v *JWTVerifier) resolve(vt VerifiedToken, route string) (Identity, error) 
 		v.log.Warn("session subject maps to no principal on this route", "sub", vt.Subject, "route", route)
 		return Identity{}, &Denial{Status: http.StatusForbidden, Code: DenialPermissionDenied, Message: "no principal is configured for this session on this route"}
 	}
+	now := v.now()
+	admin := AdminNotEligible
+	for _, p := range mapped {
+		if p.Identity.Kind == KindAdmin {
+			admin = AdminOK
+			if !p.stepUpOK(vt, now, v.cfg.ClockSkew) {
+				admin = AdminStepUpRequired
+			}
+		}
+	}
+	// The session report only reports; every other route enforces the rule of
+	// the principal it resolved to.
+	if route != OIDCRouteSession && !chosen.stepUpOK(vt, now, v.cfg.ClockSkew) {
+		v.log.Warn("session needs a stronger or newer sign-in", "sub", vt.Subject, "principal", chosen.Identity.ID, "route", route)
+		return Identity{}, &Denial{Status: http.StatusForbidden, Code: DenialStepUpRequired, Message: "verify again with a second factor to continue"}
+	}
 	id := chosen.Identity
 	id.Session = &Session{
 		Subject:    vt.Subject,
 		Email:      vt.Email,
 		Expiry:     vt.Expiry,
 		Principals: sessionPrincipals(mapped),
+		Admin:      admin,
 	}
 	return id, nil
 }

@@ -449,7 +449,18 @@ func (c *Config) SessionPrincipals() []SessionPrincipal {
 		if len(p.Subjects) == 0 {
 			continue
 		}
-		out = append(out, SessionPrincipal{Identity: c.configuredIdentity(p), Subjects: slices.Clone(p.Subjects)})
+		sp := SessionPrincipal{Identity: c.configuredIdentity(p), Subjects: slices.Clone(p.Subjects)}
+		if p.Kind == KindAdmin {
+			sp.RequireAMR, sp.MaxAuthAge = slices.Clone(defaultAdminAMR), defaultAdminMaxAuthAge
+		}
+		if p.RequireAMR != nil {
+			sp.RequireAMR = slices.Clone(*p.RequireAMR)
+		}
+		if p.MaxAuthAge != "" {
+			// validateSubjects checked the value.
+			sp.MaxAuthAge, _ = time.ParseDuration(p.MaxAuthAge)
+		}
+		out = append(out, sp)
 	}
 	return out
 }
