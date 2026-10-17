@@ -166,3 +166,23 @@ Identified: xberg = `github.com/xberg-io/xberg` (renamed Kreuzberg); MiMo-V2.6 =
 
 - Round 1 started 2026-10-13: `team-ownership-agent-backend` 1.1 (ipfs-agent-architect) as the PR-K1 dispatch check.
 - Execute stays active until every change satisfies the completion checklist; dispatch is not completion.
+
+## OG-23 answered (2026-10-17): console-session-auth approved
+
+Operator, verbatim, in order:
+
+- "I set `oauth.prometheusags.ai` to `23.239.29.33` IP address and we should use `prometheusags.ai` for this since kratos, etc. are all parked there.  that is the answer to #1, and all the other answers should be as you recommend but adjusted for that."
+- (after the lead reported, from read-only checks, that Kratos, sso-broker, flint-gate, forge and frf are all on `know-me.tools` and `auth.prometheusags.ai` is a Google Cloud address outside the cluster) "I set `oauth.know-me.tools` to the same `23.239.29.33`"
+- (asked to pick one issuer) "know-me.tools, defer IDs"
+
+Recorded answers to ADR-0013 "Decisions left to the operator":
+
+1. Hydra host: `oauth.know-me.tools` (issuer `https://oauth.know-me.tools`), next to Kratos at `auth.know-me.tools`. DNS A 23.239.29.33 (Cloudflare) checked by the lead with `dig`, also via 1.1.1.1. `oauth.prometheusags.ai` also resolves to 23.239.29.33 and is unused; it gets no listener (404 on `argocd-gateway`), removal is the operator's choice.
+2. Allowlisted Kratos identity IDs and the admin: **deferred** by the operator. Not needed by groups 1-3, 5; required before group 4 RBAC wiring that names subjects and before the cutover (group 6, OG-26).
+3. Admin path: (a) enable TOTP or WebAuthn in Kratos and enroll the admin identity before cutover.
+4. Non-browser console `/api/v0` clients: none.
+5. go-jose bump to `v4.1.6`: approved.
+6. Soak before group 7: 7 days.
+- Placement (RN5.1, console-session-auth before `lke-agent-settings` and `lke-vector-search`) and the Hydra deployment in `flint-core`: approved.
+
+Correction found by the lead (live read, 2026-10-17): `argocd/wildcard-know-me-tools-tls` is not a wildcard; its SANs are `api`, `auth`, `gate`, `rt`, `sso` `.know-me.tools`. Task 4.2's "TLS covered by the existing wildcard" is therefore wrong: `oauth.know-me.tools` needs its own Certificate via `letsencrypt-prod` DNS-01 (Cloudflare zone). Amend 4.2 before it runs.

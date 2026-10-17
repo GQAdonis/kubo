@@ -909,3 +909,62 @@ Unverified (each is a named task, not an assumption the design rests on silently
 - Apply section 1 to `goals.md` and sections 3-9 to `plan.md` (revision 4), and record OG-16 verbatim in `execution.md`.
 - Register the eight changes and 54 tasks in round order with `prometheus kbd change register` and `task register`, backend task IDs equal to the ordinals in each `tasks.md`, each call under `timeout` with `</dev/null` (gotcha 2026-10-11).
 - Apply the two amendments in section 3 to the `kubo-candidate-image` and `phase-integration-gate` change folders.
+
+---
+
+# Plan revision note (2026-10-16): console-session-auth
+
+Appended by `ipfs-agent-architect`. Proposed. Earlier sections are unchanged. Source decisions, verbatim: "If I move the console, that fucks up all the URL's I have with IPFS being owned by prometheusags.ai" (the console stays at `https://console.prometheusags.ai`, and its session lives on prometheusags.ai), and "file the issues and add Hydra" (Ory Hydra beside Kratos, with Envoy Gateway's built-in OIDC; not sso-broker, Prometheus-AGS/flint-infra#9; not flint-gate ext_authz, Know-Me-Tools/flint-gate#16). ADR: [`docs/mcp/0013-console-session-auth.md`](../../../docs/mcp/0013-console-session-auth.md) (Proposed). Change: `openspec/changes/console-session-auth/` (8 groups, 40 tasks).
+
+## RN5.1 Placement
+
+`console-session-auth` goes **before** the Round 9 cluster changes `lke-agent-settings` and `lke-vector-search`. Those two put `/agui`, the settings route and `/index/*` on the console. As written, they would ship on the interim scheme of bearer-only rules outside basic auth, with the `ui` token in `localStorage`. With this change first, they land directly under the session policy, and the M1 and M2 residuals end instead of growing.
+
+| Step | Work | Waits on |
+|---|---|---|
+| A | `console-session-auth` group 1 (ADR acceptance, contract keys, generated reference, go-jose bump) | OG-23 for the ADR decisions |
+| B | groups 2 (verifier) and 3 (Web UI session mode), in parallel | A |
+| C | group 4 (Hydra, host, Kratos wiring) and group 5 (NetworkPolicy), separate PRs | A; cluster only, independent of B |
+| D | `kubo-candidate-image` rebuilt with B merged (or the final image), so the sidecar schema accepts `auth.oidc` (task 6.3) | B |
+| E | group 6 (cutover), then the soak, then group 7 | C, D; OG-26, OG-27 |
+| F | `lke-agent-settings`, then `lke-vector-search`, as amended below | E (6.7 PASS) |
+| G | group 8 reviews, at the phase boundary with the other reviews | B, E |
+
+Effect on the critical path: the cluster chain gains steps C to E ahead of Round 9. B runs alongside C. The candidate-image rebuild (D) is the new coupling. If the vector chain or another fix forces a Round 8 rebuild anyway, D costs nothing extra.
+
+## RN5.2 Amendments to existing changes (for the lead to apply; not edited here)
+
+- **`lke-agent-settings`:**
+  - 1.1: the console `ui` and `admin` principals use `subjects` (operator allowlist) instead of token Secrets created at OG-14. The `admin` token Secret stays only for port-forward break-glass, if the operator keeps decision 3(c).
+  - 1.2: the `/agui` and settings rules are targeted by the session policy `ipfs-webui-auth` and are not "bearer-only outside basic auth". The offline check asserts the opposite of today's assertion for these two rules.
+  - 1.8: the checks use a signed-in browser, not bearer tokens.
+- **`lke-vector-search` 1.4:** the `/index/search` and `/index/status` rules are under the session policy. The `egress_ack` and NetworkPolicy parts are unchanged, but they now extend the `console-session-auth` 5.2 policy object instead of creating a second policy for the same pod.
+- **ADR-0009 and ADR-0004:** the M1 and M2 interim conditions end at `console-session-auth` 7.2, not at "Kratos plus flint-gate". The flint-gate wording in those amendments is superseded by ADR-0013 once it is Accepted.
+
+## RN5.3 New operator gates (in time order)
+
+None of these is an agent task. Agents prepare inputs and record evidence; the operator acts.
+
+| Gate | When | What the operator does | Blocks |
+|---|---|---|---|
+| **OG-23** | Before step A | Approve this note and ADR-0013. Answer its six decisions: (1) Hydra host `oauth.know-me.tools`, and add the Cloudflare A record to 23.239.29.33; (2) the allowlisted Kratos identity IDs and which is admin; (3) admin path: enable TOTP or WebAuthn in Kratos (recommended), accept password-only, or no console admin; (4) confirm there are no non-browser console `/api/v0` clients; (5) the go-jose bump to v4.1.6; (6) the soak length. Then **approve the Hydra deployment** in `flint-core` (a new stateful service on the console's sign-in path, with its own database in the shared Postgres), and merge and sync the group 4 PR | Groups 1, 4 |
+| **OG-24** | Before the group 4 merge takes effect; any time before 4.5 | Create out-of-band, never in git and never printed: the Hydra DSN, `secrets.system` and `secrets.cookie` Secrets in `flint-core`; the Kratos UI `CSRF_COOKIE_SECRET`. After Hydra is up, **create the OAuth client `ipfs-console`** with the Hydra CLI against the admin API (client_secret_basic; `authorization_code` and `refresh_token`; `redirect_uris` the console callback; `skip_consent: true`), and put its secret only in Secret `ipfs/ipfs-console-oidc` key `client-secret`. Confirm by `kubectl get secret` names only | 4.5, 4.6, 6.1 |
+| **OG-25** | After 5.3 | Merge and sync the NetworkPolicy PR, and approve the one throwaway probe pod used by 5.4 (its creation and deletion are the only writes) | 5.4; group 6 |
+| **OG-26** | After 6.6, with D done | **The cutover, with rollback ready.** Merge and sync the cutover PR (a planned single-replica restart of `ipfs` for the sidecar config, under the 2026-10-13 gotcha). Run the operator part of `lke-checks/console-session.sh` with a signed-in allowlisted browser and a second, non-allowlisted account. On any FAIL, run the PR's literal `git revert <merge-sha>` and sync; basic auth returns because `ipfs-webui-basicauth` is still present | 6.7; `lke-agent-settings`, `lke-vector-search` |
+| **OG-27** | After the soak (default 7 days) with no revert | Approve group 7: delete `ipfs-webui-basicauth` and the console `ui` token Secret out of band, and retire the dedicated htpasswd user. From then on, the rollback of the cutover is no longer one commit | 7.1, 7.2 |
+
+## RN5.4 Risks this adds, and what is unverified
+
+- **New risks:**
+  - console access depends on Kratos, Hydra, the Kratos UI and the flint-core Postgres (break glass: port-forward or revert);
+  - open Kratos registration makes the `sub` allowlist load-bearing (default-Deny RBAC, the agreement script 6.2, security read 6.6);
+  - Hydra's admin API is unauthenticated (NetworkPolicy 5.2, proof 5.4).
+- **Unverified (ADR-0013 lists eight points; each is a named check):**
+  - the combined `oidc`, `jwt` and `authorization` policy (6.1 dry run);
+  - the ID token after a refresh (6.5);
+  - Envoy's end-session `id_token_hint` (6.5);
+  - the Hydra migration command (4.1);
+  - the signing algorithm (4.5);
+  - Calico enforcement (5.4);
+  - Kratos UI v1.3.1 with the challenge flow (4.6);
+  - non-browser `/api/v0` clients (OG-23).
