@@ -207,6 +207,19 @@ func NewHTTPServer(s *Server, opts HTTPOptions) (*HTTPServer, error) {
 	if err := h.Mount(RouteMCP, mcpHandler, MountOptions{}); err != nil {
 		return nil, err
 	}
+	// The session report exists only while auth.oidc is on; otherwise the path
+	// is a plain 404.
+	if c, ok := h.verify.(*ChainVerifier); ok && c.jwt != nil {
+		cors := CORSPolicy{Methods: []string{http.MethodGet, http.MethodOptions}, Headers: []string{"authorization"}}
+		err := h.Mount(RouteAuthSession, sessionHandler{}, MountOptions{
+			Kinds:          []string{KindUI, KindHumanMCP, KindAdmin},
+			AllowedOrigins: c.jwt.origins,
+			CORS:           &cors,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
 	routeProviders.mu.Lock()
 	providers := slices.Clone(routeProviders.list)
 	routeProviders.mu.Unlock()

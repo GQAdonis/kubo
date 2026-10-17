@@ -11,6 +11,7 @@ import (
 const (
 	sessionOrigin = "https://console.example.test"
 	sessionSub    = jwtTestSub
+	viewerSub     = "ui-only-subject-0001"
 	otherSub      = "7f1e2d3c-0000-4000-8000-00000000beef"
 )
 
@@ -39,8 +40,14 @@ func defaultSessionPrincipals() []SessionPrincipal {
 			Subjects: []string{sessionSub},
 		},
 		{
-			Identity: NewIdentity(Principal{ID: "console-admin", Kind: KindAdmin}, nil, nil, nil),
-			Subjects: []string{sessionSub},
+			Identity:   NewIdentity(Principal{ID: "console-admin", Kind: KindAdmin}, nil, nil, nil),
+			Subjects:   []string{sessionSub},
+			RequireAMR: defaultAdminAMR,
+			MaxAuthAge: defaultAdminMaxAuthAge,
+		},
+		{
+			Identity: NewIdentity(Principal{ID: "viewer", Kind: KindUI}, []string{AllGroups}, nil, nil),
+			Subjects: []string{viewerSub},
 		},
 		{
 			Identity: NewIdentity(Principal{ID: "laptop", Kind: KindHumanMCP}, []string{AllGroups}, nil, nil),
