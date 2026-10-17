@@ -1,0 +1,14 @@
+gateway moved to 8182: port 8181 is held by another local process (openai-proxy, pid 4165, *:8181)
+HTTP/1.1 200 OK
+Access-Control-Allow-Headers: Content-Type
+Content-Type: text/html
+Etag: "bafybeif77lxxz7nvkjfvzvjron2gcruxf44ahfgsen4bpfsppteglge7ou"
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Headers: Content-Type
+Content-Type: text/html
+Etag: "bafkreidpafa2zdvprsf2fessffc3minnu72p2ga6mkcfci5i3q5hlhpth4"
+
+pid 27283 gone
+5101 free
+8182 free

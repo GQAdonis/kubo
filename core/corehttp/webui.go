@@ -18,7 +18,7 @@ import (
 // and merkleized with `ipfs add --cid-version 1 -Q -r -n ./build`, the recipe
 // of upstream's release workflow. The previous upstream build (v4.13.0) stays
 // in WebUIPaths.
-const WebUIPath = "/ipfs/bafybeiblix77cfttmrmz5h54qacay5f4z5bgajc736ufiyoy5cus54stki"
+const WebUIPath = "/ipfs/bafybeif77lxxz7nvkjfvzvjron2gcruxf44ahfgsen4bpfsppteglge7ou"
 
 // WebUIPaths is a list of all past webUI paths.
 var WebUIPaths = []string{

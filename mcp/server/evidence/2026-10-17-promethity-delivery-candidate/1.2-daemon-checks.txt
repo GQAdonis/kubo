@@ -1,0 +1,38 @@
+--- id
+{
+	"ID": "12D3KooWE83DuGaptEqeMgZv4tgJc8n5Y3akMq8eKLGJ85VuPFWP",
+	"PublicKey": "CAESID/1x8v9STDW1Y9OxW+UwcS1AfGUgX7p+Nxb08h9IghQ",
+--- dag stat
+
+CID                                                        	Blocks         	Size
+bafybeif77lxxz7nvkjfvzvjron2gcruxf44ahfgsen4bpfsppteglge7ou	388            	21501016
+
+Summary
+Total Size: 21501016 (22 MB)
+Unique Blocks: 388
+Shared Size: 0 (0 B)
+Ratio: 1.000000
+
+
+--- ls
+bafybeiea672iocnzue6ta5ka62ltj6sd7l4f42bphfm7s4racjeuob7a44 -     agent-chat/
+bafkreig5plzt65pw5z3yt4b3p76yvh73kdgv6cm6jqngxyq4p4l3h3wpwm 4067  apple-touch-icon.png
+bafkreihepju6xucps2kvj4n5rzqp6fhqgolo6h2swhbodrp6jyucjshhn4 6493  asset-manifest.json
+bafkreif6bvkn57s4sk76g3d5k547tzefe3tlp4xtd5vuehztqxigtpyaci 3290  favicon.ico
+bafkreif2iq6mci4csqkfwbefflfglpbyoh6duf4ibhvlzwpg7zyfdwayny 1129  favicon.svg
+bafybeiexjf63aoybyva7lpbhs5o2xffjfghnv6l3sxrmyv2qazvmkcpd6u -     fonts/
+bafkreicz2idb6g4e33xbtoedn4fbtw63wc57s3trnfchygq65te5ywcdvu 6289  icon-192.png
+bafkreiawkyeuosl6xt7whqghv2bxcbufqhqcyybpvqoqhddctdt3ppkbyq 18649 icon-512.png
+bafkreidpafa2zdvprsf2fessffc3minnu72p2ga6mkcfci5i3q5hlhpth4 1344  index.html
+bafybeidxmgngqzzztsafre4jve44j7uywjhtb2zsv624z6ckgqjijzwk2a -     locales/
+bafkreic3srk2xythwzlr7rprzoyulgcskzmedmjgt72j5l5erxntsyu5e4 508   manifest.json
+bafkreify77wnuxvmkyujz6qdwcta33n3imb4b6n6wmy5kmanvck4nhvksy 10853 maskable-512.png
+bafybeiafjxo3kqeuxuata6wouwzq25fb5c3ahvsviyznj5n6bfqnpvq5ze -     static/
+--- gateway
+200 text/html
+200 text/html
+--- shutdown
+pid 16077 gone
+5101 free
+COMMAND    PID     USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+openai-pr 4165 gqadonis   10u  IPv4 0x9fe6fad4a24e5049      0t0  TCP *:8181 (LISTEN)

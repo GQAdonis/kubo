@@ -1,0 +1,12 @@
+npm error code 1
+npm error path /Volumes/T7/Projects/references/ipfs-webui/node_modules/kubo
+npm error command failed
+npm error command sh -c node src/post-install.js
+npm error https://dist.ipfs.tech/kubo/versions
+npm error RequestError
+npm error     at ClientRequest.<anonymous> (/Volumes/T7/Projects/references/ipfs-webui/node_modules/got/dist/source/core/index.js:970:111)
+npm error     at Object.onceWrapper (node:events:623:26)
+npm error     at ClientRequest.emit (node:events:520:35)
+npm error     at origin.emit (/Volumes/T7/Projects/references/ipfs-webui/node_modules/@szmarczak/http-timer/dist/source/index.js:43:20)
+npm error     at emitErrorEvent (node:_http_client:108:11)
+npm error     at TLSSocket.socketErrorListener (node:_http_client:575:5)

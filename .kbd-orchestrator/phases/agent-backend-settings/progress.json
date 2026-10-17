@@ -2,25 +2,26 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1887,
-  "derivedRevision": 1887,
+  "sourceRevision": 1906,
+  "derivedRevision": 1906,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1887
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 17
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-16T10:32:03.512336Z",
+  "last_updated": "2026-10-17T13:36:35.628430Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 36,
-  "changes_completed": 30,
+  "changes_completed": 31,
   "implementation_total": 36,
-  "implementation_completed": 30,
+  "implementation_completed": 31,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 30,
+      "completed": 31,
       "total": 36,
       "status": "IN_PROGRESS"
     },
@@ -49,7 +50,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 64,
+      "completed": 65,
       "total": 76,
       "status": "IN_PROGRESS"
     },
@@ -139,12 +140,12 @@
     {
       "id": "lke-origin-isolation",
       "title": "lke-origin-isolation",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 12,
-      "tasks_done": 11,
-      "last_task_completed": "After OG-15, run the unauthenticated redirect check (read-only). Acceptance: gateway-host `/webui` and `/api/v0/version` answer a redirect to the console host; recorded in a new dated evidence folder.",
-      "next_task_pending": "PR #36 security-read follow-ups",
+      "tasks_done": 12,
+      "last_task_completed": "PR #36 security-read follow-ups",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -351,9 +352,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 4,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "Production Web UI build and its CID. Acceptance: CID recorded with the build commit.",
+      "tasks_done": 3,
+      "last_task_completed": "After OG-7, set `WebUIPath` to the new CID on the branch and `make build`. Acceptance: a one-line diff in `webui.go`, made after the `kubo-candidate-image` 1.1 build so the OG-12 image does not point ",
+      "next_task_pending": "Package Desktop with the candidate Web UI and fork binary (not installed). Acceptance: `.app` built under the Desktop `dist/`.",
       "blockers": []
     },
     {

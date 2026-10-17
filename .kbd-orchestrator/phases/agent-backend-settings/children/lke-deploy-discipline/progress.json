@@ -2,16 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1536,
-  "derivedRevision": 1536,
+  "sourceRevision": 1893,
+  "derivedRevision": 1893,
   "frontier": {
-    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1536
+    "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 4
   },
   "conflictCount": 0,
   "phase": "lke-deploy-discipline",
   "phaseId": "agent-backend-settings::lke-deploy-discipline",
   "parentPhase": "agent-backend-settings",
-  "last_updated": "2026-10-14T11:08:43.555120Z",
+  "last_updated": "2026-10-17T13:06:36.006065Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 3,
   "changes_completed": 3,
@@ -49,8 +50,8 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 41,
-      "total": 68,
+      "completed": 65,
+      "total": 76,
       "status": "IN_PROGRESS"
     },
     "evidence": {

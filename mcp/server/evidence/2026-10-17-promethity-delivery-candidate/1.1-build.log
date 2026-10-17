@@ -1,0 +1,106 @@
+
+> ipfs-webui@4.13.0 prebuild
+> lol public/locales > src/lib/languages.json
+
+
+> ipfs-webui@4.13.0 build
+> run-script-os
+
+(node:66038) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> ipfs-webui@4.13.0 build:darwin:linux
+> cross-env REACT_APP_GIT_REV=`git rev-parse --short HEAD` react-app-rewired-esm build
+
+(node:66120) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Compiled with warnings.
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/@chainsafe/is-ip/src/is-ip.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/@chainsafe/is-ip/src/is-ip.ts'
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/@chainsafe/is-ip/src/parse.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/@chainsafe/is-ip/src/parse.ts'
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/@chainsafe/is-ip/src/parser.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/@chainsafe/is-ip/src/parser.ts'
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/encryption.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/encryption.ts'
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/index.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/index.ts'
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/signing.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/signing.ts'
+
+Failed to parse source map from '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/utils.ts' file: Error: ENOENT: no such file or directory, open '/Volumes/T7/Projects/references/ipfs-webui/node_modules/dag-jose/src/utils.ts'
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  389.64 kB (+7.97 kB)  build/static/js/main.3babb2fc.js
+  197.54 kB             build/static/js/603.7cb74d79.chunk.js
+  159.64 kB             build/static/js/996.b7beb5d4.chunk.js
+  81.66 kB (+1 B)       build/static/js/139.bc195758.chunk.js
+  67.74 kB              build/static/js/410.00300ead.chunk.js
+  41.63 kB              build/static/js/124.6bb24251.chunk.js
+  31.91 kB (+185 B)     build/static/js/541.42c43294.chunk.js
+  25.14 kB              build/static/js/565.5a9d328c.chunk.js
+  22.91 kB (+5.21 kB)   build/static/css/main.f4c6bab9.css
+  20.82 kB              build/static/js/956.c2a5b1eb.chunk.js
+  15.81 kB              build/static/js/452.ef355716.chunk.js
+  14.03 kB              build/static/js/249.b57b1bf8.chunk.js
+  13.76 kB              build/static/js/438.7299113e.chunk.js
+  13.64 kB              build/static/js/479.042cd57d.chunk.js
+  11.12 kB              build/static/js/994.7a94398d.chunk.js
+  8.54 kB (+11 B)       build/static/js/937.d9761517.chunk.js
+  8.37 kB               build/static/js/451.f7fbf6a7.chunk.js
+  8.32 kB               build/static/js/450.5a7d46ed.chunk.js
+  5.31 kB               build/static/js/57.1d31561b.chunk.js
+  4.86 kB               build/static/js/584.6cc4b58e.chunk.js
+  4.38 kB (-127 B)      build/static/js/984.ea34e5fd.chunk.js
+  2.44 kB (+15 B)       build/static/css/541.75577822.chunk.css
+  1.76 kB               build/static/css/57.a491cef0.chunk.css
+  1.23 kB               build/static/css/956.e4752138.chunk.css
+  1.04 kB (+78 B)       build/static/js/325.03966833.chunk.js
+  906 B (+90 B)         build/static/js/504.55fa980f.chunk.js
+  899 B (-1.91 kB)      build/static/js/992.791650ef.chunk.js
+  896 B                 build/static/css/452.5b081e59.chunk.css
+  811 B                 build/static/css/249.88ddb32d.chunk.css
+  749 B                 build/static/css/451.8a19b637.chunk.css
+  214 B                 build/static/css/992.892ce2a3.chunk.css
+
+The project was built assuming it is hosted at ./.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+

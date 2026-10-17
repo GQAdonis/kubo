@@ -1,0 +1,14 @@
+Initializing daemon...
+Kubo version: 0.44.0-dev-231d5c4ec-dirty
+Repo version: 18
+System version: arm64/darwin
+Golang version: go1.27.1
+PeerID: 12D3KooWE83DuGaptEqeMgZv4tgJc8n5Y3akMq8eKLGJ85VuPFWP
+Swarm not listening, running in offline mode.
+RPC API server listening on /ip4/127.0.0.1/tcp/5101
+WebUI: http://127.0.0.1:5101/webui
+Gateway server listening on /ip4/127.0.0.1/tcp/8181
+Routing V1 API exposed at http://127.0.0.1:8181/routing/v1
+Daemon is ready
+Received interrupt signal, shutting down...
+(Hit ctrl-c again to force-shutdown the daemon.)
