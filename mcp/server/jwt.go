@@ -234,11 +234,34 @@ func (v *JWTVerifier) Verify(ctx context.Context, token string, req *http.Reques
 	if err != nil {
 		return Identity{}, time.Time{}, err
 	}
+	if err := v.checkOrigin(req); err != nil {
+		return Identity{}, time.Time{}, err
+	}
 	id, err := v.resolve(vt, route)
 	if err != nil {
 		return Identity{}, time.Time{}, err
 	}
 	return id, vt.Expiry, nil
+}
+
+// checkOrigin applies auth.oidc.require_origin. A session identity rides on a
+// cookie the gateway turned into a bearer, so a page on a sibling site can make
+// the browser send it; a state-changing request must therefore name a page
+// origin the operator listed. A request with no Origin fails. Static bearers
+// never reach this check.
+func (v *JWTVerifier) checkOrigin(req *http.Request) error {
+	if !v.cfg.RequireOrigin {
+		return nil
+	}
+	switch req.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return nil
+	}
+	if origin := strings.ToLower(req.Header.Get("Origin")); origin != "" && slices.Contains(v.origins, origin) {
+		return nil
+	}
+	v.log.Warn("session request refused: origin missing or not listed in agent.origin_allowlist", "method", req.Method, "path", req.URL.Path)
+	return &Denial{Status: http.StatusForbidden, Code: DenialOriginRequired, Message: "a session request that changes state must send an Origin listed in agent.origin_allowlist"}
 }
 
 // ProtectedResourceMetadata implements AuthVerifier. The verifier advertises no

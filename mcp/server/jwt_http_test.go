@@ -65,14 +65,15 @@ func newSessionEnv(t *testing.T, o sessionEnvOptions) *sessionEnv {
 	v, err := NewJWTVerifier(JWTOptions{OIDC: cfg, Principals: principals, OriginAllowlist: origins})
 	require.NoError(t, err)
 	e := newHTTPEnv(t, func(h *HTTPOptions) { h.Verifier = v })
+	// The real mounts pass agent.origin_allowlist as the route's origins.
 	for _, m := range []struct {
 		route string
 		opts  MountOptions
 	}{
-		{RouteAGUI, MountOptions{}},
+		{RouteAGUI, MountOptions{AllowedOrigins: origins}},
 		{RouteA2A, MountOptions{}},
-		{RouteSettings, MountOptions{Kinds: []string{KindAdmin}}},
-		{RouteIndexSearch, MountOptions{Kinds: []string{KindUI, KindHumanMCP}}},
+		{RouteSettings, MountOptions{Kinds: []string{KindAdmin}, AllowedOrigins: origins}},
+		{RouteIndexSearch, MountOptions{Kinds: []string{KindUI, KindHumanMCP}, AllowedOrigins: origins}},
 	} {
 		require.NoError(t, e.hs.Mount(m.route, echoRoute(), m.opts))
 	}

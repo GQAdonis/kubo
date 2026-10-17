@@ -80,6 +80,8 @@ type Denial struct {
 // Denial codes. They are HTTP-level and say nothing about the token.
 const (
 	DenialPermissionDenied = "permission_denied"
+	// DenialOriginRequired is auth.oidc.require_origin refusing a request.
+	DenialOriginRequired = "origin_required"
 	// DenialStepUpRequired is the settings error code of ADR-0013 section 5.
 	DenialStepUpRequired = "step_up_required"
 )
