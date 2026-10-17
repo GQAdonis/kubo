@@ -409,6 +409,10 @@ func setCORS(w http.ResponseWriter, origin string) {
 func (h *HTTPServer) authenticate(next http.Handler, kinds []string) http.Handler {
 	kindGate := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		info := auth.TokenInfoFromContext(r.Context())
+		if d := denialOf(info); d != nil {
+			h.writeDenial(w, d)
+			return
+		}
 		id, _ := info.Extra[identityExtraKey].(Identity)
 		if !slices.Contains(kinds, id.Kind) {
 			http.Error(w, fmt.Sprintf("Forbidden: principal %s (%s) is not accepted on %s", id.ID, id.Kind, r.URL.Path), http.StatusForbidden)
@@ -434,6 +438,18 @@ func (h *HTTPServer) authenticate(next http.Handler, kinds []string) http.Handle
 		r.Header.Set("Authorization", "Bearer anonymous")
 		guarded.ServeHTTP(w, r)
 	})
+}
+
+// writeDenial answers a request whose token is valid but may not proceed. A
+// step-up refusal uses the settings error shape of the contract; the rest are
+// plain text. Neither says anything about the token.
+func (h *HTTPServer) writeDenial(w http.ResponseWriter, d *Denial) {
+	h.log.Warn("rejected request", "reason", d.Code)
+	if d.Code == DenialStepUpRequired {
+		writeSettingsJSON(w, d.Status, "", settingsErrorBody{Error: settingsErrorDetail{Code: d.Code, Message: d.Message}})
+		return
+	}
+	http.Error(w, "Forbidden: "+d.Message, d.Status)
 }
 
 // Handler returns the listener's HTTP handler, for tests and for callers that

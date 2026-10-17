@@ -37,12 +37,35 @@ type AuthVerifier interface {
 // supplies it.
 const ResourceMetadataPath = "/.well-known/oauth-protected-resource"
 
+// denialExtraKey is the TokenInfo.Extra key that carries a Denial.
+const denialExtraKey = "denial"
+
+// denialOf returns the denial an authentication produced, or nil.
+func denialOf(info *auth.TokenInfo) *Denial {
+	if info == nil {
+		return nil
+	}
+	d, _ := info.Extra[denialExtraKey].(*Denial)
+	return d
+}
+
 // TokenVerifier adapts an AuthVerifier to the go-sdk's auth.TokenVerifier. The
 // identity travels in TokenInfo.Extra and its ID in TokenInfo.UserID, which the
 // SDK uses to refuse a session presented by another user.
 func TokenVerifier(v AuthVerifier) auth.TokenVerifier {
 	return func(ctx context.Context, token string, req *http.Request) (*auth.TokenInfo, error) {
 		id, exp, err := v.Verify(ctx, token, req)
+		var denial *Denial
+		if errors.As(err, &denial) {
+			// The token is valid but this request may not proceed. The SDK maps
+			// every error other than an invalid token to 500, so the denial
+			// travels as a placeholder identity the listener answers itself.
+			return &auth.TokenInfo{
+				Scopes:     []string{ScopeRead},
+				Expiration: time.Now().Add(verdictWindow),
+				Extra:      map[string]any{denialExtraKey: denial},
+			}, nil
+		}
 		if err != nil {
 			return nil, err
 		}

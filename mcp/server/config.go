@@ -171,6 +171,19 @@ type PrincipalConfig struct {
 	ShellCapable      *bool      `json:"shell_capable"`
 	Check             string     `json:"check"`
 	UAR               *UARConfig `json:"uar"`
+	// Subjects are the OpenID Connect `sub` values (identity IDs) that resolve
+	// to this principal when auth.oidc is enabled. A principal needs a
+	// credential, subjects, or both.
+	Subjects []string `json:"subjects"`
+	// RequireAMR nil is the kind default; an explicit [] accepts any amr.
+	RequireAMR *[]string `json:"require_amr"`
+	// MaxAuthAge is a duration string; empty is the kind default.
+	MaxAuthAge string `json:"max_auth_age"`
+}
+
+// HasCredential reports whether the principal names a static credential.
+func (p PrincipalConfig) HasCredential() bool {
+	return p.Credential.Env != "" || p.Credential.File != ""
 }
 
 // LoadConfig reads and validates a config file. Validation errors name the
@@ -311,6 +324,10 @@ func (c *Config) SessionTimeoutDuration() (time.Duration, error) {
 // resolved (S5), so the listener never turns anonymous by accident.
 func (c *Config) Credentials() (creds []StaticCredential, warnings []string) {
 	for _, p := range c.Principals {
+		if !p.HasCredential() && len(p.Subjects) > 0 {
+			// A session-only principal: it has no static bearer to resolve.
+			continue
+		}
 		token, err := p.Credential.Read()
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("principal %s (%s) is disabled: %v; it authenticates nothing until the reference resolves", p.Name, p.Kind, err))

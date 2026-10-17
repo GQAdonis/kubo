@@ -171,3 +171,5 @@ func rewritePayload(tok string, claims map[string]any) string {
 	}
 	return head + "." + jsonSeg(claims) + "." + signatureSegment(tok)
 }
+
+func newTestAlgorithms() []jose.SignatureAlgorithm { return []jose.SignatureAlgorithm{jose.RS256} }

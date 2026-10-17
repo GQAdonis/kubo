@@ -366,6 +366,9 @@ func (c *Config) configuredIdentity(p PrincipalConfig) Identity {
 // validatePrincipals enforces the rules the JSON schema cannot express.
 func (c *Config) validatePrincipals() error {
 	seen := make(map[string]struct{}, len(c.Principals))
+	if err := c.validateSubjects(); err != nil {
+		return err
+	}
 	for i, p := range c.Principals {
 		at := fmt.Sprintf("principals[%d] (%s)", i, p.Name)
 		if p.Name == OperatorPrincipalID {
@@ -392,4 +395,61 @@ func (c *Config) validatePrincipals() error {
 		}
 	}
 	return nil
+}
+
+// validateSubjects enforces the session rules the JSON schema cannot express:
+// a principal needs a credential or subjects, only the kinds that take a
+// subject list one, the step-up values parse, and two principals of one kind
+// never list the same subject.
+func (c *Config) validateSubjects() error {
+	type owner struct{ kind, subject string }
+	seen := make(map[owner]string)
+	for i, p := range c.Principals {
+		at := fmt.Sprintf("principals[%d] (%s)", i, p.Name)
+		if !p.HasCredential() && len(p.Subjects) == 0 {
+			return fmt.Errorf("%s: a principal needs a credential, subjects, or both", at)
+		}
+		if len(p.Subjects) > 0 && !isSessionKind(p.Kind) {
+			return fmt.Errorf("%s: subjects is only valid for kinds ui, human-mcp and admin", at)
+		}
+		if p.MaxAuthAge != "" {
+			if d, err := time.ParseDuration(p.MaxAuthAge); err != nil || d <= 0 {
+				return fmt.Errorf("%s: max_auth_age %q is not a positive duration", at, p.MaxAuthAge)
+			}
+		}
+		for _, sub := range p.Subjects {
+			k := owner{p.Kind, sub}
+			if first, dup := seen[k]; dup {
+				return fmt.Errorf("principals[].subjects: subject %q is listed by principals %q and %q of kind %s", sub, first, p.Name, p.Kind)
+			}
+			seen[k] = p.Name
+		}
+	}
+	return nil
+}
+
+// OIDCSettings returns the resolved auth.oidc section, or nil when it is not
+// enabled.
+func (c *Config) OIDCSettings() (*OIDCSettings, error) {
+	if !c.Auth.OIDC.Enabled {
+		return nil, nil
+	}
+	s, err := c.Auth.OIDC.resolve()
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+// SessionPrincipals returns the principals a session subject can resolve to:
+// those that list subjects.
+func (c *Config) SessionPrincipals() []SessionPrincipal {
+	var out []SessionPrincipal
+	for _, p := range c.Principals {
+		if len(p.Subjects) == 0 {
+			continue
+		}
+		out = append(out, SessionPrincipal{Identity: c.configuredIdentity(p), Subjects: slices.Clone(p.Subjects)})
+	}
+	return out
 }

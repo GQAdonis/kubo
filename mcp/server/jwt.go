@@ -75,8 +75,11 @@ type JWTOptions struct {
 	// Logger receives diagnostics; nil discards them. It never receives a
 	// token.
 	Logger *slog.Logger
-	// Subjects maps `sub` to identities.
-	Subjects map[string]Identity
+	// Principals are the configured principals a subject can resolve to.
+	Principals []SessionPrincipal
+	// OriginAllowlist is agent.origin_allowlist: the page origins a session
+	// identity may send a non-safe request from.
+	OriginAllowlist []string
 }
 
 // JWTVerifier is an AuthVerifier for OpenID Connect ID tokens (ADR-0013
@@ -87,7 +90,8 @@ type JWTVerifier struct {
 	keys     *jwksCache
 	now      func() time.Time
 	log      *slog.Logger
-	subjects map[string]Identity
+	subjects map[string][]SessionPrincipal
+	origins  []string
 }
 
 // NewJWTVerifier builds the verifier. It fetches nothing: the key set is read
@@ -104,12 +108,21 @@ func NewJWTVerifier(o JWTOptions) (*JWTVerifier, error) {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
+	subjects, err := indexSessionPrincipals(o.Principals)
+	if err != nil {
+		return nil, err
+	}
+	origins, err := normalizeOrigins(o.OriginAllowlist)
+	if err != nil {
+		return nil, fmt.Errorf("agent.origin_allowlist: %w", err)
+	}
 	return &JWTVerifier{
+		origins:  origins,
 		cfg:      o.OIDC,
 		keys:     newJWKSCache(o.OIDC.JWKSURL, o.OIDC.JWKSCacheTTL, o.Client, now),
 		now:      now,
 		log:      log,
-		subjects: o.Subjects,
+		subjects: subjects,
 	}, nil
 }
 
@@ -204,15 +217,26 @@ func (v *JWTVerifier) reject(reason string) (VerifiedToken, error) {
 	return VerifiedToken{}, errTokenInvalid
 }
 
-// Verify implements AuthVerifier.
-func (v *JWTVerifier) Verify(ctx context.Context, token string, _ *http.Request) (Identity, time.Time, error) {
+// Verify implements AuthVerifier. The route comes from the request path: a
+// token is refused (401) on a route auth.oidc.routes does not list, before any
+// key is fetched. A valid token whose subject maps to no principal accepted on
+// the route is a Denial (403).
+func (v *JWTVerifier) Verify(ctx context.Context, token string, req *http.Request) (Identity, time.Time, error) {
+	route := ""
+	if req != nil && req.URL != nil {
+		route = oidcRouteOf(req.URL.Path)
+	}
+	if route == "" || !slices.Contains(v.cfg.Routes, route) {
+		_, err := v.reject(jwtRejectRoute)
+		return Identity{}, time.Time{}, err
+	}
 	vt, err := v.validate(ctx, token)
 	if err != nil {
 		return Identity{}, time.Time{}, err
 	}
-	id, ok := v.subjects[vt.Subject]
-	if !ok {
-		return Identity{}, time.Time{}, errTokenInvalid
+	id, err := v.resolve(vt, route)
+	if err != nil {
+		return Identity{}, time.Time{}, err
 	}
 	return id, vt.Expiry, nil
 }

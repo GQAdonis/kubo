@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -29,9 +30,10 @@ func newTestJWTVerifier(t *testing.T, iss *testIssuer, mutate func(*OIDCSettings
 	v, err := NewJWTVerifier(JWTOptions{
 		OIDC: cfg,
 		Now:  func() time.Time { return jwtTestNow },
-		Subjects: map[string]Identity{
-			jwtTestSub: NewIdentity(Principal{ID: "console-ui", Kind: KindUI}, []string{AllGroups}, nil, nil),
-		},
+		Principals: []SessionPrincipal{{
+			Identity: NewIdentity(Principal{ID: "console-ui", Kind: KindUI}, []string{AllGroups}, nil, nil),
+			Subjects: []string{jwtTestSub},
+		}},
 	})
 	require.NoError(t, err)
 	return v
@@ -88,7 +90,7 @@ func TestJWTVerifierAcceptsOnlyTheValidToken(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			id, exp, err := v.Verify(t.Context(), tc.token, nil)
+			id, exp, err := v.Verify(t.Context(), tc.token, reqTo(RouteAGUI))
 			if !tc.ok {
 				require.ErrorIs(t, err, auth.ErrInvalidToken)
 				assert.Empty(t, id.ID)
@@ -102,6 +104,11 @@ func TestJWTVerifierAcceptsOnlyTheValidToken(t *testing.T) {
 			assert.WithinDuration(t, time.Unix(claimsInt(t, tc.token, "exp"), 0), exp, 0, "the verdict ends at the token exp")
 		})
 	}
+}
+
+// reqTo is a request to path, for the verifier's route selection.
+func reqTo(path string) *http.Request {
+	return &http.Request{Method: http.MethodGet, URL: &url.URL{Path: path}, Header: http.Header{}}
 }
 
 // claimsInt reads an integer claim from the payload of a signed test token.
@@ -126,11 +133,11 @@ func TestJWTVerifierAlgorithmSelection(t *testing.T) {
 	ec := iss.sign(testKidEC, claimsAt(jwtTestNow, jwtTestSub))
 	rs := iss.sign(testKidRSA, claimsAt(jwtTestNow, jwtTestSub))
 
-	_, _, err := newTestJWTVerifier(t, iss, only(jose.ES256)).Verify(t.Context(), ec, nil)
+	_, _, err := newTestJWTVerifier(t, iss, only(jose.ES256)).Verify(t.Context(), ec, reqTo(RouteAGUI))
 	require.NoError(t, err, "ES256 token with ES256 allowed")
-	_, _, err = newTestJWTVerifier(t, iss, only(jose.ES256)).Verify(t.Context(), rs, nil)
+	_, _, err = newTestJWTVerifier(t, iss, only(jose.ES256)).Verify(t.Context(), rs, reqTo(RouteAGUI))
 	require.ErrorIs(t, err, auth.ErrInvalidToken, "RS256 token with only ES256 allowed")
-	_, _, err = newTestJWTVerifier(t, iss, only(jose.RS256, jose.ES256)).Verify(t.Context(), ec, nil)
+	_, _, err = newTestJWTVerifier(t, iss, only(jose.RS256, jose.ES256)).Verify(t.Context(), ec, reqTo(RouteAGUI))
 	require.NoError(t, err, "both allowed")
 }
 
@@ -143,7 +150,7 @@ func TestJWTVerifierKeyAlgorithmMismatchIsRejected(t *testing.T) {
 	iss.mu.Unlock()
 	v := newTestJWTVerifier(t, iss, nil)
 	tok := signWith(t, jose.SigningKey{Algorithm: jose.RS256, Key: iss.rsaKey}, "ps-only", claimsAt(jwtTestNow, jwtTestSub))
-	_, _, err := v.Verify(t.Context(), tok, nil)
+	_, _, err := v.Verify(t.Context(), tok, reqTo(RouteAGUI))
 	require.ErrorIs(t, err, auth.ErrInvalidToken)
 }
 
@@ -158,7 +165,7 @@ func TestJWTVerifierRefusesPrivateAndNonSigningKeys(t *testing.T) {
 	v := newTestJWTVerifier(t, iss, nil)
 	for _, kid := range []string{"private", "enc-key"} {
 		tok := signWith(t, jose.SigningKey{Algorithm: jose.RS256, Key: iss.rsaKey}, kid, claimsAt(jwtTestNow, jwtTestSub))
-		_, _, err := v.Verify(t.Context(), tok, nil)
+		_, _, err := v.Verify(t.Context(), tok, reqTo(RouteAGUI))
 		require.ErrorIs(t, err, auth.ErrInvalidToken, kid)
 	}
 }
@@ -168,7 +175,7 @@ func TestJWKSCacheFetchesOnceForManyTokens(t *testing.T) {
 	v := newTestJWTVerifier(t, iss, nil)
 	tok := iss.sign(testKidRSA, claimsAt(jwtTestNow, jwtTestSub))
 	for range 20 {
-		_, _, err := v.Verify(t.Context(), tok, nil)
+		_, _, err := v.Verify(t.Context(), tok, reqTo(RouteAGUI))
 		require.NoError(t, err)
 	}
 	assert.EqualValues(t, 1, iss.hits.Load())
@@ -257,7 +264,7 @@ func TestJWTVerifierKeysUnavailableIs401NotAFault(t *testing.T) {
 	iss := newTestIssuer(t)
 	iss.setDown(true)
 	v := newTestJWTVerifier(t, iss, nil)
-	_, _, err := v.Verify(t.Context(), iss.sign(testKidRSA, claimsAt(jwtTestNow, jwtTestSub)), nil)
+	_, _, err := v.Verify(t.Context(), iss.sign(testKidRSA, claimsAt(jwtTestNow, jwtTestSub)), reqTo(RouteAGUI))
 	require.ErrorIs(t, err, auth.ErrInvalidToken)
 
 	// Garbage instead of a key set is the same.
@@ -266,7 +273,7 @@ func TestJWTVerifierKeysUnavailableIs401NotAFault(t *testing.T) {
 	iss.garbage = true
 	iss.mu.Unlock()
 	v = newTestJWTVerifier(t, iss, nil)
-	_, _, err = v.Verify(t.Context(), iss.sign(testKidRSA, claimsAt(jwtTestNow, jwtTestSub)), nil)
+	_, _, err = v.Verify(t.Context(), iss.sign(testKidRSA, claimsAt(jwtTestNow, jwtTestSub)), reqTo(RouteAGUI))
 	require.ErrorIs(t, err, auth.ErrInvalidToken)
 }
 

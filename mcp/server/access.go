@@ -67,6 +67,10 @@ type Identity struct {
 	// Restrictions are grants withdrawn by policy for this request. It is set
 	// only on the effective identity, never on the configured one.
 	Restrictions []Restriction
+	// Session is set when a JWT authenticated the request (auth.oidc). It
+	// carries the verified subject for audit records and the session report.
+	// It is nil for static bearers, stdio and the anonymous loopback caller.
+	Session *Session
 }
 
 // Restriction records why a grant was withdrawn from an identity.
