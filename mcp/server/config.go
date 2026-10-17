@@ -24,6 +24,9 @@ type Config struct {
 	HTTP       HTTPConfig        `json:"http"`
 	Tools      ToolsConfig       `json:"tools"`
 	Principals []PrincipalConfig `json:"principals"`
+	// Auth is the auth section (auth.oidc: session-token verification, off by
+	// default).
+	Auth AuthConfig `json:"auth"`
 	// Confirmation is the confirmation section (modes, resolvers, cli, ttl).
 	Confirmation ConfirmationConfig `json:"confirmation"`
 	// LLM is the model backend of the agent loop (nil: the agent is off) and
@@ -215,6 +218,9 @@ func ParseConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 	if err := cfg.validatePrincipals(); err != nil {
+		return nil, err
+	}
+	if err := cfg.Auth.OIDC.validate(); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
