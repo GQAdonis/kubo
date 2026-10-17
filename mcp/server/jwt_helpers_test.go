@@ -173,3 +173,8 @@ func rewritePayload(tok string, claims map[string]any) string {
 }
 
 func newTestAlgorithms() []jose.SignatureAlgorithm { return []jose.SignatureAlgorithm{jose.RS256} }
+
+// jwkSigningKey is the issuer's RSA signing key.
+func jwkSigningKey(i *testIssuer) jose.SigningKey {
+	return jose.SigningKey{Algorithm: jose.RS256, Key: i.rsaKey}
+}

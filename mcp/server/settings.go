@@ -797,9 +797,15 @@ func (h *settingsHandler) auditWrite(id Identity, fields []string, oldHost, newH
 	if moved {
 		level = slog.LevelWarn
 	}
-	h.log.Log(context.Background(), level, "agent settings applied",
-		"principal", id.ID, "revision", h.st.revision, "fields", strings.Join(fields, ","),
+	attrs := []any{"principal", id.ID}
+	if id.Session != nil {
+		// A session identity is audited by its verified subject, never by the
+		// email or the token.
+		attrs = append(attrs, "sub", id.Session.Subject)
+	}
+	attrs = append(attrs, "revision", h.st.revision, "fields", strings.Join(fields, ","),
 		"old_host", oldHost, "new_host", newHost, "key_not_carried", keyNotCarried)
+	h.log.Log(context.Background(), level, "agent settings applied", attrs...)
 }
 
 // persistedUndo holds the overlay and key files as they were before a write,
