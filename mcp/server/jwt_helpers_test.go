@@ -81,13 +81,7 @@ func (i *testIssuer) serveJWKS(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (i *testIssuer) setDown(down bool) { i.mu.Lock(); i.down = down; i.mu.Unlock() }
-func (i *testIssuer) hide(kid string, hide bool) {
-	i.mu.Lock()
-	i.hidden[kid] = hide
-	i.mu.Unlock()
-}
-
-func (i *testIssuer) jwksURL() string { return i.srv.URL + "/jwks.json" }
+func (i *testIssuer) jwksURL() string   { return i.srv.URL + "/jwks.json" }
 
 // settings is a resolved auth.oidc section aimed at this issuer.
 func (i *testIssuer) settings() OIDCSettings {
