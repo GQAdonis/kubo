@@ -17,6 +17,7 @@ Related pages: [configuration reference](config-reference.md) (every option, def
 - [Restrict what `ipfs mcp` can do on the daemon](#restrict-what-ipfs-mcp-can-do-on-the-daemon)
 - [Confirmation and its limits](#confirmation-and-its-limits)
 - [Search the node](#search-the-node)
+- [Session tokens from the console (OpenID Connect)](#session-tokens-from-the-console-openid-connect)
 - [Off switches](#off-switches)
 - [Troubleshooting](#troubleshooting)
 
@@ -238,6 +239,44 @@ With an `embeddings` section in the config file, `ipfs mcp` can build a semantic
 
 Everything is off without an `embeddings` section, indexing and search need a principal whose `egress_ack` covers the hosts involved, and the operator identity cannot index. The full setup, every key with its default and off switch, and the LKE and Desktop deployments are in the [embeddings guide](embeddings.md) ([ADR-0006](0006-embeddings-surrealdb.md), [ADR-0011](0011-whole-node-vector-search.md)).
 
+## Session tokens from the console (OpenID Connect)
+
+A deployment can put a sign-in in front of the console (the Web UI and its `/agui`, settings and search routes) and have the gateway forward the signed-in person's OpenID Connect ID token to `ipfs mcp` as `Authorization: Bearer <id_token>`. `ipfs mcp` then checks the token itself and maps the person to a principal. The design and its limits are in [ADR-0013](0013-console-session-auth.md). Nothing here applies to IPFS Desktop, the loopback Web UI, stdio or an MCP client using a static bearer; those are unchanged.
+
+It is **off by default**. With `auth.oidc.enabled` false or absent, `ipfs mcp` accepts no token but the static ones, fetches no key set, and `GET /auth/session` answers 404. There is no built-in issuer, audience or key URL; you configure all three.
+
+```json
+{
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.example.org",
+      "audiences": ["ipfs-console"],
+      "jwks_url": "https://oauth.example.org/.well-known/jwks.json"
+    }
+  },
+  "agent": {"agui": true, "origin_allowlist": ["https://console.example.org"]},
+  "principals": [
+    {"name": "console-ui", "kind": "ui", "subjects": ["<identity id>"]},
+    {"name": "console-admin", "kind": "admin", "subjects": ["<identity id>"]}
+  ]
+}
+```
+
+How it decides:
+
+- **Token checks.** Signature against the key set at `jwks_url` (asymmetric algorithms only; `none` and `HS*` are refused), the `kid`, exact `iss`, one of `audiences`, and `exp`, `nbf` and `iat` within `clock_skew` (30 s by default, at most 2 minutes). Any failure is a plain 401 that does not say which check failed. An unknown `kid` causes at most one key set refetch every 30 seconds.
+- **Who the person is.** Only the token's `sub` (the identity ID), matched exactly against `principals[].subjects`. The `email` claim is shown by `/auth/session` for display and never selects or grants anything. A valid token whose `sub` is in no principal for the route gets 403. A principal needs a `credential`, `subjects`, or both; two principals of the same kind cannot list the same subject, and one subject may appear in a `ui` and an `admin` principal.
+- **Where it applies.** `auth.oidc.routes` (default `agui`, `settings`, `index`, `session`). A token on any other route, `/mcp` and `/a2a` included, gets 401. Add `mcp` only if you mean it.
+- **Browser safety.** With `auth.oidc.require_origin` (default true), a session request that is not GET, HEAD or OPTIONS must send an `Origin` listed in `agent.origin_allowlist`; a request with no `Origin` gets 403. Static bearers keep their existing behaviour.
+- **Admin.** An `admin` session needs one of `totp`, `webauthn`, `passkey` or `lookup_secret` in the token's `amr`, and an `auth_time` within one hour (`require_amr`, `max_auth_age`). Otherwise the settings route answers 403 `step_up_required`. `"require_amr": []` accepts a password-only session; that is a weakening, and the token still proves nothing about who is at the keyboard for a given write.
+- **Startup.** An unreachable key set never stops `ipfs mcp`: static bearers work, and session tokens get 401 until the keys load. The log names the key set URL, never a token.
+- **Logs.** The settings audit line names the principal and the `sub`. No log line, audit record or response contains a token or the email.
+
+`GET /auth/session` returns the principals the token maps to (name and kind), the email for display, the token's `exp`, and the admin state (`ok`, `step_up_required` or `not_eligible`). It never returns the token or the `sub`. A static bearer alone gets 401 there.
+
+To turn it off, set `"auth": {"oidc": {"enabled": false}}` (or remove the section) and restart `ipfs mcp`; to narrow it, shorten `routes` or empty a principal's `subjects`. Signing out of the console ends the gateway's cookies and the issuer's login session, but **the Kratos session on the sign-in site survives a console logout**, so the next console sign-in is silent while it lives. A full sign-out is the sign-in site's own logout.
+
 ## Off switches
 
 | To turn off | Do this |
@@ -252,6 +291,7 @@ Everything is off without an `embeddings` section, indexing and search need a pr
 | MCP App views | `--no-app-views` (or `tools.app_views: false`). |
 | Out-of-band confirmation prompts | `--confirm=none` or `IPFS_MCP_CONFIRM=none`. Per-call confirmation itself cannot be turned off. |
 | Embeddings and search | Off unless the config file has an `embeddings` section. Per part: remove the `extractor` or `describer` block, set `bulk.enabled: false`, set `search_route.enabled: false` (see the [embeddings guide](embeddings.md)). |
+| Session tokens (OpenID Connect) | Off by default. `"auth": {"oidc": {"enabled": false}}`, or remove the section; narrow with `auth.oidc.routes` or a principal's `subjects`. |
 | AG-UI, A2A | Off by default; they need `--agui` / `--a2a`, `--http` and a model backend. |
 
 Each option, its default and the test that runs it in the off state are listed in the [configuration reference](config-reference.md).
