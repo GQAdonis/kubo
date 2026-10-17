@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ipfs mcp session route descriptor",
+  "description": "Schema of routes/session.json, the route descriptor for GET /auth/session (console-session-auth 1.3, ADR-0013 section 4). It pins structurally that the route is GET-only, that its response is the referenced response schema (no inline copy of the shape), that it is mounted only when auth.oidc.enabled is true, and that the token and the `sub` claim are never returned.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "description", "mount", "authorization", "routes", "neverReturned", "errors"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "source": { "type": "string", "minLength": 10 },
+    "description": { "type": "string", "minLength": 10 },
+    "mount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conditions", "absentBehavior"],
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "string", "minLength": 10 },
+          "allOf": [
+            { "contains": { "type": "string", "pattern": "--http" } },
+            { "contains": { "type": "string", "pattern": "auth\\.oidc\\.enabled" } }
+          ],
+          "description": "The two mount conditions: the --http listener, and auth.oidc.enabled true."
+        },
+        "absentBehavior": { "type": "string", "minLength": 10, "pattern": "404" }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "routeKey", "description"],
+      "properties": {
+        "identity": { "const": "jwt" },
+        "routeKey": {
+          "const": "session",
+          "description": "The auth.oidc.routes value that admits a JWT on this route; the route is in the default list."
+        },
+        "description": { "type": "string", "minLength": 10 }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["method", "path", "response"],
+        "properties": {
+          "method": { "const": "GET" },
+          "path": { "const": "/auth/session" },
+          "response": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "contentType", "schema"],
+            "properties": {
+              "status": { "const": 200 },
+              "contentType": { "const": "application/json" },
+              "schema": { "const": "routes/session-response.schema.json" },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "neverReturned": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "allOf": [
+        { "contains": { "const": "token" } },
+        { "contains": { "const": "sub" } }
+      ],
+      "description": "Fields no response of this route carries. token and sub must be listed."
+    },
+    "errors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["httpLevel", "mapping"],
+      "properties": {
+        "httpLevel": { "type": "string", "minLength": 10 },
+        "mapping": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "status", "when", "retryable"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^[a-z][a-z_]*$", "description": "A code of the shared ErrorCode list (schemas/common.json) or the not_configured reason name used by routes/index.json for an unmounted route." },
+              "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+              "when": { "type": "string", "minLength": 10 },
+              "retryable": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

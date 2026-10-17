@@ -1,0 +1,59 @@
+{
+  "$schema": "./session.schema.json",
+  "source": "ADR-0013 (docs/mcp/0013-console-session-auth.md) section 4, accepted 2026-10-17; the principal kinds and the route-aware resolution are ADR-0009 section 3; the failure semantics follow openspec/changes/console-session-auth/specs/mcp-session-token-auth/spec.md.",
+  "description": "Route descriptor for GET /auth/session on the ipfs mcp --http listener. It tells the Web UI what the forwarded console session resolves to, so the page can choose session mode, show \"Signed in as\", and offer \"Sign out\" and \"Verify again for settings\". The route exists only when auth.oidc.enabled is true. It reports the principal names and kinds, the email claim for display, the token's exp and the admin step-up state, and it returns neither the token nor the `sub` claim.",
+  "mount": {
+    "conditions": [
+      "the ipfs mcp HTTP listener is on (--http); stdio-only operation has no HTTP surface at all",
+      "auth.oidc.enabled is true in the ipfs mcp config (default false)"
+    ],
+    "absentBehavior": "When either condition is unmet the route is not mounted: GET /auth/session answers 404, nothing is fetched and no JWKS is dialed. The Web UI treats the 404 as 'not in session mode' and leaves its existing credential path untouched."
+  },
+  "authorization": {
+    "identity": "jwt",
+    "routeKey": "session",
+    "description": "Authenticates only a JWT identity that passes the token validation of ADR-0013 section 4 and arrives on a route listed in auth.oidc.routes (the default list includes session). A request with no valid JWT identity gets 401. A valid token whose `sub` maps to no principal accepted on this route gets 403. The method is GET, so the require_origin rule does not apply. Cookies are never read; the gateway forwards the ID token in the Authorization header."
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/auth/session",
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "schema": "routes/session-response.schema.json",
+        "description": "The body is exactly the referenced schema. `email` is for display only; `admin` is ok, step_up_required or not_eligible."
+      }
+    }
+  ],
+  "neverReturned": ["token", "sub", "claims other than email and exp"],
+  "errors": {
+    "httpLevel": "401, 403 and 404 answers from the authentication, authorization and mount layers are HTTP-level: plain text or empty bodies, not the ToolError shape. The 200 body is the response schema above; the only contract error body this route can produce is internal.",
+    "mapping": [
+      {
+        "code": "not_configured",
+        "status": 404,
+        "when": "A mount condition is unmet: no --http listener, or auth.oidc.enabled is false or the section is absent. The route is not mounted and the body is not a contract error object.",
+        "retryable": false
+      },
+      {
+        "code": "unauthenticated",
+        "status": 401,
+        "when": "No valid JWT identity: no bearer, a token that fails signature, issuer, audience, expiry or algorithm checks, or the JWKS is not loaded yet. The response does not say which check failed.",
+        "retryable": false
+      },
+      {
+        "code": "permission_denied",
+        "status": 403,
+        "when": "The token is valid but its `sub` maps to no principal accepted on this route. Nothing is resolved and no body of the response schema is returned.",
+        "retryable": false
+      },
+      {
+        "code": "internal",
+        "status": 500,
+        "when": "Any other failure while serving the mounted route.",
+        "retryable": false
+      }
+    ]
+  }
+}

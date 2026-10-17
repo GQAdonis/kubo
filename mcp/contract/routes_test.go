@@ -185,3 +185,85 @@ func routeSubObjects(doc any, key string) []map[string]any {
 	}
 	return out
 }
+
+// TestSessionRouteDescriptor pins console-session-auth 1.3: the /auth/session
+// descriptor validates against its schema, is GET-only and mounted only with
+// auth.oidc.enabled, names the response schema instead of restating it, and
+// lists token and sub as never returned.
+func TestSessionRouteDescriptor(t *testing.T) {
+	doc := readJSON(t, "routes/session.json")
+	if err := resolveRef(t, "routes/session.schema.json").Validate(doc); err != nil {
+		t.Fatalf("routes/session.json does not match routes/session.schema.json: %v", err)
+	}
+	var d struct {
+		Routes []struct {
+			Method   string `json:"method"`
+			Path     string `json:"path"`
+			Response struct {
+				Schema string `json:"schema"`
+			} `json:"response"`
+		} `json:"routes"`
+		Errors struct {
+			Mapping []struct {
+				Code   string `json:"code"`
+				Status int    `json:"status"`
+			} `json:"mapping"`
+		} `json:"errors"`
+	}
+	readInto(t, "routes/session.json", &d)
+	if len(d.Routes) != 1 || d.Routes[0].Method != "GET" || d.Routes[0].Path != "/auth/session" {
+		t.Fatalf("routes = %+v, want exactly GET /auth/session", d.Routes)
+	}
+	if _, err := fs.ReadFile(files, d.Routes[0].Response.Schema); err != nil {
+		t.Errorf("response schema %s: %v", d.Routes[0].Response.Schema, err)
+	}
+	for _, obj := range routeSubObjects(doc, "response") {
+		for _, kw := range []string{"type", "properties", "items", "required", "enum"} {
+			if _, bad := obj[kw]; bad {
+				t.Errorf("the response object carries JSON Schema keyword %q: an inline copy of the shape is forbidden", kw)
+			}
+		}
+	}
+	want := map[string]int{"not_configured": 404, "unauthenticated": 401, "permission_denied": 403, "internal": 500}
+	got := map[string]int{}
+	for _, m := range d.Errors.Mapping {
+		got[m.Code] = m.Status
+	}
+	for code, status := range want {
+		if got[code] != status {
+			t.Errorf("errors.mapping[%s] = %d, want %d", code, got[code], status)
+		}
+	}
+}
+
+// TestSessionResponseSchema pins the response body: the valid examples pass,
+// and a body that holds a sub (or a token) fails with the offending key named.
+func TestSessionResponseSchema(t *testing.T) {
+	rs := resolveRef(t, "routes/session-response.schema.json")
+	for _, p := range []string{"routes/examples/session-ok.json", "routes/examples/session-ui-only.json"} {
+		if err := rs.Validate(readJSON(t, p)); err != nil {
+			t.Errorf("%s: %v", p, err)
+		}
+	}
+	for file, key := range map[string]string{
+		"routes/invalid/session-with-sub.json":   "sub",
+		"routes/invalid/session-with-token.json": "token",
+	} {
+		err := rs.Validate(readJSON(t, file))
+		if err == nil {
+			t.Errorf("%s validated, want failure", file)
+			continue
+		}
+		if !strings.Contains(err.Error(), `"`+key+`"`) {
+			t.Errorf("%s: error does not name %s: %v", file, key, err)
+		}
+	}
+	// Neither field may be declared by the schema, so no future edit can
+	// quietly start returning them.
+	props := readJSON(t, "routes/session-response.schema.json").(map[string]any)["properties"].(map[string]any)
+	for _, k := range []string{"sub", "token", "access_token", "id_token"} {
+		if _, ok := props[k]; ok {
+			t.Errorf("session response schema declares %q", k)
+		}
+	}
+}

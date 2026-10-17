@@ -363,12 +363,15 @@ func TestConfigExamplesValidate(t *testing.T) {
 func TestConfigInvalidExamplesFail(t *testing.T) {
 	rs := resolveRef(t, configSchema)
 	var exp struct {
-		Cases map[string]string `json:"cases"`
+		Cases         map[string]string `json:"cases"`
+		SemanticCases map[string]string `json:"semanticCases"`
 	}
 	readInto(t, "config/invalid/expectations.json", &exp)
 	for _, p := range jsonFiles(t, "config/invalid") {
 		if path.Base(p) != "expectations.json" {
-			if _, ok := exp.Cases[path.Base(p)]; !ok {
+			_, schemaCase := exp.Cases[path.Base(p)]
+			_, semanticCase := exp.SemanticCases[path.Base(p)]
+			if !schemaCase && !semanticCase {
 				t.Errorf("%s has no expectation", p)
 			}
 		}
@@ -381,6 +384,63 @@ func TestConfigInvalidExamplesFail(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), field) {
 			t.Errorf("%s: error does not name %s: %v", file, field, err)
+		}
+	}
+}
+
+// duplicateSubjectError reports the cross-item rule JSON Schema cannot
+// express (ADR-0013 section 4): two principals of the same kind must not list
+// the same subject. A subject may appear in principals of different kinds (a
+// ui and an admin entry for one person). It returns nil for a clean config.
+func duplicateSubjectError(doc any) error {
+	root, _ := doc.(map[string]any)
+	type owner struct{ kind, subject string }
+	seen := map[owner]string{}
+	for _, p := range toSlice(root["principals"]) {
+		pm, _ := p.(map[string]any)
+		name, _ := pm["name"].(string)
+		kind, _ := pm["kind"].(string)
+		for _, s := range toStrings(pm["subjects"]) {
+			k := owner{kind, s}
+			if first, dup := seen[k]; dup {
+				return fmt.Errorf("principals[].subjects: subject %q is listed by principals %q and %q of kind %s", s, first, name, kind)
+			}
+			seen[k] = name
+		}
+	}
+	return nil
+}
+
+// TestConfigSemanticInvalidExamplesFail covers the invalid examples that
+// validate against the JSON Schema but break a rule it cannot express: the
+// listed Go check must reject them and name the key, and every valid example
+// must pass the same check.
+func TestConfigSemanticInvalidExamplesFail(t *testing.T) {
+	rs := resolveRef(t, configSchema)
+	var exp struct {
+		SemanticCases map[string]string `json:"semanticCases"`
+	}
+	readInto(t, "config/invalid/expectations.json", &exp)
+	if len(exp.SemanticCases) == 0 {
+		t.Fatal("expectations.json lists no semanticCases")
+	}
+	for file, field := range exp.SemanticCases {
+		doc := readJSON(t, "config/invalid/"+file)
+		if err := rs.Validate(doc); err != nil {
+			t.Errorf("%s: a semantic case must pass the JSON Schema (else list it under cases): %v", file, err)
+		}
+		err := duplicateSubjectError(doc)
+		if err == nil {
+			t.Errorf("%s: accepted, want a duplicate-subject error", file)
+			continue
+		}
+		if !strings.Contains(err.Error(), field) {
+			t.Errorf("%s: error does not name %s: %v", file, field, err)
+		}
+	}
+	for _, p := range jsonFiles(t, "config/examples") {
+		if err := duplicateSubjectError(readJSON(t, p)); err != nil {
+			t.Errorf("%s: %v", p, err)
 		}
 	}
 }

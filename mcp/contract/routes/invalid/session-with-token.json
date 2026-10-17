@@ -1,0 +1,8 @@
+{
+  "principals": [
+    { "name": "console-ui", "kind": "ui" }
+  ],
+  "exp": 1792243200,
+  "admin": "not_eligible",
+  "token": "eyJhbGciOiJSUzI1NiJ9.e30.c2ln"
+}

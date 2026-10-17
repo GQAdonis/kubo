@@ -1,0 +1,15 @@
+{
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.know-me.tools",
+      "audiences": [
+        "ipfs-console"
+      ],
+      "jwks_url": "https://oauth.know-me.tools/.well-known/jwks.json",
+      "algorithms": [
+        "HS256"
+      ]
+    }
+  }
+}

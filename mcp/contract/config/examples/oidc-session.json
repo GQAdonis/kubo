@@ -1,0 +1,62 @@
+{
+  "http": {
+    "enabled": true,
+    "listen": "0.0.0.0:5050"
+  },
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.know-me.tools",
+      "audiences": [
+        "ipfs-console"
+      ],
+      "jwks_url": "https://oauth.know-me.tools/.well-known/jwks.json",
+      "algorithms": [
+        "RS256"
+      ],
+      "clock_skew": "30s",
+      "jwks_cache_ttl": "15m",
+      "routes": [
+        "agui",
+        "settings",
+        "index",
+        "session"
+      ],
+      "require_origin": true
+    }
+  },
+  "principals": [
+    {
+      "name": "console-ui",
+      "kind": "ui",
+      "subjects": [
+        "0b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8"
+      ],
+      "groups": [
+        "*"
+      ]
+    },
+    {
+      "name": "console-admin",
+      "kind": "admin",
+      "subjects": [
+        "0b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8"
+      ],
+      "require_amr": [
+        "totp",
+        "webauthn"
+      ],
+      "max_auth_age": "1h"
+    }
+  ],
+  "llm": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "model": "qwen3:8b"
+  },
+  "agent": {
+    "agui": true,
+    "origin_allowlist": [
+      "https://console.prometheusags.ai"
+    ]
+  }
+}

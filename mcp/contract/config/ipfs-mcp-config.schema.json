@@ -154,7 +154,14 @@
             "ownerChange": "mcp-agent-principal-enforcement"
           },
           "credential": {
-            "$ref": "#/$defs/SecretRef",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SecretRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": null,
             "offSwitch": "Remove the principal entry, or remove the env variable or file it names: an unknown token gets 401. If the named environment variable or file is absent, only that principal is disabled and the start logs a warning, as long as at least one other principal (or a --auth-token-* operator token) resolves; the disabled principal authenticates nothing until the reference resolves (CRITICAL-2). If none of the configured principals resolves and no operator token is given, ipfs mcp --http exits at start naming the missing variables or files.",
             "ownerChange": "mcp-http-transport-auth"
@@ -265,17 +272,247 @@
             "default": null,
             "offSwitch": "null (default); required only for kind uar.",
             "ownerChange": "mcp-agent-principal-enforcement"
+          },
+          "subjects": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^\\S+$"
+            },
+            "default": [],
+            "description": "The OpenID Connect `sub` values (Kratos identity IDs) that resolve to this principal when auth.oidc.enabled is true (ADR-0013 section 4). Matched exactly against `sub`; the `email` claim never selects or grants a principal. A principal needs `credential`, `subjects`, or both; `credential` is optional when `subjects` has at least one entry. One subject may be listed in a `ui` principal and an `admin` principal (one person, two capabilities); each request resolves to the principal whose kind the route accepts. Two principals of the same kind listing the same subject is a configuration error at load: JSON Schema cannot compare items, so mcp/contract/agentic_test.go (TestConfigSemanticInvalidExamplesFail) pins the rule. Honored for kinds ui, human-mcp and admin only.",
+            "offSwitch": "Empty (default): no subject resolves to this principal, so a session token cannot select it. Static `credential` bearers are unaffected. With auth.oidc.enabled false the key is ignored.",
+            "ownerChange": "console-session-auth"
+          },
+          "require_amr": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "password",
+                "oidc",
+                "totp",
+                "lookup_secret",
+                "webauthn",
+                "code",
+                "passkey"
+              ]
+            },
+            "default": null,
+            "description": "Authentication methods (the `amr` claim, filled by Kratos from the session's methods) of which at least one must be present for a session identity of this principal. null (default) applies the kind default: `admin` needs any of totp, webauthn, passkey and lookup_secret; other kinds need none. A failing request gets 403 `step_up_required`. An explicit empty list accepts any `amr` including password-only sessions on an admin entry, a documented weakening (ADR-0013 section 5). Applies to JWT identities only, never to static bearers.",
+            "offSwitch": "[] accepts any `amr` (documented weakening for an admin entry). null (default) is the kind default. With auth.oidc.enabled false the key is ignored.",
+            "ownerChange": "console-session-auth"
+          },
+          "max_auth_age": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Duration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum age of the sign-in, `now - auth_time`, for a session identity of this principal. null (default) applies the kind default: `admin` 1h; other kinds no limit. A token without `auth_time` fails the check where it applies. A failing request gets 403 `step_up_required`. Applies to JWT identities only, never to static bearers.",
+            "offSwitch": "null (default) is the kind default (1h for admin, none for other kinds). A long duration weakens the bound; there is no value that disables it for admin short of a very large duration. With auth.oidc.enabled false the key is ignored.",
+            "ownerChange": "console-session-auth"
           }
         },
         "required": [
           "name",
-          "kind",
-          "credential"
+          "kind"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "credential"
+            ]
+          },
+          {
+            "required": [
+              "subjects"
+            ],
+            "properties": {
+              "subjects": {
+                "minItems": 1
+              }
+            }
+          }
         ]
       },
       "default": [],
       "offSwitch": "Empty (default): no ui, a2a, uar or admin principal exists, HTTP has no authenticated principal and the settings route is not mounted (404). A loopback listener with no principal and no operator token configured at all serves every request as the anonymous-loopback principal, which is read-only (confirmation class none tools only; no write or destructive group can be granted to it). A non-loopback listener without a verifier is refused. When principals are configured but none of them has a credential that resolves (and no --auth-token-* operator token is given), startup fails and names the principals and the environment variables or files it expected; it does not fall back to the anonymous listener. When some resolve, only those are enabled.",
       "ownerChange": "mcp-agent-principal-enforcement"
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "oidc": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "offSwitch": "false (default): no JWT is accepted anywhere, no JWKS is fetched, GET /auth/session is not mounted (404) and only static bearer tokens authenticate, exactly as before.",
+              "ownerChange": "console-session-auth",
+              "description": "Turns on OpenID Connect ID-token authentication for session identities forwarded by the console gateway (ADR-0013 section 4). Needs issuer, audiences and jwks_url. Static bearers are tried first and are matched exactly as without it."
+            },
+            "issuer": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^https://[^\\s/]+(/[^\\s]*)?$",
+              "default": null,
+              "offSwitch": "Leave auth.oidc.enabled false: the issuer is not read. There is no built-in issuer anywhere in kubo.",
+              "ownerChange": "console-session-auth",
+              "description": "Exact `iss` value a token must carry. Required when enabled is true; null (default) means unset."
+            },
+            "audiences": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "default": [],
+              "offSwitch": "Leave auth.oidc.enabled false: audiences are not read. When enabled it must list at least one value.",
+              "ownerChange": "console-session-auth",
+              "description": "`aud` must contain at least one of these values. Required and non-empty when enabled is true."
+            },
+            "jwks_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2048,
+              "pattern": "^(https://[^\\s/]+|http://(127\\.0\\.0\\.1|localhost|\\[::1\\])(:[0-9]+)?)(/[^\\s]*)?$",
+              "default": null,
+              "offSwitch": "Leave auth.oidc.enabled false: nothing is fetched. This is the one new outbound endpoint and it is configured, never derived. An unreachable URL never stops startup; JWT requests get 401 until keys load.",
+              "ownerChange": "console-session-auth",
+              "description": "URL of the issuer's JSON Web Key Set. `https` only, except `http` for a loopback host (127.0.0.1, localhost or [::1]). Required when enabled is true; null (default) means unset. Fetched only when enabled."
+            },
+            "algorithms": {
+              "type": "array",
+              "uniqueItems": true,
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "RS256",
+                  "RS384",
+                  "RS512",
+                  "PS256",
+                  "PS384",
+                  "PS512",
+                  "ES256",
+                  "ES384",
+                  "ES512",
+                  "EdDSA"
+                ]
+              },
+              "default": [
+                "RS256"
+              ],
+              "offSwitch": "Narrow the list. `none` and `HS*` are not accepted by the schema; there is no value that switches signature checking off.",
+              "ownerChange": "console-session-auth",
+              "description": "Allowed JWS `alg` values. Asymmetric algorithms only: `none` and every `HS*` value are rejected."
+            },
+            "clock_skew": {
+              "$ref": "#/$defs/Duration",
+              "default": "30s",
+              "offSwitch": "0s: no leeway for exp, nbf and iat.",
+              "ownerChange": "console-session-auth",
+              "description": "Leeway applied to `exp`, `nbf` and `iat`. At most 2m (enforced when the configuration is loaded)."
+            },
+            "jwks_cache_ttl": {
+              "$ref": "#/$defs/Duration",
+              "default": "15m",
+              "offSwitch": "Always enforced when enabled; lower it to refresh keys sooner. An unknown `kid` never causes more than one refetch per 30 s. Ignored when auth.oidc.enabled is false (nothing is cached or fetched).",
+              "ownerChange": "console-session-auth",
+              "description": "How long a fetched key set is cached. An unknown `kid` triggers at most one refetch per 30 s."
+            },
+            "routes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "mcp",
+                  "a2a",
+                  "agui",
+                  "settings",
+                  "index",
+                  "session"
+                ]
+              },
+              "default": [
+                "agui",
+                "settings",
+                "index",
+                "session"
+              ],
+              "offSwitch": "Narrow the list (or leave it empty) so fewer routes accept a JWT; a JWT on a route not listed gets 401. `mcp` and `a2a` are not in the default and are accepted only when an operator adds them.",
+              "ownerChange": "console-session-auth",
+              "description": "Routes that accept a JWT identity. A JWT on any other route gets 401."
+            },
+            "require_origin": {
+              "type": "boolean",
+              "default": true,
+              "offSwitch": "false turns the check off: a JWT identity then follows the same Origin behaviour as a static bearer. Leave true behind a shared-site gateway (ADR-0013 section 7).",
+              "ownerChange": "console-session-auth",
+              "description": "For a JWT identity and a method other than GET, HEAD or OPTIONS, `Origin` must be present and listed in agent.origin_allowlist, otherwise 403. A request with no Origin fails. Static bearer requests keep their existing Origin behaviour."
+            }
+          },
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "required": [
+              "issuer",
+              "audiences",
+              "jwks_url"
+            ],
+            "properties": {
+              "issuer": {
+                "type": "string"
+              },
+              "jwks_url": {
+                "type": "string"
+              },
+              "audiences": {
+                "minItems": 1
+              }
+            }
+          },
+          "default": {},
+          "description": "OpenID Connect ID-token authentication for the console session (ADR-0013). Off unless enabled is true.",
+          "offSwitch": "Omit the section or leave enabled false (default): no JWT is accepted, no JWKS is fetched, GET /auth/session answers 404, and static bearers authenticate as before.",
+          "ownerChange": "console-session-auth"
+        }
+      },
+      "default": {},
+      "offSwitch": "Omit the section (default): no session authentication of any kind.",
+      "ownerChange": "console-session-auth"
     },
     "llm": {
       "type": [

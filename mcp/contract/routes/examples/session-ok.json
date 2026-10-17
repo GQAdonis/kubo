@@ -1,0 +1,9 @@
+{
+  "principals": [
+    { "name": "console-ui", "kind": "ui" },
+    { "name": "console-admin", "kind": "admin" }
+  ],
+  "email": "operator@example.com",
+  "exp": 1792243200,
+  "admin": "step_up_required"
+}

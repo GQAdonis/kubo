@@ -107,7 +107,8 @@ func TestSettingsWriteShape(t *testing.T) {
 }
 
 // TestSettingsErrorCodesAreStable pins the closed set of stable error codes:
-// exactly the four the settings API defines, and no tool error code leaks in.
+// exactly the five the settings API defines (step_up_required added by
+// console-session-auth, ADR-0013 section 5), and no tool error code leaks in.
 func TestSettingsErrorCodesAreStable(t *testing.T) {
 	var doc map[string]any
 	readInto(t, "settings/settings-error.schema.json", &doc)
@@ -117,7 +118,7 @@ func TestSettingsErrorCodesAreStable(t *testing.T) {
 	for _, c := range raw {
 		codes = append(codes, c.(string))
 	}
-	want := []string{"backend_not_configured", "revision_conflict", "egress_confirmation_required", "secrets_not_accepted"}
+	want := []string{"backend_not_configured", "revision_conflict", "egress_confirmation_required", "secrets_not_accepted", "step_up_required"}
 	if !slices.Equal(codes, want) {
 		t.Fatalf("error code enum = %v, want %v", codes, want)
 	}

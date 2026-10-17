@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ipfs mcp agent settings: error shape",
-  "description": "Error body of the settings route and its test-connection and model-list endpoints. code is the stable machine-readable code; the set below is closed and grows only by a contract change, so clients can switch on it. HTTP statuses: backend_not_configured 503 (no backend is configured; also the /agui answer with no backend), revision_conflict 412 (missing or stale If-Match revision), egress_confirmation_required 409 (the write would change the model host without a matching egress_confirmation), secrets_not_accepted 403 (a secret field was sent while agent.settings.accept_secrets is false). Authentication and route-absent failures (401, 404) are HTTP-level and are not this document. So is a rate or concurrency refusal (429 with a Retry-After header, Round 7 L4: the route allows 60 requests a minute with a burst of 60 per principal, test-connection and model-list 10 a minute with at most 2 in flight, and 16 open change streams in all); a client honours Retry-After and does not parse a body.",
+  "description": "Error body of the settings route and its test-connection and model-list endpoints. code is the stable machine-readable code; the set below is closed and grows only by a contract change, so clients can switch on it. HTTP statuses: backend_not_configured 503 (no backend is configured; also the /agui answer with no backend), revision_conflict 412 (missing or stale If-Match revision), egress_confirmation_required 409 (the write would change the model host without a matching egress_confirmation), secrets_not_accepted 403 (a secret field was sent while agent.settings.accept_secrets is false), step_up_required 403 (a session identity mapped to an admin principal lacks a required second factor in `amr` or its `auth_time` is older than `max_auth_age`; ADR-0013 section 5; only reachable with auth.oidc.enabled). Authentication and route-absent failures (401, 404) are HTTP-level and are not this document. So is a rate or concurrency refusal (429 with a Retry-After header, Round 7 L4: the route allows 60 requests a minute with a burst of 60 per principal, test-connection and model-list 10 a minute with at most 2 in flight, and 16 open change streams in all); a client honours Retry-After and does not parse a body.",
   "type": "object",
   "additionalProperties": false,
   "required": ["error"],
@@ -18,9 +18,10 @@
             "backend_not_configured",
             "revision_conflict",
             "egress_confirmation_required",
-            "secrets_not_accepted"
+            "secrets_not_accepted",
+            "step_up_required"
           ],
-          "description": "Stable machine-readable code. backend_not_configured: no backend configured (503). revision_conflict: missing or stale If-Match (412). egress_confirmation_required: the write changes the model host without a matching egress_confirmation (409). secrets_not_accepted: a secret field was sent while accept_secrets is false (403)."
+          "description": "Stable machine-readable code. backend_not_configured: no backend configured (503). revision_conflict: missing or stale If-Match (412). egress_confirmation_required: the write changes the model host without a matching egress_confirmation (409). secrets_not_accepted: a secret field was sent while accept_secrets is false (403). step_up_required: the session identity is mapped to an admin principal but its `amr` holds none of require_amr or `now - auth_time` exceeds max_auth_age or `auth_time` is missing (403); nothing is changed, and the client asks the person to verify again."
         },
         "message": {
           "type": "string",

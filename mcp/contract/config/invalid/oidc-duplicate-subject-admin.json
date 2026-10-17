@@ -1,0 +1,28 @@
+{
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.know-me.tools",
+      "audiences": [
+        "ipfs-console"
+      ],
+      "jwks_url": "https://oauth.know-me.tools/.well-known/jwks.json"
+    }
+  },
+  "principals": [
+    {
+      "name": "admin-a",
+      "kind": "admin",
+      "subjects": [
+        "0b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8"
+      ]
+    },
+    {
+      "name": "admin-b",
+      "kind": "admin",
+      "subjects": [
+        "0b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8"
+      ]
+    }
+  ]
+}

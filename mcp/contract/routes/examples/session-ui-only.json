@@ -1,0 +1,7 @@
+{
+  "principals": [
+    { "name": "console-ui", "kind": "ui" }
+  ],
+  "exp": 1792243200,
+  "admin": "not_eligible"
+}
