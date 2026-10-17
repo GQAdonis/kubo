@@ -2,11 +2,11 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1906,
-  "derivedRevision": 1906,
+  "sourceRevision": 1911,
+  "derivedRevision": 1911,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 17
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 22
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -29,12 +29,12 @@
   "stageId": null,
   "stageStatus": null,
   "completionMetric": "implementation",
-  "implementationCompleted": 65,
+  "implementationCompleted": 66,
   "implementationTotal": 76,
   "planRevision": 2,
-  "revision": 1906,
+  "revision": 1911,
   "exactNextCommand": null,
   "nextChange": "lke-agent-settings",
   "nextTask": "1.1",
-  "updatedAt": "2026-10-17T13:36:35.628430Z"
+  "updatedAt": "2026-10-17T14:36:24.362223Z"
 }

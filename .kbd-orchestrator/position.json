@@ -2,14 +2,14 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1906,
-  "derivedRevision": 1906,
+  "sourceRevision": 1911,
+  "derivedRevision": 1911,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 17
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 22
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-17T13:36:35.628430Z",
+  "updatedAt": "2026-10-17T14:36:24.362223Z",
   "cursor": [
     "agent-backend-settings",
     "lke-agent-settings",
@@ -20,7 +20,7 @@
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 65,
+      "done": 66,
       "total": 76
     },
     "children": [
@@ -30,7 +30,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 31,
+          "done": 32,
           "total": 36
         },
         "children": [
@@ -302,9 +302,9 @@
           {
             "type": "change",
             "id": "promethity-delivery-candidate",
-            "status": "PENDING",
+            "status": "COMPLETE",
             "progress": {
-              "done": 3,
+              "done": 4,
               "total": 4
             }
           },

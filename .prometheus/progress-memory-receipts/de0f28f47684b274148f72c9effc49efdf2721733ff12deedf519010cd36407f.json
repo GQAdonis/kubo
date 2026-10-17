@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "eventId": "kpm-e1f5de75ab8ea63a634f13cab3bcaae0",
+  "eventSha256": "098be657b0d0e269f1e1643a8ce22b627219cd34298cce1f4ce02df66e16bc3f",
+  "eventIdentitySha256": "6ab4e2ccbec42ade279f71cf66c2cae1e7542f5c478e7744bd1bc4dd7703537e",
+  "event": {
+    "schemaVersion": 1,
+    "eventId": "kpm-e1f5de75ab8ea63a634f13cab3bcaae0",
+    "observedAt": "2026-10-17T14:36:31.550783Z",
+    "runId": "ipfs-mcp-server-20261009T081630Z",
+    "boundary": "task",
+    "status": "complete",
+    "phaseId": "agent-backend-settings",
+    "changeId": "promethity-delivery-candidate",
+    "taskId": "1.4",
+    "taskClass": "product",
+    "elapsedHours": 0.0,
+    "touchedFiles": [
+      ".kbd-orchestrator/current-waypoint.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/hooks-status.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/hooks.log.jsonl",
+      ".kbd-orchestrator/phases/agent-backend-settings/plan.md",
+      ".kbd-orchestrator/phases/agent-backend-settings/progress.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/tasks.md",
+      ".kbd-orchestrator/position-reminder.txt",
+      ".kbd-orchestrator/position.json",
+      "docs/mcp/0013-console-session-auth.md",
+      "mcp/server/evidence/2026-10-17-promethity-delivery-candidate/1.4-desktop-package.md",
+      "openspec/changes/console-session-auth/.openspec.yaml",
+      "openspec/changes/console-session-auth/design.md",
+      "openspec/changes/console-session-auth/proposal.md",
+      "openspec/changes/console-session-auth/specs/console-session-gateway/spec.md",
+      "openspec/changes/console-session-auth/specs/mcp-session-token-auth/spec.md",
+      "openspec/changes/console-session-auth/specs/webui-console-session/spec.md",
+      "openspec/changes/console-session-auth/tasks.md",
+      "openspec/changes/promethity-delivery-candidate/tasks.md"
+    ],
+    "verification": [],
+    "commitSha": "fc0ae33f3e0bf9cffffd889ad9e2a06303e548dd",
+    "blocker": null,
+    "exactNextWork": null
+  },
+  "sessionLogAppended": true,
+  "memory": {
+    "transport": "outbox",
+    "status": "queued",
+    "operationId": "6be579a465e237934c36b0a55d3d84745a89c912fe86b4f5e8aea101c02731ff",
+    "pkError": "pk exited 1"
+  },
+  "complete": true,
+  "recordedAt": "2026-10-17T14:36:32.830309Z"
+}
