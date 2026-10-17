@@ -2,17 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1953,
-  "derivedRevision": 1953,
+  "sourceRevision": 1971,
+  "derivedRevision": 1971,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 64
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 82
   },
   "conflictCount": 0,
   "phase": "lke-deploy-discipline",
   "phaseId": "agent-backend-settings::lke-deploy-discipline",
   "parentPhase": "agent-backend-settings",
-  "last_updated": "2026-10-17T15:29:13.693621Z",
+  "last_updated": "2026-10-17T15:49:48.270175Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 3,
   "changes_completed": 3,

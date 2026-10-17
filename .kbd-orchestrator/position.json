@@ -2,18 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1970,
-  "derivedRevision": 1970,
+  "sourceRevision": 2009,
+  "derivedRevision": 2009,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 81
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 120
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-17T15:48:38.985154Z",
+  "updatedAt": "2026-10-17T20:50:16.428324Z",
   "cursor": [
     "agent-backend-settings",
     "console-session-auth",
-    "1.5"
+    "3.1"
   ],
   "root": {
     "type": "phase",
@@ -77,9 +77,9 @@
           {
             "type": "change",
             "id": "console-session-auth",
-            "status": "PENDING",
+            "status": "IN_PROGRESS",
             "progress": {
-              "done": 4,
+              "done": 13,
               "total": 40
             }
           },

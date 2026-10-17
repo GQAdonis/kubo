@@ -2,17 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 1970,
-  "derivedRevision": 1970,
+  "sourceRevision": 2009,
+  "derivedRevision": 2009,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 81
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 120
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-17T15:48:38.985154Z",
+  "last_updated": "2026-10-17T20:50:16.428324Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
   "changes_completed": 32,
@@ -74,11 +74,11 @@
     {
       "id": "console-session-auth",
       "title": "Console session auth (Hydra + Envoy OIDC)",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "IN_PROGRESS",
+      "implementation_status": "IN_PROGRESS",
       "tasks_total": 40,
-      "tasks_done": 4,
-      "last_task_completed": "1.4 Regenerate `docs/mcp/config-reference.md` with the existing generator `docs/mcp/config_reference.py`. Acceptan",
+      "tasks_done": 13,
+      "last_task_completed": "2.9 Document the feature and its off switch in `docs/mcp/` (user guide section) and in the v0.44 changelog Highlig",
       "next_task_pending": "1.5 Make `github.com/go-jose/go-jose/v4` a direct dependency at `v4.1.6` with `go get` and `make mod_tidy`, after ",
       "blockers": []
     },
