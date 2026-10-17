@@ -186,3 +186,5 @@ Recorded answers to ADR-0013 "Decisions left to the operator":
 - Placement (RN5.1, console-session-auth before `lke-agent-settings` and `lke-vector-search`) and the Hydra deployment in `flint-core`: approved.
 
 Correction found by the lead (live read, 2026-10-17): `argocd/wildcard-know-me-tools-tls` is not a wildcard; its SANs are `api`, `auth`, `gate`, `rt`, `sso` `.know-me.tools`. Task 4.2's "TLS covered by the existing wildcard" is therefore wrong: `oauth.know-me.tools` needs its own Certificate via `letsencrypt-prod` DNS-01 (Cloudflare zone). Amend 4.2 before it runs.
+
+- **1.5 upstream PR opened 2026-10-17** (operator: "Approved for those actions"): fork GQAdonis/p2p-forge, https://github.com/ipshipyard/p2p-forge/pull/96 (`chore: bump go-jose to v4.1.6`, go.mod/go.sum only, `go test ./...` pass). Task 1.5 stays open until kubo bumps p2p-forge to a release containing it.
