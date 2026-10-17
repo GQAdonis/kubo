@@ -2,7 +2,7 @@
 
 Plan reference: `.kbd-orchestrator/phases/agent-backend-settings/plan.md`, "Plan revision note (2026-10-16): console-session-auth", phase path `agent-backend-settings`, change ID `console-session-auth`. ADR: `docs/mcp/0013-console-session-auth.md`.
 
-Change-level prerequisites: `lke-origin-isolation` complete, and the plan revision note approved by the operator. Scheduled before `lke-agent-settings` and `lke-vector-search`. Cluster tasks follow the know-me-cluster skill `lke-gitops-change`: offline checks, a live preflight posted on the PR, then stop for the operator's merge, then verify. Agents never apply, sync, restart or read Secret values.
+Change-level prerequisites: `lke-origin-isolation` complete, and the plan revision note approved by the operator. The cutover (group 6) additionally waits for task 1.5 (go-jose at least `v4.1.6` through the p2p-forge bump). Scheduled before `lke-agent-settings` and `lke-vector-search`. Cluster tasks follow the know-me-cluster skill `lke-gitops-change`: offline checks, a live preflight posted on the PR, then stop for the operator's merge, then verify. Agents never apply, sync, restart or read Secret values.
 
 ## 1. Architect: ADR, contract, dependency (ipfs-agent-architect)
 
@@ -10,7 +10,7 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 - [x] 1.2 Add `auth.oidc` (`enabled`, `issuer`, `audiences`, `jwks_url`, `algorithms`, `clock_skew`, `jwks_cache_ttl`, `routes`, `require_origin`) and `principals[].subjects`, `require_amr` and `max_auth_age` to `mcp/contract/config/ipfs-mcp-config.schema.json`. Each key gets `default`, `offSwitch` and `ownerChange`. `credential` becomes optional when `subjects` is present. Add one valid example and three invalid examples (missing `jwks_url`, `HS256`, a duplicate subject in two `admin` principals). Acceptance: `go test ./mcp/contract/...` passes and the three invalid examples are rejected with the offending key named.
 - [x] 1.3 Add the `/auth/session` route and its response schema (principals, email, exp, admin status, no token and no `sub`) under `mcp/contract/routes/`, and the `step_up_required` error code. Acceptance: `go test ./mcp/contract/...` passes with a fixture that holds a `sub` field failing schema validation.
 - [x] 1.4 Regenerate `docs/mcp/config-reference.md` with the existing generator `docs/mcp/config_reference.py`. Acceptance: the generator's consistency check passes, and the generated page lists every new key with its default and off switch.
-- [ ] 1.5 Make `github.com/go-jose/go-jose/v4` a direct dependency at `v4.1.6` with `go get` and `make mod_tidy`, after the operator approves (ADR-0013 decision 5). Acceptance: all three `go.mod` files show `v4.1.6`, and `make build` plus `go test ./plugin/plugins/dagjose/...` pass.
+- [ ] 1.5 Track the go-jose bump through the protected `p2p-forge` stack (ADR-0013 decision 5, corrected 2026-10-17). Open an upstream PR on `ipshipyard/p2p-forge` bumping `github.com/go-jose/go-jose/v4` to `v4.1.6`, and track it to release; the verifier (group 3) builds against the graph's `v4.1.4` meanwhile and stays off by default. Do not `go get` go-jose directly in kubo. Acceptance (done when): kubo's `go get github.com/ipshipyard/p2p-forge@vX && make mod_tidy` has landed, all three `go.mod` files show go-jose at least `v4.1.6`, and `make build` plus `go test ./plugin/plugins/dagjose/...` pass.
 
 ## 2. `ipfs mcp` JWT verifier (mcp-server-engineer)
 
@@ -64,6 +64,8 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 - [ ] 5.4 After OG-25 (merge, plus an operator-approved probe pod): verify enforcement. Acceptance: the evidence README shows the probe pod in another namespace failing to connect to `ipfs-api.ipfs.svc:5001` and `hydra-admin.flint-core.svc:4445`; the `ipfs` pod Ready with zero restarts; console `/webui` and the swarm still answering.
 
 ## 6. Cluster: console cutover (ipfs-agent-architect)
+
+Prerequisite: task 1.5 is done (go-jose at least `v4.1.6` in all three `go.mod` files). Do not start 6.1 before it.
 
 - [ ] 6.1 Cutover PR. Contents:
   - `ipfs-webui-auth` keeps its name and annotations; its spec becomes `oidc`:

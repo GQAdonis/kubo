@@ -99,3 +99,9 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 
 - The lead's live read showed `argocd/wildcard-know-me-tools-tls` is not a wildcard: SANs are `api`, `auth`, `gate`, `rt`, `sso` `.know-me.tools`. ADR-0013 and task 4.2 wrongly said the wildcard covers `oauth.know-me.tools`.
 - Decision: `oauth.know-me.tools` gets its own Certificate from ClusterIssuer `letsencrypt-prod` (DNS-01, Cloudflare zone `know-me.tools`). Confirmed read-only in `know-me-cluster`: `cluster/manifests.yaml` declares `letsencrypt-prod` with a `dns01.cloudflare` solver (token Secret `cloudflare-api-token`); `namespaces/argocd-config/manifests.yaml` declares per-host Certificates (`design-know-me-tools-tls`, `know-me-tools-site-tls`) against it. Task 4.2 amended; the ADR text corrected. Rationale: an uncovered SNI on the new listener would fail TLS at cutover.
+
+## 2026-10-17: go-jose goes through p2p-forge, not a direct bump (ADR-0013 decision 5 corrected, console-session-auth 1.5)
+
+- ADR-0013 decision 5 said go-jose "is not one of the protected transitive stacks". Wrong: `github.com/ipshipyard/p2p-forge@v0.10.1` (latest release) requires go-jose v4.1.4, so a direct `v4.1.6` pin in kubo would run a combination p2p-forge never tested (AGENTS.md "Transitive dependency bumps"). Also at v4.1.4: grpc v1.83.1; `acmez/v3` v3.1.6 at v4.1.3; `go-dag-jose` v0.1.1 at v4.0.4 (`go mod graph`).
+- Operator, verbatim, answering the lead's plan: "yes, go ahead with 1-3". Plan: (1) upstream PR on `ipshipyard/p2p-forge` bumping go-jose to v4.1.6 (prepared locally, not yet opened), (2) verifier built against v4.1.4, off by default, (3) ADR correction. Cutover (group 6, OG-26) waits for kubo's p2p-forge bump with go-jose at least v4.1.6 in all three `go.mod` files (task 1.5), because v4.1.5/v4.1.6 fix JWK/JWT parsing flaws (GHSA-mgcc-cww5-fp2q) relevant to a network-fetched JWKS.
+- Risk: cutover timing depends on an upstream release we do not control.
