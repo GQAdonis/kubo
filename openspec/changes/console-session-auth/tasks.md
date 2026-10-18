@@ -51,6 +51,7 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
   - `Prune=false` on any PVC.
   
   Acceptance: the offline render and `kubeconform` pass, `git grep` finds no secret value, and the preflight posted on the PR shows every referenced Secret and key present (created at OG-24).
+  - Added 2026-10-18 (#40 security read LOW-2, operator accepted option (b)): role `hydra` keeps the default PUBLIC `CONNECT` on `flint`, `kratos`, `flintgate`, `broker` and `frf` once OG-24 sets its password. Accepted as an interim residual; the fix is the 6.0 pg_hba change, before cutover.
 - [ ] 4.2 Route `oauth.know-me.tools` on `argocd-gateway`: a Certificate for `oauth.know-me.tools` (ClusterIssuer `letsencrypt-prod`, DNS-01 on the Cloudflare zone `know-me.tools`; `wildcard-know-me-tools-tls` is not a wildcard and does not cover this host), a new listener on that Certificate's Secret, and an HTTPRoute to `hydra-public:4444` pinned by `sectionName`. Acceptance: the preflight reports DNS A = 23.239.29.33, issuance path DNS-01 on a Cloudflare zone PASS, no redundant Certificate, and route pinning PASS.
 - [ ] 4.3 Kratos wiring. In `kratos.yml`, set `oauth2_provider.url: http://hydra-admin.flint-core.svc.cluster.local:4445`. On `kratos-ui`, set `HYDRA_ADMIN_URL`, `CSRF_COOKIE_NAME`, and `CSRF_COOKIE_SECRET` from an out-of-band Secret. If 4.6 fails on v1.3.1, also change the `kratos-ui` image to the `v26.2.0` tag pinned by digest. Acceptance: the diff shows exactly these keys, and the preflight shows the CSRF Secret key present.
 - [x] 4.4 Security-reviewer read of the 4.1-4.3 PR before OG-23. Acceptance: a findings file under `.agent-team/kubo-ipfs-agentic/findings/security/agent-backend-settings/` with no open CRITICAL.
@@ -76,6 +77,8 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 ## 6. Cluster: console cutover (ipfs-agent-architect)
 
 Prerequisite: task 1.5 is done (go-jose at least `v4.1.6` in all three `go.mod` files). Do not start 6.1 before it.
+
+- [ ] 6.0 Close #40 LOW-2 (operator-accepted interim residual, 2026-10-18). In the `flint-forge-postgres18` image's pg_hba, first-match order and ahead of the generic host rule: `host hydra hydra all scram-sha-256`, then `host all hydra all reject`; keep the upstream `scram-sha-256` host rule. Acceptance: after the image rollout, a connection as `hydra` to `hydra` succeeds and one to `flint` is rejected by pg_hba (operator-run, password never printed), and the security-reviewer marks LOW-2 resolved. Gates OG-26.
 
 - [ ] 6.1 Cutover PR. Contents:
   - `ipfs-webui-auth` keeps its name and annotations; its spec becomes `oidc`:
