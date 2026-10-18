@@ -1,66 +1,211 @@
-[
-  {
-    "file": "signed-in-320-light.png",
-    "horizontalOverflowPx": 0
+{
+  "capturedFrom": {
+    "ipfsWebui": "895b6b62",
+    "kubo": "ca396ea7c",
+    "note": "built from a clean committed ipfs-webui HEAD (REACT_APP_ENV=test); kubo HEAD is the repo at capture time and carries the evidence folder uncommitted"
   },
-  {
-    "file": "signed-in-320-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "signed-in-1440-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "signed-in-1440-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "sign-in-again-320-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "sign-in-again-320-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "sign-in-again-1440-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "sign-in-again-1440-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "step-up-320-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "step-up-320-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "step-up-1440-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "step-up-1440-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "chat-expired-320-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "chat-expired-320-dark.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "chat-expired-1440-light.png",
-    "horizontalOverflowPx": 0
-  },
-  {
-    "file": "chat-expired-1440-dark.png",
-    "horizontalOverflowPx": 0
-  }
-]
+  "captures": [
+    {
+      "file": "signed-in-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "signed-in-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "signed-in-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "signed-in-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "signed-in-focus-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+    },
+    {
+      "file": "signed-in-focus-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+    },
+    {
+      "file": "signed-in-focus-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+    },
+    {
+      "file": "signed-in-focus-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+    },
+    {
+      "file": "sign-in-again-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "sign-in-again-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "sign-in-again-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "sign-in-again-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "sign-in-again-focus-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "sign-in-again-focus-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "sign-in-again-focus-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "sign-in-again-focus-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "step-up-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "step-up-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "step-up-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "step-up-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "step-up-focus-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+    },
+    {
+      "file": "step-up-focus-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+    },
+    {
+      "file": "step-up-focus-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+    },
+    {
+      "file": "step-up-focus-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+    },
+    {
+      "file": "not-eligible-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "not-eligible-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "not-eligible-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "not-eligible-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "chat-expired-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "chat-expired-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null
+    },
+    {
+      "file": "chat-expired-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "chat-expired-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62"
+    },
+    {
+      "file": "chat-expired-focus-320-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "chat-expired-focus-320-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": null,
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "chat-expired-focus-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "chat-expired-focus-1440-dark.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+    },
+    {
+      "file": "sign-in-again-reduced-motion-1440-light.png",
+      "horizontalOverflowPx": 0,
+      "footerRevision": "895b6b62",
+      "reducedMotion": true
+    }
+  ]
+}
