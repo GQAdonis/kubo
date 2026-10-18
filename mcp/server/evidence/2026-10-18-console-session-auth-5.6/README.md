@@ -42,3 +42,20 @@ Controls: `liter-llm` and `kratos-ui` have no ingress policy and were reachable 
 ## Peer recheck (15 minutes after the sync)
 
 See the appended section below.
+
+### Recheck at 2026-10-18T17:02:02Z (15 minutes after the sync)
+
+```
+peers=123 quic=99      (baseline 133 at 16:43:57Z, 117 right after the sync)
+findprovs=3
+DNSLink OK
+gateway -> 200
+ipfs-0 ready=true true restarts=0 2
+BLOCKED kratos-admin.flint-core.svc:4434
+```
+
+`libp2p.direct addrs=0` is not a regression: this node has no AutoTLS listener (no `tls/sni` address; the custom `/tcp/8081/ws` listener suppresses AutoWSS, #41 read INFO-1), so it never had one. The kratos-admin line is blocked by both `kratos-ingress` (receiving side) and `ipfs-egress`; the egress proof is the liter-llm and kratos-ui lines above.
+
+## Result
+
+PASS: peering, DHT, DNSLink and the gateway work; in-cluster destinations, the cluster's own LB IP and metadata are blocked from the ipfs pod. #38 MEDIUM-1 closed in production. Follow-ups from the #41 read: LOW-1 (`automountServiceAccountToken: false` at the next planned restart), LOW-3, LOW-4, LOW-5 (check widening).

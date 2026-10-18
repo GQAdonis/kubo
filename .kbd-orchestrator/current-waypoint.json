@@ -2,11 +2,11 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2076,
-  "derivedRevision": 2076,
+  "sourceRevision": 2078,
+  "derivedRevision": 2078,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 187
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 189
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -23,7 +23,7 @@
   "parentPhase": null,
   "childPointer": null,
   "change": "console-session-auth",
-  "currentTask": "5.6",
+  "currentTask": "4.1",
   "status": "ready",
   "lifecycle": "ready",
   "stageId": null,
@@ -32,9 +32,9 @@
   "implementationCompleted": 66,
   "implementationTotal": 77,
   "planRevision": 3,
-  "revision": 2076,
+  "revision": 2078,
   "exactNextCommand": "/kbd-apply console-session-auth",
   "nextChange": "console-session-auth",
-  "nextTask": "5.6",
-  "updatedAt": "2026-10-18T16:41:12.369007Z"
+  "nextTask": "4.1",
+  "updatedAt": "2026-10-18T17:09:50.936488Z"
 }
