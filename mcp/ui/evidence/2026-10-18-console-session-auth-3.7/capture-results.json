@@ -1,0 +1,222 @@
+{
+  "capturedFrom": {
+    "ipfsWebui": "81674a5e",
+    "kubo": "see commit",
+    "note": "clean committed ipfs-webui HEAD, REACT_APP_ENV=test build, served by a small static server with SPA fallback on 127.0.0.1:3011 (Playwright library, Chromium headless; no Playwright runner), /api/v0 proxied to a real Kubo (online, no bootstrap peers) on 127.0.0.1:5101 with a temp IPFS_PATH. The search chips needed GET /index/status stubbed through a Playwright route and a dummy chat endpoint and token in localStorage; the modal is 'Import > From IPFS' (components/modal). Viewports 320x1100 and 1440x900. -zoom.png files are 24px-padded crops around the focused control. 320 uses a 1100px-tall viewport so the whole modal is in view. Known out of scope: shortcut-modal.js has its own close button (not .prom-modal-close) and was not changed.",
+    "modalOverflow": "hidden"
+  },
+  "captures": [
+    {
+      "file": "modal-close-focus-320-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Close\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "-2px",
+        "boxShadow": "none"
+      },
+      "ringBox": {
+        "x": 252,
+        "y": 167.375,
+        "w": 44,
+        "h": 44
+      },
+      "modalBox": {
+        "x": 24,
+        "y": 167.375,
+        "w": 272,
+        "h": 765.25
+      },
+      "modalOverflow": "hidden"
+    },
+    {
+      "file": "switch-focus-320-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(94, 87, 80) 0px 0px 0px 1px inset, rgb(245, 242, 238) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-focus-320-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(94, 87, 80) 0px 0px 0px 1px inset, rgb(245, 242, 238) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-on-focus-320-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(176, 42, 16) 0px 0px 0px 1px inset, rgb(245, 242, 238) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "modal-close-focus-1440-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Close\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "-2px",
+        "boxShadow": "none"
+      },
+      "ringBox": {
+        "x": 948,
+        "y": 156.546875,
+        "w": 44,
+        "h": 44
+      },
+      "modalBox": {
+        "x": 448,
+        "y": 156.546875,
+        "w": 544,
+        "h": 586.90625
+      },
+      "modalOverflow": "hidden"
+    },
+    {
+      "file": "switch-focus-1440-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(94, 87, 80) 0px 0px 0px 1px inset, rgb(245, 242, 238) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-focus-1440-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(94, 87, 80) 0px 0px 0px 1px inset, rgb(245, 242, 238) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-on-focus-1440-light.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(176, 42, 16) 0px 0px 0px 1px inset, rgb(245, 242, 238) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "modal-close-focus-320-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Close\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "-2px",
+        "boxShadow": "none"
+      },
+      "ringBox": {
+        "x": 252,
+        "y": 167.375,
+        "w": 44,
+        "h": 44
+      },
+      "modalBox": {
+        "x": 24,
+        "y": 167.375,
+        "w": 272,
+        "h": 765.25
+      },
+      "modalOverflow": "hidden"
+    },
+    {
+      "file": "switch-focus-320-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(160, 152, 144) 0px 0px 0px 1px inset, rgb(12, 11, 10) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-focus-320-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(160, 152, 144) 0px 0px 0px 1px inset, rgb(12, 11, 10) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-on-focus-320-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(233, 106, 18) 0px 0px 0px 1px inset, rgb(12, 11, 10) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "modal-close-focus-1440-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Close\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "-2px",
+        "boxShadow": "none"
+      },
+      "ringBox": {
+        "x": 948,
+        "y": 156.546875,
+        "w": 44,
+        "h": 44
+      },
+      "modalBox": {
+        "x": 448,
+        "y": 156.546875,
+        "w": 544,
+        "h": 586.90625
+      },
+      "modalOverflow": "hidden"
+    },
+    {
+      "file": "switch-focus-1440-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(160, 152, 144) 0px 0px 0px 1px inset, rgb(12, 11, 10) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-focus-1440-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(160, 152, 144) 0px 0px 0px 1px inset, rgb(12, 11, 10) 0px 0px 0px 2px"
+      }
+    },
+    {
+      "file": "chip-on-focus-1440-dark.png",
+      "reachedByKeyboardTab": true,
+      "computed": {
+        "text": "BUTTON \"Text\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(233, 106, 18) 0px 0px 0px 1px inset, rgb(12, 11, 10) 0px 0px 0px 2px"
+      }
+    }
+  ]
+}
