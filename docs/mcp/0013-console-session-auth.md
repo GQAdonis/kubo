@@ -225,7 +225,7 @@ Today any pod in the cluster reaches `ipfs-api:5001` (the full RPC API, unauthen
 
 ### 9. Logout and session lifetime
 
-- **Logout.** `logoutPath: /oauth2/logout` (not `/logout`, to stay clear of any future console path). Envoy clears its cookies and calls Hydra's end-session endpoint. Hydra ends its login session and hands the logout challenge to the Kratos UI, which accepts it and redirects to `https://console.prometheusags.ai/`. **The Kratos session on `know-me.tools` survives** (verified in `logout.ts`), so the next console sign-in is silent while it lives. A full sign-out is Kratos's own logout at `auth.know-me.tools`; the Web UI's "Sign out" offers both.
+- **Logout.** `logoutPath: /oauth2/logout` (not `/logout`, to stay clear of any future console path). Envoy clears its cookies and calls Hydra's end-session endpoint. Hydra ends its login session and hands the logout challenge to the Kratos UI, which accepts it and redirects to `https://console.prometheusags.ai/`. **The Kratos session on `know-me.tools` survives** (verified in `logout.ts`), so the next console sign-in is silent while it lives. A full sign-out is Kratos's own logout at `auth.know-me.tools`; the Web UI's "Sign out" ends the console session and says that signing out of `know-me.tools` is a separate step (no link: a hardcoded endpoint would break the configurable-endpoint rule; UI review m1, 2026-10-17).
 - **Hydra lifetimes:**
   - `ttl.id_token = ttl.access_token = 15m`, kept equal on purpose (unverified point 2);
   - `ttl.refresh_token = 12h`, the longest a console session lives without a new sign-in;
