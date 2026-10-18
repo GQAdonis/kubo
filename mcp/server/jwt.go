@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	// go-jose is pinned to the version already in the module graph (v4.1.4,
-	// which p2p-forge v0.10.1 requires) until p2p-forge ships v4.1.6; do not
-	// bump it ahead of that release (AGENTS.md, transitive dependency bumps).
+	// go-jose v4.1.6 comes in through the temporary GQAdonis/p2p-forge fork
+	// replace in go.mod (operator decision 2026-10-17); return to an upstream
+	// p2p-forge release once ipshipyard/p2p-forge#96 ships.
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/modelcontextprotocol/go-sdk/auth"

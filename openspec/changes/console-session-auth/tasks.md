@@ -11,6 +11,7 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 - [x] 1.3 Add the `/auth/session` route and its response schema (principals, email, exp, admin status, no token and no `sub`) under `mcp/contract/routes/`, and the `step_up_required` error code. Acceptance: `go test ./mcp/contract/...` passes with a fixture that holds a `sub` field failing schema validation.
 - [x] 1.4 Regenerate `docs/mcp/config-reference.md` with the existing generator `docs/mcp/config_reference.py`. Acceptance: the generator's consistency check passes, and the generated page lists every new key with its default and off switch.
 - [ ] 1.5 Track the go-jose bump through the protected `p2p-forge` stack (ADR-0013 decision 5, corrected 2026-10-17). Open an upstream PR on `ipshipyard/p2p-forge` bumping `github.com/go-jose/go-jose/v4` to `v4.1.6`, and track it to release; the verifier (group 3) builds against the graph's `v4.1.4` meanwhile and stays off by default. Do not `go get` go-jose directly in kubo. Acceptance (done when): kubo's `go get github.com/ipshipyard/p2p-forge@vX && make mod_tidy` has landed, all three `go.mod` files show go-jose at least `v4.1.6`, and `make build` plus `go test ./plugin/plugins/dagjose/...` pass.
+  - 2026-10-17: met through the operator-directed fork replace (ADR-0013 section 4 amendment): all three modules resolve go-jose `v4.1.6` (`test/dependencies` carries no go-jose line; `go list -m` there shows v4.1.6); `make build`, `go test ./mcp/server/ ./mcp/contract/... ./core/node/libp2p/... ./cmd/ipfs/kubo/` and the `test/cli` MCP and CID-profile tests pass. `plugin/plugins/dagjose` has no test files.
 
 ## 2. `ipfs mcp` JWT verifier (mcp-server-engineer)
 
@@ -26,10 +27,10 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 
 ## 3. Web UI session mode (ui-ux-engineer, `../ipfs-webui`)
 
-- [ ] 3.1 Session-mode detection through same-origin `GET /auth/session`. Acceptance: a unit test with the route answering 404 leaves the existing chat-token code path untouched, and one with a 200 report switches to session mode.
-- [ ] 3.2 On entering session mode, delete `ipfs-webui:agent-chat:token` and any stored API address with userinfo, and never write a credential afterwards. Acceptance: an e2e test seeds both values, loads the page in session mode, and asserts both keys are absent and that `localStorage` and `sessionStorage` contain no value matching the seeded token or password.
-- [ ] 3.3 Same-origin calls with `credentials: 'same-origin'` and no `Authorization` for `/api/v0`, `/agui`, settings and `/index/*`. Acceptance: an e2e network capture in session mode shows zero requests carrying an `Authorization` header set by the page.
-- [ ] 3.4 The 401 path ("Sign in again", top-level navigation), the 403 `step_up_required` explanation, and "Signed in as", sign-out (`/oauth2/logout`) and the separate `know-me.tools` sign-out note. Acceptance: e2e tests for each state pass, with screenshots at 320 and 1440 px in both themes attached to the PR.
+- [x] 3.1 Session-mode detection through same-origin `GET /auth/session`. Acceptance: a unit test with the route answering 404 leaves the existing chat-token code path untouched, and one with a 200 report switches to session mode.
+- [x] 3.2 On entering session mode, delete `ipfs-webui:agent-chat:token` and any stored API address with userinfo, and never write a credential afterwards. Acceptance: an e2e test seeds both values, loads the page in session mode, and asserts both keys are absent and that `localStorage` and `sessionStorage` contain no value matching the seeded token or password.
+- [x] 3.3 Same-origin calls with `credentials: 'same-origin'` and no `Authorization` for `/api/v0`, `/agui`, settings and `/index/*`. Acceptance: an e2e network capture in session mode shows zero requests carrying an `Authorization` header set by the page.
+- [x] 3.4 The 401 path ("Sign in again", top-level navigation), the 403 `step_up_required` explanation, and "Signed in as", sign-out (`/oauth2/logout`) and the separate `know-me.tools` sign-out note. Acceptance: e2e tests for each state pass, with screenshots at 320 and 1440 px in both themes attached to the PR.
 - [ ] 3.5 UI review through `prometheus-ui-review` after 3.1-3.4. Acceptance: a findings file exists with no open blocking item.
 
 ## 4. Cluster: provider and wiring (ipfs-agent-architect, know-me-cluster via `lke-gitops-change`)

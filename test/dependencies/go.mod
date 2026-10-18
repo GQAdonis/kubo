@@ -344,3 +344,6 @@ require (
 	mvdan.cc/gofumpt v0.7.0 // indirect
 	mvdan.cc/unparam v0.0.0-20240528143540-8a5130ca722f // indirect
 )
+
+// Temporary: GQAdonis fork of p2p-forge v0.10.1 with go-jose v4.1.6 (operator decision 2026-10-17; upstream ipshipyard/p2p-forge#96). Drop when upstream releases it.
+replace github.com/ipshipyard/p2p-forge => github.com/GQAdonis/p2p-forge v0.10.2-0.20261017160620-d40b57a3643b

@@ -55,7 +55,7 @@ require (
 	github.com/gammazero/chanqueue v1.1.2 // indirect
 	github.com/gammazero/deque v1.2.1 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -225,3 +225,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
+
+// Temporary: GQAdonis fork of p2p-forge v0.10.1 with go-jose v4.1.6 (operator decision 2026-10-17; upstream ipshipyard/p2p-forge#96). Drop when upstream releases it.
+replace github.com/ipshipyard/p2p-forge => github.com/GQAdonis/p2p-forge v0.10.2-0.20261017160620-d40b57a3643b

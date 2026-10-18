@@ -99,7 +99,7 @@ require (
 )
 
 require (
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/google/jsonschema-go v0.4.3
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 )
@@ -284,3 +284,6 @@ exclude (
 	github.com/ipfs/go-ipfs-cmds v2.0.1+incompatible
 	github.com/libp2p/go-libp2p v6.0.23+incompatible
 )
+
+// Temporary: GQAdonis fork of p2p-forge v0.10.1 with go-jose v4.1.6 (operator decision 2026-10-17; upstream ipshipyard/p2p-forge#96). Drop when upstream releases it.
+replace github.com/ipshipyard/p2p-forge => github.com/GQAdonis/p2p-forge v0.10.2-0.20261017160620-d40b57a3643b
