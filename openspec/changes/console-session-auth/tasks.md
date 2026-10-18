@@ -55,6 +55,7 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 - [ ] 4.5 After OG-23 (merge and sync) and OG-24 (Secrets and client): read-only verification. Checks: `https://oauth.know-me.tools/.well-known/openid-configuration` returns `issuer` equal to `https://oauth.know-me.tools`, and records `id_token_signing_alg_values_supported` (unverified point 5); the JWKS URL returns at least one key; `hydra-admin` has no route on any Gateway. Acceptance: a README in a new dated evidence folder marks each check PASS or FAIL.
   - Added 2026-10-18 (carried from 5.4): a throwaway probe pod in another namespace fails to reach `hydra-admin.flint-core.svc:4445` while `hydra-public` 4444 answers, with operator approval for the pod.
 - [ ] 4.6 Operator-run browser check of the provider alone, through a throwaway authorization request for `ipfs-console` built by the agent. Kratos login completes, consent is skipped, and the callback URL receives a `code`. Acceptance: the evidence README records the operator's result. On FAIL with UI v1.3.1, task 4.3's image switch is made and this check is re-run.
+  - Added 2026-10-18 (#39 security read LOW-2): with `HYDRA_ADMIN_URL` set, run login, consent-skip and logout and confirm kratos-ui makes no request to Kratos admin 4434 or to any `oryapis.com` host. If it does, set `KRATOS_ADMIN_URL=http://kratos-admin:4434/` and add `app=kratos-ui` (not flint-gate) to a 4434 rule in `kratos-ingress`, with the check updated.
 
 ## 5. Cluster: NetworkPolicy (ipfs-agent-architect)
 
