@@ -2,17 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2023,
-  "derivedRevision": 2023,
+  "sourceRevision": 2027,
+  "derivedRevision": 2027,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 134
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 138
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-17T20:52:32.782133Z",
+  "last_updated": "2026-10-18T01:11:40.603052Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
   "changes_completed": 32,
@@ -77,9 +77,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 40,
-      "tasks_done": 17,
+      "tasks_done": 18,
       "last_task_completed": "3.4 The 401 path (\"Sign in again\", top-level navigation), the 403 `step_up_required` explanation, and \"Signed in a",
-      "next_task_pending": "1.5 Make `github.com/go-jose/go-jose/v4` a direct dependency at `v4.1.6` with `go get` and `make mod_tidy`, after ",
+      "next_task_pending": "3.5 UI review through `prometheus-ui-review` after 3.1-3.4. Acceptance: a findings file exists with no open blocki",
       "blockers": []
     },
     {
