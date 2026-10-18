@@ -32,7 +32,8 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 - [x] 3.3 Same-origin calls with `credentials: 'same-origin'` and no `Authorization` for `/api/v0`, `/agui`, settings and `/index/*`. Acceptance: an e2e network capture in session mode shows zero requests carrying an `Authorization` header set by the page.
 - [x] 3.4 The 401 path ("Sign in again", top-level navigation), the 403 `step_up_required` explanation, and "Signed in as", sign-out (`/oauth2/logout`) and the separate `know-me.tools` sign-out note. Acceptance: e2e tests for each state pass, with screenshots at 320 and 1440 px in both themes attached to the PR.
   - Held (UI review M3, 2026-10-17): the acceptance e2e run of `test/e2e/console-session.test.js` has not executed; it runs at the phase integration gate and 3.4 is unverified until it passes there.
-- [ ] 3.5 UI review through `prometheus-ui-review` after 3.1-3.4. Acceptance: a findings file exists with no open blocking item.
+- [x] 3.5 UI review through `prometheus-ui-review` after 3.1-3.4. Acceptance: a findings file exists with no open blocking item.
+- [ ] 3.6 UI review carry items (confirmation `console-session-auth-ui-review-confirmation.md`): M4 visible focus ring on accent-filled primary buttons (WCAG 2.2 SC 2.4.7) with re-captured step-up and sign-in-again focus states; m2 single announcement when the session has ended on the settings page, with a test rendering `AgentSettingsPage` and the banner; M1 residual: 401s from the async resource bundles raise "Sign in again"; m7 unsent chat text is not lost silently on expiry. Acceptance: each item fixed with a test, jest, eslint and tsc pass, and the reviewer confirms in one pass before the phase gate.
 
 ## 4. Cluster: provider and wiring (ipfs-agent-architect, know-me-cluster via `lke-gitops-change`)
 
@@ -56,14 +57,16 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 
 ## 5. Cluster: NetworkPolicy (ipfs-agent-architect)
 
-- [ ] 5.1 Read-only inventory of in-cluster consumers of `ipfs-api`, `ipfs-headless` and `ipfs-mcp` (Services, Endpoints, any manifest referencing them outside `namespaces/ipfs`). Acceptance: the inventory is in the PR body, and the PR stops if any consumer other than the gateway exists.
+- [x] 5.1 Read-only inventory of in-cluster consumers of `ipfs-api`, `ipfs-headless` and `ipfs-mcp` (Services, Endpoints, any manifest referencing them outside `namespaces/ipfs`). Acceptance: the inventory is in the PR body, and the PR stops if any consumer other than the gateway exists.
 - [ ] 5.2 NetworkPolicies:
   - `ipfs`: 5001, 5050 and 8080 only from Envoy proxies labelled `gateway.envoyproxy.io/owning-gateway-name=ipfs-gateway-gw`; 4001 TCP and UDP from anywhere;
   - `flint-core`: `hydra-admin` 4445 only from `kratos` and `kratos-ui`; `hydra-public` 4444 only from the `argocd-gateway` proxies.
   
   Acceptance: an offline `yq` check asserts these exact selectors and ports, and the preflight passes.
-- [ ] 5.3 Security-reviewer read of the 5.2 PR. Acceptance: findings file, no open CRITICAL.
+- [x] 5.3 Security-reviewer read of the 5.2 PR. Acceptance: findings file, no open CRITICAL.
 - [ ] 5.4 After OG-25 (merge, plus an operator-approved probe pod): verify enforcement. Acceptance: the evidence README shows the probe pod in another namespace failing to connect to `ipfs-api.ipfs.svc:5001` and `hydra-admin.flint-core.svc:4445`; the `ipfs` pod Ready with zero restarts; console `/webui` and the swarm still answering.
+- [ ] 5.5 Kratos ingress NetworkPolicy (security read of #38, HIGH-1): `app=kratos` 4434 (admin) only from `flint-gate` (and `kratos-ui` only if it calls the admin API, checked first), 4433 only from the `argocd-gateway` proxies and `kratos-ui`. Acceptance: one cluster PR through `lke-gitops-change` with an offline check and preflight posted, a security read with no open CRITICAL, and live proof after merge that a probe pod in another namespace cannot reach `kratos-admin.flint-core.svc:4434`. Prerequisite for group 6.
+- [ ] 5.6 Egress limits for the `ipfs` pod (security read of #38, MEDIUM-1): allow `0.0.0.0/0` except the pod and Service CIDRs, plus kube-dns 53 UDP/TCP. Acceptance: cluster PR with preflight; after merge, peering and DHT still work (`ipfs swarm peers` count and `ipfs routing findprovs` on a known CID through the RPC) and the pod cannot reach `kratos-admin.flint-core.svc:4434`.
 
 ## 6. Cluster: console cutover (ipfs-agent-architect)
 
