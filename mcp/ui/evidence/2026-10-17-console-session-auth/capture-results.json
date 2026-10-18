@@ -1,8 +1,8 @@
 {
   "capturedFrom": {
-    "ipfsWebui": "895b6b62",
-    "kubo": "ca396ea7c",
-    "note": "built from a clean committed ipfs-webui HEAD (REACT_APP_ENV=test); kubo HEAD is the repo at capture time and carries the evidence folder uncommitted"
+    "ipfsWebui": "c2193fdd",
+    "kubo": "e4531632e",
+    "note": "built from a clean committed ipfs-webui HEAD (REACT_APP_ENV=test), served through Playwright routes on http://127.0.0.1:3001 (the port is held by another process here); /api/v0 goes to a real Kubo node on 127.0.0.1:5101. kubo HEAD is the repo at capture time and carries the evidence folder uncommitted. focusedElement records the computed outline, outline-offset, box-shadow and background of the focused control."
   },
   "captures": [
     {
@@ -18,36 +18,60 @@
     {
       "file": "signed-in-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "signed-in-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "signed-in-focus-320-light.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign out\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(225, 219, 210)"
+      }
     },
     {
       "file": "signed-in-focus-320-dark.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign out\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(45, 44, 42)"
+      }
     },
     {
       "file": "signed-in-focus-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign out\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(225, 219, 210)"
+      }
     },
     {
       "file": "signed-in-focus-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign out\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign out\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(45, 44, 42)"
+      }
     },
     {
       "file": "sign-in-again-320-light.png",
@@ -62,36 +86,60 @@
     {
       "file": "sign-in-again-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "sign-in-again-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "sign-in-again-focus-320-light.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(206, 48, 18)"
+      }
     },
     {
       "file": "sign-in-again-focus-320-dark.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(233, 106, 18)"
+      }
     },
     {
       "file": "sign-in-again-focus-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(206, 48, 18)"
+      }
     },
     {
       "file": "sign-in-again-focus-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(233, 106, 18)"
+      }
     },
     {
       "file": "step-up-320-light.png",
@@ -106,36 +154,60 @@
     {
       "file": "step-up-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "step-up-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "step-up-focus-320-light.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign out and verify again\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(206, 48, 18)"
+      }
     },
     {
       "file": "step-up-focus-320-dark.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign out and verify again\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(233, 106, 18)"
+      }
     },
     {
       "file": "step-up-focus-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign out and verify again\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(206, 48, 18)"
+      }
     },
     {
       "file": "step-up-focus-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign out and verify again\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign out and verify again\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(233, 106, 18)"
+      }
     },
     {
       "file": "not-eligible-320-light.png",
@@ -150,12 +222,12 @@
     {
       "file": "not-eligible-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "not-eligible-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "chat-expired-320-light.png",
@@ -170,41 +242,65 @@
     {
       "file": "chat-expired-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "chat-expired-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62"
+      "footerRevision": "c2193fdd"
     },
     {
       "file": "chat-expired-focus-320-light.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(206, 48, 18)"
+      }
     },
     {
       "file": "chat-expired-focus-320-dark.png",
       "horizontalOverflowPx": 0,
       "footerRevision": null,
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(233, 106, 18)"
+      }
     },
     {
       "file": "chat-expired-focus-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(206, 48, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(245, 242, 238) 0px 0px 0px 2px",
+        "background": "rgb(206, 48, 18)"
+      }
     },
     {
       "file": "chat-expired-focus-1440-dark.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
-      "focusedElement": "BUTTON \"Sign in again\" solid 2px"
+      "footerRevision": "c2193fdd",
+      "focusedElement": {
+        "text": "BUTTON \"Sign in again\"",
+        "outline": "solid 2px rgb(233, 106, 18)",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(12, 11, 10) 0px 0px 0px 2px",
+        "background": "rgb(233, 106, 18)"
+      }
     },
     {
       "file": "sign-in-again-reduced-motion-1440-light.png",
       "horizontalOverflowPx": 0,
-      "footerRevision": "895b6b62",
+      "footerRevision": "c2193fdd",
       "reducedMotion": true
     }
   ]
