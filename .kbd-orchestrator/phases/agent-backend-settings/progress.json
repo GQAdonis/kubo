@@ -2,17 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2055,
-  "derivedRevision": 2055,
+  "sourceRevision": 2058,
+  "derivedRevision": 2058,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 166
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 169
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-18T02:55:45.269328Z",
+  "last_updated": "2026-10-18T14:36:07.039671Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
   "changes_completed": 32,
@@ -76,10 +76,10 @@
       "title": "Console session auth (Hydra + Envoy OIDC)",
       "status": "IN_PROGRESS",
       "implementation_status": "IN_PROGRESS",
-      "tasks_total": 43,
-      "tasks_done": 23,
+      "tasks_total": 44,
+      "tasks_done": 24,
       "last_task_completed": "5.4 After OG-25 (merge, plus an operator-approved probe pod): verify enforcement. Acceptance: the evidence README ",
-      "next_task_pending": "3.6 UI review carry items (confirmation `console-session-auth-ui-review-confirmation.md`): M4 visible fo",
+      "next_task_pending": "3.7 Focus-ring follow-ups: modal close clipping and nits",
       "blockers": []
     },
     {
