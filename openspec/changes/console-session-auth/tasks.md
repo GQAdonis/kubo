@@ -58,7 +58,7 @@ Change-level prerequisites: `lke-origin-isolation` complete, and the plan revisi
 ## 5. Cluster: NetworkPolicy (ipfs-agent-architect)
 
 - [x] 5.1 Read-only inventory of in-cluster consumers of `ipfs-api`, `ipfs-headless` and `ipfs-mcp` (Services, Endpoints, any manifest referencing them outside `namespaces/ipfs`). Acceptance: the inventory is in the PR body, and the PR stops if any consumer other than the gateway exists.
-- [ ] 5.2 NetworkPolicies:
+- [x] 5.2 NetworkPolicies:
   - `ipfs`: 5001, 5050 and 8080 only from Envoy proxies labelled `gateway.envoyproxy.io/owning-gateway-name=ipfs-gateway-gw`; 4001 TCP and UDP from anywhere;
   - `flint-core`: `hydra-admin` 4445 only from `kratos` and `kratos-ui`; `hydra-public` 4444 only from the `argocd-gateway` proxies.
   

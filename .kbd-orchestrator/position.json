@@ -2,14 +2,14 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2043,
-  "derivedRevision": 2043,
+  "sourceRevision": 2047,
+  "derivedRevision": 2047,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 154
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 158
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-18T02:28:45.499601Z",
+  "updatedAt": "2026-10-18T02:45:29.089487Z",
   "cursor": [
     "agent-backend-settings",
     "console-session-auth",
@@ -79,7 +79,7 @@
             "id": "console-session-auth",
             "status": "PENDING",
             "progress": {
-              "done": 21,
+              "done": 22,
               "total": 43
             }
           },
