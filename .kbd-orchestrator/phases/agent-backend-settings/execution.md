@@ -188,3 +188,8 @@ Recorded answers to ADR-0013 "Decisions left to the operator":
 Correction found by the lead (live read, 2026-10-17): `argocd/wildcard-know-me-tools-tls` is not a wildcard; its SANs are `api`, `auth`, `gate`, `rt`, `sso` `.know-me.tools`. Task 4.2's "TLS covered by the existing wildcard" is therefore wrong: `oauth.know-me.tools` needs its own Certificate via `letsencrypt-prod` DNS-01 (Cloudflare zone). Amend 4.2 before it runs.
 
 - **1.5 upstream PR opened 2026-10-17** (operator: "Approved for those actions"): fork GQAdonis/p2p-forge, https://github.com/ipshipyard/p2p-forge/pull/96 (`chore: bump go-jose to v4.1.6`, go.mod/go.sum only, `go test ./...` pass). Task 1.5 stays open until kubo bumps p2p-forge to a release containing it.
+
+- **console-session-auth groups 2 and 3 (2026-10-17):**
+  - Group 2 (verifier): kubo `a092e4edd`..`22c0b4953`; `go test ./mcp/server/` and `./mcp/contract/...` pass; `go test -race` deferred to the phase gate (tier-guard).
+  - Group 3 (Web UI session mode): ipfs-webui `7e2b22ec`..`3dd965ba`, kubo `mcp/chat` session mode `ab9db5458`. Jest 1155 pass, `mcp/chat` vitest 232 pass, axe clean, 16 screenshots in `mcp/ui/evidence/2026-10-17-console-session-auth/`. The new e2e spec `test/e2e/console-session.test.js` was not run by its runner (tier-guard holds it until the phase gate); its checks ran as a library script against a real node on port 5101 (8/8 pass). Run the spec at the phase integration gate.
+  - Fork swap for p2p-forge (operator: "use the fork") NOT applied: the permission classifier denied `go mod edit -replace github.com/ipshipyard/p2p-forge=github.com/GQAdonis/p2p-forge@d40b57a` for the subagent ("Untrusted Code Integration"). Surfaced to the operator; go-jose stays at v4.1.4 until resolved.
