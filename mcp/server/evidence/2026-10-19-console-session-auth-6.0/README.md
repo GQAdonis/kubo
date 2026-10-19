@@ -91,3 +91,20 @@ Operator ran `bash ~/.local/share/know-me-ops/hydra-client-postlogout-both.sh` (
 - unchanged: `client_id ipfs-console`, `redirect_uris ["https://console.prometheusags.ai/oauth2/callback"]`.
 
 `/` is what Envoy always sends as `post_logout_redirect_uri`; after 6.1 the console route redirects `/` to `/webui/`.
+
+## LOW-12: dangling know-me.tools records deleted (2026-10-19T13:16Z)
+
+Operator direction: "Use the cloudflare API with the cloudflare token env variable in the `~/.bash_profile` file to handle these records". Token `CF_TOKEN` (value never printed) verified `active`. Zone `know-me.tools` (`a6d0ce41bbf9226033289de4ecaa96ed`, NS abdullah/yolanda.ns.cloudflare.com). Full pre-change export (47 records): `/Users/gqadonis/.local/share/know-me-ops/cloudflare-know-me.tools-20261019T131540Z.json`.
+
+Reachability before deletion (TCP 443/80/22/5432 from the operator's machine): 172.169.221.204 and 35.238.217.92 refused every port.
+
+| Record | Type | Content | Delete result |
+|---|---|---|---|
+| `*.know-me.tools` | A | 35.238.217.92 (Google Cloud) | success |
+| `chat.know-me.tools` | A | 172.169.221.204 | success |
+| `livekit.know-me.tools` | A | 172.169.221.204 | success |
+| `matrix.know-me.tools` | A | 172.169.221.204 | success |
+
+Both Cloudflare nameservers then answered NXDOMAIN for `chat`, `matrix` and a random name (the first query, seconds after the API call, still returned the old answers; propagation lag). Restore, if ever needed, from the export with the same type, name and content.
+
+Not deleted (operator decision pending), other names pointing off-cluster: `feed`, `pds`, `pg`, `relay`, `surreal-api`, `surrealist`, `uar` -> 172.169.221.204 (all ports refused); `appview` -> 34.16.104.200 and `social` -> 34.136.169.92 (Google Cloud, all ports refused); `admin` -> 35.194.48.152 (Google Cloud, 80/443 open, HTTPS to the name failed); `flint`, `the-boss` -> 185.158.133.1 (Lovable, `flint` answers 200); `agent-runtime`, `agentic-social-networking` CNAME `cname.manus.space`. Every one of these names receives the `know-me.tools` Kratos cookie.
