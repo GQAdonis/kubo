@@ -23,3 +23,16 @@ Date: 2026-10-19. Operator: "PR #48 is merged" (merge `efeaf57`). Context `know-
 
 1. Planned restart of `ipfs-0` (operator-approved) so `ipfs mcp` loads the new `ipfs-mcp-config` (`auth.oidc`, routes `session`); then the sidecar log line and the JWKS fetch over the 10443 egress rule.
 2. Operator browser steps a, a2, b (incl. `/auth/session` 403), b2 (MEDIUM-4 `?access_token=`), c, d, d2, e, and the signed-in frame-deny header check.
+
+## Planned restart of `ipfs-0` (operator: "restart ipfs-0", 2026-10-19)
+
+`kubectl delete pod ipfs-0` at 21:41:06Z; the StatefulSet recreated it at 21:41:07Z and it was Ready at 21:41:29Z (about 23 s down). Both containers Ready on `sha256:3467dea860aeb097054bdf10391abcada49b48755b3a7bd9c0f585253f952cb6`, 0 restarts (the sidecar now waits for the daemon API instead of exiting). `ipfs version --commit` `0.44.0-dev-1140ff1`; Web UI `bafybeihd7…` still pinned recursive.
+
+Sidecar log after start:
+
+```
+ipfs mcp: auth.oidc is on: session tokens from https://oauth.know-me.tools are accepted on routes session (keys at https://oauth.know-me.tools/.well-known/jwks.json)
+ipfs mcp: serving MCP over HTTP on http://[::]:5050/mcp
+```
+
+JWKS from inside the pod (egress TCP 10443 to the argocd-gateway Envoy, VIP hairpin): `wget https://oauth.know-me.tools/.well-known/jwks.json` returned the key set (`{"keys":[{"use":"sig","kty":"RSA","kid":"58c5e958-…`). After the restart: `verify.sh ipfs` PASS (0 failing), `console-session.sh unauth` RESULT: PASS.
