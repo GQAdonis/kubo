@@ -1,0 +1,99 @@
+#0 building with "orbstack" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 4.30kB 0.0s done
+#1 DONE 0.9s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.6s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#4 DONE 0.8s
+
+#5 [internal] load metadata for docker.io/library/golang:1.26.5
+#5 DONE 1.2s
+
+#6 [internal] load metadata for docker.io/library/busybox:stable-glibc
+#6 DONE 1.3s
+
+#7 [internal] load .dockerignore
+#7 transferring context:
+#7 transferring context: 297B 0.0s done
+#7 DONE 0.6s
+
+#8 [stage-2  1/10] FROM docker.io/library/busybox:stable-glibc@sha256:7e567dff0fbaa48cddc5f52ae5201a7f417436aa20e70c8750814692043dfa38
+#8 DONE 0.0s
+
+#9 [utilities 1/2] FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+#9 DONE 0.0s
+
+#10 [builder 1/6] FROM docker.io/library/golang:1.26.5@sha256:705e964a93a2fd2e75c7d59bb7d781b57e30f12293ffde5175c69229e18fb678
+#10 DONE 0.0s
+
+#11 [internal] load build context
+#11 transferring context: 27.31MB 3.9s
+#11 transferring context: 87.75MB 9.0s
+#11 transferring context: 152.10MB 14.0s
+#11 transferring context: 245.80MB 17.7s done
+#11 DONE 18.1s
+
+#12 [builder 2/6] COPY go.mod go.sum /kubo/
+#12 CACHED
+
+#13 [builder 3/6] WORKDIR /kubo
+#13 CACHED
+
+#14 [builder 4/6] RUN --mount=type=cache,target=/go/pkg/mod   go mod download
+#14 CACHED
+
+#15 [builder 5/6] COPY . /kubo
+#15 DONE 5.0s
+
+#16 [builder 6/6] RUN --mount=type=cache,target=/go/pkg/mod   --mount=type=cache,target=/root/.cache/go-build   mkdir -p .git/objects   && GOOS=linux GOARCH=amd64 GOFLAGS=-buildvcs=false make build IPFS_PLUGINS=$IPFS_PLUGINS
+#16 6.699 plugin/loader/preload.sh > plugin/loader/preload.go
+#16 6.893 go fmt plugin/loader/preload.go >/dev/null
+#16 8.062 go build -buildvcs=false "-trimpath" -ldflags="-X "github.com/ipfs/kubo".CurrentCommit=1140ff1 -X "github.com/ipfs/kubo".taggedRelease= -X "github.com/ipfs/kubo".buildOrigin=" -o "cmd/ipfs/ipfs" "github.com/ipfs/kubo/cmd/ipfs"
+#16 DONE 25.8s
+
+#17 [utilities 2/2] RUN set -eux; 	apt-get update; 	apt-get install -y --no-install-recommends 		tini 		gosu     fuse     ca-certificates 	; 	apt-get clean; 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#17 CACHED
+
+#18 [stage-2  2/10] COPY --from=utilities /usr/sbin/gosu /sbin/gosu
+#18 CACHED
+
+#19 [stage-2  3/10] COPY --from=utilities /usr/bin/tini /sbin/tini
+#19 CACHED
+
+#20 [stage-2  4/10] COPY --from=utilities /bin/fusermount /usr/local/bin/fusermount
+#20 CACHED
+
+#21 [stage-2  5/10] COPY --from=utilities /etc/ssl/certs /etc/ssl/certs
+#21 CACHED
+
+#22 [stage-2  6/10] COPY --from=builder /kubo/cmd/ipfs/ipfs /usr/local/bin/ipfs
+#22 DONE 0.6s
+
+#23 [stage-2  7/10] COPY --from=builder --chmod=755 /kubo/bin/container_daemon /usr/local/bin/start_ipfs
+#23 DONE 1.0s
+
+#24 [stage-2  8/10] COPY --from=builder /kubo/bin/container_init_run /usr/local/bin/container_init_run
+#24 DONE 1.1s
+
+#25 [stage-2  9/10] RUN chmod 4755 /usr/local/bin/fusermount
+#25 DONE 2.5s
+
+#26 [stage-2 10/10] RUN mkdir -p /data/ipfs /ipfs /ipns /mfs /container-init.d   && adduser -D -h /data/ipfs -u 1000 -G users ipfs   && chown ipfs:users /data/ipfs /ipfs /ipns /mfs /container-init.d
+#26 DONE 1.9s
+
+#27 exporting to image
+#27 exporting layers
+#27 exporting layers 1.7s done
+#27 writing image sha256:a50f357ce2f48621ca47bf6d75a3429ecd826666cfc6d92e8a69665e65f64086
+#27 writing image sha256:a50f357ce2f48621ca47bf6d75a3429ecd826666cfc6d92e8a69665e65f64086 0.2s done
+#27 naming to ghcr.io/gqadonis/kubo:1140ff10c
+#27 naming to ghcr.io/gqadonis/kubo:1140ff10c 0.3s done
+#27 DONE 2.9s

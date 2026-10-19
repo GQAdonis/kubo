@@ -1,0 +1,20 @@
+build files:      270, bytes: 21584 KiB
+add --only-hash x2: bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa
+CAR sha256: 7297ec26e950dd6646adb064be8b5373856165dd57be3250f76a4a7b441ddb11  /Users/gqadonis/.local/share/know-me-ops/webui-bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa.car
+CAR size: 21566292
+--- car header root (dag import into fresh repo)
+Pinned root	bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa	success
+Imported 388 blocks (21551384 bytes)
+bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa recursive
+QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn recursive
+
+CID                                                        	Blocks         	Size
+bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa	388            	21551384
+
+Summary
+Total Size: 21551384 (22 MB)
+Unique Blocks: 388
+Shared Size: 0 (0 B)
+Ratio: 1.000000
+
+

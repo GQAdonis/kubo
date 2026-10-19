@@ -1,0 +1,27 @@
+{
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.know-me.tools",
+      "audiences": ["ipfs-console"],
+      "jwks_url": "https://oauth.know-me.tools/.well-known/jwks.json"
+    }
+  },
+  "principals": [
+    {
+      "name": "console-ui",
+      "kind": "ui",
+      "subjects": ["461e5d70-d7a6-48ec-a20e-06b5e0236881"],
+      "groups": ["*"]
+    },
+    {
+      "name": "console-admin",
+      "kind": "admin",
+      "subjects": ["461e5d70-d7a6-48ec-a20e-06b5e0236881"]
+    }
+  ],
+  "agent": {
+    "agui": true,
+    "origin_allowlist": ["https://console.prometheusags.ai"]
+  }
+}

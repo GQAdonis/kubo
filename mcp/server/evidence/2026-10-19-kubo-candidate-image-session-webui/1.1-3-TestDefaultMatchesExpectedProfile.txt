@@ -1,0 +1,6 @@
+=== RUN   TestDefaultMatchesExpectedProfile
+=== PAUSE TestDefaultMatchesExpectedProfile
+=== CONT  TestDefaultMatchesExpectedProfile
+--- PASS: TestDefaultMatchesExpectedProfile (1.29s)
+PASS
+ok  	github.com/ipfs/kubo/test/cli	1.339s

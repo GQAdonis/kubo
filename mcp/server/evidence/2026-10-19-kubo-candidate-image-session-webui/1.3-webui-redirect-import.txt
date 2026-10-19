@@ -1,0 +1,28 @@
+## GET /webui/ on the RPC listener 5101
+HTTP/1.1 302 Found
+Content-Type: text/html; charset=utf-8
+Location: /ipfs/bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa
+Date: Mon, 19 Oct 2026 13:22:23 GMT
+## dag import
+Pinned root	bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa	success
+## pin ls
+QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn recursive
+bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa recursive
+## dag stat
+
+CID                                                        	Blocks         	Size
+bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa	388            	21551384
+
+## GET /ipfs/bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa/ on gateway 8181
+HTTP/1.1 200 OK
+Content-Type: text/html
+Etag: "bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa"
+## body head, gateway
+
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name="theme-color" media="(prefers-color-scheme: l
+## GET /ipfs/bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa/ on RPC listener 5101
+HTTP/1.1 200 OK
+Content-Type: text/html
+Etag: "bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa"
+## index.html cid
+/ipfs/bafkreibwbtdxkanetvrgvdemtnx4lsqeqql6zxlowovulq4gqp5zmm2toe

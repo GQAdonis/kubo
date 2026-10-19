@@ -1,0 +1,31 @@
+=== RUN   TestWebUI
+=== PAUSE TestWebUI
+=== CONT  TestWebUI
+=== RUN   TestWebUI/NoFetch=true_shows_not_available_error
+=== PAUSE TestWebUI/NoFetch=true_shows_not_available_error
+=== RUN   TestWebUI/DeserializedResponses=false_shows_incompatible_error
+=== PAUSE TestWebUI/DeserializedResponses=false_shows_incompatible_error
+=== RUN   TestWebUI/Both_NoFetch=true_and_DeserializedResponses=false_shows_incompatible_error
+=== PAUSE TestWebUI/Both_NoFetch=true_and_DeserializedResponses=false_shows_incompatible_error
+=== RUN   TestWebUI/redirects_/webui/_to_the_current_WebUIPath
+=== PAUSE TestWebUI/redirects_/webui/_to_the_current_WebUIPath
+=== RUN   TestWebUI/earlier_builds_stay_routed_on_the_RPC_listener
+=== PAUSE TestWebUI/earlier_builds_stay_routed_on_the_RPC_listener
+=== RUN   TestWebUI/NoFetch=true_serves_the_build_once_it_is_local
+=== PAUSE TestWebUI/NoFetch=true_serves_the_build_once_it_is_local
+=== CONT  TestWebUI/NoFetch=true_shows_not_available_error
+=== CONT  TestWebUI/redirects_/webui/_to_the_current_WebUIPath
+=== CONT  TestWebUI/Both_NoFetch=true_and_DeserializedResponses=false_shows_incompatible_error
+=== CONT  TestWebUI/DeserializedResponses=false_shows_incompatible_error
+=== CONT  TestWebUI/NoFetch=true_serves_the_build_once_it_is_local
+    webui_test.go:138: set WEBUI_BUILD_DIR to the ipfs-webui fork build output to run this test
+=== CONT  TestWebUI/earlier_builds_stay_routed_on_the_RPC_listener
+--- PASS: TestWebUI (0.00s)
+    --- SKIP: TestWebUI/NoFetch=true_serves_the_build_once_it_is_local (0.00s)
+    --- PASS: TestWebUI/NoFetch=true_shows_not_available_error (1.01s)
+    --- PASS: TestWebUI/Both_NoFetch=true_and_DeserializedResponses=false_shows_incompatible_error (1.04s)
+    --- PASS: TestWebUI/redirects_/webui/_to_the_current_WebUIPath (1.05s)
+    --- PASS: TestWebUI/DeserializedResponses=false_shows_incompatible_error (1.09s)
+    --- PASS: TestWebUI/earlier_builds_stay_routed_on_the_RPC_listener (1.10s)
+PASS
+ok  	github.com/ipfs/kubo/test/cli	1.322s

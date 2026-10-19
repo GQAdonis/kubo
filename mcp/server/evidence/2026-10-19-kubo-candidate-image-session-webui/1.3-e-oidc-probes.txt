@@ -1,0 +1,24 @@
+## 1 | POST /agui | token=- origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 2 | POST /agui | token=garbage.tok origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 3 | POST /agui | token=forged-unk.jwt origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 4 | POST /agui | token=forged-real.jwt origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 5 | POST /mcp | token=forged-real.jwt origin=none
+HTTP/1.1 401 Unauthorized
+## 6 | POST /mcp | token=- origin=none
+HTTP/1.1 401 Unauthorized
+## 7 | GET /auth/session | token=- origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 8 | GET /auth/session | token=garbage.tok origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 9 | GET /auth/session | token=forged-real.jwt origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 10 | GET /agent/settings | token=- origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 11 | GET /agent/settings | token=forged-real.jwt origin=https://console.prometheusags.ai
+HTTP/1.1 401 Unauthorized
+## 12 | POST /index/search | token=forged-real.jwt origin=https://console.prometheusags.ai
+HTTP/1.1 404 Not Found

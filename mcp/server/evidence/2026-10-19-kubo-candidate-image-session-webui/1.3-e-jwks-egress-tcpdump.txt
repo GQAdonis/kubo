@@ -1,0 +1,20 @@
+# tcpdump -n -i any 'port 53 or port 443' in the scenario e container's network namespace (alpine sidecar).
+# The probe set ran earlier; the startup JWKS prefetch connection to 23.239.29.33:443 (oauth.know-me.tools) stays open (keepalive acks 13:24:02, 13:24:32).
+# At 13:24:44 a forged unknown-kid request (kid unknown-kid-second) produced a request (41 B) and a 1665 B reply on that connection.
+tcpdump: WARNING: any: That device doesn't support promiscuous mode
+(Promiscuous mode not supported on the "any" device)
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+13:23:33.703453 eth0  In  IP 151.101.2.132.443 > 192.168.215.3.38188: Flags [P.], seq 96651391:96651415, ack 1310813357, win 4096, options [nop,nop,TS val 570983453 ecr 3083674491], length 24
+13:23:33.703476 eth0  Out IP 192.168.215.3.38188 > 151.101.2.132.443: Flags [R], seq 1310813357, win 0, length 0
+13:23:33.703478 eth0  In  IP 151.101.2.132.443 > 192.168.215.3.38188: Flags [F.], seq 24, ack 1, win 4096, options [nop,nop,TS val 570983453 ecr 3083674491], length 0
+13:23:33.703480 eth0  Out IP 192.168.215.3.38188 > 151.101.2.132.443: Flags [R], seq 1310813357, win 0, length 0
+13:23:33.703496 eth0  In  IP 151.101.2.132.443 > 192.168.215.3.38188: Flags [R.], seq 25, ack 1, win 0, options [nop,nop,TS val 570983453 ecr 3083674491], length 0
+13:24:02.322005 eth0  Out IP 192.168.215.3.51178 > 23.239.29.33.443: Flags [.], ack 1276151647, win 58, options [nop,nop,TS val 2266142211 ecr 2893011944], length 0
+13:24:02.333881 eth0  In  IP 23.239.29.33.443 > 192.168.215.3.51178: Flags [.], ack 1, win 4096, options [nop,nop,TS val 2893042218 ecr 2266111949], length 0
+13:24:32.529638 eth0  Out IP 192.168.215.3.51178 > 23.239.29.33.443: Flags [.], ack 1, win 58, options [nop,nop,TS val 2266172419 ecr 2893042218], length 0
+13:24:32.529940 eth0  In  IP 23.239.29.33.443 > 192.168.215.3.51178: Flags [.], ack 1, win 4096, options [nop,nop,TS val 2893072408 ecr 2266111949], length 0
+13:24:44.784103 eth0  Out IP 192.168.215.3.51178 > 23.239.29.33.443: Flags [P.], seq 1:42, ack 1, win 58, options [nop,nop,TS val 2266184673 ecr 2893072408], length 41
+13:24:44.784301 eth0  In  IP 23.239.29.33.443 > 192.168.215.3.51178: Flags [.], ack 42, win 4095, options [nop,nop,TS val 2893084660 ecr 2266184673], length 0
+13:24:44.841222 eth0  In  IP 23.239.29.33.443 > 192.168.215.3.51178: Flags [P.], seq 1:1666, ack 42, win 4096, options [nop,nop,TS val 2893084717 ecr 2266184673], length 1665
+13:24:44.841278 eth0  Out IP 192.168.215.3.51178 > 23.239.29.33.443: Flags [.], ack 1666, win 57, options [nop,nop,TS val 2266184731 ecr 2893084717], length 0
