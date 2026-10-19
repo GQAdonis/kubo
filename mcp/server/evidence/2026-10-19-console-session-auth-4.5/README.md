@@ -67,3 +67,5 @@ Side note: the lead first misread the logout logs (no `/self-service/logout` in 
 ## Result
 
 4.6 PASS.
+
+Correction (2026-10-19, security read INFO-F): the 4.6 paragraph above says the UI is "on the pinned v26.2.0 digest since #42". That is wrong. The live and pinned kratos-ui image is `oryd/kratos-selfservice-ui-node:v1.3.1@sha256:2d6f9a84456c0e6797664e65f2a743f695794788f1e276f915d247f9e35684a3`. The 4.6 check passed on v1.3.1, so the conditional image switch in 4.3 is still not needed.

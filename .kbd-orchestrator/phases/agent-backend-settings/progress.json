@@ -2,17 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2096,
-  "derivedRevision": 2096,
+  "sourceRevision": 2111,
+  "derivedRevision": 2111,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 207
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 222
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-19T09:41:36.218663Z",
+  "last_updated": "2026-10-19T11:11:38.257270Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 37,
   "changes_completed": 32,
@@ -76,10 +76,10 @@
       "title": "Console session auth (Hydra + Envoy OIDC)",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 45,
-      "tasks_done": 33,
-      "last_task_completed": "5.4 After OG-25 (merge, plus an operator-approved probe pod): verify enforcement. Acceptance: the evidence README ",
-      "next_task_pending": "6.0 Close #40 LOW-2: pg_hba in flint-forge-postgres18 (gates OG-26)",
+      "tasks_total": 46,
+      "tasks_done": 35,
+      "last_task_completed": "6.0a Pre-OG-26 hardening (know-me-cluster #44)",
+      "next_task_pending": "6.1 Cutover PR. Contents:",
       "blockers": []
     },
     {
