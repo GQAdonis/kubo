@@ -119,3 +119,10 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 - Options: (a) swap basicAuth for OIDC in one PR after 6.0 and the open gates (MEDIUM-1, LOW-4, INFO-B) close; (b) the same swap now with the gates as accepted residuals.
 - Decision: (a), operator's choice "Swap for OIDC, gates first". Task 6.1 also lands the browser on `/webui/` after login and sets Hydra `urls.post_logout_redirect` and the `ipfs-console` post-logout URI to `/webui/`.
 - Risk: the console stays on basic auth (and the double-auth friction the operator reported) until group 6 lands.
+
+## 2026-10-19: cutover ships a session-mode Web UI; logout uses unencrypted Envoy token cookies
+
+- Context: the pushed candidate `ghcr.io/gqadonis/kubo:1cfa42a62` (`sha256:1b88becaf2e1…`) embeds Web UI `bafybeif77…` built from ipfs-webui `21baf2bb`, which predates session mode (3.1-3.7), and no node provides that CID. The 6.1 draft (know-me-cluster #48) found that Envoy sends its encrypted ID-token cookie as `id_token_hint` and always `post_logout_redirect_uri=https://console.prometheusags.ai/`, both of which Hydra v26.2.0 rejects.
+- Decision 1 (operator: "Rebuild with session mode"): build ipfs-webui at `81674a5e` (contains 3.1-3.7), bump `WebUIPath` in `core/corehttp/webui.go` to that CID (operator approved the webui.go change), rebuild and re-smoke the image, operator pushes, import the Web UI CAR into `ipfs-0`, then the image PR moves image, route prefix and pin. The `1cfa42a62` image is not deployed.
+- Decision 2 (operator: "Disable token encryption"): `disableTokenEncryption: true` on the console OIDC policy, and `https://console.prometheusags.ai/` re-added to the `ipfs-console` client's post-logout URIs (the `/` -> `/webui/` redirect then lands the browser on `/webui/`).
+- Risk: one more build round before the cutover. With encryption off, the console token cookies (HttpOnly, Secure, Lax) carry readable tokens to anyone who already holds the cookie.
