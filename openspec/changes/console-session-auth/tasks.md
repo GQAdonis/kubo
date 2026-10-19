@@ -80,6 +80,19 @@ Prerequisite: task 1.5 is done (go-jose at least `v4.1.6` in all three `go.mod` 
 
 - [x] 6.0 Close #40 LOW-2 (operator-accepted interim residual, 2026-10-18). ~~In the `flint-forge-postgres18` image's pg_hba~~ Amended 2026-10-19: no image rebuild; ConfigMap `flint-core/postgres-hba` mounted read-only at `/etc/postgresql/hba` and `-c hba_file=/etc/postgresql/hba/pg_hba.conf` on StatefulSet `postgres` (know-me-cluster #45, a separate PR because its sync restarts `postgres-0`). The file reproduces the seven live rules of `$PGDATA/pg_hba.conf` in order and adds, first-match and ahead of the generic host rule: `host hydra hydra all scram-sha-256`, then `host all hydra all reject`; the upstream `scram-sha-256` host rule stays last. Acceptance: after the operator-scheduled merge and the restart, `show hba_file` is the ConfigMap path with 0 parse errors in `pg_hba_file_rules`, a connection as `hydra` to `hydra` succeeds and one to `flint` is rejected by pg_hba (operator-run, password never printed), and the security-reviewer marks LOW-2 resolved. Gates OG-26.
 - [x] 6.0a Pre-OG-26 hardening (know-me-cluster #44, no postgres restart). Contents: INFO-B (`flint-auth-https` HTTPRoutes from flint-core only; `flint-auth-http` from flint-core and argocd, because the HTTP-01 solver route for `wildcard-know-me-tools-tls`, which covers `auth.know-me.tools`, lives in argocd); LOW-8 (kratos-ui runAsNonRoot, seccomp RuntimeDefault, no privilege escalation, drop ALL; image `USER 10000`); LOW-4 (Hydra `oauth2.pkce.enforced: true`: Envoy v1.39.1's oauth2 filter, used by Envoy Gateway v1.9.1, always sends S256); Hydra `urls.post_logout_redirect: https://console.prometheusags.ai/webui/`. MEDIUM-1 repo part needed no change (the hydra-ingress namespace assertion is in `networkpolicy-check.sh` since #39); the live unlabeled-flint-core-pod probe stays an operator-approved step. Acceptance: #44 merged and synced, `verify.sh` PASS for flint-core and argocd, discovery still 200, and the security-reviewer confirms INFO-B, LOW-4, LOW-8 closed.
+- [ ] 6.0b Close pre-OG-26 MEDIUM-2 and LOW-9 (know-me-cluster #46, no restart). The Kratos cookie domain stays `know-me.tools`, because flint-gate's `kratos_session` provider needs it. The 16 `argocd-gateway` listeners that still had `from: All` now admit kinds HTTPRoute only, with `from: Selector` naming the namespace that owns each listener's live routes:
+  - flint-core on `flint-{sso,gate,api,rt}-https`;
+  - argocd and flint-core on `flint-{sso,gate,api,rt}-http`. These hosts are on `wildcard-know-me-tools-tls`, which uses `letsencrypt-http01`, whose solver route lives in argocd;
+  - knowme on `knowme-{site,www,runtime}-{https,http}`. These hosts use DNS-01, so argocd is not admitted. `runtime` has 0 routes today, and the operator can choose to admit no namespace there instead;
+  - knowdesign on `design-{https,http}`.
+
+  New `namespaces/argocd-config/lke-checks/know-me-listener-check.sh` with `--self-test` pins every `know-me.tools` stanza, including `flint-auth-*`. Acceptance:
+  - #46 is merged and synced;
+  - every listener is Programmed, with the attached-route counts recorded in the PR body unchanged;
+  - `verify.sh` PASS for argocd;
+  - the security-reviewer confirms MEDIUM-2 and LOW-9 closed.
+
+  Gates OG-26.
 
 - [ ] 6.1 Cutover PR. Contents:
   - `ipfs-webui-auth` keeps its name and annotations; its spec becomes `oidc`:
