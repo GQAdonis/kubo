@@ -65,3 +65,19 @@ Note on the JWKS egress: the startup prefetch holds a keep-alive connection to 2
 - Containers started and removed by ID (`container-ids.txt`; the first `b` is the first b run whose exit message I did not capture, rerun as the second `b`). An alpine tcpdump sidecar shared scenario e's network namespace. Nothing pruned. Containers publish no ports; nothing touched 4001/5001/8080/5050 on the host.
 - Forged JWTs were written to the session scratchpad and never printed or committed; `forge.py` is here. The scenario c token exists only inside its (removed) container.
 - Scripts copied from the previous run: `run-scenario.sh` (image tag changed), `smoke-entry.sh`, `raw-run2.sh`, `raw-oidc.sh`, `tools.sh`, `probe.sh`, `forge.py`, `cfg-*.json`.
+
+## Lead addendum: push and provenance (2026-10-19, LOW-13)
+
+Operator ran `docker push ghcr.io/gqadonis/kubo:1140ff10c`; registry digest `sha256:3467dea860aeb097054bdf10391abcada49b48755b3a7bd9c0f585253f952cb6` (size 2407). Link to the tested image:
+
+```
+$ docker image inspect ghcr.io/gqadonis/kubo:1140ff10c --format '{{.Id}} {{json .RepoDigests}}'
+sha256:a50f357ce2f48621ca47bf6d75a3429ecd826666cfc6d92e8a69665e65f64086 ["ghcr.io/gqadonis/kubo@sha256:3467dea860aeb097054bdf10391abcada49b48755b3a7bd9c0f585253f952cb6"]
+$ docker buildx imagetools inspect --raw ghcr.io/gqadonis/kubo@sha256:3467dea8… | jq -r .config.digest,.mediaType
+sha256:a50f357ce2f48621ca47bf6d75a3429ecd826666cfc6d92e8a69665e65f64086
+application/vnd.docker.distribution.manifest.v2+json
+```
+
+The local image ID of the tested build (`sha256:a50f357c…`) is the manifest's `config.digest`, and the tag's RepoDigest is the pushed digest, so the deployed digest is the tested image.
+
+Web UI CAR imported into `ipfs-0` before #50 (operator-directed): `Pinned root bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa success`, `Imported 388 blocks (21551384 bytes)`, `pin ls`: recursive.
