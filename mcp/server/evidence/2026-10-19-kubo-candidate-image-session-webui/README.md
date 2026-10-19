@@ -81,3 +81,28 @@ application/vnd.docker.distribution.manifest.v2+json
 The local image ID of the tested build (`sha256:a50f357c…`) is the manifest's `config.digest`, and the tag's RepoDigest is the pushed digest, so the deployed digest is the tested image.
 
 Web UI CAR imported into `ipfs-0` before #50 (operator-directed): `Pinned root bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa success`, `Imported 388 blocks (21551384 bytes)`, `pin ls`: recursive.
+
+## 1.3-f: exact #48 config (LOW-18, 2026-10-19)
+
+`1.3-f-exact-config.txt`. Same image (`ghcr.io/gqadonis/kubo:1140ff10c`, digest `sha256:3467dea8...`), but with the `config.json` of ConfigMap `ipfs-mcp-config` copied from the #48 branch tree (`kmc-cutover` HEAD `6104fc0919eb`, `namespaces/ipfs/manifests.yaml` sha256 `2185f5a01153f85fa029ee9df848ba84a4a8abf17b61abc8b16aad170a1bc6f4`). Config sha256 `7552bb669bdf35037f30e9b6cf0e46daddf29991c166df3010dad90c5c1f895e` (`cfg-exact-48.json`). The sidecar command is the manifest's verbatim: `ipfs mcp --http=0.0.0.0:5050 --api=/ip4/127.0.0.1/tcp/5001 --auth-token-env=IPFS_MCP_TOKEN --mcp-config=/mcp-config/config.json`, uid 1000, with a throwaway `IPFS_MCP_TOKEN` generated in the container and never printed. An offline `ipfs daemon` runs in the same container (API on 5001 inside the container's own network namespace, as in the pod; nothing published to the host). Entrypoint `exact-entry.sh`, probe `exact-probe.sh`.
+
+| Expectation | Result |
+|---|---|
+| Startup succeeds | PASS: `serving MCP over HTTP on http://[::]:5050/mcp` |
+| Startup log names OIDC on, route `session` only | PASS: `auth.oidc is on: session tokens from https://oauth.know-me.tools are accepted on routes session` |
+| `/auth/session` 401 with no token | PASS (probe 1) |
+| `/auth/session` 401 with a garbage bearer | PASS (probe 2); forged RS256 JWT also 401 (probe 3) |
+| JWT refused on `/mcp` | PASS: forged JWT 401 (probe 4); no token 401 (probe 5) |
+| Existing bearer principal (`--auth-token-env`) works on `/mcp` | PASS: `initialize` with the throwaway token 200 (probe 6) |
+| Bearer token is not accepted on `/auth/session` | 401 (probe 7), as the route accepts session tokens only |
+| `/agui` not served | 404 (probe 8) |
+
+Observations:
+
+- The ConfigMap has no `agent.origin_allowlist`. A request that carries an `Origin` is refused 403 (`reason=origin`) before authentication, including `GET /auth/session` with `Origin: https://console.prometheusags.ai` (probes 9, 10). The Web UI's same-origin GET sends no `Origin`, so the session probe path is unaffected (probes 1 to 3 send none). Any state-changing session route (`require_origin: true`) would need the allowlist, but only `session` (GET) is routed, so this is inert for #48; it matters when lke-agent-settings adds routes.
+- Only the log lines before probe 9 are from this scenario's probes; the first seven `rejected request reason=origin` lines come from an earlier attempt of the same container where my probe script sent the literal `Origin: -` (a script bug, fixed; the first two aborted runs hit a bind-mount race and a test-profile random API port).
+- The manifest's `ipfs-mcp` sidecar pins `ghcr.io/gqadonis/kubo@sha256:38d453a5...cf40cca`, not the tested `sha256:3467dea8...`. This run tested the latter, as instructed; the manifest digest is a different image and was not run.
+
+Not verified: a valid ID token against the live issuer (no way to mint one); the pod itself (shared netns, Secret mount, `imagePullSecrets`, Gateway/SecurityPolicy), which is container-level only here; the 403 vs 401 split on a state-changing session route.
+
+Containers: three started (two failed on harness issues before probing), all removed by ID; nothing pruned.

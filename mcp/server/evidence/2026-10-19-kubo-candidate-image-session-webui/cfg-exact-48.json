@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/GQAdonis/kubo/feat/ipfs-mcp-server/mcp/contract/config/ipfs-mcp-config.schema.json",
+  "http": {
+    "enabled": true,
+    "listen": "0.0.0.0:5050"
+  },
+  "tools": {
+    "groups": [
+      "node",
+      "content",
+      "pin",
+      "mfs",
+      "names",
+      "dag",
+      "routing",
+      "diag"
+    ],
+    "read_only": false
+  },
+  "confirmation": {
+    "modes": []
+  },
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.know-me.tools",
+      "audiences": [
+        "ipfs-console"
+      ],
+      "jwks_url": "https://oauth.know-me.tools/.well-known/jwks.json",
+      "algorithms": [
+        "RS256"
+      ],
+      "routes": [
+        "session"
+      ],
+      "require_origin": true
+    }
+  },
+  "principals": [
+    {
+      "name": "console-ui",
+      "kind": "ui",
+      "subjects": [
+        "461e5d70-d7a6-48ec-a20e-06b5e0236881"
+      ],
+      "groups": []
+    }
+  ]
+}

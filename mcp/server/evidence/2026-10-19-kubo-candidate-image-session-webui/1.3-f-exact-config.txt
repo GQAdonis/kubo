@@ -1,0 +1,58 @@
+# image ghcr.io/gqadonis/kubo:1140ff10c (digest sha256:3467dea8...); config = ConfigMap ipfs-mcp-config config.json from the #48 branch manifests.yaml, sha256 7552bb669bdf35037f30e9b6cf0e46daddf29991c166df3010dad90c5c1f895e (manifests.yaml sha256 2185f5a01153f85fa029ee9df848ba84a4a8abf17b61abc8b16aad170a1bc6f4, kmc-cutover HEAD 6104fc0919eb)
+# sidecar args, verbatim: ipfs mcp --http=0.0.0.0:5050 --api=/ip4/127.0.0.1/tcp/5001 --auth-token-env=IPFS_MCP_TOKEN --mcp-config=/mcp-config/config.json (uid 1000; IPFS_MCP_TOKEN throwaway, generated in-container, never printed)
+# daemon: ipfs daemon --offline, same container/netns, own IPFS_PATH, API 5001 inside the container netns (nothing published to the host)
+# startup log:
+ipfs mcp: auth.oidc is on: session tokens from https://oauth.know-me.tools are accepted on routes session (keys at https://oauth.know-me.tools/.well-known/jwks.json)
+ipfs mcp: serving MCP over HTTP on http://[::]:5050/mcp
+time=2026-10-19T16:19:33.294Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.531Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.647Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.771Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.914Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:34.053Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:34.195Z level=WARN msg="rejected request" reason=origin
+
+## 1 | GET /auth/session | token=- origin=none
+  HTTP/1.1 401 Unauthorized
+wget: server returned error: HTTP/1.1 401 Unauthorized
+## 2 | GET /auth/session | token=/garbage.tok origin=none
+  HTTP/1.1 401 Unauthorized
+wget: server returned error: HTTP/1.1 401 Unauthorized
+## 3 | GET /auth/session | token=/forged.jwt origin=none
+  HTTP/1.1 401 Unauthorized
+wget: server returned error: HTTP/1.1 401 Unauthorized
+## 4 | POST /mcp | token=/forged.jwt origin=none
+  HTTP/1.1 401 Unauthorized
+wget: server returned error: HTTP/1.1 401 Unauthorized
+## 5 | POST /mcp | token=- origin=none
+  HTTP/1.1 401 Unauthorized
+wget: server returned error: HTTP/1.1 401 Unauthorized
+## 6 | POST /mcp | token=/tmp/mcp.token origin=none
+  HTTP/1.1 200 OK
+## 7 | GET /auth/session | token=/tmp/mcp.token origin=none
+  HTTP/1.1 401 Unauthorized
+wget: server returned error: HTTP/1.1 401 Unauthorized
+## 8 | POST /agui | token=/forged.jwt origin=none
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+## 9 | GET /auth/session | token=- origin=https://console.prometheusags.ai
+  HTTP/1.1 403 Forbidden
+wget: server returned error: HTTP/1.1 403 Forbidden
+## 10 | GET /auth/session | token=/forged.jwt origin=https://console.prometheusags.ai
+  HTTP/1.1 403 Forbidden
+wget: server returned error: HTTP/1.1 403 Forbidden
+
+# daemon alive after probes:
+ipfs version 0.44.0-dev
+# mcp log tail (warnings):
+ipfs mcp: auth.oidc is on: session tokens from https://oauth.know-me.tools are accepted on routes session (keys at https://oauth.know-me.tools/.well-known/jwks.json)
+ipfs mcp: serving MCP over HTTP on http://[::]:5050/mcp
+time=2026-10-19T16:19:33.294Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.531Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.647Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.771Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:33.914Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:34.053Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:19:34.195Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:20:06.145Z level=WARN msg="rejected request" reason=origin
+time=2026-10-19T16:20:06.262Z level=WARN msg="rejected request" reason=origin
