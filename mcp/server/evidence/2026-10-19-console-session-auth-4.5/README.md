@@ -44,3 +44,26 @@ The `ip=` field the probe printed read `unresolved` on every line, the same awk 
 ## Result
 
 PASS. Remaining in group 4: 4.6, the operator's browser check.
+
+# 4.6: operator browser check (2026-10-19)
+
+Run by the operator in a browser. The operator had no Kratos account; registration is enabled (`selfservice.flows.registration.enabled: true`, password method), so the operator signed up at `auth.know-me.tools` from the Hydra login page.
+
+| Step | Operator result | Logs |
+|---|---|---|
+| Throwaway authorization request for `ipfs-console` (state `237982d5…`) | Kratos sign-up and login completed; no consent screen; landed on `console.prometheusags.ai/oauth2/callback?code=ory_ac_…&scope=openid+email&state=237982d5…` (404, expected: nothing serves the callback before 6.1) | Hydra: `requests/login/accept` 200, `requests/consent/accept` 200 (kratos-ui auto-accepts for `skip_consent`) |
+| Logout `https://oauth.know-me.tools/oauth2/sessions/logout` | "Your log out request however succeeded" on Hydra's fallback page | Hydra `requests/logout/accept`, `fallbacks/logout/callback`; kratos-ui `GET`/`POST /ui/logout`; Kratos `whoami` 401 at 09:32:32Z (Kratos session ended) |
+| Login again (state `9b2e4c6a…`) | Asked for the password again; landed on the callback with a new `code` | Kratos login form 09:37:47Z, `POST /self-service/login` 09:38:18Z 303; Hydra login and consent accept 200 |
+
+#39 LOW-2 check: across login, consent skip and logout, no kratos-ui log line mentions 4434, `kratos-admin` or `oryapis`; `KRATOS_ADMIN_URL` is unset; a request from kratos-ui to `kratos-admin:4434` times out (`kratos-ingress`), and the flow still completed, so kratos-ui does not need Kratos admin. Limit: kratos-ui logs only inbound requests and no egress policy selects it, so an outbound call to `oryapis.com` would not leave a log line; the result there is "no evidence of a call", not proof. No change to `KRATOS_ADMIN_URL` or `kratos-ingress` is needed. The v1.3.1 image switch in 4.3 is not needed (the UI is on the pinned v26.2.0 digest since #42).
+
+Side note: the lead first misread the logout logs (no `/self-service/logout` in a 20-minute window) as the Kratos session surviving logout; the operator's re-login asked for the password and Kratos `whoami` returned 401 after logout, so that reading was wrong and is withdrawn.
+
+## Follow-ups for group 6 (operator, 2026-10-19)
+
+- After the OIDC login the operator must land on `https://console.prometheusags.ai/webui/`, not `/` (which does not serve GET). Operator, verbatim: "this should have taken me to the `/webui` URL and not the root".
+- Hydra `urls.post_logout_redirect` is unset, so logout ends on Hydra's fallback page ("Logout succeeds but currently has nowhere to go"). Set it, and point the `ipfs-console` client's post-logout URI at `https://console.prometheusags.ai/webui/` (currently `/`).
+
+## Result
+
+4.6 PASS.

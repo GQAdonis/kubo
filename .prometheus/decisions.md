@@ -112,3 +112,10 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 - Decision: once OG-24 sets the `hydra` password, the role can connect to `flint`, `kratos`, `flintgate`, `broker` and `frf` with default PUBLIC rights. Accepted until the cutover. Rationale: no component trusts Hydra before group 6, and `hydra-admin` 4445 is NetworkPolicy-restricted.
 - Follow-up: console-session-auth task 6.0 (pg_hba `host hydra hydra all scram-sha-256`, then `host all hydra all reject`), gating OG-26.
 - Risk: a Hydra compromise between OG-24 and 6.0 could open a session on `flint` and use anything granted to PUBLIC there, including PUBLIC-executable `SECURITY DEFINER` functions.
+
+## 2026-10-19: console basic auth is removed only by the OIDC swap, after the gates
+
+- Context: the operator asked to remove basic auth on the console route because it conflicts with the OIDC login. `ipfs-webui-auth` (basicAuth) targets HTTPRoute `ipfs-webui`, which carries `/webui` and `/api/v0` (full Kubo RPC). Removing it alone would leave the node's RPC open to the internet.
+- Options: (a) swap basicAuth for OIDC in one PR after 6.0 and the open gates (MEDIUM-1, LOW-4, INFO-B) close; (b) the same swap now with the gates as accepted residuals.
+- Decision: (a), operator's choice "Swap for OIDC, gates first". Task 6.1 also lands the browser on `/webui/` after login and sets Hydra `urls.post_logout_redirect` and the `ipfs-console` post-logout URI to `/webui/`.
+- Risk: the console stays on basic auth (and the double-auth friction the operator reported) until group 6 lands.
