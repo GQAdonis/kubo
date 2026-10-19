@@ -13,16 +13,17 @@ import (
 
 // WebUI version confirmed to work with this Kubo version.
 //
-// Fork only: this is the GQAdonis/ipfs-webui build at commit 2be6b78c
-// (branch feat/ipfs-mcp-server, WebMCP integration), built with `npm run build`
-// and merkleized with `ipfs add --cid-version 1 -Q -r -n ./build`, the recipe
-// of upstream's release workflow. The previous upstream build (v4.13.0) stays
-// in WebUIPaths.
-const WebUIPath = "/ipfs/bafybeif77lxxz7nvkjfvzvjron2gcruxf44ahfgsen4bpfsppteglge7ou"
+// Fork only: this is the GQAdonis/ipfs-webui build at commit 81674a5e
+// (branch feat/ipfs-mcp-server, WebMCP integration and session mode), built
+// with `npm run build` and merkleized with `ipfs add --cid-version 1 -r -Q ./build`.
+// The previous fork builds and the upstream build (v4.13.0) stay in WebUIPaths.
+const WebUIPath = "/ipfs/bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa"
 
 // WebUIPaths is a list of all past webUI paths.
 var WebUIPaths = []string{
 	WebUIPath,
+	"/ipfs/bafybeif77lxxz7nvkjfvzvjron2gcruxf44ahfgsen4bpfsppteglge7ou", // fork, ipfs-webui 21baf2bb
+	"/ipfs/bafybeiblix77cfttmrmz5h54qacay5f4z5bgajc736ufiyoy5cus54stki", // fork, ipfs-webui 2be6b78c
 	"/ipfs/bafybeiciqeyipumpmhxzlxnbqdbbv6u5uij4hy4wax64dmj7kvrhusiq6y", // v4.13.0
 	"/ipfs/bafybeihxglpcfyarpm7apn7xpezbuoqgk3l5chyk7w4gvrjwk45rqohlmm", // v4.12.0
 	"/ipfs/bafybeiddnr2jz65byk67sjt6jsu6g7tueddr7odhzzpzli3rgudlbnc6iq", // v4.11.1
