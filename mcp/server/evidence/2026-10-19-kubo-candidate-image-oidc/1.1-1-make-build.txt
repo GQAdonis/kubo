@@ -1,0 +1,3 @@
+plugin/loader/preload.sh > plugin/loader/preload.go
+go fmt plugin/loader/preload.go >/dev/null
+go build  "-trimpath" -ldflags="-X "github.com/ipfs/kubo".CurrentCommit=1cfa42a62 -X "github.com/ipfs/kubo".taggedRelease= -X "github.com/ipfs/kubo".buildOrigin=github.com/GQAdonis/kubo" -o "cmd/ipfs/ipfs" "github.com/ipfs/kubo/cmd/ipfs"

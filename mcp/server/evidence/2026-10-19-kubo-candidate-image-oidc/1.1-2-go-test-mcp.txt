@@ -1,0 +1,6 @@
+ok  	github.com/ipfs/kubo/mcp/app	0.048s
+ok  	github.com/ipfs/kubo/mcp/contract	1.469s
+ok  	github.com/ipfs/kubo/mcp/server	43.782s
+ok  	github.com/ipfs/kubo/mcp/server/confirm	0.895s
+ok  	github.com/ipfs/kubo/mcp/server/embeddings	1.835s
+?   	github.com/ipfs/kubo/mcp/ui/catalog	[no test files]

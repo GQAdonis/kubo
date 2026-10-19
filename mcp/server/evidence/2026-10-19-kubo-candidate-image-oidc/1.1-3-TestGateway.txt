@@ -1,0 +1,245 @@
+=== RUN   TestGateway
+=== PAUSE TestGateway
+=== CONT  TestGateway
+=== RUN   TestGateway/GET_IPFS_path_succeeds
+=== PAUSE TestGateway/GET_IPFS_path_succeeds
+=== RUN   TestGateway/GET_IPFS_path_with_explicit_?filename_succeeds_with_proper_header
+=== PAUSE TestGateway/GET_IPFS_path_with_explicit_?filename_succeeds_with_proper_header
+=== RUN   TestGateway/GET_IPFS_path_with_explicit_?filename_and_&download=true_succeeds_with_proper_header
+=== PAUSE TestGateway/GET_IPFS_path_with_explicit_?filename_and_&download=true_succeeds_with_proper_header
+=== RUN   TestGateway/GET_for_Server_Worker_registration_outside_of_an_IPFS_content_root_errors
+=== PAUSE TestGateway/GET_for_Server_Worker_registration_outside_of_an_IPFS_content_root_errors
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds
+=== RUN   TestGateway/IPNS
+=== PAUSE TestGateway/IPNS
+=== RUN   TestGateway/GET_invalid_IPFS_path_errors
+=== PAUSE TestGateway/GET_invalid_IPFS_path_errors
+=== RUN   TestGateway/GET_invalid_path_errors
+=== PAUSE TestGateway/GET_invalid_path_errors
+=== RUN   TestGateway/GET_/webui_returns_301_or_302
+=== PAUSE TestGateway/GET_/webui_returns_301_or_302
+=== RUN   TestGateway/GET_/webui/_returns_301_or_302
+=== PAUSE TestGateway/GET_/webui/_returns_301_or_302
+=== RUN   TestGateway/GET_/webui/_returns_user-specified_headers
+=== PAUSE TestGateway/GET_/webui/_returns_user-specified_headers
+=== RUN   TestGateway/X-Ipfs-Path_returns_only_with_Gateway.DeprecatedXIpfsPath
+=== PAUSE TestGateway/X-Ipfs-Path_returns_only_with_Gateway.DeprecatedXIpfsPath
+=== RUN   TestGateway/POST_/api/v0/version_succeeds
+=== PAUSE TestGateway/POST_/api/v0/version_succeeds
+=== RUN   TestGateway/pprof
+=== PAUSE TestGateway/pprof
+=== RUN   TestGateway/index_content_types
+=== PAUSE TestGateway/index_content_types
+=== RUN   TestGateway/raw_leaves_node
+=== PAUSE TestGateway/raw_leaves_node
+=== RUN   TestGateway/compact_blocks
+=== PAUSE TestGateway/compact_blocks
+=== RUN   TestGateway/verify_gateway_file
+=== PAUSE TestGateway/verify_gateway_file
+=== RUN   TestGateway/verify_gateway_file_diallable_while_on_unspecified
+=== PAUSE TestGateway/verify_gateway_file_diallable_while_on_unspecified
+=== RUN   TestGateway/NoFetch
+=== PAUSE TestGateway/NoFetch
+=== RUN   TestGateway/DeserializedResponses
+=== RUN   TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_leaving_implicit_default_for_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(enabled)
+=== PAUSE TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_leaving_implicit_default_for_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(enabled)
+=== RUN   TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_leaving_implicit_default_on_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(disabled)
+=== PAUSE TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_leaving_implicit_default_on_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(disabled)
+=== RUN   TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_explicitly_enabling_on_Gateway.PublicGateways[example.com]_should_override_global_(enabled)
+=== PAUSE TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_explicitly_enabling_on_Gateway.PublicGateways[example.com]_should_override_global_(enabled)
+=== RUN   TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_explicitly_disabling_on_Gateway.PublicGateways[example.com]_should_override_global_(disabled)
+=== PAUSE TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_explicitly_disabling_on_Gateway.PublicGateways[example.com]_should_override_global_(disabled)
+=== CONT  TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_leaving_implicit_default_for_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(enabled)
+=== CONT  TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_explicitly_enabling_on_Gateway.PublicGateways[example.com]_should_override_global_(enabled)
+=== CONT  TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_leaving_implicit_default_on_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(disabled)
+=== CONT  TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_explicitly_disabling_on_Gateway.PublicGateways[example.com]_should_override_global_(disabled)
+=== RUN   TestGateway/DisableHTMLErrors
+=== PAUSE TestGateway/DisableHTMLErrors
+=== CONT  TestGateway/GET_IPFS_path_succeeds
+=== CONT  TestGateway/DisableHTMLErrors
+=== RUN   TestGateway/DisableHTMLErrors/Returns_HTML_error_without_DisableHTMLErrors,_Accept_contains_text/html
+=== PAUSE TestGateway/DisableHTMLErrors/Returns_HTML_error_without_DisableHTMLErrors,_Accept_contains_text/html
+=== RUN   TestGateway/DisableHTMLErrors/Does_not_return_HTML_error_with_DisableHTMLErrors_enabled,_and_Accept_contains_text/html
+=== PAUSE TestGateway/DisableHTMLErrors/Does_not_return_HTML_error_with_DisableHTMLErrors_enabled,_and_Accept_contains_text/html
+=== CONT  TestGateway/DisableHTMLErrors/Returns_HTML_error_without_DisableHTMLErrors,_Accept_contains_text/html
+=== CONT  TestGateway/NoFetch
+=== CONT  TestGateway/GET_/webui/_returns_301_or_302
+=== CONT  TestGateway/index_content_types
+=== CONT  TestGateway/pprof
+=== CONT  TestGateway/GET_/webui_returns_301_or_302
+=== CONT  TestGateway/IPNS
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds
+=== CONT  TestGateway/GET_IPFS_path_with_explicit_?filename_and_&download=true_succeeds_with_proper_header
+=== CONT  TestGateway/GET_IPFS_path_with_explicit_?filename_succeeds_with_proper_header
+=== CONT  TestGateway/DisableHTMLErrors/Does_not_return_HTML_error_with_DisableHTMLErrors_enabled,_and_Accept_contains_text/html
+=== CONT  TestGateway/GET_for_Server_Worker_registration_outside_of_an_IPFS_content_root_errors
+=== CONT  TestGateway/GET_invalid_IPFS_path_errors
+=== CONT  TestGateway/GET_invalid_path_errors
+=== CONT  TestGateway/X-Ipfs-Path_returns_only_with_Gateway.DeprecatedXIpfsPath
+=== CONT  TestGateway/POST_/api/v0/version_succeeds
+=== CONT  TestGateway/verify_gateway_file
+=== CONT  TestGateway/verify_gateway_file_diallable_while_on_unspecified
+=== CONT  TestGateway/GET_/webui/_returns_user-specified_headers
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_index_file_CID
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_index_file_CID
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_test_file_CID
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_test_file_CID
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_returns_redirect_to_add_trailing_slash
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_returns_redirect_to_add_trailing_slash
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_no_trailing_slash_returns_expected_output_when_go-get_is_passed
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_no_trailing_slash_returns_expected_output_when_go-get_is_passed
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_trailing_slash_returns_expected_output
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_trailing_slash_returns_expected_output
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_nonexistent_file_returns_404_(Not_Found)
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_nonexistent_file_returns_404_(Not_Found)
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_invalid_CID_returns_400_(Bad_Request)
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_invalid_CID_returns_400_(Bad_Request)
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_returns_ok_code_(200)
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_returns_ok_code_(200)
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_with_byte_range_returns_ok_code_(200)
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_with_byte_range_returns_ok_code_(200)
+=== RUN   TestGateway/GET_IPFS_directory_path_succeeds/GET_/ipfs/ipfs/{cid}_returns_redirect_to_the_valid_path
+=== PAUSE TestGateway/GET_IPFS_directory_path_succeeds/GET_/ipfs/ipfs/{cid}_returns_redirect_to_the_valid_path
+=== CONT  TestGateway/compact_blocks
+=== RUN   TestGateway/IPNS/GET_invalid_IPNS_root_returns_500_(Internal_Server_Error)
+=== PAUSE TestGateway/IPNS/GET_invalid_IPNS_root_returns_500_(Internal_Server_Error)
+=== RUN   TestGateway/IPNS/GET_IPNS_path_succeeds
+=== PAUSE TestGateway/IPNS/GET_IPNS_path_succeeds
+=== RUN   TestGateway/IPNS/GET_IPNS_path_has_correct_Cache-Control
+=== PAUSE TestGateway/IPNS/GET_IPNS_path_has_correct_Cache-Control
+=== RUN   TestGateway/IPNS/GET_/ipfs/ipns/{peerid}_returns_redirect_to_the_valid_path
+=== PAUSE TestGateway/IPNS/GET_/ipfs/ipns/{peerid}_returns_redirect_to_the_valid_path
+=== CONT  TestGateway/raw_leaves_node
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_index_file_CID
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_nonexistent_file_returns_404_(Not_Found)
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_/ipfs/ipfs/{cid}_returns_redirect_to_the_valid_path
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_with_byte_range_returns_ok_code_(200)
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_returns_ok_code_(200)
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_invalid_CID_returns_400_(Bad_Request)
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_no_trailing_slash_returns_expected_output_when_go-get_is_passed
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_trailing_slash_returns_expected_output
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_returns_redirect_to_add_trailing_slash
+=== CONT  TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_test_file_CID
+=== CONT  TestGateway/IPNS/GET_invalid_IPNS_root_returns_500_(Internal_Server_Error)
+=== CONT  TestGateway/IPNS/GET_IPNS_path_has_correct_Cache-Control
+=== CONT  TestGateway/IPNS/GET_/ipfs/ipns/{peerid}_returns_redirect_to_the_valid_path
+=== CONT  TestGateway/IPNS/GET_IPNS_path_succeeds
+=== RUN   TestGateway/index_content_types/GET_index.html_has_correct_content_type
+=== PAUSE TestGateway/index_content_types/GET_index.html_has_correct_content_type
+=== RUN   TestGateway/index_content_types/HEAD_index.html_has_no_content
+=== PAUSE TestGateway/index_content_types/HEAD_index.html_has_no_content
+=== CONT  TestGateway/index_content_types/GET_index.html_has_correct_content_type
+=== CONT  TestGateway/index_content_types/HEAD_index.html_has_no_content
+=== RUN   TestGateway/pprof/mutex
+=== PAUSE TestGateway/pprof/mutex
+=== RUN   TestGateway/pprof/block
+=== PAUSE TestGateway/pprof/block
+=== CONT  TestGateway/pprof/mutex
+=== CONT  TestGateway/pprof/block
+=== RUN   TestGateway/pprof/block/setting_the_block_profiler_rate_works_(0_so_it_doesn't_enable)
+=== PAUSE TestGateway/pprof/block/setting_the_block_profiler_rate_works_(0_so_it_doesn't_enable)
+=== RUN   TestGateway/pprof/mutex/setting_the_mutex_fraction_works_(negative_so_it_doesn't_enable)
+=== PAUSE TestGateway/pprof/mutex/setting_the_mutex_fraction_works_(negative_so_it_doesn't_enable)
+=== RUN   TestGateway/pprof/block/block_profiler_endpoint_doesn't_accept_a_string_as_an_argument
+=== PAUSE TestGateway/pprof/block/block_profiler_endpoint_doesn't_accept_a_string_as_an_argument
+=== RUN   TestGateway/pprof/mutex/mutex_endpoint_doesn't_accept_a_string_as_an_argument
+=== PAUSE TestGateway/pprof/mutex/mutex_endpoint_doesn't_accept_a_string_as_an_argument
+=== RUN   TestGateway/pprof/mutex/mutex_endpoint_returns_405_on_GET
+=== PAUSE TestGateway/pprof/mutex/mutex_endpoint_returns_405_on_GET
+=== CONT  TestGateway/pprof/mutex/setting_the_mutex_fraction_works_(negative_so_it_doesn't_enable)
+=== RUN   TestGateway/pprof/block/block_profiler_endpoint_returns_405_on_GET
+=== PAUSE TestGateway/pprof/block/block_profiler_endpoint_returns_405_on_GET
+=== CONT  TestGateway/pprof/block/setting_the_block_profiler_rate_works_(0_so_it_doesn't_enable)
+=== CONT  TestGateway/pprof/mutex/mutex_endpoint_doesn't_accept_a_string_as_an_argument
+=== CONT  TestGateway/pprof/block/block_profiler_endpoint_returns_405_on_GET
+=== CONT  TestGateway/pprof/mutex/mutex_endpoint_returns_405_on_GET
+=== CONT  TestGateway/pprof/block/block_profiler_endpoint_doesn't_accept_a_string_as_an_argument
+=== RUN   TestGateway/NoFetch/not_present
+=== RUN   TestGateway/NoFetch/not_present/not_present_CID_from_node_1
+=== PAUSE TestGateway/NoFetch/not_present/not_present_CID_from_node_1
+=== RUN   TestGateway/NoFetch/not_present/not_present_IPNS_Record_from_node_1
+=== PAUSE TestGateway/NoFetch/not_present/not_present_IPNS_Record_from_node_1
+=== CONT  TestGateway/NoFetch/not_present/not_present_CID_from_node_1
+=== CONT  TestGateway/NoFetch/not_present/not_present_IPNS_Record_from_node_1
+=== RUN   TestGateway/NoFetch/present
+=== RUN   TestGateway/NoFetch/present/present_CID_from_node_1
+=== PAUSE TestGateway/NoFetch/present/present_CID_from_node_1
+=== RUN   TestGateway/NoFetch/present/present_IPNS_Record_from_node_1
+=== PAUSE TestGateway/NoFetch/present/present_IPNS_Record_from_node_1
+=== CONT  TestGateway/NoFetch/present/present_CID_from_node_1
+=== CONT  TestGateway/NoFetch/present/present_IPNS_Record_from_node_1
+--- PASS: TestGateway (6.40s)
+    --- PASS: TestGateway/DeserializedResponses (0.00s)
+        --- PASS: TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_leaving_implicit_default_on_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(disabled) (2.03s)
+        --- PASS: TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_explicitly_disabling_on_Gateway.PublicGateways[example.com]_should_override_global_(disabled) (2.02s)
+        --- PASS: TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_enabled,_leaving_implicit_default_for_Gateway.PublicGateways[example.com]_should_inherit_the_global_setting_(enabled) (2.28s)
+        --- PASS: TestGateway/DeserializedResponses/when_Gateway.DeserializedResponses_is_globally_disabled,_explicitly_enabling_on_Gateway.PublicGateways[example.com]_should_override_global_(enabled) (2.35s)
+    --- PASS: TestGateway/GET_IPFS_path_succeeds (0.01s)
+    --- PASS: TestGateway/GET_IPFS_path_with_explicit_?filename_and_&download=true_succeeds_with_proper_header (0.01s)
+    --- PASS: TestGateway/GET_/webui/_returns_301_or_302 (0.01s)
+    --- PASS: TestGateway/GET_/webui_returns_301_or_302 (0.01s)
+    --- PASS: TestGateway/GET_for_Server_Worker_registration_outside_of_an_IPFS_content_root_errors (0.00s)
+    --- PASS: TestGateway/GET_IPFS_path_with_explicit_?filename_succeeds_with_proper_header (0.00s)
+    --- PASS: TestGateway/GET_invalid_path_errors (0.00s)
+    --- PASS: TestGateway/GET_invalid_IPFS_path_errors (0.00s)
+    --- PASS: TestGateway/verify_gateway_file (0.00s)
+    --- PASS: TestGateway/POST_/api/v0/version_succeeds (0.00s)
+    --- PASS: TestGateway/raw_leaves_node (0.57s)
+    --- PASS: TestGateway/GET_IPFS_directory_path_succeeds (0.66s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_index_file_CID (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_nonexistent_file_returns_404_(Not_Found) (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_/ipfs/ipfs/{cid}_returns_redirect_to_the_valid_path (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_with_byte_range_returns_ok_code_(200) (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_inlined_zero-length_data_object_returns_ok_code_(200) (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_invalid_CID_returns_400_(Bad_Request) (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_no_trailing_slash_returns_expected_output_when_go-get_is_passed (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_and_trailing_slash_returns_expected_output (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_directory_with_index.html_returns_redirect_to_add_trailing_slash (0.00s)
+        --- PASS: TestGateway/GET_IPFS_directory_path_succeeds/GET_IPFS_the_test_file_CID (0.00s)
+    --- PASS: TestGateway/IPNS (0.82s)
+        --- PASS: TestGateway/IPNS/GET_invalid_IPNS_root_returns_500_(Internal_Server_Error) (0.03s)
+        --- PASS: TestGateway/IPNS/GET_IPNS_path_has_correct_Cache-Control (0.00s)
+        --- PASS: TestGateway/IPNS/GET_/ipfs/ipns/{peerid}_returns_redirect_to_the_valid_path (0.00s)
+        --- PASS: TestGateway/IPNS/GET_IPNS_path_succeeds (0.00s)
+    --- PASS: TestGateway/compact_blocks (1.04s)
+    --- PASS: TestGateway/GET_/webui/_returns_user-specified_headers (2.28s)
+    --- PASS: TestGateway/pprof (2.35s)
+        --- PASS: TestGateway/pprof/block (0.00s)
+            --- PASS: TestGateway/pprof/block/block_profiler_endpoint_returns_405_on_GET (0.00s)
+            --- PASS: TestGateway/pprof/block/block_profiler_endpoint_doesn't_accept_a_string_as_an_argument (0.00s)
+            --- PASS: TestGateway/pprof/block/setting_the_block_profiler_rate_works_(0_so_it_doesn't_enable) (0.00s)
+        --- PASS: TestGateway/pprof/mutex (0.00s)
+            --- PASS: TestGateway/pprof/mutex/setting_the_mutex_fraction_works_(negative_so_it_doesn't_enable) (0.00s)
+            --- PASS: TestGateway/pprof/mutex/mutex_endpoint_returns_405_on_GET (0.00s)
+            --- PASS: TestGateway/pprof/mutex/mutex_endpoint_doesn't_accept_a_string_as_an_argument (0.00s)
+    --- PASS: TestGateway/DisableHTMLErrors (0.00s)
+        --- PASS: TestGateway/DisableHTMLErrors/Does_not_return_HTML_error_with_DisableHTMLErrors_enabled,_and_Accept_contains_text/html (2.13s)
+        --- PASS: TestGateway/DisableHTMLErrors/Returns_HTML_error_without_DisableHTMLErrors,_Accept_contains_text/html (2.39s)
+    --- PASS: TestGateway/verify_gateway_file_diallable_while_on_unspecified (2.64s)
+    --- PASS: TestGateway/index_content_types (3.19s)
+        --- PASS: TestGateway/index_content_types/GET_index.html_has_correct_content_type (0.00s)
+        --- PASS: TestGateway/index_content_types/HEAD_index.html_has_no_content (0.00s)
+    --- PASS: TestGateway/X-Ipfs-Path_returns_only_with_Gateway.DeprecatedXIpfsPath (3.47s)
+    --- PASS: TestGateway/NoFetch (4.54s)
+        --- PASS: TestGateway/NoFetch/not_present (0.23s)
+            --- PASS: TestGateway/NoFetch/not_present/not_present_CID_from_node_1 (0.00s)
+            --- PASS: TestGateway/NoFetch/not_present/not_present_IPNS_Record_from_node_1 (0.00s)
+        --- PASS: TestGateway/NoFetch/present (0.10s)
+            --- PASS: TestGateway/NoFetch/present/present_CID_from_node_1 (0.01s)
+            --- PASS: TestGateway/NoFetch/present/present_IPNS_Record_from_node_1 (0.35s)
+PASS
+ok  	github.com/ipfs/kubo/test/cli	11.452s
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/autoconf	0.372s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/fuse	0.108s [no tests to run]
+?   	github.com/ipfs/kubo/test/cli/harness	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/ipfs/kubo/test/cli/migrations	0.197s [no tests to run]
+?   	github.com/ipfs/kubo/test/cli/testutils	[no test files]
+?   	github.com/ipfs/kubo/test/cli/testutils/httprouting	[no test files]
+?   	github.com/ipfs/kubo/test/cli/testutils/pinningservice	[no test files]

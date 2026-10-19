@@ -65,3 +65,19 @@ Run by the operator: `bash ~/.local/share/know-me-ops/hydra-client-postlogout.sh
 - before: `post_logout_redirect_uris ["https://console.prometheusags.ai/"]`, `updated_at 2026-10-19T08:42:08Z`
 - after: `post_logout_redirect_uris ["https://console.prometheusags.ai/webui/"]`, `updated_at 2026-10-19T11:52:04Z`
 - unchanged: `client_id ipfs-console`, `redirect_uris ["https://console.prometheusags.ai/oauth2/callback"]`, `token_endpoint_auth_method client_secret_basic`. The secret is untouched (a JSON Patch on one field; Secret `ipfs/ipfs-console-oidc` still matches).
+
+## 6.0b (#46, MEDIUM-2 and LOW-9) after sync (2026-10-19)
+
+Operator: "PR #46 is merged" (merge `c5bc0ef`). Argo `argocd-config` synced to `c5bc0ef` at 12:51:07Z, Synced and Healthy.
+
+| Check | Observed | Result |
+|---|---|---|
+| All 25 argocd-gateway listeners Programmed | 25/25 `True` | PASS |
+| Attached-route counts equal the pre-merge simulation (`m2live/live-sim.txt`) | every listener equal (e.g. flint-rt-https 1, knowme-runtime-https 0, onyx-https 2) | PASS |
+| Negative probe (required by the read): namespace `csa-probe-medium2`, HTTPRoute for `rt.know-me.tools`, `sectionName: flint-rt-https`, rule = 302 redirect on a unique path | `Accepted=False`, reason `NotAllowedByListeners` ("No listeners included by this parent ref allowed this attachment"); the probe path returned 200 from the existing frf backend, not the probe's 302; flint-rt-https stayed at 1 route; namespace deleted 12:51:31Z to 12:51:40Z | PASS |
+| `know-me-listener-check.sh` and `--self-test` on main `c5bc0ef` | PASS, PASS | PASS |
+| `verify.sh argocd` with an external fetch of know-me.tools (200), www (301), design (401), sso (404), gate (404), api (404), rt (200), auth `/ui/login` (303), oauth discovery (200), realtor (200) | 0 failing | PASS |
+
+The sso, gate and api roots answer 404 with an empty body; their routes are attached (counts unchanged), so the 404 is the backend's answer at `/`, not a missing route. Whether those roots answered 404 before #46 was not recorded.
+
+Live DNS (LOW-12, raised to a pre-OG-26 gate pending the operator): `chat`, `livekit`, `matrix` `.know-me.tools` -> 172.169.221.204, and a `*.know-me.tools` wildcard -> 35.238.217.92 (Google Cloud); neither is a cluster gateway and both time out. See `pr46-security-read.md`, lead's checks.

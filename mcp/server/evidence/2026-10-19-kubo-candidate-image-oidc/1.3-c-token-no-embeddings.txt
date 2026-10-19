@@ -1,0 +1,23 @@
+## log
+ipfs mcp: AG-UI endpoint enabled at /agui (0 browser origins allowed)
+ipfs mcp: no model backend is configured (--llm-base-url and --llm-model), so /agui answers 503 backend_not_configured until one is
+ipfs mcp: serving MCP over HTTP on http://127.0.0.1:5151/mcp
+## POST /agui (throwaway ui token)
+HTTP/1.1 503 Service Unavailable
+{"error":{"code":"backend_not_configured","message":"no model backend is configured","retryable":false}}
+{"error":{"code":"backend_not_configured","message":"no model backend is configured","retryable":false}}
+## GET /agent/settings (throwaway ui token)
+HTTP/1.1 404 Not Found
+## POST /index/search (throwaway ui token)
+HTTP/1.1 404 Not Found
+## GET /index/status (throwaway ui token)
+HTTP/1.1 404 Not Found
+## tools/list
+Connecting to 127.0.0.1:5151 (127.0.0.1:5151)
+"name":"ipfs_cat"
+"name":"ipfs_get"
+"name":"ipfs_ls"
+"name":"ipfs_node_info"
+"name":"ipfs_node_status"
+## GET /auth/session on scenario c (oidc off)
+HTTP/1.1 404 Not Found

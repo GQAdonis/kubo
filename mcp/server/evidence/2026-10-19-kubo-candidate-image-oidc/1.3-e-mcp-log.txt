@@ -1,0 +1,5 @@
+ipfs mcp: AG-UI endpoint enabled at /agui (1 browser origins allowed)
+ipfs mcp: no model backend is configured (--llm-base-url and --llm-model), so /agui answers 503 backend_not_configured until one is
+ipfs mcp: agent settings API enabled at /agent/settings (admin principals only)
+ipfs mcp: auth.oidc is on: session tokens from https://oauth.know-me.tools are accepted on routes agui,settings,index,session (keys at https://oauth.know-me.tools/.well-known/jwks.json)
+ipfs mcp: serving MCP over HTTP on http://127.0.0.1:5151/mcp
