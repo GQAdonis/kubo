@@ -1,0 +1,22 @@
+== unauthenticated checks (https://console.prometheusags.ai, https://ipfs.prometheusags.ai) ==
+PASS: GET /webui/ (navigation) redirects to sign-in: ok: client_id ipfs-console, redirect_uri https://console.prometheusags.ai/oauth2/callback, S256, scopes email offline_access openid, state url https://console.prometheusags.ai/webui/
+  cookie name seen: OauthNonce-d5c6607b.9e54e9bf73b2ee50
+  cookie name seen: OauthNonce-d5c6607b
+  cookie name seen: CodeVerifier-d5c6607b.9e54e9bf73b2ee50
+  cookie name seen: CodeVerifier-d5c6607b
+PASS: webui: 4 Set-Cookie header(s), all Secure, HttpOnly, SameSite=Lax, host-only
+PASS: GET / (navigation) redirects to sign-in: ok: client_id ipfs-console, redirect_uri https://console.prometheusags.ai/oauth2/callback, S256, scopes email offline_access openid, state url https://console.prometheusags.ai/
+  cookie name seen: OauthNonce-d5c6607b.c9f6e890f14123bc
+  cookie name seen: OauthNonce-d5c6607b
+  cookie name seen: CodeVerifier-d5c6607b.c9f6e890f14123bc
+  cookie name seen: CodeVerifier-d5c6607b
+PASS: root: 4 Set-Cookie header(s), all Secure, HttpOnly, SameSite=Lax, host-only
+PASS: fetch-style GET /api/v0/version answers 401 with no redirect
+PASS: no Basic challenge on /api/v0/version
+PASS: fetch-style GET /auth/session answers 401 without a session
+PASS: POST /api/v0/version with Origin 'https://ipfs.prometheusags.ai' answers 403 "Invalid origin" at the gateway (CSRF), not from kubo
+PASS: POST /api/v0/version with Origin '<none>' answers 403 "Invalid origin" at the gateway (CSRF), not from kubo
+PASS: POST /api/v0/version with the console Origin passes CSRF and gets 401 from sign-in
+PASS: POST https://ipfs.prometheusags.ai/mcp without a bearer answers 401
+
+RESULT: PASS
