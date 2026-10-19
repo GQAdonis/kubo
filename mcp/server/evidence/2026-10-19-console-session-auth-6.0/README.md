@@ -81,3 +81,13 @@ Operator: "PR #46 is merged" (merge `c5bc0ef`). Argo `argocd-config` synced to `
 The sso, gate and api roots answer 404 with an empty body; their routes are attached (counts unchanged), so the 404 is the backend's answer at `/`, not a missing route. Whether those roots answered 404 before #46 was not recorded.
 
 Live DNS (LOW-12, raised to a pre-OG-26 gate pending the operator): `chat`, `livekit`, `matrix` `.know-me.tools` -> 172.169.221.204, and a `*.know-me.tools` wildcard -> 35.238.217.92 (Google Cloud); neither is a cluster gateway and both time out. See `pr46-security-read.md`, lead's checks.
+
+## `ipfs-console` post-logout URIs for logout option (a) (operator-run, 2026-10-19T13:12:06Z)
+
+Operator ran `bash ~/.local/share/know-me-ops/hydra-client-postlogout-both.sh` (JSON Patch on `post_logout_redirect_uris` only, via port-forward; no secret printed), per the 2026-10-19 decision "Disable token encryption".
+
+- before: `["https://console.prometheusags.ai/webui/"]`, `updated_at 2026-10-19T11:52:04Z`
+- after: `["https://console.prometheusags.ai/", "https://console.prometheusags.ai/webui/"]`, `updated_at 2026-10-19T13:12:06Z`
+- unchanged: `client_id ipfs-console`, `redirect_uris ["https://console.prometheusags.ai/oauth2/callback"]`.
+
+`/` is what Envoy always sends as `post_logout_redirect_uri`; after 6.1 the console route redirects `/` to `/webui/`.
