@@ -2,11 +2,11 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2166,
-  "derivedRevision": 2166,
+  "sourceRevision": 2189,
+  "derivedRevision": 2189,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 277
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 300
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
@@ -22,7 +22,7 @@
   "phase": "agent-backend-settings",
   "parentPhase": null,
   "childPointer": null,
-  "change": "lke-agent-settings",
+  "change": "mcp-oidc-hardening",
   "currentTask": "1.1",
   "status": "ready",
   "lifecycle": "ready",
@@ -30,11 +30,11 @@
   "stageStatus": null,
   "completionMetric": "implementation",
   "implementationCompleted": 67,
-  "implementationTotal": 77,
+  "implementationTotal": 78,
   "planRevision": 3,
-  "revision": 2166,
+  "revision": 2189,
   "exactNextCommand": "/kbd-apply console-session-auth",
-  "nextChange": "lke-agent-settings",
+  "nextChange": "mcp-oidc-hardening",
   "nextTask": "1.1",
-  "updatedAt": "2026-10-20T10:02:19.481100Z"
+  "updatedAt": "2026-10-20T10:40:23.638008Z"
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "description": "Task identity list for the readiness gate coverage check, scoped to the change the adopted contract covers (console-session-auth). Derived read-only from canonical state (prometheus kbd status --json) at revision 2113. Not a work selector; canonical state is authoritative. Task ids repeat across changes, so this list is per change; widen it only with a contract amendment.",
+  "description": "Derived read-only from prometheus kbd status --json. console-session-auth tasks keep bare ids; other changes use <change>:<id> because ids repeat across changes.",
   "phaseId": "agent-backend-settings",
-  "change": "console-session-auth",
+  "change": "console-session-auth,mcp-oidc-hardening,lke-agent-settings",
   "tasks": [
     {
       "id": "3.6",
@@ -232,6 +232,180 @@
     {
       "id": "8.2",
       "sequence": 40,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:1.1",
+      "change": "mcp-oidc-hardening",
+      "sequence": 1,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:1.2",
+      "change": "mcp-oidc-hardening",
+      "sequence": 2,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:1.3",
+      "change": "mcp-oidc-hardening",
+      "sequence": 3,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:1.4",
+      "change": "mcp-oidc-hardening",
+      "sequence": 4,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:1.5",
+      "change": "mcp-oidc-hardening",
+      "sequence": 5,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:1.6",
+      "change": "mcp-oidc-hardening",
+      "sequence": 6,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.1",
+      "change": "mcp-oidc-hardening",
+      "sequence": 7,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.2",
+      "change": "mcp-oidc-hardening",
+      "sequence": 8,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.3",
+      "change": "mcp-oidc-hardening",
+      "sequence": 9,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.4",
+      "change": "mcp-oidc-hardening",
+      "sequence": 10,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.5",
+      "change": "mcp-oidc-hardening",
+      "sequence": 11,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.6",
+      "change": "mcp-oidc-hardening",
+      "sequence": 12,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:2.7",
+      "change": "mcp-oidc-hardening",
+      "sequence": 13,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:3.1",
+      "change": "mcp-oidc-hardening",
+      "sequence": 14,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:3.2",
+      "change": "mcp-oidc-hardening",
+      "sequence": 15,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:3.3",
+      "change": "mcp-oidc-hardening",
+      "sequence": 16,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:4.1",
+      "change": "mcp-oidc-hardening",
+      "sequence": 17,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:5.1",
+      "change": "mcp-oidc-hardening",
+      "sequence": 18,
+      "status": "pending"
+    },
+    {
+      "id": "mcp-oidc-hardening:5.2",
+      "change": "mcp-oidc-hardening",
+      "sequence": 19,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.1",
+      "change": "lke-agent-settings",
+      "sequence": 1,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.10",
+      "change": "lke-agent-settings",
+      "sequence": 10,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.2",
+      "change": "lke-agent-settings",
+      "sequence": 2,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.3",
+      "change": "lke-agent-settings",
+      "sequence": 3,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.4",
+      "change": "lke-agent-settings",
+      "sequence": 4,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.5",
+      "change": "lke-agent-settings",
+      "sequence": 5,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.6",
+      "change": "lke-agent-settings",
+      "sequence": 6,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.7",
+      "change": "lke-agent-settings",
+      "sequence": 7,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.8",
+      "change": "lke-agent-settings",
+      "sequence": 8,
+      "status": "pending"
+    },
+    {
+      "id": "lke-agent-settings:1.9",
+      "change": "lke-agent-settings",
+      "sequence": 9,
       "status": "pending"
     }
   ]

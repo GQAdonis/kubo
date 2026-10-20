@@ -2,27 +2,27 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2166,
-  "derivedRevision": 2166,
+  "sourceRevision": 2188,
+  "derivedRevision": 2188,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 277
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 299
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-20T10:02:19.481100Z",
+  "last_updated": "2026-10-20T10:39:54.988594Z",
   "last_updated_by": "kbd-runtime",
-  "changes_total": 37,
+  "changes_total": 38,
   "changes_completed": 33,
-  "implementation_total": 37,
+  "implementation_total": 38,
   "implementation_completed": 33,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 33,
-      "total": 37,
+      "total": 38,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -51,7 +51,7 @@
     "primaryCounter": "implementation",
     "implementation": {
       "completed": 67,
-      "total": 77,
+      "total": 78,
       "status": "IN_PROGRESS"
     },
     "evidence": {
@@ -347,11 +347,22 @@
       "blockers": []
     },
     {
+      "id": "mcp-oidc-hardening",
+      "title": "mcp-oidc-hardening: OIDC verifier hardening (8.1 LOW-1..5, 8.2 MAJOR-1/MINORs)",
+      "status": "PENDING",
+      "implementation_status": "PENDING",
+      "tasks_total": 19,
+      "tasks_done": 0,
+      "last_task_completed": null,
+      "next_task_pending": "1.1 Operator ruling on the auth.oidc.jwks_max_stale default (design D2; proposed 24h, minimum jwks_cache_ttl, no v",
+      "blockers": []
+    },
+    {
       "id": "lke-agent-settings",
       "title": "lke-agent-settings",
       "status": "PENDING",
       "implementation_status": "PENDING",
-      "tasks_total": 9,
+      "tasks_total": 10,
       "tasks_done": 0,
       "last_task_completed": null,
       "next_task_pending": "Sidecar and config: `--agui`, `--settings-dir=/mcp-settings`, `admin` and `ui` principals reading their tokens from the out-of-band Secrets created at OG-14, `agent.origin_allowlist` = console origin,",

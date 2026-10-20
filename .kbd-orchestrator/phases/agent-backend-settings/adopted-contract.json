@@ -1,12 +1,12 @@
 {
-  "contractVersion": "1",
+  "contractVersion": "3",
   "kind": "kbd.adopted-contract",
   "identity": {
     "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "phaseId": "agent-backend-settings",
     "planRevision": 3,
-    "contractDigest": "374337868965e82c4cb5a17f9d8a8dd8d9f421c2ed870f996b58c3e53c4d71ed"
+    "contractDigest": "5c075c892706cbbf82ba1fa332d13b4bc332e41fe92c6fbdf2c8e884ac0e56b2"
   },
   "digestNormalization": {
     "algorithm": "sha256",
@@ -14,22 +14,22 @@
     "rationale": "contractDigest is excluded to avoid self-reference; planRevision is bound by the canonical decision itself.",
     "stalenessRule": "REJECT-STALE when the digest of this file differs from the sha256 in the latest non-superseded ADOPTED-CONTRACT decision for this path."
   },
-  "adoptionSource": "Operator instruction 2026-10-19 in the Claude Code session: '1. Adopt a contract now', answering the BLOCKED readiness gate on /kbd-apply console-session-auth.",
+  "adoptionSource": "Operator instruction 2026-10-20: \"adopt the amendment and continue\". v3 only binds each v2 scenario ownerTask to the registered task ids (mcp-oidc-hardening and lke-agent-settings OpenSpec changes written and validated 2026-10-20); scope, scenarios and acceptance are unchanged from v2.",
   "decisionOwner": "operator (travis@know-me.tools)",
   "amendmentPolicy": "Any change to scope, scenarios or acceptance is a new contract version adopted with kbd-contract-adopt.sh --supersedes <prior decision id> on explicit operator instruction. Dispatching any other change in this phase (lke-agent-settings, phase-integration-gate, promethity-delivery, lke-vector-search) requires an amendment that adds its scenarios and widens tasks.json first. Suggestions and review follow-ups never enter task totals on their own.",
   "releaseClaim": {
-    "userOperation": "The operator opens https://console.prometheusags.ai/webui/, signs in once through Hydra and Kratos at know-me.tools, uses the Web UI in session mode with the agent's identity shown as 'Signed in as', and signs out back to /webui/. No console basic-auth credential exists any more.",
+    "userOperation": "The operator, signed in to https://console.prometheusags.ai/webui/ through Hydra, opens agent chat and the agent settings page; chat runs through the configured backend with writes confirmed in the island, settings reads return no key material, and key writes are refused. ipfs mcp rejects tokens with the wrong azp, stale JWKS keys past a cap, and routes not listed in auth.oidc.routes.",
     "supportedEnvironments": [
       "LKE cluster 'know-me' (context know-me), namespace ipfs, Envoy Gateway v1.9.1 / Envoy 1.39.1, Argo CD sync from know-me-cluster main",
       "kubo image ghcr.io/gqadonis/kubo@sha256:3467dea860aeb097054bdf10391abcada49b48755b3a7bd9c0f585253f952cb6 with Web UI bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa",
       "Ory Hydra v26.2.0 at https://oauth.know-me.tools and Kratos login UI v1.3.1 (by digest) in flint-core",
       "A current desktop browser with devtools (operator steps)"
     ],
-    "currentCapabilities": "Live since know-me-cluster #48 (efeaf57) and the planned ipfs-0 restart at 2026-10-19T21:41Z: SecurityPolicy ipfs/ipfs-webui-auth is Accepted with OIDC, JWT (Authorization: Bearer only), deny-by-default RBAC allowing one subject, and CSRF; basicAuth is gone. ipfs mcp logs auth.oidc on for the session route and fetches JWKS. Unauthenticated checks (console-session.sh unauth, origin-isolation.sh unauth, verify.sh ipfs, the manual bearer probe) passed. The signed-in browser half of 6.7 has not been observed yet. The console 'ui' principal still holds its old credential until 7.1.",
+    "currentCapabilities": "Console session sign-in is live and accepted (console-session-auth 47/47; ADR-0009 and ADR-0004 amendments 2026-10-20). Machine RPC host rpc.prometheusags.ai is live (know-me-cluster #51). /agui and settings are not routed on the console. The 8.1 LOW items and 8.2 findings are open.",
     "explicitUnknowns": [
-      "Signed-in behaviour (operator steps a, a2, header check, b, b2, c, d, d2, e) is not yet observed.",
-      "Whether the access log keeps the id_token_hint query string on the logout URL (follow-up 5, not gating).",
-      "Soak length for OG-27 is the operator's call."
+      "Whether Envoy Gateway forwards the session ID token on a streaming /agui response without breaking SSE (check in the revised 1.2).",
+      "The JWKS staleness cap value (LOW-2): proposed 24h, operator call.",
+      "Neither 8.1 nor 8.2 reviewer ran tests; the hardening change must run the targeted Go and test/cli suites at its boundary."
     ]
   },
   "statusVocabulary": [
@@ -193,10 +193,149 @@
       "negativeControl": "Any open CRITICAL/HIGH, a missing off switch, or a review run in the builder's context is FAIL.",
       "fixtures": "kubo feat/ipfs-mcp-server at commit 1140ff10c (the deployed image source).",
       "evidence": "Findings files under .agent-team/kubo-ipfs-agentic/findings/{security,review}/agent-backend-settings/."
+    },
+    {
+      "id": "HARD-1",
+      "name": "azp is checked on multi-audience tokens (8.1 LOW-1)",
+      "ownerTask": "mcp-oidc-hardening:2.1",
+      "productionEntry": "go test ./mcp/server/... -run TestOIDC.*Azp -v",
+      "realCollaborators": [
+        "mcp/server/jwt.go verifier",
+        "httptest JWKS server"
+      ],
+      "oracle": "A token with aud [ipfs-console, other] and azp other is rejected; azp ipfs-console is accepted.",
+      "negativeControl": "Removing the azp check makes the reject case fail.",
+      "fixtures": "Locally generated RSA keys; no network.",
+      "evidence": "go test output in a dated evidence folder."
+    },
+    {
+      "id": "HARD-2",
+      "name": "Stale JWKS keys are not trusted past a cap (8.1 LOW-2)",
+      "ownerTask": "mcp-oidc-hardening:1.1+mcp-oidc-hardening:2.2",
+      "productionEntry": "go test ./mcp/server/... -run TestJWKS.*Stale -v (testing/synctest)",
+      "realCollaborators": [
+        "mcp/server/jwks.go"
+      ],
+      "oracle": "With the issuer unreachable, a cached key verifies until the cap and is refused after it.",
+      "negativeControl": "Cap disabled makes the after-cap case fail.",
+      "fixtures": "synctest fake clock.",
+      "evidence": "go test output."
+    },
+    {
+      "id": "HARD-3",
+      "name": "One subject per write-granted principal (8.1 LOW-3)",
+      "ownerTask": "mcp-oidc-hardening:2.6",
+      "productionEntry": "go test ./mcp/server/... -run TestConfig.*Subjects -v",
+      "realCollaborators": [
+        "mcp/server/oidc_config.go"
+      ],
+      "oracle": "Config load fails when a principal with write groups lists more than one subject, or UserID carries sub.",
+      "negativeControl": "Two subjects on a write principal must not load.",
+      "fixtures": "Inline configs.",
+      "evidence": "go test output."
+    },
+    {
+      "id": "HARD-4",
+      "name": "auth.oidc.routes has no implicit agui/settings default (8.1 LOW-4)",
+      "ownerTask": "mcp-oidc-hardening:2.5",
+      "productionEntry": "go test ./mcp/server/... -run TestOIDCRoutes -v",
+      "realCollaborators": [
+        "mcp/server/oidc_config.go"
+      ],
+      "oracle": "Unset routes means session only; agui and settings accept tokens only when listed.",
+      "negativeControl": "An unset routes config must refuse a session token on /agui.",
+      "fixtures": "Inline configs.",
+      "evidence": "go test output; docs/config.md and mcp docs updated."
+    },
+    {
+      "id": "HARD-5",
+      "name": "JWKS fetch safeguards are tested (8.1 LOW-5, 8.2 MINOR-4/5)",
+      "ownerTask": "mcp-oidc-hardening:2.3+mcp-oidc-hardening:2.4",
+      "productionEntry": "go test ./mcp/server/... -run TestJWKSFetch -v",
+      "realCollaborators": [
+        "mcp/server/jwks.go",
+        "httptest server"
+      ],
+      "oracle": "Redirects refused; bodies over 1 MiB refused; a cancelled request context does not cancel the shared fetch (context.WithoutCancel).",
+      "negativeControl": "Each guard removed makes its case fail.",
+      "fixtures": "httptest.",
+      "evidence": "go test output."
+    },
+    {
+      "id": "HARD-6",
+      "name": "Docs and changelog corrections (8.2 MAJOR-1, MINOR-1/2/3/6/7)",
+      "ownerTask": "mcp-oidc-hardening:1.5+mcp-oidc-hardening:1.6+mcp-oidc-hardening:3.1+mcp-oidc-hardening:3.2+mcp-oidc-hardening:3.3+mcp-oidc-hardening:4.1",
+      "productionEntry": "make build && go test ./test/cli/... -run TestMCP.*Disabled -v; reviewer read of docs/changelogs",
+      "realCollaborators": [
+        "ipfs binary",
+        "test/cli harness"
+      ],
+      "oracle": "Changelog notes the p2p-forge replace and that go install no longer works; proxy-variable and subjects wording fixed; disabled-state test keeps the session principal; startup error names the cause; a dag-jose round trip passes under go-jose v4.1.6.",
+      "negativeControl": "The disabled-state test fails if the session principal is honoured with OIDC off.",
+      "fixtures": "Throwaway repos on non-default ports.",
+      "evidence": "Test output and reviewer findings file."
+    },
+    {
+      "id": "LAS-1",
+      "name": "Revised lke-agent-settings tasks match the session model",
+      "ownerTask": "lke-agent-settings:1.1+lke-agent-settings:1.7",
+      "productionEntry": "openspec validate lke-agent-settings --strict and an architect diff of tasks.md",
+      "realCollaborators": [
+        "openspec CLI"
+      ],
+      "oracle": "No task assumes a console bearer token or an untargeted /agui rule; validate passes.",
+      "negativeControl": "The current tasks.md text (bearer-only, no SecurityPolicy) must be rejected by the reviewer checklist.",
+      "fixtures": "Repo only.",
+      "evidence": "Validate output and the updated tasks.md commit."
+    },
+    {
+      "id": "LAS-2",
+      "name": "Console /agui and settings are session-protected",
+      "ownerTask": "lke-agent-settings:1.2+lke-agent-settings:1.8",
+      "productionEntry": "know-me-cluster: lke-checks/webui-auth-targeting.sh and lke-checks/agent-settings.sh unauth",
+      "realCollaborators": [
+        "ipfs-webui-auth",
+        "ipfs mcp"
+      ],
+      "oracle": "Both rules are on ipfs-webui, targeted by the session policy; unauthenticated /agui and settings answer 401; /api/v0 behaviour unchanged.",
+      "negativeControl": "A rule moved off the targeted route fails the targeting check.",
+      "fixtures": "Offline render plus live read-only probes.",
+      "evidence": "Script outputs in a dated evidence folder."
+    },
+    {
+      "id": "LAS-3",
+      "name": "Signed-in chat and settings behave as specified",
+      "ownerTask": "lke-agent-settings:1.9+lke-agent-settings:1.10",
+      "productionEntry": "Operator browser steps (OG-13)",
+      "realCollaborators": [
+        "Hydra",
+        "Envoy",
+        "ipfs mcp",
+        "Web UI"
+      ],
+      "oracle": "Chat runs or answers backend_not_configured; settings read has no key material; key write returns secrets_not_accepted; admin is not reachable from the console session.",
+      "negativeControl": "A second Kratos account is refused.",
+      "fixtures": "Operator account plus a second account.",
+      "evidence": "Operator step table in the evidence README."
+    },
+    {
+      "id": "LAS-4",
+      "name": "Rollback and Secret discipline",
+      "ownerTask": "lke-agent-settings:1.1+lke-agent-settings:1.4+lke-agent-settings:1.5",
+      "productionEntry": "Offline checks on the rendered manifests",
+      "realCollaborators": [
+        "kustomize/yq render"
+      ],
+      "oracle": "Every new Secret reference has optional: true; no lifecycle key; standalone PVC; PR body has the Rollback section.",
+      "negativeControl": "A required Secret reference fails the check.",
+      "fixtures": "Offline render.",
+      "evidence": "Check output."
     }
   ],
   "functionalScope": [
-    "console-session-auth tasks 6.0b and 6.1 through 8.2: cutover, checks, evidence, credential removal, ADR residuals, reviews"
+    "console-session-auth tasks 6.0b and 6.1 through 8.2: cutover, checks, evidence, credential removal, ADR residuals, reviews",
+    "mcp-oidc-hardening: 8.1 LOW-1..LOW-5 and 8.2 MAJOR-1/MINOR fixes in mcp/server and docs",
+    "lke-agent-settings: console /agui and settings under the session policy, sidecar config, PVC, checks"
   ],
   "resilienceScope": {
     "policy": "Adopted scenarios never defer on budget overflow; exhaustion means checkpoint and BLOCKED. Only items listed as deferredOptional may move to a later phase.",
@@ -210,10 +349,10 @@
     ]
   },
   "exclusions": [
-    "Other changes of this phase: lke-agent-settings, phase-integration-gate, promethity-delivery, lke-vector-search (need an amendment before dispatch)",
-    "agent.origin_allowlist and any write route on the console (prerequisite of lke-agent-settings)",
+    "Other changes of this phase: phase-integration-gate, promethity-delivery, lke-vector-search (need a later amendment)",
     "Rolling flint-gate forward",
-    "Any change to /api/v0, the HTTP gateway, the default CID recipe or wire behaviour"
+    "Any change to /api/v0, the HTTP gateway, the default CID recipe or wire behaviour",
+    "Changing rpc.prometheusags.ai (know-me-cluster #51) beyond what lke-agent-settings needs"
   ],
   "requiredSafetyChecks": [
     "Never print secrets, tokens, cookie values or passwords, including CF_TOKEN and IPFS_CONSOLE_*",
@@ -268,5 +407,17 @@
   },
   "status": {
     "implementationComplete": false
-  }
+  },
+  "supersedes": "contract-adoption-agent-backend-settings-73ed8c4b",
+  "amendmentSummary": [
+    "console-session-auth is complete (47/47, 2026-10-20); its scenarios CSA-1..CSA-11 stay as recorded history.",
+    "Adds a new prerequisite change mcp-oidc-hardening (8.1 LOW-1..LOW-5, 8.2 MAJOR-1, MINOR-1..MINOR-7) that must complete before lke-agent-settings dispatches. It does not exist in openspec yet; creating it is the first step after adoption.",
+    "Adds lke-agent-settings, with a required OpenSpec revision first: tasks 1.1, 1.2 and 1.8 assume bearer-only ui/admin tokens on the console and no SecurityPolicy on /agui. After console-session-auth the console is session-only and the console ui principal is bound to the Hydra sub (ADR-0004 amendment 2026-10-20). The revised tasks keep /agui and settings behind ipfs-webui-auth, map the session sub to the ui principal, keep admin off the console, and set auth.oidc.routes and agent.origin_allowlist explicitly.",
+    "phase-integration-gate, promethity-delivery and lke-vector-search stay excluded and need a later amendment."
+  ],
+  "requiredBeforeDispatch": [
+    "Operator adopts this file with --supersedes.",
+    "Widen tasks.json to mcp-oidc-hardening and lke-agent-settings (after the OpenSpec change for mcp-oidc-hardening exists and lke-agent-settings is revised).",
+    "mcp-oidc-hardening completes before lke-agent-settings 1.1."
+  ]
 }
