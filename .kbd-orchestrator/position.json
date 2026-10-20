@@ -2,25 +2,25 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2078,
-  "derivedRevision": 2078,
+  "sourceRevision": 2166,
+  "derivedRevision": 2166,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 189
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 277
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-18T17:09:50.936488Z",
+  "updatedAt": "2026-10-20T10:02:19.481100Z",
   "cursor": [
     "agent-backend-settings",
-    "console-session-auth",
-    "4.1"
+    "lke-agent-settings",
+    "1.1"
   ],
   "root": {
     "type": "phase",
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 66,
+      "done": 67,
       "total": 77
     },
     "children": [
@@ -30,7 +30,7 @@
         "canonicalId": "agent-backend-settings",
         "status": "IN_PROGRESS",
         "progress": {
-          "done": 32,
+          "done": 33,
           "total": 37
         },
         "children": [
@@ -77,10 +77,10 @@
           {
             "type": "change",
             "id": "console-session-auth",
-            "status": "IN_PROGRESS",
+            "status": "COMPLETE",
             "progress": {
-              "done": 28,
-              "total": 44
+              "done": 47,
+              "total": 47
             }
           },
           {
