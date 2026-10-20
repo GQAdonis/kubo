@@ -21,6 +21,7 @@ Scheduled in Round 9. Cluster tasks follow the know-me-cluster skill `lke-gitops
   - `auth.oidc.require_origin` absent or `true`;
   - `agent.settings.accept_secrets: false`;
   - `llm.api_key` as a file reference to the out-of-band LLM key Secret (S1: the operator sets the cloud key out of band, never through the browser and never in git).
+  - Amendment 2026-10-20 (security read 1.7 I-1): `llm` is left out of the OG-13 PR. An `llm` block needs `base_url` and `model` (schema), and `ipfs mcp` refuses a key flag with no backend, so the key cannot be wired without choosing a backend, which is the operator's decision. `/agui` answers 503 `backend_not_configured` until a follow-up PR adds the operator-chosen backend and its key Secret (with the per-route rate limit and egress policy of 1.7 I-5).
   
   - an `admin` principal (OQ-1 ruling, "Port-forward only") with a static `credential` given as a file reference to a token in an out-of-band admin Secret, mounted with `optional: true`, and no `subjects`. It is reachable only through `kubectl --context know-me port-forward` to the `ipfs-mcp` port of the pod; no console rule routes to the settings path, so no session identity can select it.
   
