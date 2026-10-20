@@ -22,7 +22,7 @@ Date: 2026-10-19. Operator: "PR #48 is merged" (merge `efeaf57`). Context `know-
 ## Still to do
 
 1. Planned restart of `ipfs-0` (operator-approved) so `ipfs mcp` loads the new `ipfs-mcp-config` (`auth.oidc`, routes `session`); then the sidecar log line and the JWKS fetch over the 10443 egress rule.
-2. Operator browser steps a, a2, b (incl. `/auth/session` 403), b2 (MEDIUM-4 `?access_token=`), c, d, d2, e, and the signed-in frame-deny header check.
+2. Operator browser steps: done 2026-10-19, see "Operator browser steps" below (d2 still to record).
 
 ## Planned restart of `ipfs-0` (operator: "restart ipfs-0", 2026-10-19)
 
@@ -36,3 +36,21 @@ ipfs mcp: serving MCP over HTTP on http://[::]:5050/mcp
 ```
 
 JWKS from inside the pod (egress TCP 10443 to the argocd-gateway Envoy, VIP hairpin): `wget https://oauth.know-me.tools/.well-known/jwks.json` returned the key set (`{"keys":[{"use":"sig","kty":"RSA","kid":"58c5e958-…`). After the restart: `verify.sh ipfs` PASS (0 failing), `console-session.sh unauth` RESULT: PASS.
+
+## Operator browser steps (operator report, 2026-10-19)
+
+Run by the operator in two separate browser profiles: A with the allowlisted account, B with a second, non-allowlisted Kratos account. Only PASS or FAIL was reported. No token, cookie value or password was shared with the lead or written down.
+
+| Step | Check | Result |
+|---|---|---|
+| a | Allowlisted sign-in: Kratos login, no consent screen, Web UI at `/webui/` showing "Signed in as" | PASS |
+| a2 | `ipfs-console-at`, `ipfs-console-idt`, `OauthHMAC-*`, `OauthExpires-*`, `RefreshToken-*` are Secure, HttpOnly, SameSite Lax, host-only `console.prometheusags.ai`, Path `/`; none under a parent or sibling domain | PASS |
+| header | Signed-in `/webui/` and `/api/v0` responses carry `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` (LOW-16a live) | PASS |
+| b | Non-allowlisted account: 403 on `/webui/`, `/api/v0/version` and `/auth/session` | PASS |
+| b2 | MEDIUM-4 live: profile B with A's ID token in `?access_token=`, on both navigation and `fetch` POST: 403 | PASS |
+| e | Bare `https://console.prometheusags.ai/` ends on `/webui/` | PASS |
+| c | 20 minutes after sign-in, reload and Files load without a sign-in prompt (refresh works) | PASS |
+| d | `/oauth2/logout` within 15 minutes: Hydra, Kratos logout, then the password prompt (no Hydra error); after sign-in, `/webui/` | PASS |
+| d2 | Logout after more than 15 minutes idle (record only) | NOT RUN |
+
+Result: 8 of 8 gating steps PASS. Step d2 is record-only (the LOW-17 residual, accepted in `decisions.md`). It has not been run yet, so 6.7 stays open until it is recorded.
