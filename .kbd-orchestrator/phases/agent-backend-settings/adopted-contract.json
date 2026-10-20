@@ -1,0 +1,272 @@
+{
+  "contractVersion": "1",
+  "kind": "kbd.adopted-contract",
+  "identity": {
+    "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
+    "runId": "ipfs-mcp-server-20261009T081630Z",
+    "phaseId": "agent-backend-settings",
+    "planRevision": 3,
+    "contractDigest": "374337868965e82c4cb5a17f9d8a8dd8d9f421c2ed870f996b58c3e53c4d71ed"
+  },
+  "digestNormalization": {
+    "algorithm": "sha256",
+    "command": "jq -S -c 'del(.identity.contractDigest) | del(.identity.planRevision)'",
+    "rationale": "contractDigest is excluded to avoid self-reference; planRevision is bound by the canonical decision itself.",
+    "stalenessRule": "REJECT-STALE when the digest of this file differs from the sha256 in the latest non-superseded ADOPTED-CONTRACT decision for this path."
+  },
+  "adoptionSource": "Operator instruction 2026-10-19 in the Claude Code session: '1. Adopt a contract now', answering the BLOCKED readiness gate on /kbd-apply console-session-auth.",
+  "decisionOwner": "operator (travis@know-me.tools)",
+  "amendmentPolicy": "Any change to scope, scenarios or acceptance is a new contract version adopted with kbd-contract-adopt.sh --supersedes <prior decision id> on explicit operator instruction. Dispatching any other change in this phase (lke-agent-settings, phase-integration-gate, promethity-delivery, lke-vector-search) requires an amendment that adds its scenarios and widens tasks.json first. Suggestions and review follow-ups never enter task totals on their own.",
+  "releaseClaim": {
+    "userOperation": "The operator opens https://console.prometheusags.ai/webui/, signs in once through Hydra and Kratos at know-me.tools, uses the Web UI in session mode with the agent's identity shown as 'Signed in as', and signs out back to /webui/. No console basic-auth credential exists any more.",
+    "supportedEnvironments": [
+      "LKE cluster 'know-me' (context know-me), namespace ipfs, Envoy Gateway v1.9.1 / Envoy 1.39.1, Argo CD sync from know-me-cluster main",
+      "kubo image ghcr.io/gqadonis/kubo@sha256:3467dea860aeb097054bdf10391abcada49b48755b3a7bd9c0f585253f952cb6 with Web UI bafybeihd7ozltm2fciiiufczpfu4iahc4qfkhzkuro2ces75bmirdb3mpa",
+      "Ory Hydra v26.2.0 at https://oauth.know-me.tools and Kratos login UI v1.3.1 (by digest) in flint-core",
+      "A current desktop browser with devtools (operator steps)"
+    ],
+    "currentCapabilities": "Live since know-me-cluster #48 (efeaf57) and the planned ipfs-0 restart at 2026-10-19T21:41Z: SecurityPolicy ipfs/ipfs-webui-auth is Accepted with OIDC, JWT (Authorization: Bearer only), deny-by-default RBAC allowing one subject, and CSRF; basicAuth is gone. ipfs mcp logs auth.oidc on for the session route and fetches JWKS. Unauthenticated checks (console-session.sh unauth, origin-isolation.sh unauth, verify.sh ipfs, the manual bearer probe) passed. The signed-in browser half of 6.7 has not been observed yet. The console 'ui' principal still holds its old credential until 7.1.",
+    "explicitUnknowns": [
+      "Signed-in behaviour (operator steps a, a2, header check, b, b2, c, d, d2, e) is not yet observed.",
+      "Whether the access log keeps the id_token_hint query string on the logout URL (follow-up 5, not gating).",
+      "Soak length for OG-27 is the operator's call."
+    ]
+  },
+  "statusVocabulary": [
+    "PASS",
+    "FAIL",
+    "BLOCKED",
+    "UNKNOWN"
+  ],
+  "scenarioMatrix": [
+    {
+      "id": "CSA-1",
+      "name": "Unauthenticated console requests are refused or redirected to sign-in",
+      "ownerTask": "6.1+6.5+6.7",
+      "productionEntry": "know-me-cluster: bash namespaces/ipfs/lke-checks/console-session.sh unauth (read-only, kubectl --context know-me plus curl)",
+      "realCollaborators": [
+        "Envoy Gateway ipfs-webui-auth SecurityPolicy",
+        "Hydra",
+        "ipfs mcp /auth/session"
+      ],
+      "oracle": "Every check reports PASS and the script exits 0, including checks 5, 6, 6b and 8: /webui/ answers 302 to Hydra, missing or wrong Origin on state-changing requests answers 403, /auth/session without a session answers 401.",
+      "negativeControl": "console-session.sh --self-test: each parser mutation and the two end-to-end mutations must be reported as FAIL (12 of 12 and 2 of 2).",
+      "fixtures": "Live cluster at the image digest above; no credentials, cookies or tokens are read or printed; IPFS_CONSOLE_* variables are not used.",
+      "evidence": "argv, exit code and full stdout saved to mcp/server/evidence/2026-10-19-console-session-auth-6.7/console-session-unauth.txt (already recorded) plus the self-test output."
+    },
+    {
+      "id": "CSA-2",
+      "name": "Session principal allowlist agrees between Envoy RBAC and ipfs mcp",
+      "ownerTask": "6.2",
+      "productionEntry": "know-me-cluster: bash namespaces/ipfs/lke-checks/session-allowlist.sh and session-allowlist.sh --self-test",
+      "realCollaborators": [
+        "ipfs-mcp-config ConfigMap",
+        "ipfs-webui-auth SecurityPolicy"
+      ],
+      "oracle": "25 agreement checks PASS and exit 0 on the merged tree efeaf57.",
+      "negativeControl": "--self-test: all 24 mutations (subject added on one side only, extra principal, wildcard) are caught with a nonzero exit.",
+      "fixtures": "know-me-cluster main at efeaf57 (worktree kmc-main5); no cluster writes.",
+      "evidence": "Script outputs recorded in the 6.7 evidence folder, with the tree commit."
+    },
+    {
+      "id": "CSA-3",
+      "name": "The running ipfs sidecar carries the OIDC verifier and session-mode Web UI",
+      "ownerTask": "6.3",
+      "productionEntry": "kubectl --context know-me -n ipfs get pod ipfs-0 -o jsonpath='{.status.containerStatuses[*].imageID}' and the ipfs-mcp container startup log",
+      "realCollaborators": [
+        "ghcr.io/gqadonis/kubo",
+        "ipfs-0 StatefulSet pod"
+      ],
+      "oracle": "Every kubo container imageID ends in sha256:3467dea860aeb097054bdf10391abcada49b48755b3a7bd9c0f585253f952cb6 and the log line shows auth.oidc on with routes session.",
+      "negativeControl": "The superseded image 1cfa42a62 (Web UI bafybeif77..., no session mode) must not appear in any container status.",
+      "fixtures": "Live pod after the 2026-10-19T21:41:06Z restart.",
+      "evidence": "imageID values and the matching log line in the 6.7 evidence README."
+    },
+    {
+      "id": "CSA-4",
+      "name": "Rollback is written down and executable",
+      "ownerTask": "6.4",
+      "productionEntry": "gh pr view 48 --repo Prometheus-AGS/know-me-cluster --json body",
+      "realCollaborators": [
+        "know-me-cluster PR #48",
+        "Argo CD application for ipfs"
+      ],
+      "oracle": "The body has a Rollback section with the literal git revert <merge-sha>, the Argo app name, the planned restart step, and the break-glass fallback.",
+      "negativeControl": "A body lacking the literal revert command or the restart step is FAIL.",
+      "fixtures": "PR #48 as merged (efeaf57).",
+      "evidence": "Quoted Rollback section and PR URL in the 6.7 evidence README."
+    },
+    {
+      "id": "CSA-5",
+      "name": "Independent security read of the cutover before OG-26",
+      "ownerTask": "6.6",
+      "productionEntry": ".agent-team/kubo-ipfs-agentic/findings/security/agent-backend-settings/pr50-pr48-security-read.md and pr48-confirmation.md (security-reviewer, separate context)",
+      "realCollaborators": [
+        "security-reviewer role"
+      ],
+      "oracle": "Verdict PASS with no open CRITICAL, HIGH or MEDIUM for #48.",
+      "negativeControl": "Any open CRITICAL/HIGH/MEDIUM, or a read done in the builder's context, is FAIL.",
+      "fixtures": "Review of b4f2cf4 rebased on acc6e73, merged as efeaf57.",
+      "evidence": "The two findings files (committed)."
+    },
+    {
+      "id": "CSA-6",
+      "name": "Origin isolation holds without credentials",
+      "ownerTask": "6.7",
+      "productionEntry": "know-me-cluster: bash namespaces/ipfs/lke-checks/origin-isolation.sh unauth (never the default or credentialed mode)",
+      "realCollaborators": [
+        "console.prometheusags.ai",
+        "ipfs.prometheusags.ai gateway"
+      ],
+      "oracle": "All unauth checks PASS, exit 0.",
+      "negativeControl": "A request from Origin https://ipfs.prometheusags.ai to the console API must be refused; if it is allowed the check is FAIL.",
+      "fixtures": "Live cluster; IPFS_CONSOLE_USER and IPFS_CONSOLE_PASSWORD are never used by an agent.",
+      "evidence": "argv, exit code and stdout in the 6.7 evidence folder (already recorded)."
+    },
+    {
+      "id": "CSA-7",
+      "name": "Gateway refuses a forged bearer with no session",
+      "ownerTask": "6.7",
+      "productionEntry": "curl -s -o /dev/null -w '%{http_code}' -H 'Sec-Fetch-Mode: cors' -H 'Authorization: Bearer x' https://console.prometheusags.ai/api/v0/version",
+      "realCollaborators": [
+        "Envoy JWT filter (provider hydra)"
+      ],
+      "oracle": "401 from Envoy, with no kubo response body.",
+      "negativeControl": "The same request through a signed-in browser session returns 200 (operator step); a 200 to the forged bearer is FAIL.",
+      "fixtures": "No cookies; literal token 'x'.",
+      "evidence": "Status code and response headers in the 6.7 evidence README (already recorded)."
+    },
+    {
+      "id": "CSA-8",
+      "name": "Operator signed-in browser flow",
+      "ownerTask": "6.7",
+      "productionEntry": "Operator browser steps a, a2, header check, b, b2, c, d, d2, e from the 6.7 list in openspec/changes/console-session-auth/tasks.md",
+      "realCollaborators": [
+        "Hydra",
+        "Kratos",
+        "Envoy OAuth2 filter",
+        "ipfs mcp /auth/session",
+        "Web UI session mode"
+      ],
+      "oracle": "a: sign-in lands on /webui/ showing 'Signed in as'; a2: the five session cookies carry Secure, HttpOnly and SameSite as specified; header check: /webui/ and /api/v0 carry X-Frame-Options: DENY and CSP frame-ancestors 'none'; b: /auth/session from a foreign origin is 403; b2: ?access_token= is ignored (401); c, d, d2, e as written in tasks.md, with d2 recording what happened.",
+      "negativeControl": "b and b2 are the negative controls: a 200 on either is FAIL. A sign-in that lands on / instead of /webui/, or a logout with nowhere to go, is FAIL.",
+      "fixtures": "Operator's own browser and account; no cookie, token or password values are written down, only names, attributes and status codes.",
+      "evidence": "Operator's per-step PASS/FAIL with status codes and header names, recorded by the lead in the 6.7 evidence README."
+    },
+    {
+      "id": "CSA-9",
+      "name": "Old console credential removed after the soak",
+      "ownerTask": "7.1",
+      "productionEntry": "know-me-cluster PR removing the console ui principal's credential and its token Secret reference; then console-session.sh unauth and the CSA-8 step a",
+      "realCollaborators": [
+        "ipfs-mcp-config",
+        "Argo CD"
+      ],
+      "oracle": "The merged tree has no credential for the ui principal and no reference to its token Secret; sign-in (step a) still works.",
+      "negativeControl": "A request to /auth/session or /mcp with the old bearer token answers 401.",
+      "fixtures": "After OG-27 (operator-declared end of soak).",
+      "evidence": "PR URL, merge SHA, grep of the rendered manifests, and the 401 status code (token value never printed)."
+    },
+    {
+      "id": "CSA-10",
+      "name": "Residuals M1 and M2 closed in the ADRs",
+      "ownerTask": "7.2",
+      "productionEntry": "docs/mcp ADR-0009 and ADR-0004 amendments",
+      "realCollaborators": [
+        "ipfs-agent-architect role"
+      ],
+      "oracle": "Each ADR has an appended amendment stating the residual ended, citing the 6.7 evidence path and the 7.1 merge SHA.",
+      "negativeControl": "An amendment without the evidence path or merge SHA is FAIL; rewriting earlier ADR text instead of appending is FAIL.",
+      "fixtures": "ADRs in this repo.",
+      "evidence": "Commit SHA of the amendments."
+    },
+    {
+      "id": "CSA-11",
+      "name": "Independent reviews of the verifier and of compatibility",
+      "ownerTask": "8.1+8.2",
+      "productionEntry": "security-reviewer read of mcp/server (2.x verifier, jwks.go) and contract 1.2/1.3; reviewer read for /api/v0, gateway, CID and off-switch compatibility",
+      "realCollaborators": [
+        "security-reviewer role",
+        "reviewer role"
+      ],
+      "oracle": "Both findings files exist with no open CRITICAL or HIGH; 8.2 confirms no /api/v0, gateway or default CID change and an off switch with docs for every new key.",
+      "negativeControl": "Any open CRITICAL/HIGH, a missing off switch, or a review run in the builder's context is FAIL.",
+      "fixtures": "kubo feat/ipfs-mcp-server at commit 1140ff10c (the deployed image source).",
+      "evidence": "Findings files under .agent-team/kubo-ipfs-agentic/findings/{security,review}/agent-backend-settings/."
+    }
+  ],
+  "functionalScope": [
+    "console-session-auth tasks 6.0b and 6.1 through 8.2: cutover, checks, evidence, credential removal, ADR residuals, reviews"
+  ],
+  "resilienceScope": {
+    "policy": "Adopted scenarios never defer on budget overflow; exhaustion means checkpoint and BLOCKED. Only items listed as deferredOptional may move to a later phase.",
+    "deferredOptional": [
+      "Delete the two _lovable TXT records",
+      "DNS guard check for off-cluster know-me.tools records",
+      "Web UI fix for LOW-17 (logout after 15 minutes idle)",
+      "verify.sh INFO-G (SKIP instead of FAIL with no Gateway)",
+      "LOW-4 negative PKCE test",
+      "Access-log check for id_token_hint (follow-up 5)"
+    ]
+  },
+  "exclusions": [
+    "Other changes of this phase: lke-agent-settings, phase-integration-gate, promethity-delivery, lke-vector-search (need an amendment before dispatch)",
+    "agent.origin_allowlist and any write route on the console (prerequisite of lke-agent-settings)",
+    "Rolling flint-gate forward",
+    "Any change to /api/v0, the HTTP gateway, the default CID recipe or wire behaviour"
+  ],
+  "requiredSafetyChecks": [
+    "Never print secrets, tokens, cookie values or passwords, including CF_TOKEN and IPFS_CONSOLE_*",
+    "Agents run origin-isolation.sh only as 'origin-isolation.sh unauth'",
+    "Merges, Argo syncs and pod restarts are operator actions or need explicit operator approval",
+    "Reviews run in a separate context from the builder",
+    "Keep the old targetRef in any PR that removes a route (2026-10-16 gotcha)",
+    "No widening of agent permissions and no routing around classifier denials"
+  ],
+  "budgets": {
+    "timeMinutes": 480,
+    "toolCalls": 400,
+    "repairAttempts": 2,
+    "noProgressLimit": 3,
+    "tokenBudget": "UNKNOWN",
+    "tokenFallback": "Stop at the timeMinutes or toolCalls limit, checkpoint, and report BLOCKED with the remaining scenarios.",
+    "exhaustion": "Checkpoint and BLOCKED; never a silent PASS. Docs and state may be saved without re-running product checks."
+  },
+  "evidenceInvalidation": "Evidence is keyed to the image digest, the know-me-cluster tree commit and this contract digest. A new image, a new cluster commit touching ipfs-webui-auth or ipfs-mcp-config, or a contract amendment invalidates only the scenarios that read it; earlier evidence stays in history.",
+  "workerRoutes": {
+    "agent": "claude-code lead with kubo-ipfs-agentic roles (ipfs-agent-architect, security-reviewer, reviewer)",
+    "model": "claude-opus-5-5",
+    "billing": "operator's Claude Code subscription",
+    "subagents": "security-reviewer and reviewer only, each in its own context",
+    "reviewRoundsMax": 2
+  },
+  "boundaryPacket": {
+    "postImplementationOnly": true,
+    "singleRun": true,
+    "commands": [
+      "bash namespaces/ipfs/lke-checks/console-session.sh unauth",
+      "bash namespaces/ipfs/lke-checks/session-allowlist.sh --self-test",
+      "bash namespaces/ipfs/lke-checks/origin-isolation.sh unauth",
+      "kubectl --context know-me -n ipfs get pod ipfs-0 -o jsonpath='{.status.containerStatuses[*].imageID}'",
+      "kubectl --context know-me -n ipfs get securitypolicy ipfs-webui-auth -o jsonpath='{.status}'"
+    ],
+    "expectedEffects": [
+      "None; every command is read-only."
+    ],
+    "requiredApprovals": "None for the read-only commands. Merges, syncs and restarts in 7.1 need the operator.",
+    "receipts": [
+      "mcp/server/evidence/2026-10-19-console-session-auth-6.7/README.md and its output files"
+    ],
+    "cleanup": [
+      "Remove scratch worktree kmc-main5 after 7.1 merges"
+    ],
+    "stopConditions": [
+      "SecurityPolicy ipfs-webui-auth not Accepted, or any route answering 500: run the 6.4 revert and stop",
+      "Any CSA scenario FAIL: record it and stop before closing its owner task",
+      "A command would print a secret value: stop"
+    ]
+  },
+  "status": {
+    "implementationComplete": false
+  }
+}
