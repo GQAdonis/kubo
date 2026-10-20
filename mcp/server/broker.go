@@ -293,7 +293,7 @@ func (b *Broker) reserve(n newConfirmation, limit int) (Pending, error) {
 		sid:      n.sid,
 		tool:     n.tool,
 		argsHash: n.argsHash,
-		dedupe:   dedupeKey(n.sid, n.principal.ID, n.tool, n.argsHash),
+		dedupe:   dedupeKey(n.sid, n.principal.BindingKey(), n.tool, n.argsHash),
 	}
 	b.byID[r.ID] = r
 	b.active[r.dedupe] = r.ID

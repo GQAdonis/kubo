@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
@@ -411,6 +412,52 @@ func duplicateSubjectError(doc any) error {
 	return nil
 }
 
+// maxStaleError reports the cross-key rule JSON Schema cannot express
+// (mcp-oidc-hardening design D2): auth.oidc.jwks_max_stale must be a
+// non-zero duration no shorter than auth.oidc.jwks_cache_ttl. Defaults are
+// the schema defaults (24h and 15m). The rule holds whether or not
+// auth.oidc.enabled is true. It returns nil for a clean config.
+func maxStaleError(doc any) error {
+	root, _ := doc.(map[string]any)
+	auth, _ := root["auth"].(map[string]any)
+	oidc, _ := auth["oidc"].(map[string]any)
+	read := func(key, def string) (time.Duration, error) {
+		v, ok := oidc[key].(string)
+		if !ok {
+			v = def
+		}
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return 0, fmt.Errorf("auth.oidc.%s: %w", key, err)
+		}
+		return d, nil
+	}
+	ttl, err := read("jwks_cache_ttl", "15m")
+	if err != nil {
+		return err
+	}
+	maxStale, err := read("jwks_max_stale", "24h")
+	if err != nil {
+		return err
+	}
+	if maxStale <= 0 {
+		return fmt.Errorf("auth.oidc.jwks_max_stale: %s removes the cap; no value does (turn the verifier off with auth.oidc.enabled: false)", maxStale)
+	}
+	if maxStale < ttl {
+		return fmt.Errorf("auth.oidc.jwks_max_stale: %s is shorter than auth.oidc.jwks_cache_ttl %s", maxStale, ttl)
+	}
+	return nil
+}
+
+// semanticConfigError runs every cross-item and cross-key config rule that
+// JSON Schema cannot express, and returns the first violation.
+func semanticConfigError(doc any) error {
+	if err := duplicateSubjectError(doc); err != nil {
+		return err
+	}
+	return maxStaleError(doc)
+}
+
 // TestConfigSemanticInvalidExamplesFail covers the invalid examples that
 // validate against the JSON Schema but break a rule it cannot express: the
 // listed Go check must reject them and name the key, and every valid example
@@ -429,9 +476,9 @@ func TestConfigSemanticInvalidExamplesFail(t *testing.T) {
 		if err := rs.Validate(doc); err != nil {
 			t.Errorf("%s: a semantic case must pass the JSON Schema (else list it under cases): %v", file, err)
 		}
-		err := duplicateSubjectError(doc)
+		err := semanticConfigError(doc)
 		if err == nil {
-			t.Errorf("%s: accepted, want a duplicate-subject error", file)
+			t.Errorf("%s: accepted, want a semantic config error", file)
 			continue
 		}
 		if !strings.Contains(err.Error(), field) {
@@ -439,7 +486,7 @@ func TestConfigSemanticInvalidExamplesFail(t *testing.T) {
 		}
 	}
 	for _, p := range jsonFiles(t, "config/examples") {
-		if err := duplicateSubjectError(readJSON(t, p)); err != nil {
+		if err := semanticConfigError(readJSON(t, p)); err != nil {
 			t.Errorf("%s: %v", p, err)
 		}
 	}
@@ -501,6 +548,27 @@ func TestConfigDefaults(t *testing.T) {
 	}
 	if props["llm"].(map[string]any)["default"] != nil || props["embeddings"].(map[string]any)["default"] != nil {
 		t.Error("llm and embeddings must default to null (off, no endpoint)")
+	}
+	// mcp-oidc-hardening D2 and D5: the staleness cap defaults to 24h and
+	// cannot be removed; an absent routes list accepts a JWT on session only.
+	oidc := props["auth"].(map[string]any)["properties"].(map[string]any)["oidc"].(map[string]any)["properties"].(map[string]any)
+	if got := oidc["jwks_max_stale"].(map[string]any)["default"]; got != "24h" {
+		t.Errorf("auth.oidc.jwks_max_stale default %v, want 24h", got)
+	}
+	if got := toStrings(oidc["routes"].(map[string]any)["default"]); !slices.Equal(got, []string{"session"}) {
+		t.Errorf("auth.oidc.routes default %v, want [session]", got)
+	}
+	for _, v := range []string{"0s", "0h", "14m59s"} {
+		doc := map[string]any{"auth": map[string]any{"oidc": map[string]any{"jwks_max_stale": v}}}
+		if err := maxStaleError(doc); err == nil || !strings.Contains(err.Error(), "auth.oidc.jwks_max_stale") {
+			t.Errorf("jwks_max_stale %s with the default TTL: got %v, want an error naming the key", v, err)
+		}
+	}
+	for _, v := range []string{"15m", "24h", "168h"} {
+		doc := map[string]any{"auth": map[string]any{"oidc": map[string]any{"jwks_max_stale": v}}}
+		if err := maxStaleError(doc); err != nil {
+			t.Errorf("jwks_max_stale %s with the default TTL: %v", v, err)
+		}
 	}
 	// No reserved port is accepted as a listen address, in either form.
 	rs := resolveRef(t, configSchema+"#/$defs/ListenAddress")

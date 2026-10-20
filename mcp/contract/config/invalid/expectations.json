@@ -1,5 +1,5 @@
 {
-  "description": "Each file under cases must fail validation against ../ipfs-mcp-config.schema.json, and the error must name the offending key (jsonschema-go reports the schema location of the failing key). Each file under semanticCases is valid JSON Schema but breaks a cross-item rule that JSON Schema cannot express; it must be rejected by the Go check in agentic_test.go (duplicateSubjectError), whose error names the key.",
+  "description": "Each file under cases must fail validation against ../ipfs-mcp-config.schema.json, and the error must name the offending key (jsonschema-go reports the schema location of the failing key). Each file under semanticCases is valid JSON Schema but breaks a cross-item rule that JSON Schema cannot express; it must be rejected by the Go checks in agentic_test.go (semanticConfigError: duplicate subjects, and auth.oidc.jwks_max_stale shorter than auth.oidc.jwks_cache_ttl or zero), whose error names the key.",
   "cases": {
     "literal-llm-key.json": "/llm/properties/api_key",
     "literal-principal-token.json": "/principals/items/properties/credential",
@@ -15,6 +15,7 @@
     "oidc-hs256.json": "/auth/properties/oidc/properties/algorithms"
   },
   "semanticCases": {
-    "oidc-duplicate-subject-admin.json": "principals[].subjects"
+    "oidc-duplicate-subject-admin.json": "principals[].subjects",
+    "oidc-max-stale-below-ttl.json": "auth.oidc.jwks_max_stale"
   }
 }

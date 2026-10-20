@@ -86,13 +86,16 @@ func (i *testIssuer) jwksURL() string   { return i.srv.URL + "/jwks.json" }
 // settings is a resolved auth.oidc section aimed at this issuer.
 func (i *testIssuer) settings() OIDCSettings {
 	return OIDCSettings{
-		Issuer:        testIssuerURL,
-		Audiences:     []string{testAudience},
-		JWKSURL:       i.jwksURL(),
-		Algorithms:    []jose.SignatureAlgorithm{jose.RS256},
-		ClockSkew:     30 * time.Second,
-		JWKSCacheTTL:  15 * time.Minute,
-		Routes:        DefaultOIDCRoutes(),
+		Issuer:       testIssuerURL,
+		Audiences:    []string{testAudience},
+		JWKSURL:      i.jwksURL(),
+		Algorithms:   []jose.SignatureAlgorithm{jose.RS256},
+		ClockSkew:    30 * time.Second,
+		JWKSCacheTTL: 15 * time.Minute,
+		JWKSMaxStale: 24 * time.Hour,
+		// The explicit list that restores the pre-hardening default; the
+		// default itself is [session] and has its own tests.
+		Routes:        []string{OIDCRouteAGUI, OIDCRouteSettings, OIDCRouteIndex, OIDCRouteSession},
 		RequireOrigin: true,
 	}
 }

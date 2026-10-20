@@ -33,6 +33,7 @@ const (
 	jwtRejectSignature = "signature"
 	jwtRejectClaims    = "claims"
 	jwtRejectTime      = "time"
+	jwtRejectAZP       = "azp"
 	jwtRejectRoute     = "route"
 )
 
@@ -61,6 +62,8 @@ type idTokenClaims struct {
 	Email    string           `json:"email"`
 	AMR      []string         `json:"amr"`
 	AuthTime *jwt.NumericDate `json:"auth_time"`
+	// AZP is the authorized party (OIDC Core 3.1.3.7).
+	AZP string `json:"azp"`
 }
 
 // JWTOptions configures NewJWTVerifier.
@@ -119,15 +122,26 @@ func NewJWTVerifier(o JWTOptions) (*JWTVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("agent.origin_allowlist: %w", err)
 	}
-	return &JWTVerifier{
+	// A hand-built OIDCSettings with no cap gets the default: the cap has no
+	// off value.
+	maxStale := o.OIDC.JWKSMaxStale
+	if maxStale <= 0 {
+		maxStale = DefaultOIDCJWKSMaxStale
+	}
+	v := &JWTVerifier{
 		origins:  origins,
 		ownLog:   ownLog,
 		cfg:      o.OIDC,
-		keys:     newJWKSCache(o.OIDC.JWKSURL, o.OIDC.JWKSCacheTTL, o.Client, now),
+		keys:     newJWKSCache(o.OIDC.JWKSURL, o.OIDC.JWKSCacheTTL, maxStale, o.Client, now),
 		now:      now,
 		log:      log,
 		subjects: subjects,
-	}, nil
+	}
+	v.keys.onStale = func(age time.Duration) {
+		v.log.Warn("jwks key set is older than auth.oidc.jwks_max_stale: session tokens are refused until it is fetched again",
+			"age", age.Round(time.Second).String(), "max_stale", maxStale.String(), "jwks", redactURL(o.OIDC.JWKSURL))
+	}
+	return v, nil
 }
 
 // adoptLogger makes l the verifier's logger unless the caller supplied one. The
@@ -136,6 +150,21 @@ func (v *JWTVerifier) adoptLogger(l *slog.Logger) {
 	if !v.ownLog && l != nil {
 		v.log = l
 	}
+}
+
+// warnOpenRoutes logs one Warn line when a route other than the session report
+// accepts a JWT and agent.origin_allowlist is empty: require_origin then refuses
+// every state-changing session request, which is safe but looks like a fault.
+// Startup continues.
+func (v *JWTVerifier) warnOpenRoutes() {
+	if len(v.origins) > 0 || !v.cfg.RequireOrigin {
+		return
+	}
+	if !slices.ContainsFunc(v.cfg.Routes, func(r string) bool { return r != OIDCRouteSession }) {
+		return
+	}
+	v.log.Warn("auth.oidc.routes lists routes beyond session but agent.origin_allowlist is empty: state-changing session requests will be refused until it lists the console origin",
+		"routes", strings.Join(v.cfg.Routes, ","))
 }
 
 // Warm fetches the key set once. An error names the URL (userinfo removed) and
@@ -212,6 +241,9 @@ func (v *JWTVerifier) validate(ctx context.Context, token string) (VerifiedToken
 	default:
 		return v.reject(jwtRejectClaims)
 	}
+	if !v.azpOK(claims) {
+		return v.reject(jwtRejectAZP)
+	}
 	out := VerifiedToken{
 		Subject: claims.Subject,
 		Email:   claims.Email,
@@ -222,6 +254,16 @@ func (v *JWTVerifier) validate(ctx context.Context, token string) (VerifiedToken
 		out.AuthTime = claims.AuthTime.Time()
 	}
 	return out, nil
+}
+
+// azpOK applies OIDC Core 3.1.3.7 steps 4 and 5: an ID token with several
+// audiences must carry an azp, and an azp must be one of the configured
+// audiences. go-jose has already checked that some aud is configured.
+func (v *JWTVerifier) azpOK(c idTokenClaims) bool {
+	if c.AZP == "" {
+		return len(c.Audience) <= 1
+	}
+	return slices.Contains(v.cfg.Audiences, c.AZP)
 }
 
 func (v *JWTVerifier) reject(reason string) (VerifiedToken, error) {

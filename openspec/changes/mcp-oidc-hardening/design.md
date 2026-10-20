@@ -76,3 +76,7 @@ An absent `routes` now accepts a JWT only on `/auth/session`. Every other route 
 ## Open Questions
 
 - Should the verifier also reject tokens that carry `scp` or `client_id`, which are access-token shaped? It depends on the claim names in a real Hydra ID token, which nobody has read. It can be added later without changing these specs' other requirements, and it is not a gate for `lke-agent-settings`.
+
+## Implementation note (2026-10-20): D4 binding key
+
+D4 said the binding key for a session principal is the principal ID plus `#` plus the `sub`. The implementation uses the principal ID plus `#` plus the first 32 hex characters of SHA-256 of the `sub` (`Principal.BindingKey()` in `mcp/server/principal.go`). The confirm token is signed but readable by the client, so it must not carry the raw `sub`. Binding semantics are unchanged: two subjects on one principal never share a session, a confirm token or an elicitation answer. Static principals keep their ID as the key. The startup Warn from D5 is skipped when `require_origin` is false, because the allowlist has no effect then.

@@ -68,7 +68,7 @@ func (g *gate) elicitAnswer(c *call, state string, responses mcp.InputResponseMa
 		return invalid("The request state is malformed, was tampered with or is not a request state.")
 	}
 	switch {
-	case claims.SID != c.sid, claims.PID != c.principal.ID, claims.Tool != c.tool.Name, claims.ArgsSHA256 != c.argsHash:
+	case claims.SID != c.sid, claims.PID != c.principal.BindingKey(), claims.Tool != c.tool.Name, claims.ArgsSHA256 != c.argsHash:
 		return invalid("The request state belongs to another call.")
 	case !mayElicit(c.principal, c.ss):
 		return invalid("This session or caller cannot answer a confirmation through elicitation.")

@@ -272,21 +272,34 @@ func httpSettings(req *cmds.Request, cfg *mcpserver.Config, s *mcpSettings, flag
 }
 
 // errNoPrincipalResolved is the startup error when the config names principals
-// and none of their credential references resolved. It names each principal and
-// the environment variable or file it expects, never a value. It returns nil
-// when no principal is configured: the anonymous loopback default.
+// and no static credential resolved and no session can authenticate. It names
+// each principal and the environment variable or file it expects, never a
+// value; a session-only principal (subjects, no credential) is named with the
+// auth.oidc.enabled key that would make it work. It returns nil when no
+// principal is configured: the anonymous loopback default.
 func errNoPrincipalResolved(principals []mcpserver.PrincipalConfig) error {
 	if len(principals) == 0 {
 		return nil
 	}
 	refs := make([]string, 0, len(principals))
+	var sessionOnly []string
 	for _, p := range principals {
 		if !p.HasCredential() {
+			if len(p.Subjects) > 0 {
+				sessionOnly = append(sessionOnly, p.Name)
+			}
 			continue
 		}
 		refs = append(refs, fmt.Sprintf("%s (%s)", p.Name, p.Credential))
 	}
-	return fmt.Errorf("the config names %d principal(s) but none has a credential, so the listener would serve anonymous callers: %s; set the environment variable or create the file for at least one, or remove the principals to run anonymously on loopback", len(principals), strings.Join(refs, ", "))
+	var parts []string
+	if len(refs) > 0 {
+		parts = append(parts, fmt.Sprintf("no principal has a resolvable credential: set the environment variable or create the file for at least one (%s)", strings.Join(refs, ", ")))
+	}
+	if len(sessionOnly) > 0 {
+		parts = append(parts, fmt.Sprintf("the session-only principal(s) %s authenticate nothing while auth.oidc.enabled is false: set auth.oidc.enabled to true with an issuer, audiences and jwks_url, or give them a credential", strings.Join(sessionOnly, ", ")))
+	}
+	return fmt.Errorf("the config names %d principal(s) but the listener would serve anonymous callers: %s; or remove the principals to run anonymously on loopback", len(principals), strings.Join(parts, "; "))
 }
 
 // destructiveSelector is the contract's --tools selector for destructive tools.

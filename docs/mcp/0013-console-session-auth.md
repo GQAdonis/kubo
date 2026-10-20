@@ -14,7 +14,7 @@ Recorded answers (the first quote was superseded for point 1 by the second and t
 
 1. Hydra host: `oauth.know-me.tools` (issuer `https://oauth.know-me.tools`). DNS A 23.239.29.33.
 2. Allowlisted identity IDs and the admin: deferred. Required before subjects are wired (group 4 RBAC) and before the cutover (group 6).
-3. Admin path: option (a), TOTP or WebAuthn enabled in Kratos and the admin identity enrolled before cutover.
+3. Admin path: option (a), TOTP or WebAuthn enabled in Kratos and the admin identity enrolled before cutover. **Superseded 2026-10-20 by option (c), port-forward only; see the amendment of that date.**
 4. Non-browser console `/api/v0` clients: none.
 5. go-jose `v4.1.6`: approved as the target. Corrected 2026-10-17: it arrives only through an upstream `ipshipyard/p2p-forge` bump (section 4); the verifier is built at the graph's `v4.1.4`.
 6. Soak before deleting the interim credentials: seven days.
@@ -260,7 +260,7 @@ Today any pod in the cluster reaches `ipfs-api:5001` (the full RPC API, unauthen
 
 ### 12. Stability
 
-- **No `/api/v0` contract change.** No command, argument, default or response shape changes. Kubo gains no code; the only kubo-side effect is that an `Authorization` header it already ignores is present.
+- **No `/api/v0` contract change.** No command, argument, default or response shape changes. There are no `/api/v0` or gateway code changes; kubo's only edits are the WebUIPath bump and the dependency pins. The only effect on kubo's RPC listener is that an `Authorization` header it already ignores is present. (Wording corrected 2026-10-20, 8.2 NIT-2.)
 - **No HTTP Gateway change.** `ipfs.prometheusags.ai` routes and `Gateway.PublicGateways` are untouched, so gateway conformance is unaffected.
 - **No CID or wire change.**
 - **`ipfs mcp` change is additive.** A new optional config section, optional principal keys, a new verifier off by default, and a new optional route. `principals[].credential` becomes optional when `subjects` is present, which only relaxes the schema; every existing config stays valid.
@@ -269,10 +269,44 @@ Today any pod in the cluster reaches `ipfs-api:5001` (the full RPC API, unauthen
 
 1. **Hydra's host name.** `oauth.know-me.tools` is recommended (section 1). Confirm, or name another `*.know-me.tools` host, and add the Cloudflare A record. **Answered 2026-10-17: `oauth.know-me.tools`; A record 23.239.29.33 set.**
 2. **The allowlists.** The Kratos identity IDs (`sub`) that may use the console (RBAC and `ui`), and which of them is admin. The operator reads them from Kratos; agents never read identities. **Answered 2026-10-17: deferred ("defer IDs"); required before subjects are wired and before the cutover.**
-3. **Admin on the console.** Recommended (a): enable TOTP or WebAuthn in Kratos before cutover (`selfservice.methods.totp.enabled: true`, plus `session.whoami.required_aal: highest_available`) and enroll the admin identity. Alternatives: (b) accept password-only admin (`require_amr: []`, a documented weakening); (c) no console admin, with settings changed through `kubectl port-forward` and the static admin bearer. Until (a) or (b), settings on the console answer 403 `step_up_required`. **Answered 2026-10-17: option (a), TOTP or WebAuthn.**
+3. **Admin on the console.** Recommended (a): enable TOTP or WebAuthn in Kratos before cutover (`selfservice.methods.totp.enabled: true`, plus `session.whoami.required_aal: highest_available`) and enroll the admin identity. Alternatives: (b) accept password-only admin (`require_amr: []`, a documented weakening); (c) no console admin, with settings changed through `kubectl port-forward` and the static admin bearer. Until (a) or (b), settings on the console answer 403 `step_up_required`. **Answered 2026-10-17: option (a), TOTP or WebAuthn.** **Superseded 2026-10-20: option (c). Operator, verbatim: "Port-forward only". See the amendment of that date.**
 4. **Non-browser `/api/v0` clients on the console.** Confirm there are none, or name them. **Answered 2026-10-17: none.**
 5. **The go-jose bump** to `v4.1.6` (section 4). **Answered 2026-10-17: approved, `v4.1.6`. Operator, verbatim, on the corrected plan: "yes, go ahead with 1-3".** The original wording assumed a direct `go get` bump; go-jose is pinned through the protected `p2p-forge` stack, so the approved plan is: (1) an upstream PR on `ipshipyard/p2p-forge` bumping go-jose to `v4.1.6`, (2) the verifier built against `v4.1.4` meanwhile and off by default, (3) this correction. The cutover (group 6, OG-26) waits for kubo's p2p-forge bump to land with go-jose at least `v4.1.6` in all three `go.mod` files. The uncomfortable part: cutover timing now depends on an upstream release we do not control, and the project can stall at group 5 with the verifier built but unusable on the real console.
 6. **The soak period** before deleting `ipfs-webui-basicauth` and the console `ui` token Secret. Seven days is suggested. **Answered 2026-10-17: seven days.**
+
+## Amendment (2026-10-20: mcp-oidc-hardening and the LKE admin path)
+
+This amendment records the decisions of the OpenSpec change `openspec/changes/mcp-oidc-hardening/` (design D1 to D6), which answers the phase-boundary reviews of `console-session-auth`: the verifier security review (8.1, LOW-1 to LOW-5) and the compatibility review (8.2, MAJOR-1, MINOR-1 to MINOR-7, NIT-1, NIT-2). It also records the operator's 2026-10-20 rulings, quoted verbatim from `.prometheus/decisions.md`. The verifier sections above (4, 5, 7) stay in force except where a decision below narrows them.
+
+### Operator rulings, 2026-10-20 (verbatim)
+
+- `auth.oidc.jwks_max_stale` default (mcp-oidc-hardening task 1.1). Operator: "24h".
+- OQ-1, the admin path on LKE. Operator: "Port-forward only". Decision 3 moves from option (a) to option (c). Admin settings changes on the cloud node are made only through `kubectl port-forward` with a static `admin` bearer read from an out-of-band Secret. No admin principal is reachable through the public console session: no principal of kind `admin` lists `subjects` in the LKE config, and the settings route is not routed on the console. This supersedes the 2026-10-17 answer (a). Kratos TOTP and WebAuthn enrollment is no longer a precondition for anything on LKE. `require_amr` and `max_auth_age` (section 5) stay in the contract for other deployments that choose console admin.
+- OQ-2, the image roll. Operator: "Fold into OG-13 PR". The image that carries `mcp-oidc-hardening` ships in the same know-me-cluster PR that adds `/agui` (`lke-agent-settings`), with one planned restart of `ipfs-0`.
+
+### Decisions
+
+- **D1, `azp` and several audiences (8.1 LOW-1).** A token whose `aud` holds more than one value authenticates only if it carries an `azp` that is one of `auth.oidc.audiences`. A token that carries an `azp` authenticates only if that `azp` is one of `audiences`. This applies OpenID Connect Core 1.0, section 3.1.3.7, steps 4 and 5. A failure is the same generic 401 as every other token check. Rejected: requiring exactly one `aud`, which refuses conformant tokens; and doing nothing while Hydra access tokens are opaque, which an operator can change without kubo noticing.
+- **D2, staleness cap `auth.oidc.jwks_max_stale` (8.1 LOW-2).** New key, default `24h` (the ruling above). A held key stops verifying once more than `jwks_max_stale` has passed since the last successful key-set fetch; every JWT then gets 401 until a fetch succeeds, static bearers are unaffected, and the expiry is logged once per stale period with no key material or token. The value must be at least `jwks_cache_ttl`, `0` is a load error, and the rule is checked whether or not `auth.oidc.enabled` is true. No value removes the cap; the off switch of the whole verifier stays `auth.oidc.enabled: false`. Rejected: a "never expire" value, which would recreate the finding, and a cap derived from the TTL, which couples two settings tuned for different reasons.
+- **D3, key fetch on `context.WithoutCancel` (8.2 MINOR-4).** A key-set fetch is not cancelled when the request that triggered it is cancelled or its client disconnects. It stays bounded by the existing 10 s fetch timeout, and concurrent waiters still share one fetch. A client that drops mid-fetch can no longer burn the 30 s refetch window.
+- **D4, per-subject binding (8.1 LOW-3).** For an identity authenticated by an ID token, the MCP session binding and every confirmation binding key on the principal ID plus the `sub`. Two people mapped to one principal cannot continue each other's MCP session or answer each other's pending confirmations. Static bearer identities keep the principal-ID binding. The key is internal and is never written to a response; audit records already carry `sub` (section 9). The fallback, "one subject per write-granted principal" at load, is used only if D4 cannot be built without changing the confirmation contract in `mcp/contract/`, and only after the architect amends the design.
+- **D5, default `auth.oidc.routes` is `["session"]` (8.1 LOW-4).** With `routes` absent, a JWT authenticates only on `/auth/session`. Every other route is listed explicitly; `[]` accepts a JWT nowhere. When the list names a route other than `session` and `agent.origin_allowlist` is empty, startup logs one Warn line naming both keys and continues, since `require_origin` already fails closed. This narrows a default and widens nothing. The previous default is restored with `["agui","settings","index","session"]`. The table row for `auth.oidc.routes` in section 4 above records the original default and is superseded by this decision.
+- **D6, JWKS fetch and proxy variables (8.2 MINOR-1).** Documented, not changed. The JWKS fetch of `ipfs mcp` uses the default HTTP transport and so honors `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` (`docs/environment-variables.md`). The reason other `ipfs mcp` clients ignore the proxy variables, that they carry content, prompts or keys, does not apply: the JWKS request carries none of them and the response is public keys. Setting `Proxy: nil` could break a deployment whose JWKS egress goes through a proxy.
+
+Also in this change: tests for the existing redirect refusal and 1 MiB key-set bound (8.1 LOW-5, 8.2 MINOR-5); the real-binary disabled-state test keeps the session principal configured (8.2 MINOR-3); a startup failure that names `auth.oidc.enabled` when every principal is session-only and the verifier is off (8.2 MINOR-6); a dag-jose round trip under go-jose v4.1.6 (8.2 MINOR-7); the `/auth/session` encode error logged at Debug (8.2 NIT-1); the `principals[].subjects` off-switch wording (8.2 MINOR-2); the v0.44 changelog disclosure of the p2p-forge fork `replace` (8.2 MAJOR-1); and the Stability wording above (8.2 NIT-2).
+
+### Deferred
+
+- **Rejecting access-token-shaped tokens by `scp`, `client_id` or `typ`** (the optional half of 8.1 LOW-1). Deferred, not blocking `lke-agent-settings`, until the claim names in a live Hydra ID token have been read. It can be added later without changing D1 to D6.
+- In-process rate limiting of bearer verification (8.1 INFO-1, the carried MCP-03 item).
+
+### Stability
+
+No `/api/v0`, HTTP Gateway, default CID recipe or wire change. No `go.mod` change and no new `replace`; the p2p-forge fork `replace` (section 4, amended 2026-10-17) is unchanged and is now disclosed in the v0.44 changelog. Every new or changed key has a default, an off switch and a row in `docs/mcp/config-reference.md`.
+
+### The uncomfortable thing
+
+The 24h cap signs every console user out if the issuer is unreachable for more than a day, and with admin now port-forward only, the console has no admin fallback at all: the break-glass path for both is cluster access. D1 is unverified against a live Hydra ID token; if Hydra sets an `azp` other than the configured audience, every console sign-in gets 401 after the image roll, and the first place that shows is the operator's signed-in check in `lke-agent-settings` task 1.8.
 
 ## Alternatives considered
 
@@ -308,3 +342,4 @@ Today any pod in the cluster reaches `ipfs-api:5001` (the full RPC API, unauthen
 - `.prometheus/gotchas.md` 2026-10-14 (Envoy basic-auth realm)
 - Prometheus-AGS/flint-infra#9, Know-Me-Tools/flint-gate#16
 - `openspec/changes/console-session-auth/`
+- `openspec/changes/mcp-oidc-hardening/` (2026-10-20 amendment)

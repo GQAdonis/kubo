@@ -269,7 +269,12 @@ Exception, `ipfs mcp` (see the [agent guide](mcp/agentic.md)): the clients of `i
 - the embedder, the vector store (remote SurrealDB), the content extractor and the media describer of [`embeddings`](mcp/embeddings.md);
 - the model client of the agent loop (`/agui`, `/a2a`) and the backend probe behind the settings route.
 
-The one `ipfs mcp` client that does honor the variables is the RPC client for a remote `--api` URL, which behaves as the `ipfs` CLI does toward a remote daemon. To reach a model, store or extractor endpoint through a proxy, point the setting at a gateway host you control and acknowledge, and let that host do the proxying.
+Two `ipfs mcp` clients do honor the variables:
+
+- the RPC client for a remote `--api` URL, which behaves as the `ipfs` CLI does toward a remote daemon;
+- the key set (JWKS) fetch of the session-token verifier, made only when `auth.oidc.enabled` is true, to the `auth.oidc.jwks_url` you configured (see [ADR-0013](mcp/0013-console-session-auth.md)). It carries no content, prompts or keys, and its response is the issuer's public keys, so the reason for the exception above does not apply. To keep it off a proxy, list the issuer host in `NO_PROXY`.
+
+To reach a model, store or extractor endpoint through a proxy, point the setting at a gateway host you control and acknowledge, and let that host do the proxying.
 
 ## `HTTP_PROXY`
 

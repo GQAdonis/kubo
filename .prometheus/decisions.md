@@ -149,3 +149,10 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 - 7.1: the OG-27 soak ended (operator, 2026-10-20). The `console-ui` principal never had a credential (subjects only since #48). know-me-cluster #52 (`2dee35471`) removed the remaining manifest references to the console htpasswd Secret. The operator waived deleting the Secrets: `ipfs-webui-basicauth` and `ipfs-webui-basic-auth` were still live after #52, and nothing references them. Acceptance item "kubectl no longer lists them" is therefore not met, by operator decision.
 - 7.2: ADR-0009 and ADR-0004 carry dated 2026-10-20 amendments ending M1 and M2, citing the 6.7 evidence and #52.
 - Risk: an unused old console password still exists in the cluster.
+
+## 2026-10-20: mcp-oidc-hardening and lke-agent-settings operator rulings
+
+- OQ-1, admin on LKE (operator: "Port-forward only"): ADR-0013 decision 3 moves from (a) to (c). Admin settings changes on the cloud node go only through `kubectl port-forward` with a static admin bearer from an out-of-band Secret. No admin principal is reachable through the public console session. Supersedes the 2026-10-17 answer (a).
+- `auth.oidc.jwks_max_stale` default (operator: "24h"): a cached signing key keeps verifying for at most 24h while the issuer is unreachable (mcp-oidc-hardening 1.1).
+- OQ-2, image roll (operator: "Fold into OG-13 PR"): the image carrying mcp-oidc-hardening ships in the same know-me-cluster PR that adds `/agui`, with one planned ipfs-0 restart.
+- Deferred, not blocking: rejecting tokens that carry `scp` or `client_id` (optional half of 8.1 LOW-1) until the claim names are seen in a live Hydra ID token.

@@ -91,4 +91,7 @@ func TestHTTPStartupSessionOnlyPrincipals(t *testing.T) {
 
 	_, err = loadSettingsForTest(mcpRequest(cmds.OptMap{mcpConfigOptionName: writeMCPConfig(t, body(false))}))
 	require.Error(t, err, "subjects alone do not authenticate anyone while auth.oidc is off")
+	assert.Contains(t, err.Error(), "auth.oidc.enabled", "the message names the key that turns the verifier on")
+	assert.Contains(t, err.Error(), "console-ui", "and the session-only principal it concerns")
+	assert.NotContains(t, err.Error(), "resolvable credential", "no empty credential list")
 }

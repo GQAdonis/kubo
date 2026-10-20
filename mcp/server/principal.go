@@ -1,6 +1,10 @@
 package server
 
-import "context"
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+)
 
 // Principal kinds from ADR-0004.
 const (
@@ -26,6 +30,24 @@ type Principal struct {
 	ID string
 	// Kind is one of the Kind constants.
 	Kind string
+	// sub is the `sub` of the person behind a session identity; empty for a
+	// static bearer. It is internal: it is never written to a response, and
+	// only a digest of it reaches a confirm token.
+	sub string
+}
+
+// BindingKey is what the MCP session binding and every confirmation binding
+// key on. For a static bearer it is the principal ID, as before. For a session
+// identity it adds a digest of the token's `sub`, so two people mapped to one
+// principal cannot continue each other's MCP session or answer each other's
+// pending confirmations (ADR-0013 amendment, mcp-oidc-hardening D4). The digest
+// keeps the subject itself out of the signed confirm tokens a client can read.
+func (p Principal) BindingKey() string {
+	if p.sub == "" {
+		return p.ID
+	}
+	sum := sha256.Sum256([]byte(p.sub))
+	return p.ID + "#" + hex.EncodeToString(sum[:16])
 }
 
 // LocalPrincipal is the principal of a stdio session.

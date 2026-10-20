@@ -16,6 +16,7 @@
       ],
       "clock_skew": "30s",
       "jwks_cache_ttl": "15m",
+      "jwks_max_stale": "24h",
       "routes": [
         "agui",
         "settings",

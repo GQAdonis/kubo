@@ -1,7 +1,9 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,11 +33,60 @@ func TestJWTRouteScope(t *testing.T) {
 	})
 	t.Run("empty list accepts a JWT nowhere", func(t *testing.T) {
 		e := newSessionEnv(t, sessionEnvOptions{oidc: func(s *OIDCSettings) { s.Routes = []string{} }})
-		for _, route := range []string{RouteAGUI, RouteSettings, RouteIndexSearch} {
+		for _, route := range []string{RouteAGUI, RouteSettings, RouteIndexSearch, RouteAuthSession} {
 			code, _ := e.call(t, http.MethodGet, route, e.token(sessionSub, nil), "")
 			assert.Equal(t, http.StatusUnauthorized, code, route)
 		}
 	})
+}
+
+// With auth.oidc.routes absent only the session report accepts a JWT.
+func TestJWTRouteScopeDefaultIsSessionOnly(t *testing.T) {
+	cfg, err := ParseConfig(oidcConfigJSON(`{` + validOIDCBody + `}`))
+	require.NoError(t, err)
+	resolved, err := cfg.Auth.OIDC.resolve()
+	require.NoError(t, err)
+	require.Equal(t, []string{OIDCRouteSession}, resolved.Routes)
+
+	e := newSessionEnv(t, sessionEnvOptions{oidc: func(s *OIDCSettings) { s.Routes = resolved.Routes }})
+	for _, route := range []string{RouteAGUI, RouteSettings, RouteIndexSearch} {
+		code, _ := e.call(t, http.MethodGet, route, e.token(sessionSub, nil), "")
+		assert.Equal(t, http.StatusUnauthorized, code, route)
+	}
+	resp := e.do(t, rawReq{path: RouteMCP, token: e.token(otherSub, nil), body: initializeBody})
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "/mcp")
+	code, _ := e.call(t, http.MethodGet, RouteAuthSession, e.token(sessionSub, nil), "")
+	assert.Equal(t, http.StatusOK, code, "/auth/session")
+}
+
+// A route beyond session with an empty agent.origin_allowlist logs one Warn
+// line naming both keys; startup continues. A listed origin, or routes limited
+// to session, logs nothing.
+func TestJWTRoutesWarnWhenOriginAllowlistIsEmpty(t *testing.T) {
+	iss := newTestIssuer(t)
+	build := func(routes []string, origins []string) string {
+		logs := &lockedBuffer{}
+		log := slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		cfg := iss.settings()
+		cfg.Routes = routes
+		v, err := NewJWTVerifier(JWTOptions{OIDC: cfg, Principals: defaultSessionPrincipals(), OriginAllowlist: origins})
+		require.NoError(t, err)
+		newHTTPEnv(t, func(h *HTTPOptions) {
+			h.Verifier = NewChainVerifier(testVerifier(t), v)
+			h.Logger = log
+		})
+		return logs.String()
+	}
+	count := func(out string) int { return strings.Count(out, "auth.oidc.routes") }
+
+	out := build([]string{OIDCRouteAGUI, OIDCRouteSession}, nil)
+	assert.Equal(t, 1, count(out), out)
+	assert.Contains(t, out, "agent.origin_allowlist")
+	assert.Contains(t, out, "level=WARN")
+
+	assert.Zero(t, count(build([]string{OIDCRouteAGUI, OIDCRouteSession}, []string{sessionOrigin})), "allowlist set")
+	assert.Zero(t, count(build([]string{OIDCRouteSession}, nil)), "session only")
+	assert.Zero(t, count(build([]string{}, nil)), "no route")
 }
 
 func TestJWTOriginRule(t *testing.T) {

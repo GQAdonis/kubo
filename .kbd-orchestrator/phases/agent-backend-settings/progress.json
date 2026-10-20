@@ -2,17 +2,17 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2188,
-  "derivedRevision": 2188,
+  "sourceRevision": 2260,
+  "derivedRevision": 2260,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 299
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 371
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-20T10:39:54.988594Z",
+  "last_updated": "2026-10-20T12:16:28.418291Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 38,
   "changes_completed": 33,
@@ -352,9 +352,9 @@
       "status": "PENDING",
       "implementation_status": "PENDING",
       "tasks_total": 19,
-      "tasks_done": 0,
-      "last_task_completed": null,
-      "next_task_pending": "1.1 Operator ruling on the auth.oidc.jwks_max_stale default (design D2; proposed 24h, minimum jwks_cache_ttl, no v",
+      "tasks_done": 17,
+      "last_task_completed": "4.1 Integration gate, run once after groups 1 to 3 are complete, against a make build binary, on non-default ports",
+      "next_task_pending": "5.1 security-reviewer: review groups 1 and 2 and task 3.1 against the 8.1 findings. Confirm LOW-1 to LOW-5 closed,",
       "blockers": []
     },
     {

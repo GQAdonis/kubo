@@ -28,6 +28,8 @@ func TestParseConfigOIDCDefaultsAndOffByDefault(t *testing.T) {
 	assert.Equal(t, []jose.SignatureAlgorithm{jose.RS256}, s.Algorithms)
 	assert.Equal(t, 30*time.Second, s.ClockSkew)
 	assert.Equal(t, 15*time.Minute, s.JWKSCacheTTL)
+	assert.Equal(t, 24*time.Hour, s.JWKSMaxStale)
+	assert.Equal(t, []string{OIDCRouteSession}, s.Routes, "a JWT is accepted on the session report only")
 	assert.Equal(t, DefaultOIDCRoutes(), s.Routes)
 	assert.NotContains(t, s.Routes, OIDCRouteMCP)
 	assert.True(t, s.RequireOrigin)

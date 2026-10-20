@@ -211,7 +211,7 @@ func TestJWKSCacheRefetchIsRateLimitedAndTTLBounded(t *testing.T) {
 
 	synctest.Test(t, func(t *testing.T) {
 		rt := &fakeJWKS{set: jose.JSONWebKeySet{Keys: []jose.JSONWebKey{pubA}}}
-		c := newJWKSCache("https://keys.test.invalid/jwks.json", 15*time.Minute, &http.Client{Transport: rt}, time.Now)
+		c := newJWKSCache("https://keys.test.invalid/jwks.json", 15*time.Minute, 24*time.Hour, &http.Client{Transport: rt}, time.Now)
 
 		_, err := c.key(t.Context(), "a")
 		require.NoError(t, err)
@@ -252,7 +252,7 @@ func TestJWKSCacheRefetchIsRateLimitedAndTTLBounded(t *testing.T) {
 func TestJWKSCacheFailureNamesTheURLWithoutUserinfo(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		rt := &fakeJWKS{fail: true}
-		c := newJWKSCache("https://user:hunter2@keys.test.invalid/jwks.json", time.Minute, &http.Client{Transport: rt}, time.Now)
+		c := newJWKSCache("https://user:hunter2@keys.test.invalid/jwks.json", time.Minute, 24*time.Hour, &http.Client{Transport: rt}, time.Now)
 		_, err := c.key(t.Context(), "a")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "keys.test.invalid/jwks.json")

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "eventId": "kpm-740cecfa5ab0feca188a935edecc22b9",
+  "eventSha256": "e8277fdfebfbf3765123ba7ededb6b72f66b8a5fe01d204d361e0e65dbc1d7e6",
+  "eventIdentitySha256": "c99fe1911999b832dd6b9ca56818b0dbe62da1dfe7b3aa7ad19b9ca02372cfa6",
+  "event": {
+    "schemaVersion": 1,
+    "eventId": "kpm-740cecfa5ab0feca188a935edecc22b9",
+    "observedAt": "2026-10-20T10:43:14.744675Z",
+    "runId": "ipfs-mcp-server-20261009T081630Z",
+    "boundary": "task",
+    "status": "complete",
+    "phaseId": "agent-backend-settings",
+    "changeId": "mcp-oidc-hardening",
+    "taskId": "1.1",
+    "taskClass": "product",
+    "elapsedHours": 0.0,
+    "touchedFiles": [
+      ".kbd-orchestrator/current-waypoint.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/children/lke-deploy-discipline/progress.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/children/lke-deploy-discipline/tasks.md",
+      ".kbd-orchestrator/phases/agent-backend-settings/hooks-status.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/hooks.log.jsonl",
+      ".kbd-orchestrator/phases/agent-backend-settings/progress.json",
+      ".kbd-orchestrator/phases/agent-backend-settings/tasks.md",
+      ".kbd-orchestrator/phases/ipfs-mcp-server/progress.json",
+      ".kbd-orchestrator/phases/ipfs-mcp-server/tasks.md",
+      ".kbd-orchestrator/position-reminder.txt",
+      ".kbd-orchestrator/position.json",
+      ".prometheus/decisions.md",
+      "openspec/changes/mcp-oidc-hardening/tasks.md"
+    ],
+    "verification": [],
+    "commitSha": "a17a2c626b40fd5c4bded2f5297ce869d310981c",
+    "blocker": null,
+    "exactNextWork": "/kbd-apply console-session-auth"
+  },
+  "sessionLogAppended": true,
+  "memory": {
+    "transport": "outbox",
+    "status": "queued",
+    "operationId": "f2675a398ab0910c3c32d8678fc1d993a8849fe639b52342bcf6570ef2d881e0",
+    "pkError": "pk exited 1"
+  },
+  "complete": true,
+  "recordedAt": "2026-10-20T10:43:15.514594Z"
+}

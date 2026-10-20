@@ -22,7 +22,7 @@ func TestSessionNeverLogsATokenOrEmail(t *testing.T) {
 	iss := newTestIssuer(t)
 	t.Setenv(settingsKeyEnv, settingsTestKey)
 	cfg := mustParse(t, fmt.Sprintf(`{
-		"auth":{"oidc":{"enabled":true,"issuer":%q,"audiences":[%q],"jwks_url":%q}},
+		"auth":{"oidc":{"enabled":true,"issuer":%q,"audiences":[%q],"jwks_url":%q,"routes":["agui","settings","index","session"]}},
 		"principals":[
 			{"name":"console-ui","kind":"ui","subjects":[%q]},
 			{"name":"console-admin","kind":"admin","subjects":[%q]}

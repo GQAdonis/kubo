@@ -191,6 +191,7 @@ func (v *JWTVerifier) resolve(vt VerifiedToken, route string) (Identity, error) 
 		return Identity{}, &Denial{Status: http.StatusForbidden, Code: DenialStepUpRequired, Message: "verify again with a second factor to continue"}
 	}
 	id := chosen.Identity
+	id.Principal.sub = vt.Subject
 	id.Session = &Session{
 		Subject:    vt.Subject,
 		Email:      vt.Email,

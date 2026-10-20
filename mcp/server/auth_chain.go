@@ -77,5 +77,6 @@ func (c *ChainVerifier) ClockSkew() time.Duration {
 func (c *ChainVerifier) adoptLogger(l *slog.Logger) {
 	if c.jwt != nil {
 		c.jwt.adoptLogger(l)
+		c.jwt.warnOpenRoutes()
 	}
 }

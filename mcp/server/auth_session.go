@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"unicode/utf8"
 
@@ -12,7 +13,10 @@ import (
 // reports what a verified session token resolves to, so the Web UI can choose
 // session mode. It never returns the token, the `sub` or any claim besides
 // `email` and `exp`.
-type sessionHandler struct{}
+type sessionHandler struct {
+	// log receives the encoder error at debug level; nil discards it.
+	log *slog.Logger
+}
 
 // sessionPrincipalBody and sessionBody are the response of the contract schema
 // routes/session-response.schema.json.
@@ -34,7 +38,7 @@ const (
 	maxEmailLen = 320
 )
 
-func (sessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h sessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -61,5 +65,8 @@ func (sessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	_ = json.NewEncoder(w).Encode(body)
+	if err := json.NewEncoder(w).Encode(body); err != nil && h.log != nil {
+		// The client usually hung up; the response is already committed.
+		h.log.Debug("session report not written", "error", err.Error())
+	}
 }

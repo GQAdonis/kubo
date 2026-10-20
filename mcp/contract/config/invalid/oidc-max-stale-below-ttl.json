@@ -1,0 +1,26 @@
+{
+  "auth": {
+    "oidc": {
+      "enabled": true,
+      "issuer": "https://oauth.know-me.tools",
+      "audiences": [
+        "ipfs-console"
+      ],
+      "jwks_url": "https://oauth.know-me.tools/.well-known/jwks.json",
+      "jwks_cache_ttl": "15m",
+      "jwks_max_stale": "10m",
+      "routes": [
+        "session"
+      ]
+    }
+  },
+  "principals": [
+    {
+      "name": "console-ui",
+      "kind": "ui",
+      "subjects": [
+        "0b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8"
+      ]
+    }
+  ]
+}

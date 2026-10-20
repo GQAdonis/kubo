@@ -21,6 +21,11 @@ func echoRoute() http.Handler {
 		who := "public"
 		if info != nil {
 			who = info.UserID
+			// A session identity's UserID is its binding key; the echo names
+			// the principal.
+			if id, ok := info.Extra[identityExtraKey].(Identity); ok {
+				who = id.ID
+			}
 		}
 		_, _ = w.Write([]byte("ok " + who))
 	})

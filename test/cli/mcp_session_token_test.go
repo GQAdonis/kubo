@@ -77,7 +77,9 @@ func (i *sessionIssuer) token(sub string, mod func(map[string]any)) string {
 	return tok
 }
 
-func sessionTestConfig(t *testing.T, iss *sessionIssuer, llmBase string, oidcOn bool) string {
+// sessionTestConfig writes the ipfs mcp config. routes nil leaves
+// auth.oidc.routes absent, which accepts a JWT on /auth/session only.
+func sessionTestConfig(t *testing.T, iss *sessionIssuer, llmBase string, oidcOn bool, routes []string) string {
 	t.Helper()
 	cfg := map[string]any{
 		"agent": map[string]any{"agui": true, "origin_allowlist": []string{sessionTestOrigin}},
@@ -90,6 +92,9 @@ func sessionTestConfig(t *testing.T, iss *sessionIssuer, llmBase string, oidcOn 
 			map[string]any{"name": "chat", "kind": "ui", "credential": map[string]any{"env": "CLI_AGUI_CHAT_TOKEN"}, "egress_ack": []string{"local"}},
 			map[string]any{"name": "console-ui", "kind": "ui", "subjects": []string{sessionTestSub}, "egress_ack": []string{"local"}},
 		},
+	}
+	if routes != nil {
+		cfg["auth"].(map[string]any)["oidc"].(map[string]any)["routes"] = routes
 	}
 	raw, err := json.Marshal(cfg)
 	require.NoError(t, err)
@@ -104,7 +109,7 @@ func TestMCPSessionToken(t *testing.T) {
 		iss := newSessionIssuer(t)
 		node := agentLLMNode(t)
 		model := newCLIModel(t, cliSayStep("one"), cliSayStep("two"), cliSayStep("three"))
-		p := startMCPHTTPArgs(t, node, aguiEnvVars(), "--mcp-config", sessionTestConfig(t, iss, model.baseURL(), true))
+		p := startMCPHTTPArgs(t, node, aguiEnvVars(), "--mcp-config", sessionTestConfig(t, iss, model.baseURL(), true, []string{"agui", "session"}))
 		assert.Contains(t, p.stderr.String(), "auth.oidc is on")
 		assert.NotContains(t, p.stderr.String(), "operator@session-test.invalid")
 		mapped := iss.token(sessionTestSub, nil)
@@ -115,7 +120,7 @@ func TestMCPSessionToken(t *testing.T) {
 		assert.Contains(t, r.types(), "RUN_FINISHED")
 
 		assert.Equal(t, http.StatusUnauthorized, p.status(mcpHTTPRequest{path: "/mcp", token: mapped, body: "{}"}),
-			"auth.oidc.routes does not list mcp by default")
+			"auth.oidc.routes does not list mcp")
 
 		noOrigin := aguiPost(t, p, mapped, aguiInput("t-session", "r2", "hello"), nil)
 		assert.Equal(t, http.StatusForbidden, noOrigin.Status, "a session write needs a listed Origin")
@@ -151,17 +156,9 @@ func TestMCPSessionToken(t *testing.T) {
 		node := agentLLMNode(t)
 		model := newCLIModel(t, cliSayStep("one"))
 		// auth.oidc.enabled false; the section is present but inert. The
-		// session-only principal then has no way to authenticate, so the
-		// config keeps a static ui principal and drops the subjects one.
-		cfgPath := sessionTestConfig(t, iss, model.baseURL(), false)
-		raw, err := os.ReadFile(cfgPath)
-		require.NoError(t, err)
-		var cfg map[string]any
-		require.NoError(t, json.Unmarshal(raw, &cfg))
-		cfg["principals"] = cfg["principals"].([]any)[:1]
-		raw, err = json.Marshal(cfg)
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(cfgPath, raw, 0o600))
+		// static chat principal and the session principal both stay: the
+		// session one authenticates nothing while the verifier is off.
+		cfgPath := sessionTestConfig(t, iss, model.baseURL(), false, []string{"agui", "session"})
 
 		p := startMCPHTTPArgs(t, node, aguiEnvVars(), "--mcp-config", cfgPath)
 		assert.NotContains(t, p.stderr.String(), "auth.oidc is on")
@@ -170,5 +167,17 @@ func TestMCPSessionToken(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, r.Status)
 		assert.Equal(t, http.StatusNotFound, p.status(mcpHTTPRequest{method: http.MethodGet, path: "/auth/session", token: mapped}))
 		assert.Zero(t, iss.hits.Load(), "no request reached the issuer")
+	})
+
+	t.Run("routes absent: a mapped token reaches /auth/session only", func(t *testing.T) {
+		t.Parallel()
+		iss := newSessionIssuer(t)
+		node := agentLLMNode(t)
+		model := newCLIModel(t, cliSayStep("one"))
+		p := startMCPHTTPArgs(t, node, aguiEnvVars(), "--mcp-config", sessionTestConfig(t, iss, model.baseURL(), true, nil))
+		mapped := iss.token(sessionTestSub, nil)
+		assert.Equal(t, http.StatusOK, p.status(mcpHTTPRequest{method: http.MethodGet, path: "/auth/session", token: mapped}))
+		r := aguiPost(t, p, mapped, aguiInput("t-default", "r1", "hello"), map[string]string{"Origin": sessionTestOrigin})
+		assert.Equal(t, http.StatusUnauthorized, r.Status, "agui is not on the default routes")
 	})
 }

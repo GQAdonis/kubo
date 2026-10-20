@@ -32,6 +32,10 @@ type OIDCConfig struct {
 	ClockSkew  string   `json:"clock_skew"`
 	// JWKSCacheTTL is auth.oidc.jwks_cache_ttl.
 	JWKSCacheTTL string `json:"jwks_cache_ttl"`
+	// JWKSMaxStale is auth.oidc.jwks_max_stale: how long after the last
+	// successful key fetch a held key is still trusted. Empty is the default;
+	// no value removes the cap.
+	JWKSMaxStale string `json:"jwks_max_stale"`
 	// Routes nil is the default list; [] accepts a JWT on no route.
 	Routes *[]string `json:"routes"`
 	// RequireOrigin nil is the default, true.
@@ -43,6 +47,9 @@ const (
 	DefaultOIDCClockSkew    = 30 * time.Second
 	MaxOIDCClockSkew        = 2 * time.Minute
 	DefaultOIDCJWKSCacheTTL = 15 * time.Minute
+	// DefaultOIDCJWKSMaxStale is the default of auth.oidc.jwks_max_stale
+	// (operator ruling 2026-10-20).
+	DefaultOIDCJWKSMaxStale = 24 * time.Hour
 
 	// Routes a JWT identity may be accepted on (auth.oidc.routes).
 	OIDCRouteMCP      = "mcp"
@@ -54,9 +61,11 @@ const (
 )
 
 // DefaultOIDCRoutes are the routes that accept a JWT when auth.oidc.routes is
-// absent. mcp and a2a are deliberately not among them.
+// absent: the session report only. Every other route, agui, settings and index
+// included, must be listed by the operator; mcp and a2a also need a principal
+// kind that takes a subject.
 func DefaultOIDCRoutes() []string {
-	return []string{OIDCRouteAGUI, OIDCRouteSettings, OIDCRouteIndex, OIDCRouteSession}
+	return []string{OIDCRouteSession}
 }
 
 // OIDCSettings is auth.oidc with the defaults filled in and every value parsed.
@@ -67,6 +76,7 @@ type OIDCSettings struct {
 	Algorithms    []jose.SignatureAlgorithm
 	ClockSkew     time.Duration
 	JWKSCacheTTL  time.Duration
+	JWKSMaxStale  time.Duration
 	Routes        []string
 	RequireOrigin bool
 }
@@ -105,6 +115,12 @@ func (c OIDCConfig) resolve() (OIDCSettings, error) {
 	}
 	if s.JWKSCacheTTL <= 0 {
 		return s, fmt.Errorf("auth.oidc.jwks_cache_ttl %q must be positive", c.JWKSCacheTTL)
+	}
+	if s.JWKSMaxStale, err = parseOIDCDuration("auth.oidc.jwks_max_stale", c.JWKSMaxStale, DefaultOIDCJWKSMaxStale); err != nil {
+		return s, err
+	}
+	if s.JWKSMaxStale < s.JWKSCacheTTL {
+		return s, fmt.Errorf("auth.oidc.jwks_max_stale %q is out of range: it must be at least auth.oidc.jwks_cache_ttl (%s) and cannot be removed; turn the verifier off with auth.oidc.enabled false", c.JWKSMaxStale, s.JWKSCacheTTL)
 	}
 	if s.Algorithms, err = parseAlgorithms(c.Algorithms); err != nil {
 		return s, err

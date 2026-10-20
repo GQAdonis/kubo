@@ -211,7 +211,7 @@ func NewHTTPServer(s *Server, opts HTTPOptions) (*HTTPServer, error) {
 	// is a plain 404.
 	if c, ok := h.verify.(*ChainVerifier); ok && c.jwt != nil {
 		cors := CORSPolicy{Methods: []string{http.MethodGet, http.MethodOptions}, Headers: []string{"authorization"}}
-		err := h.Mount(RouteAuthSession, sessionHandler{}, MountOptions{
+		err := h.Mount(RouteAuthSession, sessionHandler{log: log}, MountOptions{
 			Kinds:          []string{KindUI, KindHumanMCP, KindAdmin},
 			AllowedOrigins: c.jwt.origins,
 			CORS:           &cors,

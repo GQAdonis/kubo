@@ -284,7 +284,7 @@
             },
             "default": [],
             "description": "The OpenID Connect `sub` values (Kratos identity IDs) that resolve to this principal when auth.oidc.enabled is true (ADR-0013 section 4). Matched exactly against `sub`; the `email` claim never selects or grants a principal. A principal needs `credential`, `subjects`, or both; `credential` is optional when `subjects` has at least one entry. One subject may be listed in a `ui` principal and an `admin` principal (one person, two capabilities); each request resolves to the principal whose kind the route accepts. Two principals of the same kind listing the same subject is a configuration error at load: JSON Schema cannot compare items, so mcp/contract/agentic_test.go (TestConfigSemanticInvalidExamplesFail) pins the rule. Honored for kinds ui, human-mcp and admin only.",
-            "offSwitch": "Empty (default): no subject resolves to this principal, so a session token cannot select it. Static `credential` bearers are unaffected. With auth.oidc.enabled false the key is ignored.",
+            "offSwitch": "Empty (default): no subject resolves to this principal, so a session token cannot select it. Static `credential` bearers are unaffected. With auth.oidc.enabled false, subjects authenticate nothing; the subject rules are still validated at load, and a config whose only principals are session-only fails startup.",
             "ownerChange": "console-session-auth"
           },
           "require_amr": {
@@ -444,6 +444,13 @@
               "ownerChange": "console-session-auth",
               "description": "How long a fetched key set is cached. An unknown `kid` triggers at most one refetch per 30 s."
             },
+            "jwks_max_stale": {
+              "$ref": "#/$defs/Duration",
+              "default": "24h",
+              "offSwitch": "No value removes the cap; turn the verifier off with `auth.oidc.enabled: false`. `0` and any value shorter than auth.oidc.jwks_cache_ttl fail config loading. A larger value keeps held keys usable longer while the issuer is unreachable.",
+              "ownerChange": "mcp-oidc-hardening",
+              "description": "Longest time since the last successful key-set fetch during which a held key still verifies tokens. Past it, every JWT gets 401 until a fetch succeeds, the expiry is logged once per stale period, and static bearers are unaffected. Must be at least auth.oidc.jwks_cache_ttl (enforced when the configuration is loaded, whether or not enabled is true). Default 24h (operator ruling, 2026-10-20)."
+            },
             "routes": {
               "type": "array",
               "uniqueItems": true,
@@ -459,14 +466,11 @@
                 ]
               },
               "default": [
-                "agui",
-                "settings",
-                "index",
                 "session"
               ],
-              "offSwitch": "Narrow the list (or leave it empty) so fewer routes accept a JWT; a JWT on a route not listed gets 401. `mcp` and `a2a` are not in the default and are accepted only when an operator adds them.",
+              "offSwitch": "`[]` accepts a JWT on no route, including /auth/session. The default `[\"session\"]` accepts a JWT only on /auth/session; every other route must be listed explicitly. The earlier default is restored with `[\"agui\",\"settings\",\"index\",\"session\"]`.",
               "ownerChange": "console-session-auth",
-              "description": "Routes that accept a JWT identity. A JWT on any other route gets 401."
+              "description": "Routes that accept a JWT identity. A JWT on any other route gets 401. When the list names a route other than `session` and agent.origin_allowlist is empty, startup logs one Warn line naming both keys and continues (auth.oidc.require_origin already fails closed). Default narrowed from `[\"agui\",\"settings\",\"index\",\"session\"]` to `[\"session\"]` by mcp-oidc-hardening."
             },
             "require_origin": {
               "type": "boolean",

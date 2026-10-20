@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -33,10 +34,17 @@ var errNoSuchKey = errors.New("no key for kid")
 // never fetches more often than jwksMinRefetch. The URL is the operator's
 // configured value; nothing is derived from a token.
 type jwksCache struct {
-	url    string
-	ttl    time.Duration
-	client *http.Client
-	now    func() time.Time
+	url string
+	ttl time.Duration
+	// maxStale is auth.oidc.jwks_max_stale: past this age since the last
+	// successful fetch no key is served, fresh or stale.
+	maxStale time.Duration
+	client   *http.Client
+	now      func() time.Time
+	// onStale reports that the cap passed. It runs once per stale period, that
+	// is until the next successful fetch.
+	onStale     func(age time.Duration)
+	staleLogged atomic.Bool
 
 	// fetchMu serializes fetches, so concurrent requests with an unknown kid
 	// share one attempt.
@@ -48,7 +56,7 @@ type jwksCache struct {
 	lastAttempt time.Time
 }
 
-func newJWKSCache(rawURL string, ttl time.Duration, client *http.Client, now func() time.Time) *jwksCache {
+func newJWKSCache(rawURL string, ttl, maxStale time.Duration, client *http.Client, now func() time.Time) *jwksCache {
 	if client == nil {
 		client = &http.Client{
 			Timeout: jwksFetchTimeout,
@@ -60,7 +68,7 @@ func newJWKSCache(rawURL string, ttl time.Duration, client *http.Client, now fun
 	if now == nil {
 		now = time.Now
 	}
-	return &jwksCache{url: rawURL, ttl: ttl, client: client, now: now, keys: map[string]jose.JSONWebKey{}}
+	return &jwksCache{url: rawURL, ttl: ttl, maxStale: maxStale, client: client, now: now, keys: map[string]jose.JSONWebKey{}}
 }
 
 // key returns the public key for kid. A key in a fresh cache is returned
@@ -101,7 +109,8 @@ func (c *jwksCache) key(ctx context.Context, kid string) (jose.JSONWebKey, error
 }
 
 // lookup returns the cached key for kid. With fresh it requires the cache to be
-// within its TTL.
+// within its TTL. Past maxStale it returns no key at all, so a key the issuer
+// rotated out or revoked cannot outlive an unreachable key set forever.
 func (c *jwksCache) lookup(kid string, fresh bool) (jose.JSONWebKey, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -109,7 +118,14 @@ func (c *jwksCache) lookup(kid string, fresh bool) (jose.JSONWebKey, bool) {
 	if !ok {
 		return jose.JSONWebKey{}, false
 	}
-	if fresh && c.now().Sub(c.fetchedAt) >= c.ttl {
+	age := c.now().Sub(c.fetchedAt)
+	if c.maxStale > 0 && age >= c.maxStale {
+		if c.onStale != nil && c.staleLogged.CompareAndSwap(false, true) {
+			c.onStale(age)
+		}
+		return jose.JSONWebKey{}, false
+	}
+	if fresh && age >= c.ttl {
 		return jose.JSONWebKey{}, false
 	}
 	return k, true
@@ -137,7 +153,10 @@ func (c *jwksCache) fetch(ctx context.Context) error {
 	c.lastAttempt = c.now()
 	c.mu.Unlock()
 
-	ctx, cancel := context.WithTimeout(ctx, jwksFetchTimeout)
+	// The fetch outlives the request that triggered it: a client that hangs up
+	// must not use up the refetch window and leave the next request without a
+	// key. jwksFetchTimeout still bounds it.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), jwksFetchTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
 	if err != nil {
@@ -174,6 +193,7 @@ func (c *jwksCache) fetch(ctx context.Context) error {
 	c.mu.Lock()
 	c.keys, c.fetchedAt = keys, c.now()
 	c.mu.Unlock()
+	c.staleLogged.Store(false)
 	return nil
 }
 

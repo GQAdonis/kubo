@@ -72,7 +72,7 @@ func TokenVerifier(v AuthVerifier) auth.TokenVerifier {
 		return &auth.TokenInfo{
 			Scopes:     id.Scopes,
 			Expiration: exp,
-			UserID:     id.ID,
+			UserID:     id.BindingKey(),
 			Extra:      map[string]any{identityExtraKey: id},
 		}, nil
 	}

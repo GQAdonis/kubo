@@ -242,7 +242,7 @@ func (g *gate) authorize(ctx context.Context, req *mcp.CallToolRequest, t contra
 	if req != nil && req.Params != nil && req.Params.RequestState != "" {
 		return nil, g.elicitAnswer(c, req.Params.RequestState, req.Params.InputResponses)
 	}
-	if p, tok, ok := g.broker.activeFor(dedupeKey(c.sid, c.principal.ID, t.Name, hash)); ok {
+	if p, tok, ok := g.broker.activeFor(dedupeKey(c.sid, c.principal.BindingKey(), t.Name, hash)); ok {
 		return nil, g.repeat(c, p, tok)
 	}
 	if mayElicit(c.principal, ss) {
@@ -341,7 +341,7 @@ func (g *gate) mintFor(use string, c *call, p Pending) (string, error) {
 	return g.signer.mint(use, tokenClaims{
 		CID:        p.ID,
 		SID:        c.sid,
-		PID:        c.principal.ID,
+		PID:        c.principal.BindingKey(),
 		Tool:       c.tool.Name,
 		ArgsSHA256: c.argsHash,
 		Exp:        p.ExpiresAt.Unix(),
@@ -441,7 +441,7 @@ func (g *gate) acceptToken(c *call, tok string) *ToolError {
 	switch {
 	case claims.SID != c.sid:
 		return invalid("The confirm token belongs to another session.")
-	case claims.PID != c.principal.ID:
+	case claims.PID != c.principal.BindingKey():
 		return invalid("The confirm token belongs to another principal.")
 	case claims.Tool != c.tool.Name:
 		return invalid("The confirm token was issued for another tool.")

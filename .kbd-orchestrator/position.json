@@ -2,18 +2,18 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2189,
-  "derivedRevision": 2189,
+  "sourceRevision": 2260,
+  "derivedRevision": 2260,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 300
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 371
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-20T10:40:23.638008Z",
+  "updatedAt": "2026-10-20T12:16:28.418291Z",
   "cursor": [
     "agent-backend-settings",
     "mcp-oidc-hardening",
-    "1.1"
+    "5.1"
   ],
   "root": {
     "type": "phase",
@@ -304,7 +304,7 @@
             "id": "mcp-oidc-hardening",
             "status": "PENDING",
             "progress": {
-              "done": 0,
+              "done": 17,
               "total": 19
             }
           },
