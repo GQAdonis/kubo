@@ -124,8 +124,8 @@ Prerequisite: task 1.5 is done (go-jose at least `v4.1.6` in all three `go.mod` 
 
 ## 7. Retire the interim credentials (ipfs-agent-architect, operator)
 
-- [ ] 7.1 After the soak (OG-27): a PR removing the console `ui` principal's `credential`, and the token Secret reference it used, from `ipfs-mcp-config`. The operator deletes `ipfs-webui-basicauth` and that token Secret out of band. Acceptance: the preflight shows no manifest referencing either Secret, and `kubectl --context know-me get secret -n ipfs` (names only) no longer lists them.
-- [ ] 7.2 Close the residuals. Append amendments to ADR-0009 (M1) and ADR-0004 (M2) stating that they ended, with the 6.7 evidence path, and log the decision. Acceptance: both ADRs carry a dated amendment naming this change, and `.prometheus/decisions.md` has the entry.
+- [x] 7.1 After the soak (OG-27): a PR removing the console `ui` principal's `credential`, and the token Secret reference it used, from `ipfs-mcp-config`. The operator deletes `ipfs-webui-basicauth` and that token Secret out of band. Acceptance: the preflight shows no manifest referencing either Secret, and `kubectl --context know-me get secret -n ipfs` (names only) no longer lists them.
+- [x] 7.2 Close the residuals. Append amendments to ADR-0009 (M1) and ADR-0004 (M2) stating that they ended, with the 6.7 evidence path, and log the decision. Acceptance: both ADRs carry a dated amendment naming this change, and `.prometheus/decisions.md` has the entry.
 
 ## 8. Independent review at the phase boundary (security-reviewer, reviewer)
 

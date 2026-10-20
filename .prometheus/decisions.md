@@ -137,3 +137,15 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 - Decision: close 6.7 on 8 of 8 gating operator steps PASS. Step d2 (logout after more than 15 minutes idle) is not run.
 - Rationale: d2 is record-only. It observes the LOW-17 residual, which was already accepted (2026-10-19), and it gates nothing. Operator: "skip d2, close 6.7 and start the reviews".
 - Consequence: the idle-logout behaviour is unobserved live. It is carried with the LOW-17 Web UI fix, whose acceptance should include running d2.
+
+## 2026-10-20: machine RPC host rpc.prometheusags.ai with basic auth
+
+- Context: after the console moved to Hydra sign-in (#48), its CSRF filter rejects any POST without the console Origin and it accepts only a Hydra session or ID token, so agents and the `ipfs` CLI could not upload.
+- Decision (operator: "do option 2"): know-me-cluster #51 adds listener `https-rpc`, HTTPRoute `ipfs-rpc` (RPC path allowlist to `ipfs-api:5001`), SecurityPolicy `ipfs-rpc-auth` (basicAuth, out-of-band Secret `ipfs-rpc-basicauth`) and BackendTrafficPolicy `ipfs-rpc-traffic` (no request timeout, 120 requests a minute). Clients use `ipfs --api /dns/rpc.prometheusags.ai/tcp/443/https --api-auth "basic:$IPFS_RPC_USER:$IPFS_RPC_PASSWORD"`. Checked live: 401 without or with a wrong password, 200 for `version`, 404 for `config/show`, `shutdown` and `/webui/`; the CLI add, pin and cat round trip worked.
+- Risk: a public write path protected by a long-lived password. The password was typed in a chat session, so rotate it. Follow-up if the agent count grows: Hydra client-credentials JWTs per agent.
+
+## 2026-10-20: console-session-auth 7.1 and 7.2, residuals M1 and M2 ended
+
+- 7.1: the OG-27 soak ended (operator, 2026-10-20). The `console-ui` principal never had a credential (subjects only since #48). know-me-cluster #52 (`2dee35471`) removed the remaining manifest references to the console htpasswd Secret. The operator waived deleting the Secrets: `ipfs-webui-basicauth` and `ipfs-webui-basic-auth` were still live after #52, and nothing references them. Acceptance item "kubectl no longer lists them" is therefore not met, by operator decision.
+- 7.2: ADR-0009 and ADR-0004 carry dated 2026-10-20 amendments ending M1 and M2, citing the 6.7 evidence and #52.
+- Risk: an unused old console password still exists in the cluster.

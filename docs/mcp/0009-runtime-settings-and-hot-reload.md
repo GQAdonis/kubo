@@ -143,6 +143,15 @@ Design notes from the review for the Kratos and `flint-gate` ADR. They are not f
 - **I2: overlay `egress_ack` persistence.** The overlay's per-principal `egress_ack` is stored per principal ID, is not pruned, and a principal re-created under the same ID inherits the hosts. Moving back to a previously confirmed host asks for no new confirmation. Deleting the overlay clears it (the rollback step in "The uncomfortable thing", item 2).
 - **I3: stale preflight.** The `/mcp` preflight for `ui` and `a2a` reads `BackendHosts` from the configuration file, not the overlay, so after a settings move it can check a stale host. Nothing leaks (the content check uses the snapshot host) but a refusal can be wrong, and the D4 copy that says content will go to the new host overstates when the `ui` principal's `egress_ack` does not cover it: the chat fails closed. `chat-setup.md` now says so.
 
+## Amendment (2026-10-20: M1 ended, console-session-auth)
+
+The console no longer uses basic auth, so the M1 residual from the Round 7 amendment above has ended.
+
+- **What ended M1.** The console signs people in through Ory Hydra with Kratos login (ADR-0013): know-me-cluster #48 (`efeaf57`, 2026-10-19) replaced `basicAuth` on `ipfs-webui-auth` with `oidc`, `jwt`, RBAC on `sub` and `csrf`. The Web UI's session mode stores no API address with inline credentials and sends no `Authorization: Basic`. After the OG-27 soak, know-me-cluster #52 (`2dee35471`, 2026-10-20) removed the remaining references, and no manifest names the console htpasswd Secret.
+- **Evidence.** The 6.7 operator browser steps, 8 of 8 gating steps PASS: `mcp/server/evidence/2026-10-19-console-session-auth-6.7/README.md`.
+- **Not fully closed.** The two old htpasswd Secrets (`ipfs-webui-basicauth`, `ipfs-webui-basic-auth`) were still in the cluster on 2026-10-20 after #52. The operator waived their deletion. Nothing references them, in git or live, so they grant no access, but an old password still exists. Browser profiles that saved the interim `https://<user>:<password>@console…` address keep that string until cleared.
+- **A separate residual, not M1.** Agents and the CLI write through `rpc.prometheusags.ai` (know-me-cluster #51): basic auth against `ipfs-rpc-basicauth`, a path allowlist and 120 requests a minute, with no browser content on that host. It is a machine credential, not a browser-stored one, and it has its own decision entry (2026-10-20).
+
 ## Consequences
 
 ### Positive

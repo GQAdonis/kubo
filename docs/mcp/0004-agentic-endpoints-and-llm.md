@@ -202,6 +202,14 @@ Operator ruling on `settings-security-review` M2 (`.agent-team/kubo-ipfs-agentic
 - **Also from the review.** When session auth lands the `ui` token leaves `localStorage`. An explicit `/mcp` kind list on LKE that excludes `ui` is suggested and not decided.
 - **Settings-driven backend changes and open confirmations.** A settings write that changes the backend endpoint or key revokes open interrupts; resuming one fails with `failed_precondition` and `details.reason = "backend_changed"` (`409` on `/agui`, JSON-RPC `-32603` with reason `BACKEND_CHANGED` on `/a2a`, ToolError `failed_precondition`, not retryable). The `failed_precondition` row of the Round 7 error table above gains this case. A resume already in flight keeps its snapshot until it ends (ADR-0009).
 
+## Amendment (2026-10-20: the console `ui` token residual ended, console-session-auth)
+
+The console `ui` token residual (M2) has ended. It was accepted above only while M1 was in force, and M1 ended on 2026-10-20 (ADR-0009 amendment of that date).
+
+- **What ended it.** The console `ui` principal (`console-ui` in `ipfs-mcp-config`) has no bearer credential. It is matched by the Hydra ID token's `sub` (`auth.oidc`, routes `[session]`), which Envoy forwards from the session cookie (know-me-cluster #48, `efeaf57`). Nothing on the console origin issues or stores a `ui` bearer token. The only `ipfs-mcp` path on the console is `/auth/session`; `/agui` and settings come with `lke-agent-settings`, which must keep the `sub` binding and set `auth.oidc.routes` and `origin_allowlist` explicitly (8.1 LOW-4).
+- **Evidence.** `mcp/server/evidence/2026-10-19-console-session-auth-6.7/README.md`, plus know-me-cluster #52 (`2dee35471`), which retired the console's basic-auth references after the OG-27 soak.
+- **Still open.** Desktop and loopback chat keep their own `ui` tokens; this amendment covers the cloud console only. The operator bearer token for `/mcp` on `ipfs.prometheusags.ai` (`ipfs-mcp-token`) is unrelated and unchanged.
+
 ## Consequences
 
 ### Positive
