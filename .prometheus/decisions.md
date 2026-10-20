@@ -163,3 +163,9 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 - `agent-backend-settings` / `lke-agent-settings` 1.1-1.8 and 1.10 closed with `prometheus kbd task transition --phase agent-backend-settings` (no lifecycle hooks fired). 1.9 waits for the PR #55 merge.
 - A stray `lke-agent-settings` change (1.1 complete) exists under `agentic-ui-implementation` from the driver's active-path lookup; the runtime refuses to cancel a complete change, so it is left and noted here. It is not part of that phase's plan.
 - Commit e702aaf72 contains the planning session's then-uncommitted `agentic-ui-implementation` phase files; left as is (pushed history is not rewritten).
+
+## 2026-10-20: lane ownership and the boundary board
+
+- Operator to the UI lane (Codex): "I do not actually want YOU writing back end code, but keep the work you have done: Commit its kubo backend changes on your own, or in a separate worktree. But close that off as soon as possible and commit and push, so I can have my claude code session free to work on back end stuff without clashing with you." Operator to the backend lane (Claude): "YOU own that code and will move it to this session's ledger as soon as Codex commits it."
+- The lanes coordinate through `.agent-team/boundary/` (README protocol, append-only `log.jsonl`, `board.sh`), because the sessions cannot message each other. The operator asked that both agent teams "communicate with each other on their boundaries".
+- The backend lane does not edit backend paths until the UI lane posts its `release` on the board (request `backend-20261020T223302Z-a82c33`).
