@@ -38,7 +38,7 @@ Stability rules that apply to every task (AGENTS.md):
   - A static bearer still authenticates past the cap.
   - Exactly one log record reports the expiry.
   - A later successful fetch restores access.
-  - `TestParseConfigOIDCRejections` rejects a cap below the TTL.
+  - `TestJWKSMaxStaleConfig` rejects a cap below the TTL (and validates it while disabled); `TestJWKSMaxStaleCapsHeldKeys` covers the cap and `TestJWKSMaxStaleDisabledFetchesNothing` the disabled state. (Corrected 2026-10-20 per 5.2 MINOR-3: the earlier text named `TestParseConfigOIDCRejections`, which has no `jwks_max_stale` case.)
   - With `auth.oidc.enabled` false and the key set, zero JWKS requests are made.
 - [x] 2.3 Fetch on `context.WithoutCancel` (8.2 MINOR-4, design D3) in `jwks.go`. Acceptance: a test cancels the first request's context while a slow `httptest` JWKS is answering. A second request with a valid token, inside the 30 s window, authenticates. The fetch is still bounded by `jwksFetchTimeout`, shown by a hung server returning an error within the timeout.
 - [x] 2.4 Tests for existing JWKS safeguards (8.1 LOW-5, 8.2 MINOR-5). Acceptance: a JWKS server answering 302 to a second valid key set gives 401 and the second server records zero hits; a key-set body over 1 MiB fails as "not a key set" and the token gets 401; both cases go through the default client, built with `JWTOptions.Client` nil.
@@ -80,5 +80,5 @@ This change routes `cmd/ipfs/kubo/mcp_http.go`, `test/cli/mcp_session_token_test
 
 ## 5. Independent review (separate contexts from the builders)
 
-- [ ] 5.1 security-reviewer: review groups 1 and 2 and task 3.1 against the 8.1 findings. Confirm LOW-1 to LOW-5 closed, or record why one is not. Acceptance: a findings file under `.agent-team/kubo-ipfs-agentic/findings/security/agent-backend-settings/` with no open CRITICAL or HIGH, and each 8.1 LOW marked closed or open with a reason.
-- [ ] 5.2 reviewer: compatibility and quality review of the whole change against the 8.2 findings. Confirm no `/api/v0`, gateway, CID or wire change; every new or changed key has a default, an off switch, a doc row and a disabled-state test; and MAJOR-1, MINOR-1 to MINOR-7, NIT-1 and NIT-2 are closed. Acceptance: a findings file under `.agent-team/kubo-ipfs-agentic/findings/review/agent-backend-settings/` with no blocking finding. One batched correction and confirmation cycle is allowed.
+- [x] 5.1 security-reviewer: review groups 1 and 2 and task 3.1 against the 8.1 findings. Confirm LOW-1 to LOW-5 closed, or record why one is not. Acceptance: a findings file under `.agent-team/kubo-ipfs-agentic/findings/security/agent-backend-settings/` with no open CRITICAL or HIGH, and each 8.1 LOW marked closed or open with a reason.
+- [x] 5.2 reviewer: compatibility and quality review of the whole change against the 8.2 findings. Confirm no `/api/v0`, gateway, CID or wire change; every new or changed key has a default, an off switch, a doc row and a disabled-state test; and MAJOR-1, MINOR-1 to MINOR-7, NIT-1 and NIT-2 are closed. Acceptance: a findings file under `.agent-team/kubo-ipfs-agentic/findings/review/agent-backend-settings/` with no blocking finding. One batched correction and confirmation cycle is allowed.

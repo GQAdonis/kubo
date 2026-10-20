@@ -240,6 +240,9 @@ const maxOpenExternal = 2
 // the most out-of-band confirmations waiting.
 var ErrTooManyOpen = errors.New("too many confirmations are already waiting for this principal or session")
 
+// The cap counts by principal ID on purpose: two subjects mapped to one
+// principal share it. That is a shared, fail-closed limit on system prompts, not
+// a binding leak; ownership of a confirmation is keyed on Principal.BindingKey.
 // openExternalLocked counts the pending out-of-band confirmations of a
 // principal and of a session. Callers hold b.mu.
 func (b *Broker) openExternalLocked(principalID, sid string) (byPrincipal, bySession int) {

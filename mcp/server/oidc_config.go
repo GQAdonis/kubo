@@ -120,7 +120,11 @@ func (c OIDCConfig) resolve() (OIDCSettings, error) {
 		return s, err
 	}
 	if s.JWKSMaxStale < s.JWKSCacheTTL {
-		return s, fmt.Errorf("auth.oidc.jwks_max_stale %q is out of range: it must be at least auth.oidc.jwks_cache_ttl (%s) and cannot be removed; turn the verifier off with auth.oidc.enabled false", c.JWKSMaxStale, s.JWKSCacheTTL)
+		have := fmt.Sprintf("%q", c.JWKSMaxStale)
+		if c.JWKSMaxStale == "" {
+			have = fmt.Sprintf("absent (the default is %s)", DefaultOIDCJWKSMaxStale)
+		}
+		return s, fmt.Errorf("auth.oidc.jwks_max_stale is %s, which is below auth.oidc.jwks_cache_ttl (%s): set auth.oidc.jwks_max_stale to at least %s; the cap cannot be removed, turn the verifier off with auth.oidc.enabled false", have, s.JWKSCacheTTL, s.JWKSCacheTTL)
 	}
 	if s.Algorithms, err = parseAlgorithms(c.Algorithms); err != nil {
 		return s, err

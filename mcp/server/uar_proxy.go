@@ -162,7 +162,10 @@ type uarPending struct {
 
 // uarThread is the proxy's record of one chat thread on the UAR instance.
 type uarThread struct {
-	owner string
+	// principal keys the shared quotas; owner is Identity.BindingKey() and
+	// keys ownership and eviction.
+	principal string
+	owner     string
 	// client is the thread id the island chose; uarID is the id UAR sees. uarID
 	// changes when the thread is abandoned (see abandonThread).
 	client string
@@ -213,12 +216,14 @@ func (t *uarThread) rememberTool(callID, name string) {
 	t.tools[callID] = name
 }
 
-func uarThreadKey(principal, thread string) string { return principal + "\x00" + thread }
+// uarThreadKey keys a thread on its owner (Identity.BindingKey()) and the
+// client's thread id.
+func uarThreadKey(owner, thread string) string { return owner + "\x00" + thread }
 
 // acquireThread finds or creates the principal's thread and marks it running.
 // A thread belongs to the principal that created it; another principal's
 // thread id is not revealed. create=false never creates (a resume).
-func (b *uarBackend) acquireThread(principal, thread string, create bool) (*uarThread, func(), error) {
+func (b *uarBackend) acquireThread(principal, owner, thread string, create bool) (*uarThread, func(), error) {
 	if len(thread) > maxSessionIDLen {
 		return nil, nil, ErrSessionNotFound
 	}
@@ -230,7 +235,7 @@ func (b *uarBackend) acquireThread(principal, thread string, create bool) (*uarT
 			delete(b.threads, k)
 		}
 	}
-	key := uarThreadKey(principal, thread)
+	key := uarThreadKey(owner, thread)
 	t, ok := b.threads[key]
 	switch {
 	case ok && t.running:
@@ -239,10 +244,10 @@ func (b *uarBackend) acquireThread(principal, thread string, create bool) (*uarT
 		return nil, nil, ErrSessionNotFound
 	}
 	if !ok {
-		if err := b.makeRoomLocked(principal); err != nil {
+		if err := b.makeRoomLocked(principal, owner); err != nil {
 			return nil, nil, err
 		}
-		t = &uarThread{owner: principal, client: thread, uarID: uarThreadID(b.gen, b.nextThreadSeqLocked(), principal, thread)}
+		t = &uarThread{principal: principal, owner: owner, client: thread, uarID: uarThreadID(b.gen, b.nextThreadSeqLocked(), owner, thread)}
 		b.threads[key] = t
 	}
 	t.running, t.touched = true, now
@@ -253,18 +258,18 @@ func (b *uarBackend) acquireThread(principal, thread string, create bool) (*uarT
 	}, nil
 }
 
-// makeRoomLocked frees a slot for a new thread of the principal by evicting its
-// own least recently used idle thread, never another principal's. Callers hold
-// b.mu.
-func (b *uarBackend) makeRoomLocked(principal string) error {
+// makeRoomLocked frees a slot for a new thread of owner. The per-principal
+// quota counts every owner of the principal (a shared cap), but only owner's own
+// least recently used idle thread is evicted, never another subject's or
+// principal's; with none to evict it fails closed. Callers hold b.mu.
+func (b *uarBackend) makeRoomLocked(principal, owner string) error {
 	own := 0
 	oldest := ""
 	for k, t := range b.threads {
-		if t.owner != principal {
-			continue
+		if t.principal == principal {
+			own++
 		}
-		own++
-		if !t.running && (oldest == "" || t.touched.Before(b.threads[oldest].touched)) {
+		if t.owner == owner && !t.running && (oldest == "" || t.touched.Before(b.threads[oldest].touched)) {
 			oldest = k
 		}
 	}
@@ -318,7 +323,7 @@ func (b *uarBackend) message(ctx context.Context, h *aguiHandler, st *aguiStream
 		h.reject(st.w, ErrMessageTooLarge)
 		return
 	}
-	th, release, err := b.acquireThread(id.ID, in.ThreadID, true)
+	th, release, err := b.acquireThread(id.ID, id.BindingKey(), in.ThreadID, true)
 	if err != nil {
 		h.reject(st.w, err)
 		return
@@ -340,7 +345,7 @@ func (b *uarBackend) message(ctx context.Context, h *aguiHandler, st *aguiStream
 // here; the UAR run continues only when every interrupt of its segment has one,
 // because UAR rejects a resume that does not cover all of them.
 func (b *uarBackend) resume(ctx context.Context, h *aguiHandler, st *aguiStream, id Identity, in *aguiInput) {
-	th, release, err := b.acquireThread(id.ID, in.ThreadID, false)
+	th, release, err := b.acquireThread(id.ID, id.BindingKey(), in.ThreadID, false)
 	if err != nil {
 		h.reject(st.w, err)
 		return

@@ -248,3 +248,41 @@ func TestJWKSDefaultClientBoundsTheBody(t *testing.T) {
 	_, _, err = v.Verify(t.Context(), tok, reqTo(RouteAGUI))
 	require.ErrorIs(t, err, auth.ErrInvalidToken)
 }
+
+// A key set nobody needed for longer than the cap is stale on the next request,
+// but the refetch succeeds, so nothing was refused and nothing is logged.
+func TestJWKSIdlePastCapWithIssuerUpLogsNothing(t *testing.T) {
+	iss := newTestIssuer(t)
+	clock := newTestClock(jwtTestNow)
+	logs := &lockedBuffer{}
+	cfg := iss.settings()
+	cfg.JWKSMaxStale = 2 * time.Hour
+	v, err := NewJWTVerifier(JWTOptions{
+		OIDC: cfg, Now: clock.Now, Logger: newDebugLogger(logs),
+		Principals: []SessionPrincipal{{
+			Identity: NewIdentity(Principal{ID: "console-ui", Kind: KindUI}, []string{AllGroups}, nil, nil),
+			Subjects: []string{jwtTestSub},
+		}},
+	})
+	require.NoError(t, err)
+	c := claimsAt(jwtTestNow, jwtTestSub)
+	c["exp"] = jwtTestNow.Add(72 * time.Hour).Unix()
+	tok := iss.sign(testKidRSA, c)
+	_, _, err = v.Verify(t.Context(), tok, reqTo(RouteAGUI))
+	require.NoError(t, err)
+
+	clock.Advance(10 * time.Hour) // idle, issuer reachable
+	_, _, err = v.Verify(t.Context(), tok, reqTo(RouteAGUI))
+	require.NoError(t, err, "the refetch restores the key")
+	assert.EqualValues(t, 2, iss.hits.Load())
+	assert.Zero(t, strings.Count(logs.String(), staleLogMessage), "no outage, no stale record")
+}
+
+func TestJWKSMaxStaleAbsentWithLongTTLNamesTheDefault(t *testing.T) {
+	_, err := ParseConfig(oidcConfigJSON(`{` + validOIDCBody + `,"jwks_cache_ttl":"48h"}`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "absent")
+	assert.Contains(t, err.Error(), "24h")
+	assert.Contains(t, err.Error(), "48h")
+	assert.NotContains(t, err.Error(), `""`)
+}

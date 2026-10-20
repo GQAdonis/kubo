@@ -462,7 +462,7 @@ func TestUARThreadIDsDifferAfterABackendRebuildAndAfterEviction(t *testing.T) {
 	assert.NotEqual(t, e.fake.run(0).Body["threadId"], e.fake.run(1).Body["threadId"], "a rebuilt backend maps the thread to a fresh UAR thread")
 
 	b := e.s.UARBackend()
-	th, release, err := b.acquireThread("chat", "evict-me", true)
+	th, release, err := b.acquireThread("chat", "chat", "evict-me", true)
 	require.NoError(t, err)
 	first := th.uarID
 	release()
@@ -470,10 +470,10 @@ func TestUARThreadIDsDifferAfterABackendRebuildAndAfterEviction(t *testing.T) {
 	now := b.now()
 	b.mu.Unlock()
 	b.now = func() time.Time { return now.Add(2 * sessionIdleTTL) }
-	_, release, err = b.acquireThread("chat", "other", true) // sweeps the idle thread
+	_, release, err = b.acquireThread("chat", "chat", "other", true) // sweeps the idle thread
 	require.NoError(t, err)
 	release()
-	th, release, err = b.acquireThread("chat", "evict-me", true)
+	th, release, err = b.acquireThread("chat", "chat", "evict-me", true)
 	require.NoError(t, err)
 	defer release()
 	assert.NotEqual(t, first, th.uarID, "an evicted thread comes back on a fresh UAR thread")

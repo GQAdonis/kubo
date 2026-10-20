@@ -50,8 +50,10 @@ func denialOf(info *auth.TokenInfo) *Denial {
 }
 
 // TokenVerifier adapts an AuthVerifier to the go-sdk's auth.TokenVerifier. The
-// identity travels in TokenInfo.Extra and its ID in TokenInfo.UserID, which the
-// SDK uses to refuse a session presented by another user.
+// identity travels in TokenInfo.Extra and its binding key (Identity.BindingKey:
+// the principal ID, plus a digest of the subject for a session identity) in
+// TokenInfo.UserID, which the SDK uses to refuse a session presented by another
+// user.
 func TokenVerifier(v AuthVerifier) auth.TokenVerifier {
 	return func(ctx context.Context, token string, req *http.Request) (*auth.TokenInfo, error) {
 		id, exp, err := v.Verify(ctx, token, req)

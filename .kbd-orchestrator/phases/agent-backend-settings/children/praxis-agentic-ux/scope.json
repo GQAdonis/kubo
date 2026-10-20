@@ -1,0 +1,9 @@
+{
+  "allowedWritePaths": [
+    ".kbd-orchestrator/phases/agent-backend-settings/children/praxis-agentic-ux/**",
+    "openspec/changes/praxis-*/**"
+  ],
+  "deniedPaths": [],
+  "inheritsConstraints": true,
+  "__note": "Edit allowedWritePaths to widen the child loop's write surface. .kbd-orchestrator/** and SCRATCHPAD.md are always allowed. Enforced advisorily by check-child-scope.sh."
+}

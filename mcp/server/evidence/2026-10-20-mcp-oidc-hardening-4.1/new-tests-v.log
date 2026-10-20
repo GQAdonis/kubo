@@ -1,0 +1,15 @@
+--- PASS: TestAGUITwoSubjectsOnePrincipalCannotShareAThread (0.09s)
+--- PASS: TestAGUITwoSubjectsOnePrincipalCannotAnswerEachOthersInterrupt (0.17s)
+--- PASS: TestAGUITwoSubjectsOnePrincipalNeverEvictEachOther (0.37s)
+--- PASS: TestUARThreadsAreOwnedAndEvictedPerSubject (0.00s)
+--- PASS: TestJWKSMaxStaleCapsHeldKeys (0.07s)
+--- PASS: TestJWKSMaxStaleHasNoOffValue (0.13s)
+--- PASS: TestJWKSMaxStaleConfig (0.08s)
+--- PASS: TestJWKSMaxStaleDisabledFetchesNothing (0.01s)
+--- PASS: TestJWKSFetchSurvivesCancelledRequest (0.04s)
+--- PASS: TestJWKSFetchStaysBoundedByTheTimeout (0.00s)
+--- PASS: TestJWKSIdlePastCapWithIssuerUpLogsNothing (0.17s)
+--- PASS: TestJWKSMaxStaleAbsentWithLongTTLNamesTheDefault (0.01s)
+--- PASS: TestJWTRouteScopeDefaultIsSessionOnly (0.11s)
+PASS
+ok  	github.com/ipfs/kubo/mcp/server	1.349s

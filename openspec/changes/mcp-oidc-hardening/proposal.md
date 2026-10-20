@@ -44,7 +44,7 @@ None.
 ## Impact
 
 - **Owners.**
-  - ipfs-agent-architect: `mcp/contract/config/ipfs-mcp-config.schema.json` and examples, the generated `docs/mcp/config-reference.md`, ADR-0013 amendment and wording, `docs/changelogs/v0.44.md` Highlights, and `docs/environment-variables.md`. The last path is owned by no role; this change records the routing decision that the architect edits it.
+  - ipfs-agent-architect: `mcp/contract/config/ipfs-mcp-config.schema.json` and examples, the generated `docs/mcp/config-reference.md`, ADR-0013 amendment and wording, `docs/changelogs/v0.44.md` Highlights, `docs/environment-variables.md`, and `docs/mcp/user-guide.md` (its session-token section stated the old `routes` default). `docs/environment-variables.md` is owned by no role; this change records the routing decision that the architect edits it.
   - mcp-server-engineer: `mcp/server/{jwt.go,jwks.go,jwt_session.go,oidc_config.go,auth.go,auth_session.go,broker.go,gate.go}` and their tests. This change also routes `cmd/ipfs/kubo/mcp_http.go` (startup message), `test/cli/mcp_session_token_test.go` and a new `test/cli` dag-jose case to this role. Those paths are owned by no role, and console-session-auth set the precedent.
   - security-reviewer and reviewer: findings files only.
 - **Config contract.** New key `auth.oidc.jwks_max_stale`, with a default and off switch. Changed default of `auth.oidc.routes`. Changed off-switch text of `principals[].subjects`.

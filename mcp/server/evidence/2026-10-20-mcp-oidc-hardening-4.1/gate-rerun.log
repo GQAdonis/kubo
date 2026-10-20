@@ -1,0 +1,93 @@
+=== $ git diff --quiet HEAD -- go.mod go.sum docs/examples/kubo-as-a-library/go.mod test/dependencies/go.mod && echo "go.mod files unchanged"
+go.mod files unchanged
+=== exit 0
+=== $ f=$( { git diff --name-only HEAD -- "*.go"; git ls-files --others --exclude-standard -- "*.go"; } ); test -z "$(gofmt -l $f)" && echo "gofmt clean"
+gofmt clean
+=== exit 0
+=== $ make build
+plugin/loader/preload.sh > plugin/loader/preload.go
+go fmt plugin/loader/preload.go >/dev/null
+go build  "-trimpath" -ldflags="-X "github.com/ipfs/kubo".CurrentCommit=186525117-dirty -X "github.com/ipfs/kubo".taggedRelease= -X "github.com/ipfs/kubo".buildOrigin=github.com/GQAdonis/kubo" -o "cmd/ipfs/ipfs" "github.com/ipfs/kubo/cmd/ipfs"
+=== exit 0
+=== $ gmake -O test_go_lint
+plugin/loader/preload.sh > plugin/loader/preload.go
+go fmt plugin/loader/preload.go >/dev/null
+OUT="/Volumes/T7/Projects/references/kubo/test/bin/golangci-lint" ; cd "test/dependencies" ; go build "-trimpath" -o "${OUT}" "github.com/golangci/golangci-lint/cmd/golangci-lint" 2>&1
+golangci-lint run --timeout=3m ./...
+../../../../../Users/gqadonis/Projects/references/kubo/fuse/node/mount_darwin.go:29:9: ST1005: error strings should not end with punctuation or newlines (stylecheck)
+	return fmt.Errorf(`macFUSE not found.
+	       ^
+gmake: *** [mk/golang.mk:116: test_go_lint] Error 1
+=== exit 2
+=== $ go test ./mcp/server/... ./mcp/contract/... ./cmd/ipfs/kubo/ -count=1
+ok  	github.com/ipfs/kubo/mcp/server	27.646s
+ok  	github.com/ipfs/kubo/mcp/server/confirm	0.847s
+ok  	github.com/ipfs/kubo/mcp/server/embeddings	2.056s
+ok  	github.com/ipfs/kubo/mcp/contract	1.236s
+ok  	github.com/ipfs/kubo/cmd/ipfs/kubo	5.347s
+=== exit 0
+=== $ export PATH="$PWD/cmd/ipfs:$PATH"; export IPFS_PATH="$(mktemp -d)"; go test ./test/cli/ -count=1 -v -run "TestMCPSessionToken|TestMCPHTTP|TestMCPPrincipal|TestDagJose|TestDefaultMatchesExpectedProfile|TestTelemetry" 2>&1 | grep -E "^(=== RUN|--- (PASS|FAIL|SKIP)|PASS|FAIL|ok )"
+=== RUN   TestDefaultMatchesExpectedProfile
+=== RUN   TestDagJose
+=== RUN   TestMCPHTTP
+=== RUN   TestMCPPrincipalUnconfiguredGetsNothing
+=== RUN   TestMCPPrincipalEgressAckIsRequiredForContentTools
+=== RUN   TestMCPPrincipalCheckUAR
+=== RUN   TestMCPPrincipalUARSessionChecks
+=== RUN   TestMCPPrincipalUARVerifyIsRefusedWhenSettingsAreUnreadable
+=== RUN   TestMCPPrincipalStdioClientIdentifyingAsUARIsRefusedContentTools
+=== RUN   TestMCPPrincipalShellCapableIsRequiredUnderConfirmCLI
+=== RUN   TestMCPPrincipalOperatorTokenIsNotExemptUnderConfirmCLI
+=== RUN   TestMCPHTTPStartupFailsWhenNoPrincipalCredentialResolves
+=== RUN   TestMCPSessionToken
+=== RUN   TestMCPSessionToken/a_mapped_token_runs_/agui_and_is_refused_on_/mcp
+=== RUN   TestMCPSessionToken/off:_no_JWT_is_accepted,_nothing_is_fetched_and_/auth/session_is_404
+=== RUN   TestMCPSessionToken/routes_absent:_a_mapped_token_reaches_/auth/session_only
+--- PASS: TestMCPSessionToken (0.00s)
+=== RUN   TestTelemetry
+=== RUN   TestTelemetry/opt-out_via_environment_variable
+=== RUN   TestTelemetry/opt-out_via_config
+=== RUN   TestTelemetry/opt-out_removes_existing_UUID_file
+=== RUN   TestTelemetry/opt-out_via_DO_NOT_TRACK
+=== RUN   TestTelemetry/IPFS_TELEMETRY_overrides_DO_NOT_TRACK
+=== RUN   TestTelemetry/no_endpoint_by_default:_nothing_is_sent_and_no_identifier_is_kept
+=== RUN   TestTelemetry/endpoint_answering_410_Gone_stops_telemetry_for_good
+=== RUN   TestTelemetry/telemetry_schema_regression_guard
+=== RUN   TestMCPPrincipalUnconfiguredGetsNothing/a_token_that_maps_to_no_configured_principal_gets_401_and_no_session
+=== RUN   TestMCPPrincipalUnconfiguredGetsNothing/without_--mcp-config_and_IPFS_MCP_CONFIG_no_ui,_a2a_or_uar_principal_exists_and_nothing_is_checked
+=== RUN   TestMCPPrincipalCheckUAR/verify_reads_the_pinned_effective-settings_path_and_refuses_what_it_cannot_read
+=== RUN   TestMCPPrincipalCheckUAR/assert_records_both_as_info_and_accepts_a_published_version
+=== RUN   TestMCPPrincipalCheckUAR/the_version_check_runs_under_assert
+=== RUN   TestMCPPrincipalCheckUAR/an_unpublished_version_is_refused
+=== RUN   TestMCPPrincipalCheckUAR/there_is_no_default_address
+=== RUN   TestMCPHTTP/rejects_missing_and_wrong_tokens,_rebinding_and_cross-origin_requests
+=== RUN   TestMCPHTTP/a_principal_is_read-only_until_a_group_is_granted_by_name
+=== RUN   TestMCPHTTP/lists_the_same_tools_as_stdio_for_the_same_flags
+=== RUN   TestMCPHTTP/a_destructive_call_is_confirmed_through_elicitation_over_HTTP
+=== RUN   TestMCPHTTP/refuses_a_non-loopback_address_without_a_token_and_reserved_ports
+=== RUN   TestMCPHTTP/rejects_a_config_with_a_literal_credential
+=== RUN   TestMCPHTTP/prints_least-privilege_RPC_paths
+=== RUN   TestMCPHTTP/does_not_open_a_listener_without_--http
+--- PASS: TestMCPPrincipalOperatorTokenIsNotExemptUnderConfirmCLI (1.82s)
+--- PASS: TestMCPHTTPStartupFailsWhenNoPrincipalCredentialResolves (1.92s)
+--- PASS: TestMCPPrincipalUARSessionChecks (1.93s)
+--- PASS: TestMCPPrincipalShellCapableIsRequiredUnderConfirmCLI (1.96s)
+--- PASS: TestMCPPrincipalStdioClientIdentifyingAsUARIsRefusedContentTools (2.07s)
+--- PASS: TestMCPPrincipalUARVerifyIsRefusedWhenSettingsAreUnreadable (2.24s)
+--- PASS: TestMCPPrincipalEgressAckIsRequiredForContentTools (2.31s)
+--- PASS: TestDagJose (2.20s)
+--- PASS: TestDefaultMatchesExpectedProfile (3.76s)
+--- PASS: TestMCPPrincipalCheckUAR (0.67s)
+--- PASS: TestMCPPrincipalUnconfiguredGetsNothing (0.00s)
+--- PASS: TestMCPHTTP (0.00s)
+--- PASS: TestTelemetry (0.00s)
+PASS
+ok  	github.com/ipfs/kubo/test/cli	8.170s
+=== exit 0
+=== $ python3 docs/mcp/config_reference.py --check --ipfs cmd/ipfs/ipfs
+schema keys: 134; options: 23; env: 5; build tags: 2; test functions found: 1355; --help compared: yes (cmd/ipfs/ipfs)
+OK: config-reference.md matches the schema, the sidecar and --help
+=== exit 0
+=== $ git diff --name-only 186525117 -- core client | grep . || echo "no /api/v0 or gateway code changed"
+no /api/v0 or gateway code changed
+=== exit 0

@@ -2,26 +2,26 @@
   "schemaVersion": "2",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2260,
-  "derivedRevision": 2260,
+  "sourceRevision": 2285,
+  "derivedRevision": 2285,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 371
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 396
   },
   "conflictCount": 0,
   "phase": "agent-backend-settings",
   "phaseId": "agent-backend-settings",
   "parentPhase": null,
-  "last_updated": "2026-10-20T12:16:28.418291Z",
+  "last_updated": "2026-10-20T13:14:50.678367Z",
   "last_updated_by": "kbd-runtime",
   "changes_total": 38,
-  "changes_completed": 33,
+  "changes_completed": 34,
   "implementation_total": 38,
-  "implementation_completed": 33,
+  "implementation_completed": 34,
   "completion": {
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 33,
+      "completed": 34,
       "total": 38,
       "status": "IN_PROGRESS"
     },
@@ -50,7 +50,7 @@
     "runId": "ipfs-mcp-server-20261009T081630Z",
     "primaryCounter": "implementation",
     "implementation": {
-      "completed": 67,
+      "completed": 68,
       "total": 78,
       "status": "IN_PROGRESS"
     },
@@ -349,12 +349,12 @@
     {
       "id": "mcp-oidc-hardening",
       "title": "mcp-oidc-hardening: OIDC verifier hardening (8.1 LOW-1..5, 8.2 MAJOR-1/MINORs)",
-      "status": "PENDING",
-      "implementation_status": "PENDING",
+      "status": "DONE",
+      "implementation_status": "COMPLETE",
       "tasks_total": 19,
-      "tasks_done": 17,
-      "last_task_completed": "4.1 Integration gate, run once after groups 1 to 3 are complete, against a make build binary, on non-default ports",
-      "next_task_pending": "5.1 security-reviewer: review groups 1 and 2 and task 3.1 against the 8.1 findings. Confirm LOW-1 to LOW-5 closed,",
+      "tasks_done": 19,
+      "last_task_completed": "5.2 reviewer: compatibility and quality review of the whole change against the 8.2 findings. Confirm no /api/v0, g",
+      "next_task_pending": null,
       "blockers": []
     },
     {
@@ -497,6 +497,16 @@
       "changes_total": 3,
       "implementation_completed": 3,
       "implementation_total": 3,
+      "certification_status": "NOT_TRACKED",
+      "handoff": null,
+      "completed_at": null
+    },
+    "praxis-agentic-ux": {
+      "status": "DONE",
+      "changes_completed": 0,
+      "changes_total": 0,
+      "implementation_completed": 0,
+      "implementation_total": 0,
       "certification_status": "NOT_TRACKED",
       "handoff": null,
       "completed_at": null

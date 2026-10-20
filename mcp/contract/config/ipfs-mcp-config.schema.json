@@ -447,7 +447,7 @@
             "jwks_max_stale": {
               "$ref": "#/$defs/Duration",
               "default": "24h",
-              "offSwitch": "No value removes the cap; turn the verifier off with `auth.oidc.enabled: false`. `0` and any value shorter than auth.oidc.jwks_cache_ttl fail config loading. A larger value keeps held keys usable longer while the issuer is unreachable.",
+              "offSwitch": "No value removes the cap; turn the verifier off with `auth.oidc.enabled: false`. `0` and any value shorter than auth.oidc.jwks_cache_ttl fail config loading, so a jwks_cache_ttl above 24h needs an explicit jwks_max_stale. Equal to jwks_cache_ttl (the minimum), no held key is used past the TTL: there is no stale fallback. A larger value keeps held keys usable longer while the issuer is unreachable.",
               "ownerChange": "mcp-oidc-hardening",
               "description": "Longest time since the last successful key-set fetch during which a held key still verifies tokens. Past it, every JWT gets 401 until a fetch succeeds, the expiry is logged once per stale period, and static bearers are unaffected. Must be at least auth.oidc.jwks_cache_ttl (enforced when the configuration is loaded, whether or not enabled is true). Default 24h (operator ruling, 2026-10-20)."
             },

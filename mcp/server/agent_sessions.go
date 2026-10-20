@@ -57,8 +57,13 @@ type runBucket struct {
 // agentSession is the in-memory state of one conversation. It is never
 // persisted.
 type agentSession struct {
-	id        string
+	id string
+	// principal is the principal ID: the key of the shared quotas. owner is
+	// Identity.BindingKey(): who may continue the session, answer its interrupt
+	// or be evicted for it. Two subjects mapped to one principal share the
+	// quotas but never a conversation.
 	principal string
+	owner     string
 	touched   time.Time
 	busy      bool
 
@@ -139,8 +144,10 @@ func (a *Agent) pruneBuckets(now time.Time) {
 }
 
 // acquire finds or creates the session and marks it busy. It charges the run
-// to the principal's rate before it touches the table.
-func (a *Agent) acquire(sessionID, principal string, create bool) (*agentSession, func(), error) {
+// to the principal's rate before it touches the table. A session belongs to
+// owner (Identity.BindingKey()); the rate and the session quotas are shared by
+// every owner of the principal.
+func (a *Agent) acquire(sessionID, principal, owner string, create bool) (*agentSession, func(), error) {
 	if len(sessionID) > maxSessionIDLen {
 		return nil, nil, ErrSessionNotFound
 	}
@@ -156,7 +163,7 @@ func (a *Agent) acquire(sessionID, principal string, create bool) (*agentSession
 	a.pruneBuckets(now)
 	s, ok := a.sessions[sessionID]
 	switch {
-	case ok && s.principal != principal:
+	case ok && s.owner != owner:
 		// Do not reveal that the ID exists for someone else.
 		return nil, nil, ErrSessionNotFound
 	case ok && s.busy:
@@ -168,13 +175,13 @@ func (a *Agent) acquire(sessionID, principal string, create bool) (*agentSession
 		return nil, nil, err
 	}
 	if !ok {
-		if err := a.makeRoom(principal); err != nil {
+		if err := a.makeRoom(principal, owner); err != nil {
 			return nil, nil, err
 		}
 		if sessionID == "" {
 			sessionID = randomID(12)
 		}
-		s = &agentSession{id: sessionID, principal: principal}
+		s = &agentSession{id: sessionID, principal: principal, owner: owner}
 		a.sessions[sessionID] = s
 	}
 	s.busy, s.touched = true, now
@@ -185,12 +192,13 @@ func (a *Agent) acquire(sessionID, principal string, create bool) (*agentSession
 	}, nil
 }
 
-// makeRoom frees a slot for a new session of the principal. It evicts only the
-// principal's own idle sessions: at its per-principal quota, or, when the table
-// is full, the principal's oldest. A full table that the principal cannot free
-// by itself is ErrTooManySessions; another principal's conversation is never
-// the price of a new one. Callers hold a.mu.
-func (a *Agent) makeRoom(principal string) error {
+// makeRoom frees a slot for a new session of owner. The per-principal quota is
+// shared by every owner of the principal, but eviction is not: only owner's own
+// idle sessions are evicted, at the quota or, when the table is full, the
+// oldest. A full table or quota that owner cannot free by itself is
+// ErrTooManySessions (fail closed); another subject's or principal's
+// conversation is never the price of a new one. Callers hold a.mu.
+func (a *Agent) makeRoom(principal, owner string) error {
 	own := 0
 	for _, s := range a.sessions {
 		if s.principal == principal {
@@ -198,7 +206,7 @@ func (a *Agent) makeRoom(principal string) error {
 		}
 	}
 	if own >= maxSessionsPerPrincipal || len(a.sessions) >= maxSessions {
-		if !a.evictOldestIdle(principal) {
+		if !a.evictOldestIdle(owner) {
 			return ErrTooManySessions
 		}
 	}
@@ -215,7 +223,7 @@ func (a *Agent) OpenInterrupt(id Identity, sessionID string) (*Interrupt, error)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	s, ok := a.sessions[sessionID]
-	if !ok || s.principal != id.ID {
+	if !ok || s.owner != id.BindingKey() {
 		return nil, ErrSessionNotFound
 	}
 	if s.busy {
@@ -232,12 +240,12 @@ func (a *Agent) OpenInterrupt(id Identity, sessionID string) (*Interrupt, error)
 	return &cp, nil
 }
 
-// evictOldestIdle drops the principal's least recently used idle session. It
+// evictOldestIdle drops the owner's least recently used idle session. It
 // reports whether it dropped one. Callers hold a.mu.
-func (a *Agent) evictOldestIdle(principal string) bool {
+func (a *Agent) evictOldestIdle(owner string) bool {
 	oldest := ""
 	for id, s := range a.sessions {
-		if s.busy || s.principal != principal {
+		if s.busy || s.owner != owner {
 			continue
 		}
 		if oldest == "" || s.touched.Before(a.sessions[oldest].touched) {

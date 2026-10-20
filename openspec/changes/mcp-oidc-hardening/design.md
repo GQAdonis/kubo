@@ -70,7 +70,9 @@ An absent `routes` now accepts a JWT only on `/auth/session`. Every other route 
 
 ## Migration Plan
 
-- The schema accepts the new key and the old configs unchanged, except an absent `routes`, whose meaning narrows.
+- The schema accepts the new key and the old configs unchanged, with two exceptions:
+  - an absent `routes`, whose meaning narrows to `session` only;
+  - a config that sets `jwks_cache_ttl` above 24h and no `jwks_max_stale` now fails to load, because the 24h default is below its TTL. It must set `jwks_max_stale` explicitly (at least the TTL). The load error names the effective default (`24h (default)`) when the key is absent (5.2 MINOR-2). The changelog and `docs/mcp/config-reference.md` say so.
 - Rollback is a revert of the change's commits. The deployed config sets `routes` explicitly and does not set `jwks_max_stale`, so it loads before and after.
 
 ## Open Questions

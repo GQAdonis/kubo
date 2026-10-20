@@ -92,6 +92,7 @@ func (c *jwksCache) key(ctx context.Context, kid string) (jose.JSONWebKey, error
 		if k, ok := c.lookup(kid, false); ok {
 			return k, nil
 		}
+		c.reportStale()
 		return jose.JSONWebKey{}, errNoSuchKey
 	}
 	if err := c.fetch(ctx); err != nil {
@@ -100,6 +101,7 @@ func (c *jwksCache) key(ctx context.Context, kid string) (jose.JSONWebKey, error
 		if k, ok := c.lookup(kid, false); ok {
 			return k, nil
 		}
+		c.reportStale()
 		return jose.JSONWebKey{}, err
 	}
 	if k, ok := c.lookup(kid, true); ok {
@@ -120,15 +122,30 @@ func (c *jwksCache) lookup(kid string, fresh bool) (jose.JSONWebKey, bool) {
 	}
 	age := c.now().Sub(c.fetchedAt)
 	if c.maxStale > 0 && age >= c.maxStale {
-		if c.onStale != nil && c.staleLogged.CompareAndSwap(false, true) {
-			c.onStale(age)
-		}
+		// Not logged here: the caller may still refetch and succeed. key()
+		// reports the expiry only when the stale answer is final.
 		return jose.JSONWebKey{}, false
 	}
 	if fresh && age >= c.ttl {
 		return jose.JSONWebKey{}, false
 	}
 	return k, true
+}
+
+// reportStale logs the cap's expiry, once per stale period, when a held key set
+// older than maxStale is the final answer: the refetch failed or the refetch
+// window forbids one. A stale set that a refetch replaces is not an outage and
+// is not reported.
+func (c *jwksCache) reportStale() {
+	c.mu.RLock()
+	age, held := c.now().Sub(c.fetchedAt), !c.fetchedAt.IsZero()
+	c.mu.RUnlock()
+	if !held || c.maxStale <= 0 || age < c.maxStale || c.onStale == nil {
+		return
+	}
+	if c.staleLogged.CompareAndSwap(false, true) {
+		c.onStale(age)
+	}
 }
 
 // warm fetches the key set once, for a prefetch at startup. It obeys the same

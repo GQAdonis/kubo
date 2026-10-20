@@ -77,6 +77,13 @@ func (c *ChainVerifier) ClockSkew() time.Duration {
 func (c *ChainVerifier) adoptLogger(l *slog.Logger) {
 	if c.jwt != nil {
 		c.jwt.adoptLogger(l)
+	}
+}
+
+// warnOpenRoutes emits the startup Warn about routes beyond session with an
+// empty agent.origin_allowlist. The listener calls it once, after adoptLogger.
+func (c *ChainVerifier) warnOpenRoutes() {
+	if c.jwt != nil {
 		c.jwt.warnOpenRoutes()
 	}
 }

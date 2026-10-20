@@ -14,3 +14,16 @@ Tree: `feat/ipfs-mcp-server` at `a17a2c626` plus the uncommitted mcp-oidc-harden
 | Stability | no change under `core/commands`, `core/corehttp`, `client/rpc`, `core/coreiface` | PASS |
 
 Not run: `-race`, the full `make test` suite, gateway conformance (no gateway code changed). Unverified until `lke-agent-settings` 1.8: the `azp` rule against a live Hydra ID token (design D1).
+
+## Rerun after the 5.1/5.2 correction cycle (2026-10-20)
+
+Full output: `gate-rerun.log`. Base: `186525117` plus the correction-cycle changes.
+
+| Step | Result |
+|---|---|
+| go.mod unchanged, gofmt clean, `make build` | PASS |
+| `gmake -O test_go_lint` | PASS for this change; the only finding is the same pre-existing `fuse/node/mount_darwin.go:29` ST1005 |
+| `go test ./mcp/server/... ./mcp/contract/... ./cmd/ipfs/kubo/ -count=1` | PASS (includes the new `agui_subject_test.go` two-subject tests, `TestJWKSIdlePastCapWithIssuerUpLogsNothing`, `TestJWKSMaxStaleAbsentWithLongTTLNamesTheDefault`) |
+| `go test ./test/cli/ -count=1 -v -run "TestMCPSessionToken\|TestMCPHTTP\|TestMCPPrincipal\|TestDagJose\|TestDefaultMatchesExpectedProfile\|TestTelemetry"` | PASS, 14 top-level tests reported `--- PASS` (answers 5.2 INFO-5: TestDagJose and TestMCPSessionToken ran) |
+| config-reference `--check --ipfs cmd/ipfs/ipfs` | PASS |
+| No change under `core/` or `client/` since 186525117 | PASS |

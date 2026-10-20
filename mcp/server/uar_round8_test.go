@@ -50,7 +50,7 @@ func TestUARFailedResumeAfterADenialWithdrawsTheDenialsItFilledIn(t *testing.T) 
 	require.Equal(t, http.StatusBadGateway, r.Status, r.Body)
 
 	// The shown interrupt is open again, and so is the one the denial filled in.
-	th, release, err := e.s.UARBackend().acquireThread("chat", "t1", false)
+	th, release, err := e.s.UARBackend().acquireThread("chat", "chat", "t1", false)
 	require.NoError(t, err)
 	defer release()
 	require.NotNil(t, th.shownPending())

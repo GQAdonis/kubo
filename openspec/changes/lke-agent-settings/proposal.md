@@ -57,7 +57,7 @@ None.
   - `--agui` absent unmounts the chat;
   - removing `agui` from `auth.oidc.routes` refuses session tokens there;
   - `auth.oidc.enabled: false` turns off the verifier;
-  - removing the `admin` principal (or its Secret, which is `optional: true`) unmounts the settings route (404).
+  - `agent.settings.enabled: false` unmounts the settings route (404). Removing the `admin` principal or its Secret (which is `optional: true`) leaves no admin credential, so no request can pass the settings route's admin check; what the route answers in that state (404 or 401) is recorded from observation in 1.1, not assumed.
 
 ## Operator rulings (2026-10-20)
 

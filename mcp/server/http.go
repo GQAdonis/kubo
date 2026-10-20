@@ -186,6 +186,7 @@ func NewHTTPServer(s *Server, opts HTTPOptions) (*HTTPServer, error) {
 	var skew time.Duration
 	if c, ok := h.verify.(*ChainVerifier); ok {
 		c.adoptLogger(log)
+		c.warnOpenRoutes()
 		skew = c.ClockSkew()
 	}
 	h.bearer = auth.RequireBearerToken(TokenVerifier(h.verify), &auth.RequireBearerTokenOptions{

@@ -58,6 +58,8 @@ type aguiEnvOpts struct {
 	noPresence  bool
 	// a2ui is AGUISettings.A2UI (nil: the default, on).
 	a2ui *bool
+	// verifier, when set, replaces the static verifier of the test principals.
+	verifier func(*testing.T) AuthVerifier
 }
 
 func aguiIdentity(id, kind string, write, destructive, ack []string) Identity {
@@ -107,7 +109,11 @@ func newAGUIEnv(t *testing.T, opts aguiEnvOpts, steps ...func(modelRequest) []st
 		{Identity: aguiIdentity("chat-ro", KindUI, nil, nil, []string{"local"}), Token: aguiTokReadUI},
 	})
 	require.NoError(t, err)
-	hopts := HTTPOptions{Listen: "127.0.0.1:0", Verifier: v, AllowedOrigins: opts.listenerOrg, MaxBodyBytes: opts.maxBody, Logger: log}
+	var verifier AuthVerifier = v
+	if opts.verifier != nil {
+		verifier = opts.verifier(t)
+	}
+	hopts := HTTPOptions{Listen: "127.0.0.1:0", Verifier: verifier, AllowedOrigins: opts.listenerOrg, MaxBodyBytes: opts.maxBody, Logger: log}
 	e.hs, err = NewHTTPServer(e.s, hopts)
 	require.NoError(t, err)
 	addr, err := e.hs.Listen()

@@ -577,7 +577,7 @@ func (a *Agent) Run(ctx context.Context, id Identity, in RunInput, emit func(Eve
 		return nil, refusal
 	}
 	// Only a new message starts a session; a resume belongs to one that exists.
-	sess, release, err := a.acquire(in.SessionID, eff.ID, in.Message != "" && !in.ContinueOnly)
+	sess, release, err := a.acquire(in.SessionID, eff.ID, eff.BindingKey(), in.Message != "" && !in.ContinueOnly)
 	if err != nil {
 		return nil, err
 	}
