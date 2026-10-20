@@ -189,6 +189,7 @@ okf_version: "0.2"
 * [Karpathy session cd5c7ce74658](/karpathy-session-cd5c7ce746586dd3.md)
 * [Karpathy session ce79ae018ff5](/karpathy-session-ce79ae018ff591b5.md)
 * [Karpathy session ce81fffe0165](/karpathy-session-ce81fffe0165db70.md)
+* [Karpathy session ceda03f9a1c8](/karpathy-session-ceda03f9a1c8aef7.md)
 * [Karpathy session d0dc2cc02950](/karpathy-session-d0dc2cc02950cd31.md)
 * [Karpathy session d0dce63770f4](/karpathy-session-d0dce63770f44725.md)
 * [Karpathy session d0eb451382bb](/karpathy-session-d0eb451382bbc8a8.md)
