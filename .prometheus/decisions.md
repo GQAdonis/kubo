@@ -156,3 +156,10 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 - `auth.oidc.jwks_max_stale` default (operator: "24h"): a cached signing key keeps verifying for at most 24h while the issuer is unreachable (mcp-oidc-hardening 1.1).
 - OQ-2, image roll (operator: "Fold into OG-13 PR"): the image carrying mcp-oidc-hardening ships in the same know-me-cluster PR that adds `/agui`, with one planned ipfs-0 restart.
 - Deferred, not blocking: rejecting tokens that carry `scp` or `client_id` (optional half of 8.1 LOW-1) until the claim names are seen in a live Hydra ID token.
+
+## 2026-10-20: lke-agent-settings tasks closed by explicit phase; stray duplicate left in place
+
+- Operator: the Codex session is only planning the UI/UX phase (`agentic-ui-implementation`), not implementing. Implementation stays in `agent-backend-settings`, and the active path is left with the planning session.
+- `agent-backend-settings` / `lke-agent-settings` 1.1-1.8 and 1.10 closed with `prometheus kbd task transition --phase agent-backend-settings` (no lifecycle hooks fired). 1.9 waits for the PR #55 merge.
+- A stray `lke-agent-settings` change (1.1 complete) exists under `agentic-ui-implementation` from the driver's active-path lookup; the runtime refuses to cancel a complete change, so it is left and noted here. It is not part of that phase's plan.
+- Commit e702aaf72 contains the planning session's then-uncommitted `agentic-ui-implementation` phase files; left as is (pushed history is not rewritten).
