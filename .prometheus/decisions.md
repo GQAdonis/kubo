@@ -131,3 +131,9 @@ Operator, verbatim: "we will use a fork of xberg (https://github.com/Know-Me-Too
 
 - MEDIUM-3 (the know-me.tools Kratos session becomes a console login; off-cluster hosts received that cookie): operator chose "Remove or repoint those names" and selected all five. Deleted via the Cloudflare API: `admin` (35.194.48.152), `flint` and `the-boss` (185.158.133.1, Lovable), `agent-runtime` and `agentic-social-networking` (CNAME `cname.manus.space`). Every remaining A/CNAME in the zone points at argocd-gateway 23.239.29.33. Zone backup before the change: `~/.local/share/know-me-ops/cloudflare-know-me.tools-20261019T180758Z.json`. Two `_lovable` TXT records remain (TXT receives no cookie). Risk: those Lovable and Manus apps no longer resolve on know-me.tools.
 - LOW-17 (logout after 15 minutes idle leaves Hydra and Kratos signed in): operator chose "Accept now, fix in Web UI later". Accepted as a residual for the cutover; follow-up: the session-mode Web UI makes one request through the console just before navigating to `/oauth2/logout`.
+
+## 2026-10-19: console-session-auth 6.7 closed with step d2 skipped
+
+- Decision: close 6.7 on 8 of 8 gating operator steps PASS. Step d2 (logout after more than 15 minutes idle) is not run.
+- Rationale: d2 is record-only. It observes the LOW-17 residual, which was already accepted (2026-10-19), and it gates nothing. Operator: "skip d2, close 6.7 and start the reviews".
+- Consequence: the idle-logout behaviour is unobserved live. It is carried with the LOW-17 Web UI fix, whose acceptance should include running d2.

@@ -22,7 +22,7 @@ Date: 2026-10-19. Operator: "PR #48 is merged" (merge `efeaf57`). Context `know-
 ## Still to do
 
 1. Planned restart of `ipfs-0` (operator-approved) so `ipfs mcp` loads the new `ipfs-mcp-config` (`auth.oidc`, routes `session`); then the sidecar log line and the JWKS fetch over the 10443 egress rule.
-2. Operator browser steps: done 2026-10-19, see "Operator browser steps" below (d2 still to record).
+2. Operator browser steps: done 2026-10-19, see "Operator browser steps" below.
 
 ## Planned restart of `ipfs-0` (operator: "restart ipfs-0", 2026-10-19)
 
@@ -51,6 +51,6 @@ Run by the operator in two separate browser profiles: A with the allowlisted acc
 | e | Bare `https://console.prometheusags.ai/` ends on `/webui/` | PASS |
 | c | 20 minutes after sign-in, reload and Files load without a sign-in prompt (refresh works) | PASS |
 | d | `/oauth2/logout` within 15 minutes: Hydra, Kratos logout, then the password prompt (no Hydra error); after sign-in, `/webui/` | PASS |
-| d2 | Logout after more than 15 minutes idle (record only) | NOT RUN |
+| d2 | Logout after more than 15 minutes idle (record only) | SKIPPED (operator decision 2026-10-19) |
 
-Result: 8 of 8 gating steps PASS. Step d2 is record-only (the LOW-17 residual, accepted in `decisions.md`). It has not been run yet, so 6.7 stays open until it is recorded.
+Result: 8 of 8 gating steps PASS. Step d2 is record-only (the LOW-17 residual, accepted in `decisions.md`); the operator chose to skip it ("skip d2, close 6.7", 2026-10-19). The idle-logout behaviour stays unobserved and is carried with the LOW-17 Web UI fix.
