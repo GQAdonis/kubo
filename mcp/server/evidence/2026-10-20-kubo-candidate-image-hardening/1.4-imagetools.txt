@@ -1,0 +1,4 @@
+Name:      ghcr.io/gqadonis/kubo:b17bf0dd4
+MediaType: application/vnd.docker.distribution.manifest.v2+json
+Digest:    sha256:2e4c906ee3de71435c0d3bdeb629f7bc9e937d10631824e2c7e35e23ba144d17
+sha256:18cf0b5fb840053f1ca7c32ef4b6ad9dfad9f4b6eaabbfce0243df7472fcd72b

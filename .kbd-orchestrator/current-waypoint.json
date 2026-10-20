@@ -2,39 +2,39 @@
   "schemaVersion": "5",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2286,
-  "derivedRevision": 2286,
+  "sourceRevision": 2306,
+  "derivedRevision": 2306,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 397
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 417
   },
   "conflictCount": 0,
   "projectId": "b7047aa1-816d-44d2-8455-63814b788cec",
   "runId": "ipfs-mcp-server-20261009T081630Z",
   "path": [
-    "agent-backend-settings"
+    "agentic-ui-implementation"
   ],
   "phaseIds": [
-    "agent-backend-settings"
+    "agentic-ui-implementation"
   ],
-  "activePhaseId": "agent-backend-settings",
-  "activePhase": "agent-backend-settings",
-  "phase": "agent-backend-settings",
+  "activePhaseId": "agentic-ui-implementation",
+  "activePhase": "agentic-ui-implementation",
+  "phase": "agentic-ui-implementation",
   "parentPhase": null,
   "childPointer": null,
-  "change": "lke-agent-settings",
-  "currentTask": "1.1",
+  "change": null,
+  "currentTask": null,
   "status": "ready",
   "lifecycle": "ready",
-  "stageId": null,
-  "stageStatus": null,
+  "stageId": "assess",
+  "stageStatus": "IN_PROGRESS",
   "completionMetric": "implementation",
-  "implementationCompleted": 68,
-  "implementationTotal": 78,
+  "implementationCompleted": 69,
+  "implementationTotal": 79,
   "planRevision": 3,
-  "revision": 2286,
-  "exactNextCommand": "/kbd-status",
-  "nextChange": "lke-agent-settings",
-  "nextTask": "1.1",
-  "updatedAt": "2026-10-20T13:15:01.685970Z"
+  "revision": 2306,
+  "exactNextCommand": "/kbd-assess agentic-ui-implementation",
+  "nextChange": null,
+  "nextTask": null,
+  "updatedAt": "2026-10-20T17:08:04.373600Z"
 }

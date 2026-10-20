@@ -1,0 +1,27 @@
+The push refers to repository [ghcr.io/gqadonis/kubo]
+ad4241693cd5: Preparing
+523425aacbf5: Preparing
+bf5459927065: Preparing
+5ebee19151bd: Preparing
+b3b60c9b5655: Preparing
+31c779fc2d4e: Preparing
+4d31c392403b: Preparing
+52201785ae7e: Preparing
+fc41a6056d0b: Preparing
+97e4ece8f8a4: Preparing
+4d31c392403b: Waiting
+52201785ae7e: Waiting
+fc41a6056d0b: Waiting
+97e4ece8f8a4: Waiting
+31c779fc2d4e: Waiting
+523425aacbf5: Pushed
+5ebee19151bd: Pushed
+ad4241693cd5: Pushed
+bf5459927065: Pushed
+31c779fc2d4e: Layer already exists
+4d31c392403b: Layer already exists
+52201785ae7e: Layer already exists
+fc41a6056d0b: Layer already exists
+97e4ece8f8a4: Layer already exists
+b3b60c9b5655: Pushed
+b17bf0dd4: digest: sha256:2e4c906ee3de71435c0d3bdeb629f7bc9e937d10631824e2c7e35e23ba144d17 size: 2407

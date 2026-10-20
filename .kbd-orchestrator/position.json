@@ -2,26 +2,25 @@
   "schemaVersion": "1",
   "generatedBy": "kbd-runtime",
   "projectionContractVersion": 2,
-  "sourceRevision": 2286,
-  "derivedRevision": 2286,
+  "sourceRevision": 2306,
+  "derivedRevision": 2306,
   "frontier": {
     "cbd052f8-e010-4fca-8234-ae78ea0ec55e": 1889,
-    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 397
+    "f12eed63-cd03-4c47-b731-9ca0a06f2339": 417
   },
   "conflictCount": 0,
-  "updatedAt": "2026-10-20T13:15:01.685970Z",
+  "updatedAt": "2026-10-20T17:08:04.373600Z",
   "cursor": [
-    "agent-backend-settings",
-    "lke-agent-settings",
-    "1.1"
+    "agentic-ui-implementation",
+    "assess"
   ],
   "root": {
     "type": "phase",
     "id": "b7047aa1-816d-44d2-8455-63814b788cec",
     "status": "ready",
     "progress": {
-      "done": 68,
-      "total": 78
+      "done": 69,
+      "total": 79
     },
     "children": [
       {
@@ -426,6 +425,28 @@
             "progress": {
               "done": 0,
               "total": 9
+            }
+          }
+        ],
+        "annotations": []
+      },
+      {
+        "type": "phase",
+        "id": "agentic-ui-implementation",
+        "canonicalId": "agentic-ui-implementation",
+        "status": "IN_PROGRESS",
+        "progress": {
+          "done": 1,
+          "total": 1
+        },
+        "children": [
+          {
+            "type": "change",
+            "id": "lke-agent-settings",
+            "status": "COMPLETE",
+            "progress": {
+              "done": 1,
+              "total": 1
             }
           }
         ],

@@ -34,6 +34,7 @@
     "openai",
     "gemini",
     "groq",
+    "mistral",
     "fireworks",
     "openrouter"
   ],
@@ -46,5 +47,5 @@
   "config_path": "/Users/gqadonis/.config/liter-llm/liter-llm-proxy.toml",
   "config_exists": true,
   "config_defects": [],
-  "checked_at": "2026-10-13T09:48:22Z"
+  "checked_at": "2026-10-20T15:43:52Z"
 }
