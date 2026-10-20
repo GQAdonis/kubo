@@ -120,7 +120,7 @@ Prerequisite: task 1.5 is done (go-jose at least `v4.1.6` in all three `go.mod` 
   
   Operator part: a signed-in allowlisted browser reaches `/webui` and chat; a second, non-allowlisted Kratos account gets 403; a session still works 20 minutes after sign-in (unverified point 2); `/oauth2/logout` clears the session. Acceptance: the script exists and prints PASS or FAIL per check.
 - [x] 6.6 Security-reviewer read of the cutover PR before OG-26. Scope: RBAC default, route coverage, cookie scope, CSRF, the token carrier, the allowlist script, and rollback. Acceptance: findings file, no open CRITICAL.
-- [ ] 6.7 After OG-26 (merge, sync, planned restart): record the script's unauthenticated output and the operator's part in a new dated evidence folder. Acceptance: README with PASS or FAIL per check. On any FAIL, the 6.4 revert was run and is recorded.
+- [x] 6.7 After OG-26 (merge, sync, planned restart): record the script's unauthenticated output and the operator's part in a new dated evidence folder. Acceptance: README with PASS or FAIL per check. On any FAIL, the 6.4 revert was run and is recorded.
 
 ## 7. Retire the interim credentials (ipfs-agent-architect, operator)
 
