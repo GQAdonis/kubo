@@ -1,0 +1,2 @@
+rpc version: ipfs version 0.44.0-dev
+gateway /ipfs/<webui cid>/: 200

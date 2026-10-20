@@ -1,0 +1,15 @@
+$ lke-checks/agent-settings.sh unauth
+=== Unauthenticated checks (read-only against live cluster) ===
+PASS: console /api/v0/version with cors mode is 401
+PASS: /webui/ navigation redirects to oauth.know-me.tools
+PASS: /agui with cors mode is 401
+PASS: POST /agui with wrong origin is 403
+PASS: console /agent/settings gets 404 (no ipfs-mcp answer)
+PASS: https://console.prometheusags.ai/agui/ gets 404
+PASS: https://console.prometheusags.ai/agui/catalog gets 404
+PASS: https://ipfs.prometheusags.ai/agent/settings gets 404
+PASS: https://rpc.prometheusags.ai/agent/settings gets 404
+PASS: ipfs.prometheusags.ai /mcp without bearer is 401
+PASS: no HTTPRoute on any public host routes /agent/settings to ipfs-mcp:5050
+=== Unauthenticated checks PASS ===
+exit 0
