@@ -3,9 +3,23 @@
   "title": "A2UI component binding references",
   "type": "object",
   "additionalProperties": false,
-  "required": ["catalogId", "serve", "aguiEvents", "description", "components", "chatRules"],
+  "required": [
+    "catalogId",
+    "serve",
+    "aguiEvents",
+    "description",
+    "components",
+    "chatRules",
+    "catalogVersion",
+    "protocolVersion",
+    "negotiation",
+    "viewBindings",
+    "externalApps"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "catalogId": {
       "type": "string",
       "pattern": "^https://[^\\s]+\\.catalog\\.json$",
@@ -14,26 +28,39 @@
     "catalogAliases": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
       "description": "Short names for the same catalog (docs, logs, config). Never sent as an A2UI catalogId."
     },
     "serve": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["route", "description"],
+      "required": [
+        "route",
+        "description"
+      ],
       "properties": {
         "route": {
           "type": "string",
           "pattern": "^/agui/[a-z][a-z0-9-]*$",
           "description": "GET route that serves the embedded catalog, directly under the AG-UI mount so it inherits the /agui protection chain (Host, Origin with the agent.origin_allowlist strict CORS answer, body limit, bearer auth, principal kind ui) and answers 404 when AG-UI is off."
         },
-        "description": { "type": "string", "minLength": 10 }
+        "description": {
+          "type": "string",
+          "minLength": 10
+        }
       }
     },
     "aguiEvents": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["surface", "catalog", "description"],
+      "required": [
+        "surface",
+        "catalog",
+        "description"
+      ],
       "properties": {
         "surface": {
           "const": "a2ui",
@@ -42,29 +69,220 @@
         "catalog": {
           "type": "string",
           "pattern": "^a2ui\\.[a-z][a-z0-9-]*$",
-          "description": "Name of the one-per-run CUSTOM event advertising the catalog, emitted after RUN_STARTED when agent.a2ui is on; value is {\"catalogId\": ..., \"catalogUrl\": <serve.route>}."
+          "description": "One-per-negotiated-run advertisement after RUN_STARTED with exact catalogId/catalogVersion/protocolVersion/catalogUrl, defined in agentic/ui-negotiation.schema.json#/$defs/CatalogAdvertisement."
         },
-        "description": { "type": "string", "minLength": 10 }
+        "description": {
+          "type": "string",
+          "minLength": 10
+        }
       }
     },
-    "description": { "type": "string" },
+    "description": {
+      "type": "string"
+    },
     "components": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "kind", "description"],
+        "required": [
+          "name",
+          "kind",
+          "description"
+        ],
         "properties": {
-          "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
-          "kind": { "type": "string", "enum": ["view", "chat"] },
-          "description": { "type": "string", "minLength": 10 }
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z0-9]*$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "view",
+              "chat"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10
+          }
         }
       }
     },
     "chatRules": {
       "type": "object",
-      "additionalProperties": { "$ref": "derivation-rules.schema.json#/$defs/Rule" }
+      "additionalProperties": {
+        "$ref": "derivation-rules.schema.json#/$defs/Rule"
+      }
+    },
+    "catalogVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Version of the catalog's semantics, distinct from A2UI protocol version and package/tool-contract versions. Exact matching, no semver ranges."
+    },
+    "protocolVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16,
+      "pattern": "^v[0-9]+\\.[0-9]+$",
+      "description": "A2UI wire version for the negotiated catalog."
+    },
+    "negotiation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inputPath",
+        "schemaRef",
+        "maxEncodedBytes",
+        "matching",
+        "missingOrInvalid",
+        "source",
+        "description"
+      ],
+      "description": "First-party negotiation decoder contract, independent from external MCP Apps.",
+      "properties": {
+        "inputPath": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "schemaRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "maxEncodedBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "matching": {
+          "const": "exact-id-catalog-version-protocol-version"
+        },
+        "missingOrInvalid": {
+          "const": "disable-a2ui-only"
+        },
+        "source": {
+          "const": "server-built-only"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000
+        }
+      }
+    },
+    "viewBindings": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "view",
+          "component",
+          "allowedComponents",
+          "uri",
+          "file",
+          "title",
+          "description"
+        ],
+        "description": "Canonical view record. Default component must be in allowedComponents; catalog tool mappings must be in this allowlist. Unique view/URI/file and actual resources/outputs are semantic invariants.",
+        "properties": {
+          "view": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "component": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Z][A-Za-z0-9]*$"
+          },
+          "allowedComponents": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Z][A-Za-z0-9]*$"
+            }
+          },
+          "uri": {
+            "type": "string",
+            "pattern": "^ui://ipfs-mcp/[a-z][a-z0-9-]*$"
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*\\.html$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "externalApps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mimeType",
+        "metadataKey",
+        "declaration",
+        "description"
+      ],
+      "description": "Ordinary MCP App resource fallback stays interoperable.",
+      "properties": {
+        "mimeType": {
+          "const": "text/html;profile=mcp-app"
+        },
+        "metadataKey": {
+          "const": "ai.ipfs/iframe-exception"
+        },
+        "declaration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "transport"
+          ],
+          "description": "Informational exception declaration, not authentication or a sandbox permission.",
+          "properties": {
+            "reason": {
+              "const": "external_mcp_app_host"
+            },
+            "transport": {
+              "const": "standard_ext_apps"
+            }
+          }
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
     }
   }
 }

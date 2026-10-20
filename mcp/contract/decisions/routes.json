@@ -1,0 +1,133 @@
+{
+  "$schema": "./routes.schema.json",
+  "description": "Dedicated read-only current-identity decisions surface; no vector-search group/egress or write-route semantics.",
+  "mount": {
+    "listener": "existing MCP HTTP listener",
+    "conditions": [
+      "http.enabled is true",
+      "agent.decisions.enabled is true (default true)",
+      "build includes agent support (not noagent and not nomcp)"
+    ],
+    "absentBehavior": "404 with no observer/subscription work; no new listener, backend, repository access or network egress. Independent of active run, LLM backend and agent.agui."
+  },
+  "authorization": {
+    "principalKinds": [
+      "ui",
+      "human-mcp",
+      "a2a",
+      "uar"
+    ],
+    "refusedKinds": [
+      "admin",
+      "anonymous"
+    ],
+    "routeKey": "decisions",
+    "identity": "full Principal.BindingKey including OIDC subject, across that identity's sessions",
+    "description": "Existing bearer AuthVerifier only, including gateway-forwarded console ID token where auth.oidc.enabled and explicit auth.oidc.routes decisions permit it. No cookie or URL-token parsing. Explicit authenticated identity required even on anonymous-loopback listeners; never fall back to LocalPrincipal. No new tool group/egress grant or approval authority."
+  },
+  "protection": {
+    "mount": "HTTPServer.Mount",
+    "hostOriginFetchMetadataBodyLimits": "unchanged shared protection chain",
+    "allowedOriginsKey": "agent.origin_allowlist",
+    "allowMethods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "allowHeaders": [
+      "authorization",
+      "content-type"
+    ],
+    "exposeHeaders": [
+      "Retry-After"
+    ],
+    "allowCredentials": false,
+    "cacheControl": "no-store",
+    "unknownOrForeignItem": "same 404"
+  },
+  "retention": {
+    "scope": "server",
+    "maxResolved": 200,
+    "maxAgeSeconds": 604800,
+    "liveRecords": "Existing broker/thread authorities retain their own quotas; avoid duplicate unbounded live storage. New UAR live observation projection is capped at 64 globally, one current open approval per existing owned thread. Eviction is observational, never consent, denial or permission to execute.",
+    "historyStartedAt": "process-local observer initialization; no durable replay or repository persistence"
+  },
+  "pagination": {
+    "defaultLimit": 50,
+    "maxLimit": 100,
+    "maxCursorBytes": 2048,
+    "cursorTtlSeconds": 60,
+    "sort": "created_at descending, then id descending",
+    "binding": [
+      "private identity tag",
+      "server epoch",
+      "snapshot revision",
+      "last sort key",
+      "limit",
+      "expiry"
+    ],
+    "cursorPrivacy": "HMAC-authenticate using process secret and bind ownership with a process-keyed opaque identity tag; never base64-encode a raw BindingKey/subject/principal. Existing unsigned pagination.go cursors are insufficient.",
+    "stale": "409 cursor_refresh_required with current caller epoch/revision; signature/foreign owner/malformed cursor is generic400 invalid_argument",
+    "maxItemBytes": 262144,
+    "maxResponseBytes": 1048576
+  },
+  "subscription": {
+    "transport": "authenticated fetch streaming SSE",
+    "path": "/decisions/events",
+    "firstEvent": "ipfs.decisions.snapshot_required",
+    "changeEvent": "ipfs.decision.changed",
+    "snapshotEvent": "ipfs.decisions.snapshot_required",
+    "maxPerIdentity": 4,
+    "maxPerPrincipal": 16,
+    "maxGlobal": 64,
+    "queueCapacity": 16,
+    "maxEventBytes": 1024,
+    "keepaliveSeconds": 25,
+    "writeDeadlineSeconds": 5,
+    "maxLifetimeSeconds": 900,
+    "authDeadline": "close no later than AuthVerifier verdict expiration; do not extend using middleware clock-skew grace",
+    "revocation": "close on known invalidation/config principal removal, credential expiry, feature disable, context cancellation or disconnect; re-authenticate every reconnect",
+    "slowConsumer": "atomically replace queued hints with one snapshot_required at latest own revision; if write misses deadline, disconnect and release subscriber",
+    "sseId": "omit SSE id and promise no replay; Last-Event-ID is not a replay cursor",
+    "lastEventId": "ignore for replay and send fresh initial snapshot_required",
+    "reconnect": "subscribe before reading current own revision; client buffers invalidations while authenticated paginated snapshot loads, retries stale pages, reconciles epoch and refetches on overflow; never claims freshness after silently dropped events",
+    "retryAfterSeconds": 5
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/decisions",
+      "querySchema": "decisions/decision-read.schema.json#/$defs/ListQuery",
+      "responseSchema": "decisions/decision-read.schema.json#/$defs/ListResponse",
+      "contentType": "application/json"
+    },
+    {
+      "method": "GET",
+      "path": "/decisions/{id}",
+      "pathParameter": "confirmation/confirmation.schema.json#/$defs/DecisionId",
+      "responseSchema": "decisions/decision-read.schema.json#/$defs/ItemResponse",
+      "contentType": "application/json"
+    },
+    {
+      "method": "GET",
+      "path": "/decisions/events",
+      "responseSchema": "decisions/decision-read.schema.json#/$defs/DecisionChanged",
+      "snapshotSchema": "decisions/decision-read.schema.json#/$defs/SnapshotRequired",
+      "contentType": "text/event-stream",
+      "description": "Reserved literal events route takes precedence over item ID routing."
+    }
+  ],
+  "errors": {
+    "responseSchema": "decisions/decision-read.schema.json#/$defs/ReadError",
+    "statuses": {
+      "400": "invalid_argument: malformed query/ID/cursor/body, unknown/repeated query, any URL credential; no raw query echoed",
+      "401": "missing/invalid/expired credential or JWT route not opted in; shared auth challenge",
+      "403": "admin/anonymous/refused kind, Host/Origin/fetch-metadata refusal",
+      "404": "feature unmounted or unknown/foreign/evicted item; no existence oracle",
+      "405": "anything but GET/OPTIONS, Allow: GET, OPTIONS; no HEAD/mutation",
+      "409": "cursor_refresh_required: authenticated own epoch/revision/expiry changed; read a fresh first page",
+      "429": "subscriber cap, Retry-After: 5, no new stream allocation",
+      "500": "safe internal route failure; no sensitive detail"
+    }
+  },
+  "continuation": "Only DecisionObservation.actions current capability hints. Existing authenticated POST /agui resume for exact owned open interruption; native-required approve stays false. No /decisions write/resolve endpoint. Other records name authorized host/native destination; UAR synthetic approval stays backend_approval."
+}

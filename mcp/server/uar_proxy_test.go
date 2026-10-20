@@ -39,6 +39,9 @@ type uarProxyEnv struct {
 }
 
 type uarProxyOpts struct {
+	runFacts          *bool
+	contextReferences *bool
+	noChatAck         bool
 	// llmExtra is merged into the llm.uar section (JSON object body).
 	skillsDir string
 	prompt    string
@@ -99,9 +102,13 @@ func newUARProxyEnv(t *testing.T, script func(int, map[string]any) (int, []byte)
 		Transport: "http", Logger: log,
 	})
 	require.NoError(t, e.s.EnableAgent(set))
-	require.NoError(t, e.s.EnableAGUI(AGUISettings{}))
+	require.NoError(t, e.s.EnableAGUI(AGUISettings{RunFacts: o.runFacts, ContextReferences: o.contextReferences}))
+	chatAck := []string{"local"}
+	if o.noChatAck {
+		chatAck = nil
+	}
 	v, err := NewStaticVerifier([]StaticCredential{
-		{Identity: aguiIdentity("chat", KindUI, []string{"pin"}, nil, []string{"local"}), Token: aguiTokChat},
+		{Identity: aguiIdentity("chat", KindUI, []string{"pin"}, nil, chatAck), Token: aguiTokChat},
 		{Identity: aguiIdentity("chat2", KindUI, []string{"pin"}, nil, []string{"local"}), Token: aguiTokChat2},
 		{Identity: aguiIdentity("peer", KindA2A, nil, nil, []string{"local"}), Token: aguiTokPeer},
 	})
@@ -162,7 +169,8 @@ func requireKuboInterrupt(t *testing.T, in map[string]any, tool string) {
 	rs := in["responseSchema"].(map[string]any)
 	assert.Equal(t, []any{"approved"}, rs["required"])
 	meta := in["metadata"].(map[string]any)["ipfs-mcp"].(map[string]any)
-	assert.ElementsMatch(t, []string{"confirmation_id", "tool", "class", "requires_native_prompt"}, keysOf(meta))
+	assert.ElementsMatch(t, []string{"confirmation_id", "tool", "class", "requires_native_prompt", "activity_id"}, keysOf(meta))
+	validateConfirmationDef(t, "ActivityId", meta["activity_id"])
 	assert.Regexp(t, confirmationIDPattern, meta["confirmation_id"], "the island's schema")
 	assert.True(t, strings.HasPrefix(meta["confirmation_id"].(string), "cf_uar_"), "an id no broker confirmation has")
 	assert.True(t, strings.HasPrefix(in["message"].(string), uarApprovalLabel), "the card says it is UAR's approval")
@@ -327,7 +335,8 @@ func TestUARRunIsProxiedWithTheGrantAndIDsRewritten(t *testing.T) {
 	e := newUARProxyEnv(t, replay(t, "run-text.sse"), uarProxyOpts{})
 	r := e.say("thread-a", "run-a", "pin something")
 	require.Equal(t, http.StatusOK, r.Status, r.Body)
-	assert.Equal(t, []string{"RUN_STARTED", "TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END", "RUN_FINISHED"}, r.types())
+	assert.Equal(t, []string{"RUN_STARTED", "CUSTOM", "TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END", "RUN_FINISHED"}, r.types())
+	factsFromEvents(t, r.Events, "thread-a", "run-a")
 	assert.Equal(t, "thread-a", r.Events[0]["threadId"], "the island sees its own thread id, not UAR's")
 	assert.Equal(t, "run-a", r.Events[0]["runId"])
 	last := r.Events[len(r.Events)-1]
@@ -430,7 +439,12 @@ func TestUARToolApprovalApproved(t *testing.T) {
 	assert.Equal(t, "int-ta-1", in["id"])
 	assert.Equal(t, "tc-1", in["toolCallId"])
 	assert.Equal(t, "2030-01-01T00:00:00Z", in["expiresAt"])
-	assert.NotContains(t, r.types(), "CUSTOM", "no A2UI advertisement on the proxied stream")
+	for _, event := range r.Events {
+		if event["type"] == "CUSTOM" {
+			require.Equal(t, runFactsEventName, event["name"], "no A2UI or untrusted CUSTOM passthrough on the proxied stream")
+			validateRunFactsEvent(t, event["value"])
+		}
+	}
 
 	r2 := e.answer("t1", "r2", "int-ta-1", true)
 	require.Equal(t, http.StatusOK, r2.Status, r2.Body)

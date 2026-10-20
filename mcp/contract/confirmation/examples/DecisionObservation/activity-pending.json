@@ -1,0 +1,22 @@
+{
+  "id": "cf_Zr4Yt1nB6kq0HdUe",
+  "source": "kubo",
+  "source_kind": "node_confirmation",
+  "approval_state": "pending",
+  "summary": {
+    "tool": "pin_add",
+    "class": "write",
+    "text": "Pin the selected fixture CID",
+    "targets": []
+  },
+  "authority": {
+    "kind": "ui",
+    "name": "Fixture chat"
+  },
+  "created_at": "2026-10-20T12:00:00Z",
+  "activity_id": "act_fixture_01",
+  "actions": {
+    "approve": false,
+    "deny": false
+  }
+}

@@ -60,7 +60,7 @@ func assertSurfaceMessages(t *testing.T, msgs []map[string]any) {
 	names := a2uiComponentNames(t)
 	catalogID := a2uiDerivationsForTest(t).CatalogID
 	for _, m := range msgs {
-		assert.Equal(t, a2uiProtocolVersion, m["version"], "every A2UI message carries the protocol version")
+		assert.Equal(t, a2uiDerivationsForTest(t).ProtocolVersion, m["version"], "every A2UI message carries the canonical protocol version")
 		if cs, ok := m["createSurface"].(map[string]any); ok {
 			assert.Equal(t, catalogID, cs["catalogId"], "createSurface names the catalog ID")
 		}
@@ -79,21 +79,18 @@ func assertSurfaceMessages(t *testing.T, msgs []map[string]any) {
 // TestA2UISurfaceComponentsAreInTheCatalog builds the surface of a success and
 // an error result for every tool in the catalog and asserts every emitted
 // component name is in the catalog.
-func TestA2UISurfaceComponentsAreInTheCatalog(t *testing.T) {
+func TestA2UIRequiresActualHandlerEvidenceForEveryTool(t *testing.T) {
 	cat, err := contract.Load()
 	require.NoError(t, err)
 	em, err := newA2UIEmitter(cat)
 	require.NoError(t, err)
-	var all []map[string]any
 	for _, tool := range cat.Tools {
 		for _, isErr := range []bool{false, true} {
 			ev := Event{Type: EventToolResult, ToolCallID: "tc-x", Tool: tool.Name, Arguments: `{}`, Content: `{}`, IsError: isErr}
 			events := em.surfaceEvents(ev, []string{"local"})
-			require.Len(t, events, 3, "%s (error=%v): createSurface, updateComponents, updateDataModel", tool.Name, isErr)
-			all = append(all, customSurfaceMessages(t, events)...)
+			assert.Empty(t, events, "%s (error=%v): a label/text alone cannot produce a trusted surface", tool.Name, isErr)
 		}
 	}
-	assertSurfaceMessages(t, all)
 }
 
 // TestA2UISurfaceSkipsUnknownTools: a tool the catalog does not name emits
@@ -114,7 +111,7 @@ func TestAGUIToolResultEmitsA2UISurface(t *testing.T) {
 	e := newAGUIEnv(t, aguiEnvOpts{},
 		callStep(40, scriptedCall{ID: "tc-1", Name: "pin_ls", Args: map[string]any{"type": "recursive"}}),
 		sayStep("You have one recursive pin, named wiki."))
-	r := e.post(aguiTokChat, aguiBody("thread-a2ui", "r1", []any{userMsg("m1", "Which pins do I have?")}), nil)
+	r := e.post(aguiTokChat, offerA2UI(t, aguiBody("thread-a2ui", "r1", []any{userMsg("m1", "Which pins do I have?")})), nil)
 	require.Equal(t, http.StatusOK, r.Status)
 
 	msgs := customSurfaceMessages(t, r.Events)
@@ -147,22 +144,17 @@ func TestAGUIToolResultEmitsA2UISurface(t *testing.T) {
 	assert.Contains(t, call["result"], "wiki")
 }
 
-// TestAGUIErrorResultEmitsAnErrorSurface: a refused call still gets a surface,
-// with status error and the ToolError text the island renders as a notice.
-func TestAGUIErrorResultEmitsAnErrorSurface(t *testing.T) {
+// Refusals retain the ordinary ToolError result and never select a success view.
+func TestAGUIErrorResultPreservesToolErrorWithoutSuccessSurface(t *testing.T) {
 	e := newAGUIEnv(t, aguiEnvOpts{},
 		callStep(40, scriptedCall{ID: "tc-1", Name: "ipfs_cat", Args: map[string]any{"path": testCID(t, 1)}}),
 		sayStep("I cannot read that file."))
-	r := e.post(aguiTokNoAck, aguiBody("thread-egress", "r1", []any{userMsg("m1", "read it")}), nil)
+	r := e.post(aguiTokNoAck, offerA2UI(t, aguiBody("thread-egress", "r1", []any{userMsg("m1", "read it")})), nil)
 	require.Equal(t, http.StatusOK, r.Status)
 	msgs := customSurfaceMessages(t, r.Events)
-	require.Len(t, msgs, 3)
-	assertSurfaceMessages(t, msgs)
-	call := msgs[2]["updateDataModel"].(map[string]any)["value"].(map[string]any)
-	assert.Equal(t, "error", call["status"])
-	assert.Contains(t, call["result"], CodeEgressNotAcknowledged)
-	card := msgs[1]["updateComponents"].(map[string]any)["components"].([]any)[0].(map[string]any)
-	assert.NotContains(t, card, "acknowledgedHosts", "the principal acknowledged no host")
+	assert.Empty(t, msgs)
+	assert.Contains(t, resultContent(t, r.Events, "tc-1"), CodeEgressNotAcknowledged)
+	assert.Zero(t, e.d.count("cat"))
 }
 
 // TestNoA2UISurfaceEventsWhenDisabled is the acceptance check of
@@ -175,11 +167,13 @@ func TestNoA2UISurfaceEventsWhenDisabled(t *testing.T) {
 	e := newAGUIEnv(t, aguiEnvOpts{a2ui: &off},
 		callStep(40, scriptedCall{ID: "tc-1", Name: "pin_ls", Args: map[string]any{"type": "recursive"}}),
 		sayStep("You have one recursive pin, named wiki."))
-	r := e.post(aguiTokChat, aguiBody("thread-a2ui-off", "r1", []any{userMsg("m1", "Which pins do I have?")}), nil)
+	r := e.post(aguiTokChat, offerA2UI(t, aguiBody("thread-a2ui-off", "r1", []any{userMsg("m1", "Which pins do I have?")})), nil)
 	require.Equal(t, http.StatusOK, r.Status)
 
 	for _, ev := range r.Events {
-		assert.NotEqual(t, "CUSTOM", ev["type"], "no CUSTOM event when agent.a2ui is off: %v", ev)
+		if ev["type"] == "CUSTOM" {
+			assert.Equal(t, runFactsEventName, ev["name"], "A2UI off preserves only independent run facts")
+		}
 	}
 	var results int
 	for _, ev := range r.Events {

@@ -1,0 +1,521 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "description",
+    "mount",
+    "authorization",
+    "protection",
+    "retention",
+    "pagination",
+    "subscription",
+    "routes",
+    "errors",
+    "continuation"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "listener",
+        "conditions",
+        "absentBehavior"
+      ],
+      "properties": {
+        "listener": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "absentBehavior": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principalKinds",
+        "refusedKinds",
+        "routeKey",
+        "identity",
+        "description"
+      ],
+      "properties": {
+        "principalKinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "refusedKinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "routeKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "protection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mount",
+        "hostOriginFetchMetadataBodyLimits",
+        "allowedOriginsKey",
+        "allowMethods",
+        "allowHeaders",
+        "exposeHeaders",
+        "allowCredentials",
+        "cacheControl",
+        "unknownOrForeignItem"
+      ],
+      "properties": {
+        "mount": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hostOriginFetchMetadataBodyLimits": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowedOriginsKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowMethods": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowHeaders": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "exposeHeaders": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowCredentials": {
+          "const": false
+        },
+        "cacheControl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknownOrForeignItem": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "maxResolved",
+        "maxAgeSeconds",
+        "liveRecords",
+        "historyStartedAt"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxResolved": {
+          "const": 200
+        },
+        "maxAgeSeconds": {
+          "const": 604800
+        },
+        "liveRecords": {
+          "type": "string",
+          "minLength": 1
+        },
+        "historyStartedAt": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defaultLimit",
+        "maxLimit",
+        "maxCursorBytes",
+        "cursorTtlSeconds",
+        "sort",
+        "binding",
+        "cursorPrivacy",
+        "stale",
+        "maxItemBytes",
+        "maxResponseBytes"
+      ],
+      "properties": {
+        "defaultLimit": {
+          "const": 50
+        },
+        "maxLimit": {
+          "const": 100
+        },
+        "maxCursorBytes": {
+          "const": 2048
+        },
+        "cursorTtlSeconds": {
+          "const": 60
+        },
+        "sort": {
+          "type": "string",
+          "minLength": 1
+        },
+        "binding": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cursorPrivacy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxItemBytes": {
+          "const": 262144
+        },
+        "maxResponseBytes": {
+          "const": 1048576
+        }
+      }
+    },
+    "subscription": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transport",
+        "path",
+        "firstEvent",
+        "changeEvent",
+        "snapshotEvent",
+        "maxPerIdentity",
+        "maxPerPrincipal",
+        "maxGlobal",
+        "queueCapacity",
+        "maxEventBytes",
+        "keepaliveSeconds",
+        "writeDeadlineSeconds",
+        "maxLifetimeSeconds",
+        "authDeadline",
+        "revocation",
+        "slowConsumer",
+        "sseId",
+        "lastEventId",
+        "reconnect",
+        "retryAfterSeconds"
+      ],
+      "properties": {
+        "transport": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "const": "/decisions/events"
+        },
+        "firstEvent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changeEvent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "snapshotEvent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxPerIdentity": {
+          "const": 4
+        },
+        "maxPerPrincipal": {
+          "const": 16
+        },
+        "maxGlobal": {
+          "const": 64
+        },
+        "queueCapacity": {
+          "const": 16
+        },
+        "maxEventBytes": {
+          "const": 1024
+        },
+        "keepaliveSeconds": {
+          "const": 25
+        },
+        "writeDeadlineSeconds": {
+          "const": 5
+        },
+        "maxLifetimeSeconds": {
+          "const": 900
+        },
+        "authDeadline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revocation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "slowConsumer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastEventId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reconnect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retryAfterSeconds": {
+          "const": 5
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "method",
+              "path",
+              "querySchema",
+              "responseSchema",
+              "contentType"
+            ],
+            "properties": {
+              "method": {
+                "const": "GET"
+              },
+              "path": {
+                "const": "/decisions"
+              },
+              "querySchema": {
+                "type": "string",
+                "minLength": 1
+              },
+              "responseSchema": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentType": {
+                "const": "application/json"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "method",
+              "path",
+              "pathParameter",
+              "responseSchema",
+              "contentType"
+            ],
+            "properties": {
+              "method": {
+                "const": "GET"
+              },
+              "path": {
+                "const": "/decisions/{id}"
+              },
+              "pathParameter": {
+                "type": "string",
+                "minLength": 1
+              },
+              "responseSchema": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentType": {
+                "const": "application/json"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "method",
+              "path",
+              "responseSchema",
+              "snapshotSchema",
+              "contentType",
+              "description"
+            ],
+            "properties": {
+              "method": {
+                "const": "GET"
+              },
+              "path": {
+                "const": "/decisions/events"
+              },
+              "responseSchema": {
+                "type": "string",
+                "minLength": 1
+              },
+              "snapshotSchema": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentType": {
+                "const": "text/event-stream"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    "errors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "responseSchema",
+        "statuses"
+      ],
+      "properties": {
+        "responseSchema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statuses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "400",
+            "401",
+            "403",
+            "404",
+            "405",
+            "409",
+            "429",
+            "500"
+          ],
+          "properties": {
+            "400": {
+              "type": "string",
+              "minLength": 1
+            },
+            "401": {
+              "type": "string",
+              "minLength": 1
+            },
+            "403": {
+              "type": "string",
+              "minLength": 1
+            },
+            "404": {
+              "type": "string",
+              "minLength": 1
+            },
+            "405": {
+              "type": "string",
+              "minLength": 1
+            },
+            "409": {
+              "type": "string",
+              "minLength": 1
+            },
+            "429": {
+              "type": "string",
+              "minLength": 1
+            },
+            "500": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "continuation": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Dedicated decisions route descriptor"
+}

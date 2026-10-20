@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IPFS first-party A2UI catalog negotiation",
+  "description": "Additive AG-UI capability branch and inert result fallback. Canonical tuple and view bindings live only in derivations/a2ui-components.json; see agentic/ui-negotiation.md.",
+  "$defs": {
+    "CatalogOffer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalogId",
+        "catalogVersion",
+        "protocolVersion"
+      ],
+      "description": "Capability offer only; exact tuple must match derivations/a2ui-components.json. Identifier is never fetched. Unsupported well-formed versions are not negotiated.",
+      "properties": {
+        "catalogId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "catalogVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "protocolVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "pattern": "^v[0-9]+\\.[0-9]+$"
+        }
+      }
+    },
+    "ClientA2UICapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalogs"
+      ],
+      "description": "Value of RunAgentInput.forwardedProps.ipfs.a2ui. Max encoded namespace 4096 UTF-8 bytes. Invalid/missing/oversize namespace disables A2UI only; never forwards arbitrary client data or enables model-composed HTML.",
+      "properties": {
+        "catalogs": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/CatalogOffer"
+          }
+        }
+      }
+    },
+    "CatalogAdvertisement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalogId",
+        "catalogVersion",
+        "protocolVersion",
+        "catalogUrl"
+      ],
+      "description": "a2ui.catalog CUSTOM event value. Exact supported tuple and configured same-listener route; no arbitrary catalog URL fetching.",
+      "properties": {
+        "catalogId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "catalogVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "protocolVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "pattern": "^v[0-9]+\\.[0-9]+$"
+        },
+        "catalogUrl": {
+          "type": "string",
+          "pattern": "^/agui/catalog$"
+        }
+      }
+    },
+    "IframeException": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "transport"
+      ],
+      "description": "Value of resource _meta['ai.ipfs/iframe-exception']; a declaration only, ignored safely by ordinary hosts. Does not replace _meta.ui, grant permissions or require a private field in messages.",
+      "properties": {
+        "reason": {
+          "const": "external_mcp_app_host"
+        },
+        "transport": {
+          "const": "standard_ext_apps"
+        }
+      }
+    },
+    "InertResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "label",
+        "tool",
+        "text",
+        "reason"
+      ],
+      "description": "Safe plain-text fallback; unknown/invalid structured data is not partly rendered. No markup/link/action props. Copy text is the only control. Render text nodes, never HTML/Markdown/autolinks, and do not execute/fetch/navigate.",
+      "properties": {
+        "kind": {
+          "const": "inert_result"
+        },
+        "label": {
+          "const": "This result can't be shown here. Nothing in it runs."
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 64000
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "unknown_catalog",
+            "unsupported_version",
+            "unknown_component",
+            "invalid_output",
+            "unmapped_view",
+            "ambiguous_tool",
+            "untrusted_source"
+          ]
+        }
+      }
+    }
+  }
+}

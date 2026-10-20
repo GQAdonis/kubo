@@ -1,0 +1,14 @@
+[
+  {
+    "id": "page_files",
+    "provenance": "page",
+    "route": "/files",
+    "path": "/notes",
+    "path_kind": "mfs"
+  },
+  {
+    "id": "user_content",
+    "provenance": "user",
+    "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+  }
+]

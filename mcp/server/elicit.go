@@ -1,6 +1,8 @@
 package server
 
 import (
+	"errors"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -29,12 +31,17 @@ func (g *gate) elicitRequest(c *call) (*mcp.CallToolResult, *ToolError) {
 	g.broker.forget(p.ID)
 	state, err := g.mintFor(useRequestState, c, p)
 	if err != nil {
-		_ = g.broker.Resolve(p.ID, ResolverElicitation, false)
+		g.broker.Cancel(p.ID)
 		return nil, &ToolError{Code: CodeInternal, Message: err.Error()}
+	}
+	meta := map[string]any{"effect_digest": p.EffectDigest}
+	if p.Destination != nil {
+		meta["destination"] = cloneDestination(p.Destination)
 	}
 	return &mcp.CallToolResult{
 		InputRequests: mcp.InputRequestMap{
 			elicitKey: &mcp.ElicitParams{
+				Meta:    mcp.Meta{"ipfs-mcp": meta},
 				Mode:    "form",
 				Message: p.Summary.Text,
 				RequestedSchema: map[string]any{
@@ -84,18 +91,37 @@ func (g *gate) elicitAnswer(c *call, state string, responses mcp.InputResponseMa
 	case p.State != StatePending:
 		return invalid("This confirmation was already answered or has expired.")
 	}
-
 	answer, _ := responses[elicitKey].(*mcp.ElicitResult)
+	var answerMeta mcp.Meta
+	if answer != nil {
+		answerMeta = answer.Meta
+	}
+	if err := g.checkReview(c, p, answerMeta); err != nil {
+		return err
+	}
+	if errors.Is(g.broker.checkEffect(p.ID, c), ErrConfirmationDigestMismatch) {
+		return digestMismatch(c.tool.Name, p.ID)
+	}
+
 	approved := answer != nil && answer.Action == "accept" && answer.Content["confirm"] == true
-	if err := g.broker.Resolve(p.ID, ResolverElicitation, approved); err != nil {
+	resolver := ""
+	if answer != nil {
+		resolver = ResolverElicitation
+	}
+	if err := g.broker.ResolveReviewed(p.ID, resolver, approved, c.reviewed); err != nil {
 		return invalid("This confirmation was already answered or has expired.")
 	}
 	if !approved {
 		snap, _ := g.broker.get(p.ID)
 		return g.outcomeError(c.tool.Name, snap, "declined")
 	}
-	if err := g.broker.claim(p.ID, claims.Nonce); err != nil {
+	claim, err := g.broker.claimEffect(p.ID, claims.Nonce, c)
+	if err != nil {
+		if errors.Is(err, ErrConfirmationDigestMismatch) {
+			return digestMismatch(c.tool.Name, p.ID)
+		}
 		return invalid("This confirmation was already used.")
 	}
+	c.claim = claim
 	return nil
 }

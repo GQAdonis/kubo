@@ -132,7 +132,7 @@ func mcpTool(t contract.Tool, sc *schemas, appViews bool) *mcp.Tool {
 // the result with structuredContent plus a JSON text fallback, or an isError
 // result carrying the contract's ToolError.
 func (s *Server) handler(t contract.Tool, sc *schemas, impl toolImpl) mcp.ToolHandler {
-	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req *mcp.CallToolRequest) (result *mcp.CallToolResult, handlerErr error) {
 		var raw json.RawMessage
 		if req != nil && req.Params != nil {
 			raw = req.Params.Arguments
@@ -157,10 +157,11 @@ func (s *Server) handler(t contract.Tool, sc *schemas, impl toolImpl) mcp.ToolHa
 				return errorResult(t.Name, perr), nil
 			}
 		}
+		var claim *executionClaim
 		if t.Confirmation != contract.ClassNone {
 			// The gate runs before the daemon call and outside its timeout:
 			// a person may take up to the confirmation TTL to answer.
-			ask, gerr := s.gate.authorize(ctx, req, t, sc, args)
+			ask, winningClaim, gerr := s.gate.authorize(ctx, req, t, sc, args)
 			if gerr != nil {
 				gerr.Tool = t.Name
 				return errorResult(t.Name, gerr), nil
@@ -168,13 +169,34 @@ func (s *Server) handler(t contract.Tool, sc *schemas, impl toolImpl) mcp.ToolHa
 			if ask != nil {
 				return ask, nil
 			}
+			if winningClaim == nil {
+				return errorResult(t.Name, &ToolError{Code: CodeFailedPrecondition, Message: "No invocation owns this approval. The operation did not start."}), nil
+			}
+			claim = winningClaim
+			defer func() {
+				claim.unknownIfUnfinished()
+				claim.decorateResult(result)
+			}()
 		}
 		ctx, cancel := context.WithTimeout(ctx, callTimeout)
 		defer cancel()
+		progress := &rpcProgress{}
+		ctx = context.WithValue(ctx, rpcProgressKey{}, progress)
+		if !claim.start() {
+			return errorResult(t.Name, &ToolError{Code: CodeFailedPrecondition, Message: "This approval already belongs to an invocation. No additional operation started."}), nil
+		}
 		out, err := impl.Call(ctx, args)
 		if err != nil {
+			if claim != nil {
+				state, publicError := executionFailure(err, progress)
+				claim.finish(state, publicError, "", nil)
+			}
 			s.log.Debug("tool call failed", "tool", t.Name, "error", err)
 			return errorResult(t.Name, err), nil
+		}
+		if claim != nil {
+			state, effect, refs, publicError := successfulOutcome(out)
+			claim.finish(state, publicError, effect, refs)
 		}
 		peerFlag := false
 		if len(t.PeerSuppliedFields) > 0 {

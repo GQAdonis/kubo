@@ -2,53 +2,108 @@
 
 ## Purpose
 
-Visible, removable context and named turn phases in the chat island, aligned with KnowMe Praxis ed. 1.2 WS-06, CX-01 and the turn anatomy.
+Visible, removable reference context and truthful run facts help the operator understand what each agent turn receives and which tools and model it actually uses.
 
 ## ADDED Requirements
 
-### Requirement: Context strip
-The chat island SHALL show a context strip above the composer listing container, files attached, model placement, memory scope and tools offered. Each item SHALL show its provenance ("From this page", "Added by you", "From settings" or "Reported by the server").
+### Requirement: Provenance-labelled context strip
+The composer SHALL show route, CID and IPFS-path references, model placement, memory scope and offered-tool facts with provenance. Labels SHALL distinguish From this page, Added by you, From settings and Reported by the server. Missing server facts SHALL say Not reported by this server rather than inventing values.
 
-#### Scenario: Strip on a file page
-- **WHEN** the island opens while the Web UI shows an MFS path and the server reports 12 offered tools out of 44
-- **THEN** the strip shows the path as container labelled "From this page", "12 of 44 tools offered" labelled "Reported by the server", memory scope "None", and the model placement
+#### Scenario: Page reference and reported tools
+- **WHEN** the current page supplies a valid IPFS-path reference and the run reports 12 offered tools from a catalog of 44
+- **THEN** the strip shows the reference as From this page and 12 of 44 tools offered as Reported by the server
 
-#### Scenario: Server reports no tool facts
-- **WHEN** the run-start payload has no `offered_tools`
-- **THEN** the tools item reads "Not reported by this server" and no count is shown
+#### Scenario: Missing tool or memory facts
+- **WHEN** a backend supplies neither an effective tool list nor a memory scope
+- **THEN** those items say Not reported by this server without asserting a fabricated count or None
 
-### Requirement: Removable context
-Container and attached files SHALL be removable before send, and a removed item SHALL NOT be included in the request. Tools offered and model placement SHALL link to agent settings instead of being removable.
+### Requirement: Removable references without uploads
+The user SHALL be able to remove page and user-added references before sending. Removed page context SHALL remain removed across sends until the route changes. This feature SHALL accept references only, with no local attachment upload or implicit local file reading. Model and tools settings SHALL link to settings rather than masquerade as removable input.
 
-#### Scenario: Remove the container
-- **WHEN** the person removes the container item and sends a message
-- **THEN** the request carries no container, and the item stays removed until the route changes
+#### Scenario: Remove page context
+- **WHEN** the person removes a page reference and sends two messages without changing route
+- **THEN** neither request contains that reference
 
-#### Scenario: Settings items
-- **WHEN** the person activates the tools-offered item
-- **THEN** the Web UI opens `#/settings/agent`, and nothing is removed
+#### Scenario: Route changes
+- **WHEN** the route changes after removal
+- **THEN** the strip visibly presents the new page's valid reference for the user to retain or remove before sending
 
-### Requirement: Context inspector
-The context inspector SHALL open from the strip and SHALL contain the sections Overview, Context, Prompt plan and Events. It SHALL display server-reported facts and SHALL NOT compute or alter budgets.
+#### Scenario: Settings link
+- **WHEN** the tools or model settings item is activated
+- **THEN** the application opens its agent settings without removing or inventing run facts
 
-#### Scenario: Inspector sections
-- **WHEN** the person opens the inspector after one turn
-- **THEN** Overview shows container, model placement, memory scope and egress host; Context shows the items sent with that turn and their provenance; Prompt plan shows the offered tool names and the system prompt digest; Events lists the current run's AG-UI events read-only
+### Requirement: Bounded untrusted reference ingestion
+Both built-in and UAR agent paths SHALL validate bounded route, CID and IPFS-path context and treat it as untrusted reference data, never system instructions. Unknown or oversized input SHALL be rejected or omitted visibly according to the shared contract. References SHALL not themselves trigger reads, network fetches or writes; access uses existing authorized tools.
 
-### Requirement: Run-start facts
-The server SHALL include in the AG-UI run-start payload the offered tool names, the contract's total tool count and a short system prompt digest. It SHALL NOT include the system prompt text.
+#### Scenario: Valid references reach both backends
+- **WHEN** the same valid bounded reference payload is sent through either configured agent backend
+- **THEN** that turn receives the chosen references with provenance and untrusted-data framing
 
-#### Scenario: Run-start payload
-- **WHEN** a run starts with 12 tools offered
-- **THEN** the payload has 12 entries in `offered_tools`, `catalog_size` equal to the contract tool count, a `system_prompt_digest` beginning with `sha256:`, and no system prompt text
+#### Scenario: Malicious or unsupported reference
+- **WHEN** a reference contains instruction-like text, an unsupported local path or exceeds the contract limit
+- **THEN** it cannot change system authority, open a local file or cause an implicit fetch, and invalid input is reported honestly
 
-### Requirement: Lifecycle strip
-Each turn SHALL show its current phase by name, derived from AG-UI events: Planning, Calling `<tool>`, Waiting for approval, Running, then Done, Failed or Cancelled. A phase SHALL NOT be shown by animation alone.
+#### Scenario: Reference removed before send
+- **WHEN** the strip removes a reference
+- **THEN** neither backend receives it through a hidden fallback field
 
-#### Scenario: Turn with an approval
-- **WHEN** a turn starts, calls `pin_rm`, and is interrupted for confirmation
-- **THEN** the strip shows Planning, then "Calling pin_rm", then "Waiting for approval", each as a word
+### Requirement: Inspector sections and retention
+The inspector SHALL show Overview, Context, Prompt plan and Events for the current run with bounded event retention. It SHALL display reported facts and sent reference provenance without altering budgets. Events SHALL be read-only, bounded and safe to display, without secrets, raw system prompt text or unsafe raw tool arguments.
+
+#### Scenario: Inspect a run
+- **WHEN** the person opens the inspector after a turn
+- **THEN** Overview shows reported placement, memory and egress; Context shows references actually sent; Prompt plan shows actual offered tools and available prompt digest; Events shows safe current-run events and reports any truncation
+
+#### Scenario: Backend omitted a section's facts
+- **WHEN** a backend provides no prompt digest or egress fact
+- **THEN** the section remains present with Not reported by this server rather than a guessed value
+
+### Requirement: Facts describe the actual run
+Run-start facts SHALL describe that run's effective offered tools and actual selected prompt snapshot, with catalog size and prompt digest only when known. Built-in and UAR backends SHALL use the same optional contract. A full server tool registry or a newly reconstructed prompt SHALL NOT stand in for unavailable run facts.
+
+The canonical transport SHALL be standard CUSTOM named ipfs.run.facts with RunFactsEvent from mcp/contract/agentic/run-context.schema.json, after RUN_STARTED and optional immediate a2ui.catalog and before tool/text. Standard RUN_STARTED fields SHALL remain compatible. Each supplied fact SHALL have its declared source provenance. Consumers SHALL bind thread_id and run_id to the inspected run. UAR tool/prompt/catalog/memory facts SHALL require a validated backend report and SHALL otherwise remain absent.
+
+#### Scenario: Independent reference and A2UI validation
+- **WHEN** valid bounded forwardedProps.ipfs.context accompanies an incompatible A2UI offer
+- **THEN** A2UI alone is disabled and the accepted turn receives its untrusted references
+- **WHEN** invalid context accompanies a valid A2UI offer
+- **THEN** HTTP 422 invalid_argument is returned before either backend receives the turn
+
+#### Scenario: Logical MFS and bounded syntax
+- **WHEN** a typed mfs reference is supplied
+- **THEN** it refers only to the connected node's logical MFS and causes no host file read or implicit tool call
+- **WHEN** references exceed 16 entries or 16,384 encoded UTF-8 bytes, duplicate IDs or contain invalid CID/path syntax
+- **THEN** the turn is rejected visibly before forwarding and no hidden generic context fallback is used
+
+#### Scenario: Configuration off switches
+- **WHEN** agent.context_references is false and the turn carries nonempty references
+- **THEN** those turns receive HTTP 422 while ordinary messaging remains available
+- **WHEN** agent.run_facts is false
+- **THEN** no run-facts projection/event is emitted and existing runs and authority checks remain available
+
+#### Scenario: Restricted tool selection
+- **WHEN** the run is offered a subset of tools
+- **THEN** offered_tools names exactly that subset rather than every registered server tool
+
+#### Scenario: Retained prompt snapshot
+- **WHEN** the backend retains the selected prompt snapshot
+- **THEN** system_prompt_digest identifies that snapshot with a sha256 prefix and no prompt text is disclosed
+
+#### Scenario: UAR facts unavailable
+- **WHEN** UAR does not report the actual prompt or effective tool set
+- **THEN** the corresponding fields remain unreported and the interface displays that limitation truthfully
+
+### Requirement: Event-derived lifecycle words
+Each turn SHALL show lifecycle words derived from actual events: Planning, Calling a named tool, Waiting for approval, Running, then an evidenced Done, Failed or Cancelled outcome. It SHALL not manufacture phases or treat an approval interruption as failure. Reduced motion SHALL preserve all semantic words without animation.
+
+#### Scenario: Approval interruption
+- **WHEN** a turn starts, calls pin_rm and interrupts for confirmation
+- **THEN** it shows Planning, Calling pin_rm and Waiting for approval as those events occur, without claiming completion
+
+#### Scenario: Missing final event
+- **WHEN** a connection ends without a reliable terminal outcome
+- **THEN** the interface communicates missing or uncertain status and does not invent Done
 
 #### Scenario: Reduced motion
-- **WHEN** `prefers-reduced-motion: reduce` is set
-- **THEN** the strip shows the same words with no animation
+- **WHEN** reduced motion is requested
+- **THEN** the same lifecycle words remain visible without animation

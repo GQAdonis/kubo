@@ -66,6 +66,10 @@ type agentSession struct {
 	owner     string
 	touched   time.Time
 	busy      bool
+	// activityID belongs to one accepted message and all its interruptions.
+	// A later message in the conversation starts a fresh activity.
+	activityID string
+	context    []ContextReference
 
 	messages []ChatMessage
 	// queue holds the tool calls of the last model reply that have no answer
@@ -237,6 +241,7 @@ func (a *Agent) OpenInterrupt(id Identity, sessionID string) (*Interrupt, error)
 	}
 	cp := *s.interrupt
 	cp.Resolvers = append([]string(nil), cp.Resolvers...)
+	cp.Destination = cloneDestination(cp.Destination)
 	return &cp, nil
 }
 

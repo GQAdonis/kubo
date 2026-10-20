@@ -14,8 +14,85 @@
       "name": "IPFS content",
       "description": "File bytes, directory listings, search hits and add receipts for content on your node.",
       "file": "content.html",
-      "bytes": 752026,
-      "sha256": "b612ea21c434b61c46b0c997faf55e3fb035279ffaa24b9fb5e5077f59f6a4c9",
+      "bytes": 886506,
+      "sha256": "cbb91ef5afb57363f8230ed20aa76445e2bd6f7e2c14224d6c379e99f445785d",
+      "reactRuntime": {
+        "schemaVersion": 1,
+        "delivery": "mcp-app:content",
+        "expectedReactVersion": "19.3.1",
+        "runtimeBinding": "bundled",
+        "inputs": [
+          {
+            "path": "package.json",
+            "sha256": "4b9951269d176dc71d501d26de4a2b28745c237ae19094a9ec32a8b5ba3b040e"
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "sha256": "85b85c9cb3c430dcea363a93ede851ec33ffe18a263971a9ef5f3d42c7fef08f"
+          },
+          {
+            "path": ".npmrc",
+            "sha256": "14b440212a81728d669d8ebf1709f7669dc83b5b74482353eea236173129b4fe"
+          },
+          {
+            "path": "../ui/scripts/pnpmfile.cjs",
+            "sha256": "5dc0757e9bde006ada0421dcbb5b1056e01ace943378346f8a46e977b90d503a"
+          }
+        ],
+        "runtime": {
+          "externalSpecifiers": [],
+          "bundledPackages": [
+            {
+              "name": "react-dom",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom",
+              "packageJsonSha256": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258",
+              "modules": [
+                {
+                  "path": "cjs/react-dom-client.production.js",
+                  "sha256": "a319b413b7a19ee34422d9a12a8e7afd003c07846716d278ba1a0898e8cb6251"
+                },
+                {
+                  "path": "cjs/react-dom.production.js",
+                  "sha256": "7a05d7f7bb2b02aae84018a88d4815a2181eef48d2cb8172d403eaa2b131eefd"
+                },
+                {
+                  "path": "client.js",
+                  "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505"
+                }
+              ]
+            },
+            {
+              "name": "react",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react@19.3.1/node_modules/react",
+              "packageJsonSha256": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67",
+              "modules": [
+                {
+                  "path": "cjs/react-jsx-runtime.production.js",
+                  "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b"
+                },
+                {
+                  "path": "cjs/react.production.js",
+                  "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e"
+                },
+                {
+                  "path": "jsx-runtime.js",
+                  "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc"
+                }
+              ]
+            }
+          ]
+        }
+      },
       "tools": [
         {
           "name": "ipfs_add",
@@ -55,8 +132,85 @@
       "name": "IPFS pins",
       "description": "What your node keeps: the pin list, verification results and pin changes.",
       "file": "pins.html",
-      "bytes": 752020,
-      "sha256": "532f52f69fa3cbec1c7385723e9b503e9faa5d54db85c7728f3cca3351101a77",
+      "bytes": 886500,
+      "sha256": "3b061c28566491dbd0031795e1246d8b3ba61166dd8ae4b17399c152c1c28080",
+      "reactRuntime": {
+        "schemaVersion": 1,
+        "delivery": "mcp-app:pins",
+        "expectedReactVersion": "19.3.1",
+        "runtimeBinding": "bundled",
+        "inputs": [
+          {
+            "path": "package.json",
+            "sha256": "4b9951269d176dc71d501d26de4a2b28745c237ae19094a9ec32a8b5ba3b040e"
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "sha256": "85b85c9cb3c430dcea363a93ede851ec33ffe18a263971a9ef5f3d42c7fef08f"
+          },
+          {
+            "path": ".npmrc",
+            "sha256": "14b440212a81728d669d8ebf1709f7669dc83b5b74482353eea236173129b4fe"
+          },
+          {
+            "path": "../ui/scripts/pnpmfile.cjs",
+            "sha256": "5dc0757e9bde006ada0421dcbb5b1056e01ace943378346f8a46e977b90d503a"
+          }
+        ],
+        "runtime": {
+          "externalSpecifiers": [],
+          "bundledPackages": [
+            {
+              "name": "react-dom",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom",
+              "packageJsonSha256": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258",
+              "modules": [
+                {
+                  "path": "cjs/react-dom-client.production.js",
+                  "sha256": "a319b413b7a19ee34422d9a12a8e7afd003c07846716d278ba1a0898e8cb6251"
+                },
+                {
+                  "path": "cjs/react-dom.production.js",
+                  "sha256": "7a05d7f7bb2b02aae84018a88d4815a2181eef48d2cb8172d403eaa2b131eefd"
+                },
+                {
+                  "path": "client.js",
+                  "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505"
+                }
+              ]
+            },
+            {
+              "name": "react",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react@19.3.1/node_modules/react",
+              "packageJsonSha256": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67",
+              "modules": [
+                {
+                  "path": "cjs/react-jsx-runtime.production.js",
+                  "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b"
+                },
+                {
+                  "path": "cjs/react.production.js",
+                  "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e"
+                },
+                {
+                  "path": "jsx-runtime.js",
+                  "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc"
+                }
+              ]
+            }
+          ]
+        }
+      },
       "tools": [
         {
           "name": "pin_ls",
@@ -91,8 +245,85 @@
       "name": "IPFS files",
       "description": "The mutable file system on your node: listings, file details and change receipts.",
       "file": "mfs.html",
-      "bytes": 752020,
-      "sha256": "f94f3a4bb3b02e6ad3b3b03f4e918dcfc8ee1e3f0055e7766864fa90ed46cc52",
+      "bytes": 886500,
+      "sha256": "20050c9bf9c5332281c28a28a897535cf896832db4749ca0f67b4152718468f2",
+      "reactRuntime": {
+        "schemaVersion": 1,
+        "delivery": "mcp-app:mfs",
+        "expectedReactVersion": "19.3.1",
+        "runtimeBinding": "bundled",
+        "inputs": [
+          {
+            "path": "package.json",
+            "sha256": "4b9951269d176dc71d501d26de4a2b28745c237ae19094a9ec32a8b5ba3b040e"
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "sha256": "85b85c9cb3c430dcea363a93ede851ec33ffe18a263971a9ef5f3d42c7fef08f"
+          },
+          {
+            "path": ".npmrc",
+            "sha256": "14b440212a81728d669d8ebf1709f7669dc83b5b74482353eea236173129b4fe"
+          },
+          {
+            "path": "../ui/scripts/pnpmfile.cjs",
+            "sha256": "5dc0757e9bde006ada0421dcbb5b1056e01ace943378346f8a46e977b90d503a"
+          }
+        ],
+        "runtime": {
+          "externalSpecifiers": [],
+          "bundledPackages": [
+            {
+              "name": "react-dom",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom",
+              "packageJsonSha256": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258",
+              "modules": [
+                {
+                  "path": "cjs/react-dom-client.production.js",
+                  "sha256": "a319b413b7a19ee34422d9a12a8e7afd003c07846716d278ba1a0898e8cb6251"
+                },
+                {
+                  "path": "cjs/react-dom.production.js",
+                  "sha256": "7a05d7f7bb2b02aae84018a88d4815a2181eef48d2cb8172d403eaa2b131eefd"
+                },
+                {
+                  "path": "client.js",
+                  "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505"
+                }
+              ]
+            },
+            {
+              "name": "react",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react@19.3.1/node_modules/react",
+              "packageJsonSha256": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67",
+              "modules": [
+                {
+                  "path": "cjs/react-jsx-runtime.production.js",
+                  "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b"
+                },
+                {
+                  "path": "cjs/react.production.js",
+                  "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e"
+                },
+                {
+                  "path": "jsx-runtime.js",
+                  "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc"
+                }
+              ]
+            }
+          ]
+        }
+      },
       "tools": [
         {
           "name": "mfs_ls",
@@ -142,8 +373,85 @@
       "name": "IPFS DAG",
       "description": "DAG nodes, sizes and CAR transfers as a tree you can follow.",
       "file": "dag.html",
-      "bytes": 752018,
-      "sha256": "158b3130289052a8da8bd8cb8b09a6147cb74bd7e38ff743cff6fc674a0985e2",
+      "bytes": 886498,
+      "sha256": "ee4210cfe215adcbf58512fb9c22d3d5bdf015da59ab5700e38b3bfcf8806e5d",
+      "reactRuntime": {
+        "schemaVersion": 1,
+        "delivery": "mcp-app:dag",
+        "expectedReactVersion": "19.3.1",
+        "runtimeBinding": "bundled",
+        "inputs": [
+          {
+            "path": "package.json",
+            "sha256": "4b9951269d176dc71d501d26de4a2b28745c237ae19094a9ec32a8b5ba3b040e"
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "sha256": "85b85c9cb3c430dcea363a93ede851ec33ffe18a263971a9ef5f3d42c7fef08f"
+          },
+          {
+            "path": ".npmrc",
+            "sha256": "14b440212a81728d669d8ebf1709f7669dc83b5b74482353eea236173129b4fe"
+          },
+          {
+            "path": "../ui/scripts/pnpmfile.cjs",
+            "sha256": "5dc0757e9bde006ada0421dcbb5b1056e01ace943378346f8a46e977b90d503a"
+          }
+        ],
+        "runtime": {
+          "externalSpecifiers": [],
+          "bundledPackages": [
+            {
+              "name": "react-dom",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom",
+              "packageJsonSha256": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258",
+              "modules": [
+                {
+                  "path": "cjs/react-dom-client.production.js",
+                  "sha256": "a319b413b7a19ee34422d9a12a8e7afd003c07846716d278ba1a0898e8cb6251"
+                },
+                {
+                  "path": "cjs/react-dom.production.js",
+                  "sha256": "7a05d7f7bb2b02aae84018a88d4815a2181eef48d2cb8172d403eaa2b131eefd"
+                },
+                {
+                  "path": "client.js",
+                  "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505"
+                }
+              ]
+            },
+            {
+              "name": "react",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react@19.3.1/node_modules/react",
+              "packageJsonSha256": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67",
+              "modules": [
+                {
+                  "path": "cjs/react-jsx-runtime.production.js",
+                  "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b"
+                },
+                {
+                  "path": "cjs/react.production.js",
+                  "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e"
+                },
+                {
+                  "path": "jsx-runtime.js",
+                  "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc"
+                }
+              ]
+            }
+          ]
+        }
+      },
       "tools": [
         {
           "name": "dag_get",
@@ -178,8 +486,85 @@
       "name": "IPFS node status",
       "description": "Node identity, server status, peers, bandwidth, repo usage, providers and index status.",
       "file": "node-status.html",
-      "bytes": 752034,
-      "sha256": "57984fc808f5c3247874c4df159b41dc82467b87df719a23228a000200321ab9",
+      "bytes": 886514,
+      "sha256": "74e028046c347abf360d4bbe17d60f4af712468f1ca171ac3fe91e4536eceb61",
+      "reactRuntime": {
+        "schemaVersion": 1,
+        "delivery": "mcp-app:node-status",
+        "expectedReactVersion": "19.3.1",
+        "runtimeBinding": "bundled",
+        "inputs": [
+          {
+            "path": "package.json",
+            "sha256": "4b9951269d176dc71d501d26de4a2b28745c237ae19094a9ec32a8b5ba3b040e"
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "sha256": "85b85c9cb3c430dcea363a93ede851ec33ffe18a263971a9ef5f3d42c7fef08f"
+          },
+          {
+            "path": ".npmrc",
+            "sha256": "14b440212a81728d669d8ebf1709f7669dc83b5b74482353eea236173129b4fe"
+          },
+          {
+            "path": "../ui/scripts/pnpmfile.cjs",
+            "sha256": "5dc0757e9bde006ada0421dcbb5b1056e01ace943378346f8a46e977b90d503a"
+          }
+        ],
+        "runtime": {
+          "externalSpecifiers": [],
+          "bundledPackages": [
+            {
+              "name": "react-dom",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom",
+              "packageJsonSha256": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258",
+              "modules": [
+                {
+                  "path": "cjs/react-dom-client.production.js",
+                  "sha256": "a319b413b7a19ee34422d9a12a8e7afd003c07846716d278ba1a0898e8cb6251"
+                },
+                {
+                  "path": "cjs/react-dom.production.js",
+                  "sha256": "7a05d7f7bb2b02aae84018a88d4815a2181eef48d2cb8172d403eaa2b131eefd"
+                },
+                {
+                  "path": "client.js",
+                  "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505"
+                }
+              ]
+            },
+            {
+              "name": "react",
+              "version": "19.3.1",
+              "source": "node_modules/.pnpm/react@19.3.1/node_modules/react",
+              "packageJsonSha256": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67",
+              "modules": [
+                {
+                  "path": "cjs/react-jsx-runtime.production.js",
+                  "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b"
+                },
+                {
+                  "path": "cjs/react.production.js",
+                  "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c"
+                },
+                {
+                  "path": "index.js",
+                  "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e"
+                },
+                {
+                  "path": "jsx-runtime.js",
+                  "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc"
+                }
+              ]
+            }
+          ]
+        }
+      },
       "tools": [
         {
           "name": "ipfs_node_info",
@@ -233,6 +618,21 @@
         },
         {
           "name": "ipfs_index_reconcile",
+          "confirmation": "write",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "ipfs_index_bulk_start",
+          "confirmation": "write",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "ipfs_index_bulk_status",
+          "confirmation": "none",
+          "component": "NodeStatusPanel"
+        },
+        {
+          "name": "ipfs_index_bulk_cancel",
           "confirmation": "write",
           "component": "NodeStatusPanel"
         }

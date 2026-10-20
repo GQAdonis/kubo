@@ -1,48 +1,50 @@
 # Proposal: praxis-decision-inbox
 
-Phase `agent-backend-settings › praxis-agentic-ux`, change 4 of 8, child plan r1, Round 3. See `.kbd-orchestrator/phases/agent-backend-settings/children/praxis-agentic-ux/plan.md`.
-
 ## Why
 
-The assessment marks these KnowMe Praxis ed. 1.2 clauses:
-
-- HOME-07 single decision inbox: **X**. Approvals appear in four places (WebMCP modal, chat `InterruptItem`, Desktop native window, system prompt); there is no inbox and no history.
-- HOME-08 Activity is the durable unit; waiting is not failure: **X**. Runs end on interrupt and nothing tracks the work across runs.
-- API-06 interrupt ends a run; continuation is a new run on the same Activity; expired decisions are rejected: **P**. Interrupt and resume exist (`agui_resume.go`), but there is no Activity identity spanning the runs and no host-side list of decisions.
-- HOME-10 required screen states: **P**. "Approval resolved elsewhere" and "expired" exist only in the model.
-
-Decision D4 (decision-log PX-06): every agent request becomes an Activity with Praxis states; approving starts a new run on the same Activity. The Kubo server already tracks open confirmations (`Server.PendingConfirmations()` in `mcp/server/server.go`, backed by the broker) but exposes no list a UI can read.
+Show the current authenticated identity its decisions across sessions using bounded memory and a protected idle event subscription; observation confers no approval authority.
 
 ## What Changes
 
-- **Kubo `mcp/server`:** a read-only decisions list endpoint on the MCP HTTP listener returning pending confirmations and a bounded history of resolved ones (last 200 or 7 days, whichever is smaller), scoped to the calling principal, each with the decision model v2 fields (state, object, destination, scope, class, authority, effect digest, `resolved_by`, times) and an `activity_id`. A change feed over the existing AG-UI stream so open inboxes update without polling.
-- **Kubo `mcp/server`:** an `activity_id` assigned at the first run of an agent request and carried by every continuation run (interrupt → approve → new run). Activity states: running, waiting for approval, waiting for input, paused, completed, failed, cancelled, unknown (reconciling).
-- **Kubo `mcp/ui`:** a `DecisionInbox` component (list of decision cards from `praxis-decision-model-v2`, grouped Waiting / Recent) and an `ActivityRow` component, both added to the A2UI catalog.
-- **Web UI:** `src/activity/` with the Home inbox slot (count plus the waiting decisions) and the `#/activity` route (Activity list with state, last run, linked decisions). The WebMCP modal, chat `InterruptItem` and inbox all render the same card; answering one moves the others to `resolved_elsewhere`.
-- Waiting for approval is shown as waiting, never as failure.
+Existing IDs: **1.1–1.5, 2.1–2.3, 3.1–3.5**.
+
+- Architect owns **1.1** and prerequisite ADR: dedicated list/item/feed descriptors, schemas, auth/off switches; do not reuse vector-search-specific `routes/index.json` semantics. Server engineer consumes the contract.
+- **1.2–1.3**: at most 200 resolved items or seven days (earliest eviction), in memory; query/filter by current identity BindingKey across its sessions. Test same configured principal with different OIDC subjects. No credentials, argument payloads, native requests from other identities or raw binding keys in list/feed.
+- **1.4**: server-assigned Activity identity survives interrupt/continuation and backend-specific resume; no durable-history claim. UAR mapping preserves supported facts and labels missing ones.
+- **1.5**: event id/state/revision payload only. Add **1.6**, server engineer: protected idle subscription on existing MCP listener with identity binding, expiry/disconnect handling, bounded subscribers/buffers, reconnect snapshot reconciliation and no durable replay.
+- Add **1.7**, server engineer: read-only item/outcome lookup and capability-scoped continuation metadata. No new generic approval endpoint. Owned chat interruptions resume through existing `/agui` ownership/digest/resolver checks. Other items name their authorized host/native surface.
+- **2.1–2.3** use all eleven shared presentations. **3.1–3.2** use authenticated fetch streaming, snapshot-first reconciliation and frame-coalesced invalidation; no bearer in URL and no invented EventSource header support.
+- **3.3** reuses the existing trusted activation/resume route only where allowed. Re-reading or receiving an event cannot approve. Read-only observer, A2A/UAR and native-required cards get no new approval authority.
+- **3.4–3.5** truthful Activity states and feature-off absence; no profile/history extras.
+
+The operator confirmed UI-01 through UI-16 in `.kbd-orchestrator/phases/agentic-ui-implementation/decision-log.md`. The reviewed phase `plan.md`, authored `tasks.json` dependency graph and `adopted-contract.json` scenario oracles govern. Historical `docs/design` copies remain visual references; canonical amendments replace conflicting architecture and acceptance assumptions.
+
+This is a plan artifact, not production implementation. F/1.1 creates implementation architecture/ownership grants; architect-owned schema/ADR tasks execute only after readiness. No RPC/gateway/default CID/wire change, direct repository opening, silent content injection, unconfigured endpoint or new approval authority. F4/G10/E6 and ADR-0010/0013 remain authoritative.
+
+No deployment, publication, push/merge, WebUI CID bump, durable history, profile editor, trusted-peer settings, new pairing protocol, uploads or multimodal ingestion. All production/test/fixture authoring precedes one final verification boundary; prerequisite compilation is allowed, per-task QA loops are not. Baseline source identities are in phase `source-baselines.json`; capture historical screenshots only in isolated fixtures at that final boundary.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `ipfs-decision-inbox`: the decisions list endpoint and change feed, Activity identity across runs, and the `DecisionInbox` and `ActivityRow` catalog components.
+- `ipfs-decision-inbox`: revised existing in-flight behavioral delta.
 
 ### Modified Capabilities
 
-None. Web UI behaviour in `src/activity/` is outside this OpenSpec root; its acceptance is in tasks.md (PX-16).
+No main capability is renamed; existing in-flight delta paths remain unchanged.
 
 ## Impact
 
-- Owners: mcp-server-engineer (endpoint, change feed, `activity_id`); ui-ux-engineer (`DecisionInbox`, `ActivityRow`, Web UI `src/activity/`).
-- Scope:
-  - Kubo: `mcp/server/server.go`, `mcp/server/broker.go` (resolved-history ring), `mcp/server/http.go` (route registration through the existing `protect` wrapper), `mcp/server/agui_resume.go` and `mcp/server/agui_stream.go` (`activity_id`, change events), `mcp/contract/routes/index.json` and a new route schema, `mcp/contract/schemas/**` (decision list item, additive)
-  - Kubo: `mcp/ui/src/components/decision-inbox/**`, `mcp/ui/src/components/activity-row/**`, `mcp/ui/catalog/ipfs-mcp.catalog.json` (regenerated)
-  - Web UI: `../ipfs-webui/src/activity/**` (new), `src/shell/**` Home slot from `praxis-shell-modes`, `src/webmcp/**` and `src/agent-chat/**` to render the shared card, `public/locales/en/*.json`
-- Stability: no `/api/v0`, HTTP Gateway, default CID recipe or wire change. The endpoint is new, read-only and lives on the MCP listener, not the Kubo RPC port. It is off when the MCP server is off. History is in memory; nothing new is written to the repo.
-- Size: L.
+- `openspec/changes/praxis-decision-inbox/**`
+- `mcp/contract/**`
+- `docs/mcp/**`
+- `mcp/server/**`
+- `test/cli/*mcp* (explicit scoped test grant in OpenSpec)`
+- `mcp/ui/src/components/** and tests/**`
+- `mcp/ui/catalog/**`
+- `mcp/chat/src/island/**`
+- `../ipfs-webui/src/{activity,webmcp,agent-chat}/**`
 
-## Dependencies
+## Planning references
 
-- Change 1 `praxis-decision-model-v2` (cards and fields).
-- Change 3 `praxis-shell-modes` (Home slot and Activity route).
-- Change 8 `praxis-desktop-attention` depends on this one.
+Library annotations: cand-001, cand-007. Exact scoped assignments: phase plan Task model assignments, `agentic-ui-implementation/praxis-decision-inbox/<backend-task-id>`. Numbered task display order is not the execution graph.

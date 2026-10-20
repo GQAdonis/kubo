@@ -24,6 +24,7 @@ const (
 	CodeConfirmDeclined       = "confirmation_declined"
 	CodeConfirmExpired        = "confirmation_expired"
 	CodeConfirmInvalid        = "confirmation_invalid"
+	CodeConfirmDigestMismatch = "confirmation_digest_mismatch"
 	CodeConfirmUnavailable    = "confirmation_unavailable"
 	CodeDaemonUnreachable     = "daemon_unreachable"
 	CodeDaemonVersionUnsupp   = "daemon_version_unsupported"

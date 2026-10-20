@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Identity-scoped read-only decisions",
+  "description": "Dedicated list/item/idle-stream shapes. Reuses DecisionObservation; no generic approval endpoint or raw principal/token projection. Normative behavior in decisions/README.md and ADR-0017.",
+  "$defs": {
+    "ServerEpoch": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]{16,128}$",
+      "description": "Random per-process epoch, never a credential. Changes on restart; old handles cannot be resumed merely because a client cached them."
+    },
+    "Revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]{1,128}$",
+      "description": "Opaque equality-only per-identity snapshot revision. Do not parse or infer global decision counts. Changes on relevant creation/resolution/outcome/expiry/eviction."
+    },
+    "Retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "max_resolved",
+        "max_age_seconds",
+        "resets_on_restart"
+      ],
+      "description": "One process-wide resolved ring filtered by caller identity, not 200 guaranteed entries per identity. Other identities can cause eviction but never content visibility.",
+      "properties": {
+        "scope": {
+          "const": "server"
+        },
+        "max_resolved": {
+          "const": 200
+        },
+        "max_age_seconds": {
+          "const": 604800
+        },
+        "resets_on_restart": {
+          "const": true
+        }
+      }
+    },
+    "ListQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "description": "Decoded GET /decisions query only; absent limit means 50. Unknown/repeated parameters, body, identity filters or URL credentials are invalid. Cursor is server-issued, owner/epoch/revision/order/expiry bound, not a continuation handle.",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "Page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "has_more"
+      ],
+      "description": "next_cursor appears iff has_more; the effective page may be shorter than limit to respect response byte bound. Cursor never exposes raw identity binding material.",
+      "properties": {
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "has_more"
+            ],
+            "properties": {
+              "has_more": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "next_cursor"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "has_more"
+            ],
+            "properties": {
+              "has_more": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "next_cursor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ListResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "server_epoch",
+        "revision",
+        "history_started_at",
+        "retention",
+        "items",
+        "page"
+      ],
+      "description": "Atomic current-identity snapshot page, newest created_at then opaque ID descending. No global count. Pages share a signed identity/epoch/revision-bound cursor snapshot or fail refresh-required; never silently skip/duplicate after mutation.",
+      "properties": {
+        "server_epoch": {
+          "$ref": "#/$defs/ServerEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        },
+        "history_started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retention": {
+          "$ref": "#/$defs/Retention"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "../confirmation/confirmation.schema.json#/$defs/DecisionObservation"
+          }
+        },
+        "page": {
+          "$ref": "#/$defs/Page"
+        }
+      }
+    },
+    "ItemResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "server_epoch",
+        "revision",
+        "history_started_at",
+        "retention",
+        "item"
+      ],
+      "description": "Read-only current-identity detail including actual outcome/receipt when reported. Unknown/foreign/evicted IDs all return the same 404. Does not run the model, RPC write or resolver.",
+      "properties": {
+        "server_epoch": {
+          "$ref": "#/$defs/ServerEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        },
+        "history_started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retention": {
+          "$ref": "#/$defs/Retention"
+        },
+        "item": {
+          "$ref": "../confirmation/confirmation.schema.json#/$defs/DecisionObservation"
+        }
+      }
+    },
+    "ChangeState": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "denied",
+        "expired",
+        "executed",
+        "not_started",
+        "running",
+        "succeeded",
+        "failed",
+        "unknown"
+      ],
+      "description": "Invalidation hint: actual execution state when present, otherwise approval state. Not DecisionPresentation, a receipt or authority. Fetch detail before displaying an outcome."
+    },
+    "DecisionChanged": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "state",
+        "revision"
+      ],
+      "description": "SSE data for event ipfs.decision.changed. Only caller-owned ID/state/revision. No tool, args, targets, token, principal, timestamps or receipt in the feed.",
+      "properties": {
+        "id": {
+          "$ref": "../confirmation/confirmation.schema.json#/$defs/DecisionId"
+        },
+        "state": {
+          "$ref": "#/$defs/ChangeState"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "SnapshotRequired": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "server_epoch",
+        "revision",
+        "reason"
+      ],
+      "description": "SSE data for event ipfs.decisions.snapshot_required. First event on every connection, and after queue overflow. Read a fresh authenticated list; no historical replay.",
+      "properties": {
+        "server_epoch": {
+          "$ref": "#/$defs/ServerEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "initial",
+            "overflow",
+            "reconcile"
+          ]
+        }
+      }
+    },
+    "ReadError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error"
+      ],
+      "description": "Mounted route errors. Middleware 401/403, disabled404 and unsupported405 may be empty/plaintext as existing HTTP protections dictate.",
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "description": "Bounded route error without arguments or identity material.",
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "invalid_argument",
+                "not_found",
+                "cursor_refresh_required",
+                "resource_exhausted",
+                "internal"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "refresh": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "server_epoch",
+                "revision"
+              ],
+              "description": "Only on cursor_refresh_required; invalidates cached pagination, never replays a write.",
+              "properties": {
+                "server_epoch": {
+                  "$ref": "#/$defs/ServerEpoch"
+                },
+                "revision": {
+                  "$ref": "#/$defs/Revision"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

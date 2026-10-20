@@ -26,13 +26,17 @@ type AGUISettings struct {
 	// A2UI is agent.a2ui: emit server-built A2UI surface messages as CUSTOM
 	// events. Nil means the default, on; false emits none, and the run stream
 	// is otherwise unchanged (the client's ToolCallCard fallback renders).
-	A2UI *bool
+	A2UI              *bool
+	RunFacts          *bool
+	ContextReferences *bool
 }
 
 // aguiConfig is AGUISettings after validation.
 type aguiConfig struct {
-	origins []string
-	a2ui    bool
+	origins           []string
+	a2ui              bool
+	runFacts          bool
+	contextReferences bool
 }
 
 // EnableAGUI turns the AG-UI endpoint on. It does not need the agent loop:
@@ -45,7 +49,7 @@ func (s *Server) EnableAGUI(set AGUISettings) error {
 	if err != nil {
 		return fmt.Errorf("agent.origin_allowlist: %w", err)
 	}
-	s.aguiExt = &aguiConfig{origins: origins, a2ui: set.A2UI == nil || *set.A2UI}
+	s.aguiExt = &aguiConfig{origins: origins, a2ui: set.A2UI == nil || *set.A2UI, runFacts: set.RunFacts == nil || *set.RunFacts, contextReferences: set.ContextReferences == nil || *set.ContextReferences}
 	return nil
 }
 
@@ -164,6 +168,10 @@ func (h *aguiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.reject(w, err)
 		return
 	}
+	if err := h.srv.checkContextInput(in); err != nil {
+		h.reject(w, err)
+		return
+	}
 	st := newAGUIStream(w, in, h.a2ui, id.EgressAck)
 	if in.Resume != nil {
 		h.resume(r.Context(), st, id, in)
@@ -179,7 +187,7 @@ func (h *aguiHandler) message(ctx context.Context, st *aguiStream, id Identity, 
 		h.reject(st.w, err)
 		return
 	}
-	_, err = h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Message: text}, st.handle)
+	_, err = h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Message: text, Context: in.Context, contextValidated: true}, st.handle)
 	h.finish(st, err)
 }
 

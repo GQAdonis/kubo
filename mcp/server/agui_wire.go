@@ -22,15 +22,19 @@ type errAGUIInput string
 
 func (e errAGUIInput) Error() string { return string(e) }
 
-// aguiInput is the part of RunAgentInput the endpoint reads. State, context,
-// tools and forwardedProps are accepted and ignored: the server offers only the
-// contract tools the principal may use and keeps no client state.
+// aguiInput is the part of RunAgentInput the endpoint reads. Generic state,
+// context and tools remain ignored; the explicit forwarded surface branch is
+// bounded display attribution. None of these properties selects tool authority.
 type aguiInput struct {
 	ThreadID string
 	RunID    string
 	// Messages are the client's messages as sent, kept verbatim so the
 	// snapshots can hand them back. Only the last one is ever read as input.
 	Messages []json.RawMessage
+	// Surface is validated display attribution, never a resolver or principal.
+	Surface      *ResolvingSurface
+	Context      []ContextReference
+	A2UICatalogs []catalogTuple
 	// Resume is nil when the field is absent or empty.
 	Resume []aguiResume
 }
@@ -41,18 +45,21 @@ type aguiResume struct {
 	Status      string
 	// Approved is the answer of a resolved entry that holds {approved}; Wait is
 	// set instead for {wait: true}.
-	Approved bool
-	Wait     bool
+	Approved       bool
+	Wait           bool
+	ReviewedEffect *ReviewedEffect
 }
 
 type aguiInputWire struct {
-	ThreadID string            `json:"threadId"`
-	RunID    string            `json:"runId"`
-	Messages []json.RawMessage `json:"messages"`
-	Resume   []struct {
-		InterruptID string          `json:"interruptId"`
-		Status      string          `json:"status"`
-		Payload     json.RawMessage `json:"payload"`
+	ThreadID       string            `json:"threadId"`
+	RunID          string            `json:"runId"`
+	Messages       []json.RawMessage `json:"messages"`
+	ForwardedProps json.RawMessage   `json:"forwardedProps"`
+	Resume         []struct {
+		InterruptID    string          `json:"interruptId"`
+		Status         string          `json:"status"`
+		Payload        json.RawMessage `json:"payload"`
+		ReviewedEffect json.RawMessage `json:"reviewed_effect"`
 	} `json:"resume"`
 }
 
@@ -74,17 +81,36 @@ func readAGUIInput(body io.Reader) (*aguiInput, error) {
 		return nil, errAGUIInput("runId must be 1 to 128 characters")
 	}
 	in := &aguiInput{ThreadID: wire.ThreadID, RunID: wire.RunID, Messages: wire.Messages}
+	surface, err := forwardedSurface(wire.ForwardedProps)
+	if err != nil {
+		return nil, errAGUIInput("forwardedProps.ipfs.surface: expected chat or inbox attribution with a bounded opaque instance")
+	}
+	in.Surface = surface
+	refs, err := forwardedContext(wire.ForwardedProps)
+	if err != nil {
+		return nil, err
+	}
+	in.Context = refs
+	in.A2UICatalogs = forwardedA2UI(wire.ForwardedProps)
 	if len(wire.Resume) == 0 {
 		return in, nil
 	}
 	if len(wire.Resume) != 1 {
 		return nil, errAGUIInput("resume must hold exactly one entry: a run carries at most one interrupt")
 	}
+	if len(in.Context) > 0 {
+		return nil, contextError(-1, "a resume retains its accepted references and cannot add new ones.")
+	}
 	e := wire.Resume[0]
 	if e.InterruptID == "" || len(e.InterruptID) > 2*maxAGUIIDLen {
 		return nil, errAGUIInput("resume names no interrupt")
 	}
 	entry := aguiResume{InterruptID: e.InterruptID, Status: e.Status}
+	reviewed, err := ParseReviewedEffect(e.ReviewedEffect)
+	if err != nil {
+		return nil, errAGUIInput(ErrMalformedReviewedEffect.Error())
+	}
+	entry.ReviewedEffect = reviewed
 	hasPayload := len(bytes.TrimSpace(e.Payload)) > 0 && !bytes.Equal(bytes.TrimSpace(e.Payload), []byte("null"))
 	switch e.Status {
 	case ResumeCancelled:
@@ -191,9 +217,16 @@ func aguiHTTPStatus(err error) (status int, code string, retry bool) {
 		ub    *uarBackendError
 	)
 	switch {
+	case errors.Is(err, ErrConfirmationDigestMismatch):
+		return http.StatusConflict, CodeConfirmDigestMismatch, false
+	case errors.Is(err, ErrInvalidResolvingSurface):
+		return http.StatusUnprocessableEntity, CodeInvalidArgument, false
 	case errors.As(err, &ub):
 		return http.StatusBadGateway, CodeInternal, true
 	case errors.As(err, &te):
+		if te.Code == CodeConfirmDigestMismatch {
+			return http.StatusConflict, te.Code, false
+		}
 		return http.StatusForbidden, te.Code, false
 	case errors.As(err, &input),
 		errors.Is(err, ErrEmptyRun), errors.Is(err, ErrBadResume),
@@ -304,6 +337,16 @@ func aguiInterrupt(in Interrupt) map[string]any {
 	}
 	if !in.ExpiresAt.IsZero() {
 		out["expiresAt"] = in.ExpiresAt.UTC().Format(time.RFC3339)
+	}
+	meta := out["metadata"].(map[string]any)["ipfs-mcp"].(map[string]any)
+	if in.EffectDigest != "" {
+		meta["effect_digest"] = in.EffectDigest
+	}
+	if in.Destination != nil {
+		meta["destination"] = cloneDestination(in.Destination)
+	}
+	if in.ActivityID != "" {
+		meta["activity_id"] = in.ActivityID
 	}
 	return out
 }

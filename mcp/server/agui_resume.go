@@ -28,6 +28,23 @@ func (h *aguiHandler) resume(ctx context.Context, st *aguiStream, id Identity, i
 		h.reject(st.w, ErrUnknownInterrupt)
 		return
 	}
+	// A resume gets correlation from the same owned interruption that supplies
+	// its confirmation identity, never from the new client runId or payload.
+	st.activityID = open.ActivityID
+	// Read ownership and the exact open interrupt above before comparing a
+	// supplied review. A read or wait never becomes approval authority.
+	if entry.ReviewedEffect != nil {
+		if err := h.srv.gate.broker.checkReviewed(open.ConfirmationID, entry.ReviewedEffect); err != nil {
+			if errors.Is(err, ErrConfirmationDigestMismatch) {
+				h.reject(st.w, digestMismatch(open.Tool, open.ConfirmationID))
+				return
+			}
+			if !errors.Is(err, ErrUnknownConfirmation) {
+				h.reject(st.w, err)
+				return
+			}
+		}
+	}
 	switch {
 	case entry.Status == ResumeCancelled, !entry.Wait && !entry.Approved:
 		h.deny(ctx, st, id, in, open, entry)
@@ -51,7 +68,7 @@ func (h *aguiHandler) approve(ctx context.Context, st *aguiStream, id Identity, 
 		h.reject(st.w, ErrNativePromptRequired)
 		return
 	}
-	err := h.srv.ResolveConfirmation(open.ConfirmationID, ResolverAGUIInterrupt, true)
+	err := h.srv.ResolveConfirmationAtSurface(open.ConfirmationID, ResolverAGUIInterrupt, true, in.Resume[0].ReviewedEffect, in.resolvingSurface())
 	switch {
 	case err == nil,
 		// Expiry is denial and an answered confirmation keeps its state: the
@@ -73,13 +90,19 @@ func (h *aguiHandler) approve(ctx context.Context, st *aguiStream, id Identity, 
 // open, that run owns the outcome: this request only records the denial and
 // finishes empty, and the open stream reports confirmation_declined.
 func (h *aguiHandler) deny(ctx context.Context, st *aguiStream, id Identity, in *aguiInput, open *Interrupt, entry aguiResume) {
+	// The authenticated, owned chat gesture is the actual denying mechanism;
+	// the later in-process continuation must not invent one for withdrawals.
+	err := h.srv.ResolveConfirmationAtSurface(open.ConfirmationID, ResolverAGUIInterrupt, false, entry.ReviewedEffect, in.resolvingSurface())
+	if err != nil && !errors.Is(err, ErrConfirmationExpired) && !errors.Is(err, ErrConfirmationResolved) && !errors.Is(err, ErrUnknownConfirmation) {
+		h.reject(st.w, err)
+		return
+	}
 	if h.watching(in.ThreadID, open.ID) {
-		_ = h.srv.ResolveConfirmation(open.ConfirmationID, ResolverAGUIInterrupt, false) // already decided is fine
 		st.begin()
 		st.finishSuccess()
 		return
 	}
-	_, err := h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
+	_, err = h.srv.Agent().Run(ctx, id, RunInput{SessionID: in.ThreadID, Resume: []ResumeEntry{
 		{InterruptID: open.ID, Status: entry.Status, Approved: false},
 	}}, st.handle)
 	h.finish(st, err)
@@ -150,6 +173,13 @@ func (h *aguiHandler) watching(thread, interruptID string) bool {
 	defer h.mu.Unlock()
 	w := h.watches[thread]
 	return w != nil && w.interruptID == interruptID
+}
+
+func (in *aguiInput) resolvingSurface() *ResolvingSurface {
+	if in.Surface == nil {
+		return ResolverSurface(ResolverAGUIInterrupt)
+	}
+	return cloneSurface(in.Surface)
 }
 
 // drop unregisters the watch and reports whether it was still the registered

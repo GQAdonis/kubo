@@ -1,0 +1,6 @@
+{
+  "agent": {
+    "context_references": false,
+    "run_facts": false
+  }
+}

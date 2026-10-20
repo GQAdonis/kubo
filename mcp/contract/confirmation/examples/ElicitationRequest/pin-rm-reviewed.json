@@ -1,0 +1,28 @@
+{
+  "method": "elicitation/create",
+  "params": {
+    "mode": "form",
+    "message": "Remove the pin on /ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi (recursive=true)? Unpinned content can be garbage collected.",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "confirm": {
+          "type": "boolean",
+          "title": "Remove pin"
+        }
+      },
+      "required": [
+        "confirm"
+      ]
+    },
+    "_meta": {
+      "ipfs-mcp": {
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        }
+      }
+    }
+  }
+}

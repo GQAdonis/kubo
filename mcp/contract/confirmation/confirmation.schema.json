@@ -132,6 +132,16 @@
                   ]
                 }
               }
+            },
+            "_meta": {
+              "type": "object",
+              "properties": {
+                "ipfs-mcp": {
+                  "$ref": "#/$defs/ReviewDisplayMetadata"
+                }
+              },
+              "additionalProperties": true,
+              "description": "Supported SDK _meta extension point. Preserve unrelated protocol metadata; validate this namespace only."
             }
           }
         }
@@ -161,6 +171,16 @@
               "type": "boolean"
             }
           }
+        },
+        "_meta": {
+          "type": "object",
+          "properties": {
+            "ipfs-mcp": {
+              "$ref": "#/$defs/ReviewResponseMetadata"
+            }
+          },
+          "additionalProperties": true,
+          "description": "Supported SDK _meta extension point. Preserve unrelated protocol metadata; validate this namespace only."
         }
       }
     },
@@ -223,6 +243,18 @@
             "a2a",
             "uar"
           ]
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        },
+        "resolved_by": {
+          "$ref": "#/$defs/Resolver"
+        },
+        "resolved_surface": {
+          "$ref": "#/$defs/ResolvingSurface"
         }
       },
       "allOf": [
@@ -297,7 +329,7 @@
         "exp",
         "nonce"
       ],
-      "description": "Fields bound by the token's HMAC-SHA256 (per-process random key). The encoded token is opaque to clients; these fields are fixed so the binding is reviewable and testable. args_sha256 is the SHA-256 of the canonical JSON (RFC 8785) of the arguments without confirm_token. The server accepts the token only when the pending confirmation cid is in state approved, then moves it to executed.",
+      "description": "Fields bound by the token's HMAC-SHA256 (per-process random key). The encoded token is opaque to clients; these fields are fixed so the binding is reviewable and testable. args_sha256 is the SHA-256 of the canonical JSON (RFC 8785) of the arguments without confirm_token. The server accepts the token only when the pending confirmation cid is in state approved, then moves it to executed. executed records approval consumption before invocation; actual success is additive ExecutionRecord/SuccessfulReceipt data. This amendment does not change v1 claims, signing, args_sha256 or acceptance.",
       "properties": {
         "v": {
           "const": 1
@@ -350,7 +382,7 @@
         "linux-polkit",
         "cli"
       ],
-      "description": "Human-presence mechanisms. The confirm token is deliberately not a resolver."
+      "description": "Authorized resolver mechanisms. They are distinct from descriptive ResolvingSurface attribution. The confirm token, effect digest and observation access are deliberately not resolvers. Only macos-localauth/linux-polkit provide the native-presence factor; desktop never does."
     },
     "PendingConfirmation": {
       "type": "object",
@@ -363,7 +395,7 @@
         "created_at",
         "expires_at"
       ],
-      "description": "Broker record for out-of-band resolution. Transitions: pending to approved, denied or expired; approved to executed exactly once.",
+      "description": "Broker record for out-of-band resolution. Transitions: pending to approved, denied or expired; approved to executed exactly once. Additive display/outcome fields do not change those transitions. executed is a single-use consumption claim before the handler runs, never a success receipt. principal remains the configured display principal, never its raw identity BindingKey; use DecisionObservation for identity-scoped read projections.",
       "properties": {
         "confirmation_id": {
           "$ref": "#/$defs/ConfirmationId"
@@ -379,7 +411,8 @@
           ]
         },
         "principal": {
-          "type": "string"
+          "type": "string",
+          "description": "Legacy configured principal display name. Never serialize the internal identity BindingKey or OIDC subject here."
         },
         "principal_kind": {
           "type": "string",
@@ -394,7 +427,8 @@
           "$ref": "#/$defs/Summary"
         },
         "resolver": {
-          "$ref": "#/$defs/Resolver"
+          "$ref": "#/$defs/Resolver",
+          "description": "Legacy resolver mechanism; when resolved_by is present they must agree. Neither identifies the browser surface."
         },
         "requires_native_prompt": {
           "type": "boolean",
@@ -411,8 +445,42 @@
         "resolved_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        },
+        "resolved_by": {
+          "$ref": "#/$defs/Resolver"
+        },
+        "resolved_surface": {
+          "$ref": "#/$defs/ResolvingSurface"
+        },
+        "execution": {
+          "$ref": "#/$defs/ExecutionRecord"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "execution"
+            ]
+          },
+          "then": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "approved",
+                  "executed"
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
     "Outcome": {
       "type": "object",
@@ -608,6 +676,16 @@
         },
         "requestState": {
           "$ref": "#/$defs/RequestState"
+        },
+        "_meta": {
+          "type": "object",
+          "properties": {
+            "ipfs-mcp": {
+              "$ref": "#/$defs/ReviewResponseMetadata"
+            }
+          },
+          "additionalProperties": true,
+          "description": "Supported SDK _meta extension point. Preserve unrelated protocol metadata; validate this namespace only."
         }
       }
     },
@@ -826,6 +904,890 @@
           }
         }
       ]
+    },
+    "EffectDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Server-computed SHA-256 of canonicalJSON({arguments: validated token-free arguments actually supplied, tool: canonical tool name}). Retain existing argsDigest canonicalization and token bytes. Omitted defaults are not inserted; explicit defaults remain explicit. Exclude only top-level confirm_token from arguments; transport/session/resolver/surface metadata is outside this envelope. A digest is an effect binding, never consent."
+    },
+    "Destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name"
+      ],
+      "description": "Safe configured destination display label from known operation semantics, never arbitrary model text, credentialed URL or secret. Omit when unknown. It does not select an endpoint or alter the call.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "node",
+            "pinning_service",
+            "ipns_name"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "ResolvingSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "description": "Descriptive attribution only; instance is a bounded opaque per-surface identifier, not a principal or credential. Distinguishes two chat panes. Browser attribution never selects an authorized resolver. Trusted native/MCP adapters stamp their own kind.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "chat",
+            "inbox",
+            "mcp_host",
+            "desktop",
+            "native_prompt",
+            "cli"
+          ]
+        },
+        "instance": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "DecisionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Opaque read-side identifier, not a confirmation token or authorization handle. UAR synthetic IDs remain separate from broker confirmations."
+    },
+    "DecisionApprovalState": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "denied",
+        "expired",
+        "executed"
+      ],
+      "description": "Legacy approval lifecycle. executed means approval was consumed exactly once before invocation, not that the operation succeeded. Missing execution metadata never upgrades it to Done."
+    },
+    "DecisionPresentation": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "waiting_system_prompt",
+        "approved",
+        "committed",
+        "denied",
+        "expired",
+        "invalidated",
+        "resolved_elsewhere",
+        "uncertain",
+        "needs_resubmit",
+        "failed_after_approval"
+      ],
+      "description": "Derived client presentation, not broker state or authorization. Successful receipt takes precedence over surface attribution; known failure maps to failed_after_approval, ambiguity to uncertain. Defined by confirmation/README.md; eleven values, one generated shared model."
+    },
+    "SafeExecutionError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "description": "Bounded public error detail. No raw RPC/backend bodies, stack traces, credentials, content bytes or sensitive arguments. Known failure does not establish zero effects.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "ReceiptReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "description": "Actual confirmed result identifier, never guessed from input or arbitrary tool prose. No fetched content, secret key bytes, credentialed URL or backend response body.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "cid",
+            "content_path",
+            "mfs_path",
+            "ipns_name",
+            "job",
+            "key"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
+    "SuccessfulReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "decision_id",
+        "tool",
+        "effect_digest",
+        "completed_at",
+        "outcome",
+        "effect",
+        "provenance",
+        "result_refs"
+      ],
+      "description": "Success evidence for one immutable decision/tool/digest, created only from the actual handler result or a correlated validated backend operation report. An accepted background job proves job_accepted only. Empty result_refs is honest for success without returned identifiers. A text TOOL_CALL_RESULT or UAR RUN_FINISHED success is insufficient. Result delivery/serialization failure after recorded success does not undo it.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "decision_id": {
+          "$ref": "#/$defs/DecisionId"
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "outcome": {
+          "const": "succeeded"
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "operation_completed",
+            "job_accepted"
+          ]
+        },
+        "provenance": {
+          "type": "string",
+          "enum": [
+            "node_handler",
+            "validated_backend_operation"
+          ]
+        },
+        "result_refs": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ReceiptReference"
+          }
+        }
+      }
+    },
+    "ExecutionRecord": {
+      "description": "At most one invocation owns this record. not_started -> running -> succeeded | failed | unknown. A later reliable correlated report may refine unknown; it never authorizes another invocation. Only succeeded has a SuccessfulReceipt. Known failure means a definite unsuccessful operation result, not no partial effects; ambiguous partial effects/transport loss stay unknown. Timestamps and receipt bindings must agree semantically. When both timestamps exist, started_at <= completed_at; equality is valid at the observed clock resolution. Clamp a backwards wall-clock completion to started_at; never invent a +1ns interval. Receipt completion equals record completion.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "not_started"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "started_at"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "started_at",
+            "completed_at",
+            "receipt"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "succeeded"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "completed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "receipt": {
+              "$ref": "#/$defs/SuccessfulReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "started_at",
+            "completed_at",
+            "error"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "failed"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "completed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeExecutionError"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state"
+          ],
+          "description": "Dispatch/outcome evidence is insufficient; no retry or zero-effect claim.",
+          "properties": {
+            "state": {
+              "const": "unknown"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "completed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeExecutionError"
+            }
+          }
+        }
+      ]
+    },
+    "DecisionAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "description": "Safe configured display identity. Omit unknown name. Never expose raw OIDC subject, BindingKey, session grant or credentials. Observation is filtered privately by the full identity binding across its sessions.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "human-mcp",
+            "ui",
+            "a2a",
+            "uar"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "DecisionEgress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "description": "Actual operation/egress-policy facts only. none requires evidence that the operation sends no content to a third-party service; absence does not imply none. This display is not an egress acknowledgement.",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "configured",
+            "not_reported"
+          ]
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        }
+      }
+    },
+    "DecisionContinuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "route",
+        "thread_id",
+        "interrupt_id"
+      ],
+      "description": "Capability-scoped locator for the current identity's exact open chat interruption. Uses the existing authenticated resume path; not a generic confirmation resolver. No bearer, confirm token, requestState, backend grant or raw args. Server rechecks owner/interrupt/expiry/digest/resolver; this locator conveys no authority by itself.",
+      "properties": {
+        "method": {
+          "const": "POST"
+        },
+        "route": {
+          "const": "/agui"
+        },
+        "thread_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "interrupt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "DecisionActions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approve",
+        "deny"
+      ],
+      "description": "Current authenticated capability hints, rechecked at resolution. Only owned open chat interruptions may carry continuation; other records name the known authorized surface or omit it honestly. Native-required observations never enable approve. Read/item/feed access cannot create resolver rights.",
+      "properties": {
+        "approve": {
+          "type": "boolean"
+        },
+        "deny": {
+          "type": "boolean"
+        },
+        "authorized_surface": {
+          "type": "string",
+          "enum": [
+            "owned_chat",
+            "originating_mcp_host",
+            "native_system_prompt",
+            "paired_desktop",
+            "headless_cli",
+            "backend_host"
+          ]
+        },
+        "continuation": {
+          "$ref": "#/$defs/DecisionContinuation"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "approve"
+            ],
+            "properties": {
+              "approve": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "continuation",
+              "authorized_surface"
+            ],
+            "properties": {
+              "authorized_surface": {
+                "const": "owned_chat"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "deny"
+            ],
+            "properties": {
+              "deny": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "continuation"
+            ]
+          }
+        }
+      ]
+    },
+    "DecisionSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "class",
+        "text",
+        "targets"
+      ],
+      "description": "Bounded prepared-operation display from catalog/known semantics; targets supply scope. No sensitive raw arguments, content bytes or unsanitized backend/model prose. Large target sets use a bounded truthful summary rather than silently implying completeness.",
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "class": {
+          "$ref": "#/$defs/ConfirmationClass"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "targets": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Target"
+          }
+        }
+      }
+    },
+    "DecisionObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "source_kind",
+        "approval_state",
+        "summary",
+        "authority",
+        "created_at",
+        "actions"
+      ],
+      "description": "Safe identity-scoped read-side projection for the later list/item/feed contract. Never include principal binding keys, other identities' native requests, raw arguments, tokens/requestState or credentials. kubo/node_confirmation denotes a broker decision; uar/backend_approval denotes UAR-only approval, not consent for this node. Summary carries tool/class/object/targets; destination names the effect target, actions.authorized_surface names where it may be answered. Absent facts remain unreported.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/DecisionId"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "kubo",
+            "uar"
+          ]
+        },
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "node_confirmation",
+            "backend_approval"
+          ]
+        },
+        "approval_state": {
+          "$ref": "#/$defs/DecisionApprovalState"
+        },
+        "summary": {
+          "$ref": "#/$defs/DecisionSummary"
+        },
+        "authority": {
+          "$ref": "#/$defs/DecisionAuthority"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        },
+        "resolved_by": {
+          "$ref": "#/$defs/Resolver"
+        },
+        "resolved_surface": {
+          "$ref": "#/$defs/ResolvingSurface"
+        },
+        "requires_native_prompt": {
+          "type": "boolean"
+        },
+        "execution": {
+          "$ref": "#/$defs/ExecutionRecord"
+        },
+        "activity_id": {
+          "$ref": "#/$defs/ActivityId"
+        },
+        "egress": {
+          "$ref": "#/$defs/DecisionEgress"
+        },
+        "actions": {
+          "$ref": "#/$defs/DecisionActions"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "const": "kubo"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_kind": {
+                "const": "node_confirmation"
+              },
+              "id": {
+                "$ref": "#/$defs/ConfirmationId"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "const": "uar"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_kind": {
+                "const": "backend_approval"
+              },
+              "id": {
+                "pattern": "^cf_uar_"
+              },
+              "summary": {
+                "properties": {
+                  "tool": {
+                    "pattern": "^uar:"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "requires_native_prompt"
+            ],
+            "properties": {
+              "requires_native_prompt": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "actions": {
+                "properties": {
+                  "approve": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "approval_state"
+            ],
+            "properties": {
+              "approval_state": {
+                "enum": [
+                  "denied",
+                  "expired"
+                ]
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "execution"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "execution"
+            ]
+          },
+          "then": {
+            "properties": {
+              "approval_state": {
+                "enum": [
+                  "approved",
+                  "executed"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "const": "kubo"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "execution": {
+                "properties": {
+                  "receipt": {
+                    "properties": {
+                      "provenance": {
+                        "const": "node_handler"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "const": "uar"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "execution": {
+                "properties": {
+                  "receipt": {
+                    "properties": {
+                      "provenance": {
+                        "const": "validated_backend_operation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ReviewedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effect_digest"
+      ],
+      "description": "Optional transport-level echo of exactly the digest the person reviewed. Never a tool argument or consent. Upgraded adapters compare it before resolving; omission retains all legacy identity, immutable tool/argument, expiry, mechanism and single-use checks. An inconsistent supplied value fails with confirmation_digest_mismatch and never claims approval.",
+      "properties": {
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        }
+      }
+    },
+    "ReviewDisplayMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effect_digest"
+      ],
+      "description": "Value of ElicitParams._meta['ipfs-mcp']; safe prepared digest and optional destination, never consent. Omit unknown destination rather than null.",
+      "properties": {
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        }
+      }
+    },
+    "ReviewResponseMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "description": "Value of ElicitResult._meta['ipfs-mcp'] or tools/call params._meta['ipfs-mcp']. Optional echo only; if both supplied, require valid identical values after existing binding checks. No new resolver rights.",
+      "properties": {
+        "reviewed_effect": {
+          "$ref": "#/$defs/ReviewedEffect"
+        }
+      }
+    },
+    "NativeResolveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "approve"
+      ],
+      "description": "Body of the existing authenticated POST /v1/resolve on private native confirmation Unix socket. Optional signed-body echo; no new public decisions resolver or pairing/protocol version. Existing native factor/resolver/expiry/sender checks remain.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfirmationId"
+        },
+        "approve": {
+          "type": "boolean"
+        },
+        "reviewed_effect": {
+          "$ref": "#/$defs/ReviewedEffect"
+        }
+      }
+    },
+    "ToolOutcomeMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmation_id",
+        "effect_digest",
+        "execution"
+      ],
+      "description": "Optional value of CallToolResult._meta['ipfs-mcp'] for the authorized current node operation after its winning claim. A detached actual execution snapshot, not consent or another result payload. Receipt is only execution.receipt. No BindingKey, raw arguments/results, tokens, prompt or authority handles. Preserve all legacy response fields and other metadata.",
+      "properties": {
+        "confirmation_id": {
+          "$ref": "#/$defs/ConfirmationId",
+          "not": {
+            "pattern": "^cf_uar_"
+          },
+          "description": "The actual node broker ID for this current call. No synthetic UAR approval ID."
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/EffectDigest"
+        },
+        "execution": {
+          "$ref": "#/$defs/ExecutionRecord"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "execution"
+            ],
+            "properties": {
+              "execution": {
+                "required": [
+                  "state"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "succeeded"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "execution": {
+                "properties": {
+                  "receipt": {
+                    "properties": {
+                      "provenance": {
+                        "const": "node_handler"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ToolOutcomeResultMeta": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "The optional standard CallToolResult._meta map. Other existing metadata such as ai.ipfs/tool and ai.ipfs/untrusted-content stays intact. No required ipfs-mcp key: legacy tool results remain valid.",
+      "properties": {
+        "ipfs-mcp": {
+          "$ref": "#/$defs/ToolOutcomeMetadata"
+        }
+      }
+    },
+    "ActivityId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Opaque server-assigned correlation ID for a newly accepted user activity, stable across its authorized resumes. Not a client-selected run/thread ID, ownership key, authorization handle, content identifier or durable history promise. Never encode a BindingKey, principal, subject, token or sensitive arguments."
     }
   }
 }

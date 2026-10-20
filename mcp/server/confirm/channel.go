@@ -49,7 +49,7 @@ const (
 // item is one confirmation a channel client may decide.
 type item struct {
 	p       server.Pending
-	resolve server.ResolveFunc
+	resolve server.ReviewedResolveFunc
 	// decided hides the item from the pending list once any client resolved
 	// it. It stays addressable until the confirmation expires, so a repeat
 	// resolve gets the broker's "already resolved" answer.
@@ -58,13 +58,15 @@ type item struct {
 
 // PendingView is the wire form of a waiting confirmation.
 type PendingView struct {
-	ID            string    `json:"id"`
-	Summary       string    `json:"summary"`
-	Tool          string    `json:"tool"`
-	Class         string    `json:"class"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	NativePrompt  bool      `json:"native_prompt,omitempty"`
-	PrincipalKind string    `json:"principal_kind,omitempty"`
+	ID            string              `json:"id"`
+	Summary       string              `json:"summary"`
+	Tool          string              `json:"tool"`
+	Class         string              `json:"class"`
+	ExpiresAt     time.Time           `json:"expires_at"`
+	NativePrompt  bool                `json:"native_prompt,omitempty"`
+	PrincipalKind string              `json:"principal_kind,omitempty"`
+	EffectDigest  string              `json:"effect_digest,omitempty"`
+	Destination   *server.Destination `json:"destination,omitempty"`
 	// Targets are the summary's structured targets; always present.
 	Targets []server.Target `json:"targets"`
 }
@@ -179,6 +181,15 @@ func (c *channel) close() {
 // add makes a confirmation visible to the clients of resolver name until ctx
 // ends (the confirmation expired).
 func (c *channel) add(ctx context.Context, name string, p server.Pending, resolve server.ResolveFunc) {
+	c.addReviewed(ctx, name, p, func(approve bool, reviewed *server.ReviewedEffect) error {
+		if reviewed != nil && (p.EffectDigest == "" || reviewed.EffectDigest != p.EffectDigest) {
+			return server.ErrConfirmationDigestMismatch
+		}
+		return resolve(approve)
+	})
+}
+
+func (c *channel) addReviewed(ctx context.Context, name string, p server.Pending, resolve server.ReviewedResolveFunc) {
 	c.mu.Lock()
 	c.items[name][p.ID] = item{p: p, resolve: resolve}
 	c.mu.Unlock()
@@ -254,6 +265,8 @@ func (c *channel) handlePending(name string, _ []byte) (int, any) {
 			NativePrompt:  it.p.NativePrompt,
 			PrincipalKind: it.p.Principal.Kind,
 			Targets:       targets,
+			EffectDigest:  it.p.EffectDigest,
+			Destination:   it.p.Destination,
 		})
 	}
 	return http.StatusOK, map[string]any{"pending": out}
@@ -261,13 +274,17 @@ func (c *channel) handlePending(name string, _ []byte) (int, any) {
 
 func (c *channel) handleResolve(name string, raw []byte) (int, any) {
 	var body struct {
-		ID      string `json:"id"`
-		Approve bool   `json:"approve"`
+		ID             string          `json:"id"`
+		Approve        *bool           `json:"approve"`
+		ReviewedEffect json.RawMessage `json:"reviewed_effect"`
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&body); err != nil || body.ID == "" {
+	if err := dec.Decode(&body); err != nil || body.ID == "" || body.Approve == nil {
 		return http.StatusBadRequest, errBody("body must be {\"id\": string, \"approve\": bool}")
+	}
+	if dec.Decode(new(any)) != io.EOF {
+		return http.StatusBadRequest, errBody("body must contain one resolve request")
 	}
 	c.mu.Lock()
 	it, ok := c.items[name][body.ID]
@@ -275,19 +292,30 @@ func (c *channel) handleResolve(name string, raw []byte) (int, any) {
 	if !ok {
 		return http.StatusNotFound, errBody("no such pending confirmation for this client")
 	}
-	err := it.resolve(body.Approve)
+	reviewed, err := server.ParseReviewedEffect(body.ReviewedEffect)
+	if err != nil {
+		return http.StatusBadRequest, map[string]any{"error": err.Error(), "code": server.CodeInvalidArgument, "retryable": false}
+	}
+	err = it.resolve(*body.Approve, reviewed)
 	if err == nil || errors.Is(err, server.ErrConfirmationResolved) || errors.Is(err, server.ErrConfirmationExpired) {
 		// Decided or over: stop listing it to every client of the channel.
 		c.forget(body.ID)
 	}
 	if err != nil {
+		if errors.Is(err, server.ErrConfirmationDigestMismatch) {
+			return http.StatusConflict, map[string]any{"error": err.Error(), "code": server.CodeConfirmDigestMismatch, "retryable": false}
+		}
 		code := http.StatusConflict
 		if errors.Is(err, server.ErrConfirmationExpired) {
 			code = http.StatusGone
 		}
 		return code, errBody(err.Error())
 	}
-	return http.StatusOK, map[string]any{"id": body.ID, "approved": body.Approve}
+	out := map[string]any{"id": body.ID, "approved": *body.Approve, "resolved_by": name}
+	if surface := server.ResolverSurface(name); surface != nil {
+		out["resolved_surface"] = surface
+	}
+	return http.StatusOK, out
 }
 
 // forget hides a decided confirmation from the pending list of every resolver.
@@ -318,6 +346,16 @@ func (r *channelResolver) Request(ctx context.Context, p server.Pending, resolve
 		return fmt.Errorf("%w: disabled after a failed HG-1 check: %s", ErrUnavailable, reason)
 	}
 	r.ch.add(ctx, r.resolverName, p, resolve)
+	return nil
+}
+
+// RequestReviewed implements server.ReviewedResolver using the existing signed
+// request body. Authentication still selects the resolver, never a body field.
+func (r *channelResolver) RequestReviewed(ctx context.Context, p server.Pending, resolve server.ReviewedResolveFunc) error {
+	if reason, off := disabledMechanism(r.resolverName); off {
+		return fmt.Errorf("%w: disabled after a failed HG-1 check: %s", ErrUnavailable, reason)
+	}
+	r.ch.addReviewed(ctx, r.resolverName, p, resolve)
 	return nil
 }
 

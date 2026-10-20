@@ -1,0 +1,35 @@
+{
+  "id": "cf_Nat1veF1xture1234",
+  "source": "kubo",
+  "source_kind": "node_confirmation",
+  "approval_state": "pending",
+  "summary": {
+    "tool": "pin_rm",
+    "class": "destructive",
+    "text": "Remove the recursive pin on the fixture CID",
+    "targets": [
+      {
+        "kind": "cid",
+        "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+      }
+    ]
+  },
+  "authority": {
+    "kind": "ui",
+    "name": "Fixture chat"
+  },
+  "created_at": "2026-10-20T12:00:00Z",
+  "requires_native_prompt": true,
+  "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+  "actions": {
+    "approve": false,
+    "deny": true,
+    "authorized_surface": "native_system_prompt",
+    "continuation": {
+      "method": "POST",
+      "route": "/agui",
+      "thread_id": "fixture_thread",
+      "interrupt_id": "fixture_interrupt"
+    }
+  }
+}

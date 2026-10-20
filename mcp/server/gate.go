@@ -31,12 +31,27 @@ type ConfirmationRequired struct {
 	ConfirmToken string `json:"confirm_token,omitempty"`
 	// RequiresNativePrompt is true for destructive calls from the ui and a2a principals:
 	// only a system prompt approves, so agui-interrupt is not in Resolvers.
-	RequiresNativePrompt bool   `json:"requires_native_prompt,omitempty"`
-	PrincipalKind        string `json:"principal_kind,omitempty"`
+	RequiresNativePrompt bool              `json:"requires_native_prompt,omitempty"`
+	PrincipalKind        string            `json:"principal_kind,omitempty"`
+	EffectDigest         string            `json:"effect_digest,omitempty"`
+	Destination          *Destination      `json:"destination,omitempty"`
+	ResolvedBy           string            `json:"resolved_by,omitempty"`
+	ResolvedSurface      *ResolvingSurface `json:"resolved_surface,omitempty"`
 }
 
 // ResolveFunc records the human's decision for one pending confirmation.
 type ResolveFunc func(approve bool) error
+
+// ReviewedResolveFunc is the authorized resolver's callback with an optional
+// echo of the operation shown to the person. The callback supplies no new rights.
+type ReviewedResolveFunc func(approve bool, reviewed *ReviewedEffect) error
+
+// ReviewedResolver accepts the contract's optional reviewed-effect echo while
+// preserving the legacy Resolver interface for existing prompts.
+type ReviewedResolver interface {
+	Resolver
+	RequestReviewed(ctx context.Context, p Pending, resolve ReviewedResolveFunc) error
+}
 
 // Resolver is a human-presence mechanism that can approve a pending
 // confirmation out of band: the paired IPFS Desktop window, a macOS
@@ -70,6 +85,9 @@ type gate struct {
 	// use and an extra sentence (index.go). The call's argument hash is not
 	// affected.
 	summaryArgs func(tool string, args map[string]any) (map[string]any, string)
+	// endpoint is read at preparation and claim so discovery cannot silently
+	// substitute a different daemon after human review.
+	endpoint func() string
 
 	mu       sync.Mutex
 	localIDs map[*mcp.ServerSession]string
@@ -199,23 +217,33 @@ type sessionIDKey struct{}
 
 // call identifies one tool call for the gate.
 type call struct {
-	ss        *mcp.ServerSession
-	principal Principal
-	sid       string
-	tool      contract.Tool
-	argsHash  string
-	args      map[string]any
-	sc        *schemas
+	ss           *mcp.ServerSession
+	principal    Principal
+	sid          string
+	tool         contract.Tool
+	argsHash     string
+	args         map[string]any
+	sc           *schemas
+	effectDigest string
+	endpoint     string
+	reviewed     *ReviewedEffect
+	reviewError  *ToolError
+	claim        *executionClaim
+	activityID   string
 }
 
-// authorize returns (nil, nil) only when this call was confirmed and claimed:
-// the caller runs it, exactly once. A non-nil result is an input-required
-// result that asks the user through elicitation; any ToolError means the call
-// has no side effect.
-func (g *gate) authorize(ctx context.Context, req *mcp.CallToolRequest, t contract.Tool, sc *schemas, raw json.RawMessage) (*mcp.CallToolResult, *ToolError) {
+// authorize returns a winning execution claim only when this call was
+// confirmed and consumed. A non-nil result asks the user through elicitation;
+// any ToolError means this attempt has no side effect. Only the claim owner
+// reaches the implementation in the shared handler.
+func (g *gate) authorize(ctx context.Context, req *mcp.CallToolRequest, t contract.Tool, sc *schemas, raw json.RawMessage) (*mcp.CallToolResult, *executionClaim, *ToolError) {
 	hash, token, args, err := argsDigest(raw)
 	if err != nil {
-		return nil, invalidArgument(err.Error())
+		return nil, nil, invalidArgument(err.Error())
+	}
+	effect, err := effectDigest(t.Name, args)
+	if err != nil {
+		return nil, nil, invalidArgument(err.Error())
 	}
 	var ss *mcp.ServerSession
 	if req != nil {
@@ -228,38 +256,65 @@ func (g *gate) authorize(ctx context.Context, req *mcp.CallToolRequest, t contra
 		sid, _ = ctx.Value(sessionIDKey{}).(string)
 	}
 	c := &call{
-		ss:        ss,
-		principal: PrincipalFromContext(ctx),
-		sid:       sid,
-		tool:      t,
-		argsHash:  hash,
-		args:      args,
-		sc:        sc,
+		ss:           ss,
+		principal:    PrincipalFromContext(ctx),
+		sid:          sid,
+		tool:         t,
+		argsHash:     hash,
+		args:         args,
+		sc:           sc,
+		effectDigest: effect,
 	}
-	if token != "" {
-		return nil, g.acceptToken(c, token)
+	c.activityID, _ = ctx.Value(activityIDKey{}).(string)
+	if g.endpoint != nil {
+		c.endpoint = g.endpoint()
 	}
-	if req != nil && req.Params != nil && req.Params.RequestState != "" {
-		return nil, g.elicitAnswer(c, req.Params.RequestState, req.Params.InputResponses)
+	if req != nil && req.Params != nil {
+		c.reviewed, c.reviewError = reviewedFromMeta(req.Params.Meta)
 	}
-	if p, tok, ok := g.broker.activeFor(dedupeKey(c.sid, c.principal.BindingKey(), t.Name, hash)); ok {
-		return nil, g.repeat(c, p, tok)
+	var ask *mcp.CallToolResult
+	var gerr *ToolError
+	switch {
+	case token != "":
+		gerr = g.acceptToken(c, token)
+	case req != nil && req.Params != nil && req.Params.RequestState != "":
+		gerr = g.elicitAnswer(c, req.Params.RequestState, req.Params.InputResponses)
+	default:
+		if p, tok, ok := g.broker.activeFor(dedupeKey(c.sid, c.principal.BindingKey(), t.Name, hash)); ok {
+			gerr = g.repeat(c, p, tok)
+		} else if c.reviewError != nil {
+			gerr = c.reviewError
+		} else if c.reviewed != nil {
+			gerr = &ToolError{Code: CodeConfirmInvalid, Message: "No waiting confirmation matches this reviewed operation. Request a fresh review."}
+		} else if mayElicit(c.principal, ss) {
+			ask, gerr = g.elicitRequest(c)
+		} else {
+			gerr = g.openExternal(ctx, c)
+		}
 	}
-	if mayElicit(c.principal, ss) {
-		return g.elicitRequest(c)
-	}
-	return nil, g.openExternal(ctx, c)
+	return ask, c.claim, gerr
 }
 
 // repeat handles a token-less repeat of a call that has an open confirmation.
 // Approved runs exactly once; pending, denied and expired are reported. A
 // repeat never approves anything.
 func (g *gate) repeat(c *call, p Pending, tok string) *ToolError {
+	if err := g.checkReview(c, p, nil); err != nil {
+		return err
+	}
+	if errors.Is(g.broker.checkEffect(p.ID, c), ErrConfirmationDigestMismatch) {
+		return digestMismatch(c.tool.Name, p.ID)
+	}
 	switch p.State {
 	case StateApproved:
-		if err := g.broker.claim(p.ID, ""); err != nil {
+		claim, err := g.broker.claimEffect(p.ID, "", c)
+		if err != nil {
+			if errors.Is(err, ErrConfirmationDigestMismatch) {
+				return digestMismatch(c.tool.Name, p.ID)
+			}
 			return g.outcomeError(c.tool.Name, p, StateExecuted)
 		}
+		c.claim = claim
 		return nil
 	case StatePending:
 		return g.requiredError(c, p, tok, CodeConfirmPending)
@@ -326,13 +381,17 @@ func (g *gate) openExternal(ctx context.Context, c *call) *ToolError {
 // open creates the pending confirmation for a call.
 func (g *gate) open(c *call, nativePrompt bool, mechanism string) (Pending, error) {
 	return g.broker.reserve(newConfirmation{
-		principal: c.principal,
-		sid:       c.sid,
-		tool:      c.tool.Name,
-		argsHash:  c.argsHash,
-		summary:   g.summaryOf(c),
-		nativeReq: nativePrompt,
-		mechanism: mechanism,
+		principal:    c.principal,
+		sid:          c.sid,
+		tool:         c.tool.Name,
+		argsHash:     c.argsHash,
+		summary:      g.summaryOf(c),
+		nativeReq:    nativePrompt,
+		mechanism:    mechanism,
+		effectDigest: c.effectDigest,
+		destination:  nodeDestination(c.tool.Name),
+		endpoint:     c.endpoint,
+		activityID:   c.activityID,
 	}, maxOpenExternal)
 }
 
@@ -359,8 +418,16 @@ func (g *gate) notify(ctx context.Context, p Pending, agent bool) bool {
 		if !resolverFits(r, p.Principal, agent) {
 			continue
 		}
-		resolve := func(approve bool) error { return g.broker.Resolve(p.ID, r.Name(), approve) }
-		if err := r.Request(rctx, p, resolve); err != nil {
+		resolve := func(approve bool, reviewed *ReviewedEffect) error {
+			return g.broker.ResolveReviewed(p.ID, r.Name(), approve, reviewed)
+		}
+		var err error
+		if rr, ok := r.(ReviewedResolver); ok {
+			err = rr.RequestReviewed(rctx, p, resolve)
+		} else {
+			err = r.Request(rctx, p, func(approve bool) error { return resolve(approve, nil) })
+		}
+		if err != nil {
 			g.log.Warn("confirmation resolver failed", "resolver", r.Name(), "error", err)
 			continue
 		}
@@ -399,6 +466,10 @@ func (g *gate) requiredError(c *call, p Pending, tok, code string) *ToolError {
 			ConfirmToken:         tok,
 			RequiresNativePrompt: p.NativePrompt,
 			PrincipalKind:        c.principal.Kind,
+			EffectDigest:         p.EffectDigest,
+			Destination:          cloneDestination(p.Destination),
+			ResolvedBy:           p.ResolvedBy,
+			ResolvedSurface:      cloneSurface(p.ResolvedSurface),
 		},
 	}
 }
@@ -414,13 +485,22 @@ func (g *gate) outcomeError(tool string, p Pending, status string) *ToolError {
 		te.Message = "Denied. " + p.Summary.Text + " requires confirmation and was not confirmed. Nothing changed."
 	case StateExpired:
 		te.Code = CodeConfirmExpired
-		te.Message = "The confirmation expired before anyone approved it. Nothing changed. Start a new call to ask again."
+		te.Message = "The confirmation expired before this call could run. Nothing changed. Start a new call to ask again."
 	default:
 		te.Code = CodeConfirmInvalid
 		te.Message = "This confirmation was already used or is not valid. Nothing changed."
 		status = "invalid"
 	}
 	te.Details = map[string]any{"confirmation_id": p.ID, "status": status}
+	if p.ResolvedBy != "" {
+		te.Details["resolved_by"] = p.ResolvedBy
+	}
+	if p.ResolvedSurface != nil {
+		te.Details["resolved_surface"] = cloneSurface(p.ResolvedSurface)
+	}
+	if p.EffectDigest != "" {
+		te.Details["effect_digest"] = p.EffectDigest
+	}
 	return te
 }
 
@@ -461,11 +541,22 @@ func (g *gate) acceptToken(c *call, tok string) *ToolError {
 	if p.Mechanism != MechanismExternal {
 		return invalid("The confirmation behind this token was opened for the user's own prompt, not for out-of-band approval.")
 	}
+	if err := g.checkReview(c, p, nil); err != nil {
+		return err
+	}
+	if errors.Is(g.broker.checkEffect(p.ID, c), ErrConfirmationDigestMismatch) {
+		return digestMismatch(c.tool.Name, p.ID)
+	}
 	switch p.State {
 	case StateApproved:
-		if err := g.broker.claim(p.ID, claims.Nonce); err != nil {
+		claim, err := g.broker.claimEffect(p.ID, claims.Nonce, c)
+		if err != nil {
+			if errors.Is(err, ErrConfirmationDigestMismatch) {
+				return digestMismatch(c.tool.Name, p.ID)
+			}
 			return invalid("The confirm token was already used.")
 		}
+		c.claim = claim
 		return nil
 	case StatePending:
 		return g.requiredError(c, p, tok, CodeConfirmPending)
@@ -476,6 +567,26 @@ func (g *gate) acceptToken(c *call, tok string) *ToolError {
 	default:
 		return g.outcomeError(c.tool.Name, p, "invalid")
 	}
+}
+
+// digestMismatch discloses no expected digest or arguments. A fresh proposal
+// requires fresh review; retrying this confirmation cannot repair it.
+func digestMismatch(tool, id string) *ToolError {
+	return &ToolError{
+		Tool: tool, Code: CodeConfirmDigestMismatch,
+		Message: "The operation no longer matches the reviewed confirmation. Review a fresh request before approving.",
+		Details: map[string]any{"confirmation_id": id},
+	}
+}
+
+func nodeDestination(tool string) *Destination {
+	// Index writes affect the configured embedding store; its destination is
+	// not a Kubo node. Leave that unknown rather than mislabeling it. Node RPC
+	// writes share a safe configured label, never a credentialed API address.
+	if strings.HasPrefix(tool, "ipfs_index_") {
+		return nil
+	}
+	return &Destination{Kind: "node", Name: "Configured Kubo node"}
 }
 
 // summaryOf builds the confirmation text of a call.

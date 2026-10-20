@@ -1,0 +1,13 @@
+{
+  "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+  "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+  "execution": {
+    "state": "failed",
+    "started_at": "2026-10-20T12:00:02Z",
+    "completed_at": "2026-10-20T12:00:03Z",
+    "error": {
+      "code": "rpc_failed",
+      "message": "The operation reported a failure."
+    }
+  }
+}

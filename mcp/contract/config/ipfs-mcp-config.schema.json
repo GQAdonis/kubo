@@ -462,7 +462,8 @@
                   "agui",
                   "settings",
                   "index",
-                  "session"
+                  "session",
+                  "decisions"
                 ]
               },
               "default": [
@@ -470,7 +471,7 @@
               ],
               "offSwitch": "`[]` accepts a JWT on no route, including /auth/session. The default `[\"session\"]` accepts a JWT only on /auth/session; every other route must be listed explicitly. The earlier default is restored with `[\"agui\",\"settings\",\"index\",\"session\"]`.",
               "ownerChange": "console-session-auth",
-              "description": "Routes that accept a JWT identity. A JWT on any other route gets 401. When the list names a route other than `session` and agent.origin_allowlist is empty, startup logs one Warn line naming both keys and continues (auth.oidc.require_origin already fails closed). Default narrowed from `[\"agui\",\"settings\",\"index\",\"session\"]` to `[\"session\"]` by mcp-oidc-hardening."
+              "description": "Routes that accept a JWT identity. A JWT on any other route gets 401. When the list names a route other than `session` and agent.origin_allowlist is empty, startup logs one Warn line naming both keys and continues (auth.oidc.require_origin already fails closed). Default narrowed from `[\"agui\",\"settings\",\"index\",\"session\"]` to `[\"session\"]` by mcp-oidc-hardening. The optional decisions route key authorizes only identity-filtered GET /decisions and its item/event subtree; it does not authorize /agui resolution. It is not in the default routes list."
             },
             "require_origin": {
               "type": "boolean",
@@ -718,6 +719,37 @@
             "allowCredentials": false,
             "vary": "Origin"
           }
+        },
+        "context_references": {
+          "type": "boolean",
+          "default": true,
+          "description": "Accept bounded visible/removable logical route/CID/IPFS/MFS references in forwardedProps.ipfs.context and frame them as untrusted data for the selected built-in/UAR turn. Never implicitly read/fetch a reference or a host filesystem path.",
+          "offSwitch": "false: no reference context is forwarded and nonempty reference input is refused with HTTP422 before backend dispatch; ordinary messages/resume and legacy ignored context remain available. Existing egress checks/confirmation remain.",
+          "ownerChange": "praxis-context-inspector"
+        },
+        "run_facts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Emit optional actual per-run facts as standard CUSTOM ipfs.run.facts after run start and optional catalog advertisement. Missing facts remain absent; no global registry stand-in, prompt text, credentials or invented budgets.",
+          "offSwitch": "false: emit no ipfs.run.facts and allocate no inspector-fact projection; existing run/tool/result behavior is unchanged. Does not disable execution confirmation or other protected read surfaces.",
+          "ownerChange": "praxis-context-inspector"
+        },
+        "decisions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Read-only current-identity decision list/item and idle SSE on the existing MCP HTTP listener. No LLM or active AG-UI run is required. Authenticated tool principals only; OIDC also needs explicit auth.oidc.routes decisions opt-in. Retains at most 200 resolved observations server-wide for seven days, filtered by full identity binding. Never enables approval authority.",
+              "offSwitch": "false: /decisions, /decisions/{id} and /decisions/events are unmounted (404), active subscriptions close and observer history is released. Underlying confirmation, native prompts and ordinary Kubo/MCP operations remain effective.",
+              "ownerChange": "praxis-decision-inbox"
+            }
+          },
+          "default": {},
+          "description": "Process-local decision observation only; no repository persistence, third-party service or listener of its own.",
+          "offSwitch": "agent.decisions.enabled: false, http.enabled: false, or a noagent/nomcp build disables this read surface without bypassing confirmation.",
+          "ownerChange": "praxis-decision-inbox"
         },
         "settings": {
           "type": "object",

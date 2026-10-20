@@ -1,47 +1,47 @@
 # Proposal: praxis-mcp-app-a2ui-seam
 
-Phase `agent-backend-settings › praxis-agentic-ux`, change 6 of 8, child plan r1, Round 2. See `.kbd-orchestrator/phases/agent-backend-settings/children/praxis-agentic-ux/plan.md`.
-
 ## Why
 
-KnowMe Praxis ed. 1.2 prefers A2UI data from one approved catalog (UI-01) and allows iframe embeds only as a declared exception with origin and correlation checks (UI-08, UI-10). The assessment found:
-
-- UI-01 one approved catalog, A2UI 0.9.x pinned: **C** (`mcp/ui/catalog/ipfs-mcp.catalog.json`, `protocolVersion` v0.9).
-- UI-02 unknown component renders an inert, labelled fallback: **P**. `ToolCallCard` falls back client-side, but the fallback is not labelled as inert.
-- UI-08 / UI-10 iframe only as a declared exception: **P**. The five MCP App views (`ui://ipfs-mcp/content`, `pins`, `mfs`, `dag`, `node-status` in `mcp/app/src/view-specs.ts`) are HTML iframed by external MCP hosts, with no declared origin and correlation contract; inside the Web UI they are not shown at all.
-- Assessment conflict 4: MCP App HTML views versus "A2UI data only".
-
-Decision D9 (decision-log PX-11): inside the Web UI and chat island, the five views render as A2UI surfaces from the same catalog. In external MCP hosts they stay sandboxed iframes, declared with origin and correlation checks. This also serves FR-12 (one component set for both adapters).
+Share one contract-derived result catalog across first-party A2UI and compatible external MCP App hosts, with actual SDK transport checks and inert fallback.
 
 ## What Changes
 
-- **View-to-surface mapping.** Each `ViewId` maps to one catalog component: `content` → `ContentCard`, `pins` → `PinList`, `mfs` → `MfsTree`, `dag` → `DagViewer`, `node-status` → `NodeStatusPanel`. The mapping is derived from the contract `ui.appView` and fails a test when a view has no catalog component.
-- **A2UI path for first-party hosts.** When the client is the Web UI or the chat island (it advertises the IPFS A2UI catalog id at `/agui`), a tool result with an `appView` is delivered as an A2UI surface update bound to the tool's structured output, through the existing `mcp-agui-a2ui-registry` path. No HTML is fetched.
-- **Iframe path declared for external hosts.** For MCP hosts that render `text/html;profile=mcp-app`, each view's resource metadata declares its exception: expected host origin policy, a per-render correlation id echoed in every `postMessage`, and refusal of messages whose origin or correlation id does not match. The views already run without network access; that stays.
-- **Inert labelled fallback (UI-02).** An unknown component, a component not in the pinned catalog, or output that fails the tool's schema renders a fallback card labelled "This result can't be shown here. Nothing in it runs." with the tool name and a text summary; it carries no actions.
-- **Web UI mount.** The Web UI registers the `mcp/ui` A2UI renderer in the pane and canvas so these surfaces appear in conversation-forward mode.
+Existing IDs: **1.1–1.3, 2.1–2.2, 3.1–3.3**. Add **1.4**, architect, for catalog negotiation/view-component mapping contract and ADR. Execute 1.4 before 1.1 and 1.2 despite its display order.
+
+- Architect adds contract negotiation and view/component derivation rules under existing contract authority; UI engineer owns `mcp/app/src/view-specs.ts`, app host adapter and `mcp/ui` renderer; server engineer owns `agui_a2ui.go` and validated AG-UI input.
+- **1.1** derives server/client mapping from one contract source. A second independently maintained TS map must not become a second authority.
+- **1.2** explicitly accepts a bounded advertised catalog identifier/version, validates it, selects server delivery and keeps older MCP hosts working. A flag may not select arbitrary HTML.
+- **2.2** must target actual SDK message transport (`mcp-port.ts` / main SDK setup), not `port.ts` interface. Validate source window and trusted origin/bootstrap plus standard request correlation using pinned SDK capabilities. Do not add a private field external hosts cannot echo. Record any precise spec amendment and evidence before implementation.
+- **3.1** fallback is inert text for unknown component, unsupported catalog version and schema-invalid result. No executable markup, action, navigation or remote fetch.
+- **3.2** starts after S host placement is available; **1.1–2.2** can precede shell completion when file ownership is disjoint.
+
+The operator confirmed UI-01 through UI-16 in `.kbd-orchestrator/phases/agentic-ui-implementation/decision-log.md`. The reviewed phase `plan.md`, authored `tasks.json` dependency graph and `adopted-contract.json` scenario oracles govern. Historical `docs/design` copies remain visual references; canonical amendments replace conflicting architecture and acceptance assumptions.
+
+This is a plan artifact, not production implementation. F/1.1 creates implementation architecture/ownership grants; architect-owned schema/ADR tasks execute only after readiness. No RPC/gateway/default CID/wire change, direct repository opening, silent content injection, unconfigured endpoint or new approval authority. F4/G10/E6 and ADR-0010/0013 remain authoritative.
+
+No deployment, publication, push/merge, WebUI CID bump, durable history, profile editor, trusted-peer settings, new pairing protocol, uploads or multimodal ingestion. All production/test/fixture authoring precedes one final verification boundary; prerequisite compilation is allowed, per-task QA loops are not. Baseline source identities are in phase `source-baselines.json`; capture historical screenshots only in isolated fixtures at that final boundary.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `ipfs-mcp-app-a2ui-seam`: one catalog for MCP App views and A2UI surfaces, the declared iframe exception for external hosts, and the inert labelled fallback.
+- `ipfs-mcp-app-a2ui-seam`: revised existing in-flight behavioral delta.
 
 ### Modified Capabilities
 
-None archived. The unarchived capabilities `mcp-app-ui` (`mcp-app-views`) and `mcp-agui-a2ui` (`mcp-agui-a2ui-registry`) keep their requirements; this change adds the seam between them.
+No main capability is renamed; existing in-flight delta paths remain unchanged.
 
 ## Impact
 
-- Owner: mcp-server-engineer (A2UI delivery for `appView` results, resource metadata); ui-ux-engineer (fallback, Web UI mount, iframe correlation in `mcp/app`).
-- Scope:
-  - Kubo: `mcp/app/src/view-specs.ts`, `mcp/app/src/views.ts`, `mcp/app/src/host/port.ts`, `mcp/app/src/host/mcp-port.ts` (origin and correlation checks), `mcp/app/src/core/**`
-  - Kubo: `mcp/ui/src/a2ui/implementations.tsx`, `mcp/ui/src/a2ui/validate.ts`, `mcp/ui/src/chat/ToolCallCard.tsx` (fallback), `mcp/ui/catalog/ipfs-mcp.catalog.json` (regenerated)
-  - Kubo: `mcp/server/agui_a2ui.go`, `mcp/server/agui_catalog.go`, `mcp/contract/catalog.json` `ui.appView` (read, not changed)
-  - Web UI: `../ipfs-webui/src/shell/**` and `src/agent-chat/**` renderer registration
-- Stability: no `/api/v0`, HTTP Gateway, default CID recipe or wire change. External MCP hosts receive the same `ui://ipfs-mcp/*` resources and MIME type as today, plus metadata.
-- Size: M.
+- `mcp/app/src/** and tests/**`
+- `mcp/ui/src/a2ui/** and tests/**`
+- `../ipfs-webui/src/{shell,agent-chat}/**`
+- `mcp/server/**`
+- `test/cli/*mcp* (explicit scoped test grant in OpenSpec)`
+- `openspec/changes/praxis-mcp-app-a2ui-seam/**`
+- `mcp/contract/**`
+- `docs/mcp/**`
 
-## Dependencies
+## Planning references
 
-- Change 1 `praxis-decision-model-v2` (confirmation surfaces inside views use the v2 card).
+Library annotations: cand-001, cand-006. Exact scoped assignments: phase plan Task model assignments, `agentic-ui-implementation/praxis-mcp-app-a2ui-seam/<backend-task-id>`. Numbered task display order is not the execution graph.

@@ -2,61 +2,99 @@
 
 ## Purpose
 
-A single, principal-scoped list of decisions and an Activity identity across runs, aligned with KnowMe Praxis ed. 1.2 HOME-07, HOME-08 and API-06.
+An identity-scoped decision inbox and Activity history show pending work across the current operator's sessions, with bounded local history and no expansion of approval authority.
 
 ## ADDED Requirements
 
-### Requirement: Decisions list endpoint
-The MCP HTTP listener SHALL expose a read-only endpoint that returns the calling principal's pending decisions and a bounded history of resolved decisions. Each item SHALL carry the decision model v2 fields: state, prepared object, destination, scope, class, named authority, effect digest when known, `resolved_by` when resolved, `activity_id`, and created, expiry and resolved times.
+### Requirement: Identity-scoped read-only decision lookup
+The MCP listener SHALL provide authenticated read-only list and item/outcome lookup for the current identity across its sessions. Identity binding SHALL include the authenticated subject, not only a shared principal name. Responses SHALL exclude confirmation secrets and SHALL not disclose other identities' decisions.
 
-#### Scenario: Pending and recent decisions
-- **WHEN** a principal with one pending `pin_rm` confirmation and one denied `mfs_rm` confirmation reads the endpoint
-- **THEN** the response lists both, the first in `pending` and the second in `denied`, each with its fields and `activity_id`
+#### Scenario: Same identity across sessions
+- **WHEN** an identity opens two authenticated sessions
+- **THEN** both can read its pending decisions and recent outcomes with shared activity identifiers, revision and model fields
 
-#### Scenario: Principal isolation
-- **WHEN** two principals each have a pending confirmation and each reads the endpoint
-- **THEN** each response contains only that principal's confirmation
+#### Scenario: Distinct OIDC subjects
+- **WHEN** two subjects share a principal configuration name
+- **THEN** neither can list, read or subscribe to the other's decisions
 
-#### Scenario: Read-only
-- **WHEN** a client sends a write method to the endpoint
-- **THEN** the server refuses it, and no decision changes state
+#### Scenario: Read-only endpoint
+- **WHEN** a client attempts a mutation through list or item lookup
+- **THEN** the request is refused and no decision changes state
 
-### Requirement: Bounded resolved history
-Resolved decisions SHALL be kept in memory up to 200 entries or 7 days, whichever is smaller, and SHALL NOT be written to the repository.
+#### Scenario: Safe model fields
+- **WHEN** a decision is returned
+- **THEN** it includes available prepared object, destination, scope, class, authority, digest, approval state, outcome, resolver mechanism, surface attribution, activity id and lifecycle times without replayable confirm tokens
 
-#### Scenario: History cap
-- **WHEN** 201 decisions have been resolved for one principal
-- **THEN** the endpoint returns the 200 most recent resolved decisions
+### Requirement: Bounded in-memory history
+Resolved history SHALL retain at most the most recent 200 entries server-wide younger than seven days, filtered for each identity. It SHALL disclose retention.scope=server and promise only up to200 retained results, not200 per identity. Other identities may cause eviction but SHALL never gain content visibility. History and pending confirmation state SHALL be process-local, cleared on server restart and never written into the Kubo repository. The response SHALL identify the current server epoch so clients can discard stale assumptions.
 
-#### Scenario: Restart clears history
-- **WHEN** the MCP server restarts
-- **THEN** the endpoint returns no resolved history and no pending decisions from before the restart
+#### Scenario: History cap and expiry
+- **WHEN** the server resolves 201 decisions across identities or a retained entry reaches seven days
+- **THEN** only the newest 200 unexpired resolved entries remain server-wide, each visible only to its owner
 
-### Requirement: Decision change feed
-The server SHALL emit an AG-UI `CUSTOM` event named `ipfs.decision.changed` carrying only the decision id and its new state whenever a decision is created or changes state, to the stream of the principal that owns it.
+#### Scenario: Restart
+- **WHEN** the agent server restarts
+- **THEN** its epoch changes, previous history and pending items disappear, and restored client cards require reconciliation rather than replay
 
-#### Scenario: Answered in another surface
-- **WHEN** a pending decision is approved through the Desktop resolver while the principal's AG-UI stream is open
-- **THEN** the stream receives `ipfs.decision.changed` with the id and state, and the event carries no tool arguments or targets
+### Requirement: Protected idle subscription
+A dedicated authenticated decision subscription SHALL stay available without an active chat run. It SHALL scope events by identity, enforce expiry and disconnect handling, and bound subscribers and buffers. Changes SHALL contain only decision id, state and revision; reconnect SHALL reconcile an authenticated snapshot without promising durable replay.
+
+#### Scenario: Idle inbox receives a decision
+- **WHEN** a pending decision changes after the chat run has ended on an interrupt
+- **THEN** its owner's idle subscription receives the change and the client reads current details through the protected lookup
+
+#### Scenario: Minimal change event
+- **WHEN** the feed emits `ipfs.decision.changed`
+- **THEN** the payload contains id, state and revision without tool arguments, targets, credentials or confirmation tokens
+
+#### Scenario: Expired authentication
+- **WHEN** the subscription's authentication expires or its identity becomes invalid
+- **THEN** the subscription ends and sends no further identity-scoped data
+
+#### Scenario: Slow client and reconnect
+- **WHEN** a subscriber overruns its bounded buffer or reconnects after missed events
+- **THEN** it reconciles a current snapshot and epoch rather than claiming that every historical event was delivered
+
+### Requirement: Resolution uses existing authority
+The inbox SHALL offer continuation only for an owned chat interruption through the existing AG-UI route and its ownership, digest, expiry and resolver checks. Other items SHALL name their authorized answering host or native surface. Read access, item selection and continuation metadata SHALL NOT authorize approval or synthesize native presence.
+
+#### Scenario: Owned chat interruption
+- **WHEN** the current identity selects its resumable chat decision
+- **THEN** any answer continues through the existing AG-UI confirmation path and preserves once-only execution
+
+#### Scenario: Host-owned or native-required decision
+- **WHEN** a decision requires another host or native presence
+- **THEN** the inbox directs the operator to that surface and offers no generic web approval bypass
+
+#### Scenario: Stale or foreign continuation
+- **WHEN** continuation metadata references a stale digest, another identity or an unauthorized resolver
+- **THEN** the server refuses continuation and performs no write
 
 ### Requirement: Activity identity across runs
-Every agent request SHALL receive an `activity_id` at its first run. A run that ends on an interrupt SHALL record the `activity_id`, and the continuation run started after approval SHALL carry the same `activity_id`.
+Every agent request SHALL have an activity identifier at its first run. Interruptions and their continuation runs SHALL preserve that identifier. An open approval SHALL be represented as waiting for approval rather than failure; successful, failed and uncertain outcomes SHALL follow the decision model's evidence rules.
 
 #### Scenario: Interrupt then continue
-- **WHEN** a run ends on a confirmation interrupt and the person approves
-- **THEN** the new run reports the same `activity_id` as the interrupted run, and the decision item carries that `activity_id`
+- **WHEN** a run interrupts for approval and later resumes
+- **THEN** both runs and the decision refer to the same Activity
 
 #### Scenario: Waiting is not failure
 - **WHEN** an Activity has an open decision
-- **THEN** its state is "waiting for approval", not failed
+- **THEN** it reports waiting for approval without inventing a failed run
 
-### Requirement: Inbox and Activity catalog components
-The component library SHALL provide `DecisionInbox` (decision cards grouped Waiting and Recent) and `ActivityRow` (Activity state, last run time, linked decisions), and both SHALL be entries in the generated A2UI catalog.
+### Requirement: Shared inbox and Activity rendering
+DecisionInbox SHALL group waiting and recent decisions using the shared eleven presentations. ActivityRow SHALL show Activity state, last run time and linked decisions. Both SHALL be generated catalog components and display bounded-history scope honestly.
 
-#### Scenario: Inbox renders states
-- **WHEN** `DecisionInbox` renders a fixture with one decision in each of the ten decision states
-- **THEN** waiting states (`pending`, `waiting_system_prompt`, `invalidated`, `uncertain`, `needs_resubmit`) appear under Waiting and the rest under Recent, each with its badge word
+#### Scenario: Eleven-state inbox
+- **WHEN** all eleven presentations are rendered
+- **THEN** pending, waiting_system_prompt, invalidated, uncertain and needs_resubmit appear under Waiting, the others under Recent, and all use shared labels with only authorized controls
 
 #### Scenario: Empty inbox
-- **WHEN** `DecisionInbox` renders with no decisions
-- **THEN** it shows "No decisions waiting." and the note "History starts when the node's agent server starts."
+- **WHEN** the inbox contains no decisions
+- **THEN** it says No decisions waiting. and History starts when the node's agent server starts.
+
+### Requirement: Disabled inbox preserves normal use
+The inbox and subscription SHALL honor documented feature off switches. Disabling them SHALL not disable normal Kubo functions or bypass confirmation on other enabled transports.
+
+#### Scenario: Inbox disabled
+- **WHEN** the operator disables the inbox feature
+- **THEN** no inbox subscription remains active and existing authorized confirmation flows remain protected

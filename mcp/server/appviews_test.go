@@ -39,7 +39,9 @@ func TestAppViewResources(t *testing.T) {
 		r, ok := byURI[v.URI]
 		require.True(t, ok, "resources/list lacks %s", v.URI)
 		assert.Equal(t, app.MIMEType, r.MIMEType)
-		assert.Equal(t, map[string]any{"ui": map[string]any{"prefersBorder": false}}, map[string]any(r.Meta))
+		assert.Equal(t, map[string]any{"prefersBorder": false}, r.Meta["ui"])
+		d := canonicalUIBindings.descriptor.ExternalApps
+		assert.Equal(t, map[string]any{"reason": d.Declaration["reason"], "transport": d.Declaration["transport"]}, r.Meta[d.MetadataKey])
 
 		got, err := cs.ReadResource(t.Context(), &mcp.ReadResourceParams{URI: v.URI})
 		require.NoError(t, err)
@@ -48,6 +50,7 @@ func TestAppViewResources(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, app.MIMEType, got.Contents[0].MIMEType)
 		assert.Equal(t, string(want), got.Contents[0].Text)
+		assert.Equal(t, r.Meta[d.MetadataKey], got.Contents[0].Meta[d.MetadataKey])
 		ui, _ := got.Contents[0].Meta["ui"].(map[string]any)
 		for _, forbidden := range []string{"csp", "permissions", "domain"} {
 			assert.NotContains(t, ui, forbidden)

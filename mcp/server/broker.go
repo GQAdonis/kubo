@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"time"
 )
@@ -14,6 +15,15 @@ const (
 	StateDenied   = "denied"
 	StateExpired  = "expired"
 	StateExecuted = "executed"
+)
+
+// Decision sources name distinct authority domains. A backend approval is never
+// a broker confirmation, even when it names this node's tool or target.
+const (
+	DecisionSourceKubo         = "kubo"
+	DecisionSourceUAR          = "uar"
+	SourceKindNodeConfirmation = "node_confirmation"
+	SourceKindBackendApproval  = "backend_approval"
 )
 
 // Resolver names (Resolver in the confirmation schema): the human-presence
@@ -57,13 +67,14 @@ const confirmTTL = DefaultConfirmTTL
 
 // Errors returned by Broker.Resolve.
 var (
-	ErrUnknownConfirmation  = errors.New("unknown confirmation")
-	ErrConfirmationResolved = errors.New("confirmation is already resolved")
-	ErrConfirmationExpired  = errors.New("confirmation expired")
-	ErrNativePromptRequired = errors.New("this confirmation needs a native prompt; a chat answer alone does not approve it")
-	ErrWrongMechanism       = errors.New("the elicitation resolver may only answer a confirmation opened by elicitation")
-	ErrCLINotForStdio       = errors.New("cli confirmation cannot approve a call on a stdio session")
-	errNotApproved          = errors.New("confirmation is not approved")
+	ErrUnknownConfirmation        = errors.New("unknown confirmation")
+	ErrConfirmationResolved       = errors.New("confirmation is already resolved")
+	ErrConfirmationExpired        = errors.New("confirmation expired")
+	ErrNativePromptRequired       = errors.New("this confirmation needs a native prompt; a chat answer alone does not approve it")
+	ErrWrongMechanism             = errors.New("the elicitation resolver may only answer a confirmation opened by elicitation")
+	ErrCLINotForStdio             = errors.New("cli confirmation cannot approve a call on a stdio session")
+	ErrConfirmationDigestMismatch = errors.New("confirmation effect no longer matches the reviewed operation")
+	errNotApproved                = errors.New("confirmation is not approved")
 )
 
 // Target is something a confirmation affects.
@@ -80,18 +91,39 @@ type Summary struct {
 	Targets []Target `json:"targets"`
 }
 
+// Destination identifies an affected configured destination for display only.
+// It never selects an endpoint or grants permission.
+type Destination struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+}
+
+// ReviewedEffect is an optional resolver-transport echo of the digest shown to
+// the person. It is neither a tool argument nor consent.
+type ReviewedEffect struct {
+	EffectDigest string `json:"effect_digest"`
+}
+
 // Pending is a snapshot of one confirmation held by the Broker
 // (PendingConfirmation in the confirmation schema). Resolvers receive it.
 type Pending struct {
-	ID           string
-	State        string
-	Principal    Principal
-	Summary      Summary
-	Resolver     string
-	CreatedAt    time.Time
-	ExpiresAt    time.Time
-	ResolvedAt   time.Time
-	NativePrompt bool
+	ID              string
+	Source          string
+	SourceKind      string
+	State           string
+	Principal       Principal
+	Summary         Summary
+	Resolver        string
+	ResolvedBy      string
+	ResolvedSurface *ResolvingSurface
+	CreatedAt       time.Time
+	ExpiresAt       time.Time
+	ResolvedAt      time.Time
+	NativePrompt    bool
+	EffectDigest    string
+	Destination     *Destination
+	Execution       *ExecutionRecord
+	ActivityID      string
 	// Mechanism is MechanismElicitation or MechanismExternal.
 	Mechanism string
 }
@@ -104,6 +136,11 @@ type record struct {
 	argsHash string
 	dedupe   string
 	token    string
+	// endpoint is an internal execution binding; never expose it in a view.
+	endpoint     string
+	observation  *retainedDecision
+	observedOnce bool
+	version      uint64
 }
 
 // Broker is the confirmation state machine. Every confirmation moves
@@ -127,6 +164,18 @@ type Broker struct {
 	// changed is closed, and replaced, whenever a confirmation leaves pending
 	// by a decision or is claimed; Await sleeps on it.
 	changed chan struct{}
+	// retained is the single resolved-decision history, separate from the
+	// authorization/token grace maps. Its private owner never reaches a view.
+	retained                 map[string]*retainedDecision
+	historyEpoch             string
+	historyStartedAt         time.Time
+	historySecret            []byte
+	historyVersion           uint64
+	historyEnabled           bool
+	decisionSubs             map[*decisionSubscription]struct{}
+	decisionWake             chan struct{}
+	decisionSources          map[string]liveDecisionSource
+	decisionSourceGeneration string
 }
 
 func newBroker(now func() time.Time, ttl time.Duration) *Broker {
@@ -138,7 +187,13 @@ func newBroker(now func() time.Time, ttl time.Duration) *Broker {
 		active:  make(map[string]string),
 		spent:   make(map[string]time.Time),
 
-		changed: make(chan struct{}),
+		changed:          make(chan struct{}),
+		retained:         make(map[string]*retainedDecision),
+		historyEpoch:     "epoch_" + randomID(16),
+		historyStartedAt: now().UTC(),
+		historySecret:    []byte(randomID(32)),
+		historyEnabled:   true,
+		decisionWake:     make(chan struct{}),
 	}
 }
 
@@ -188,13 +243,17 @@ func (b *Broker) Await(ctx context.Context, id string) (string, error) {
 }
 
 type newConfirmation struct {
-	principal Principal
-	sid       string
-	tool      string
-	argsHash  string
-	summary   Summary
-	nativeReq bool
-	mechanism string
+	principal    Principal
+	sid          string
+	tool         string
+	argsHash     string
+	summary      Summary
+	nativeReq    bool
+	mechanism    string
+	effectDigest string
+	destination  *Destination
+	endpoint     string
+	activityID   string
 }
 
 // refresh applies expiry: a confirmation that is still pending or approved
@@ -202,7 +261,10 @@ type newConfirmation struct {
 func (b *Broker) refresh(r *record) {
 	if (r.State == StatePending || r.State == StateApproved) && !b.now().Before(r.ExpiresAt) {
 		r.State = StateExpired
-		r.ResolvedAt = b.now()
+		r.ResolvedAt = r.ExpiresAt
+		b.retainNodeLocked(r)
+		b.publishDecisionLocked(r.Principal.BindingKey(), r.ID, StateExpired)
+		b.signal()
 	}
 }
 
@@ -213,6 +275,7 @@ func (b *Broker) sweep() {
 	// or a token, still sees "expired" rather than "unknown" with a short ttl.
 	cutoff := b.now().Add(-max(b.ttl, DefaultConfirmTTL))
 	for id, r := range b.byID {
+		b.refresh(r)
 		if r.ExpiresAt.Before(cutoff) {
 			delete(b.byID, id)
 			if b.active[r.dedupe] == id {
@@ -220,6 +283,8 @@ func (b *Broker) sweep() {
 			}
 		}
 	}
+	b.pruneRetainedLocked()
+	b.pruneDecisionSourcesLocked()
 	for n, exp := range b.spent {
 		if exp.Before(cutoff) {
 			delete(b.spent, n)
@@ -284,7 +349,9 @@ func (b *Broker) reserve(n newConfirmation, limit int) (Pending, error) {
 	now := b.now()
 	r := &record{
 		Pending: Pending{
-			ID:           "cf_" + randomID(16),
+			ID:           "cf_n_" + randomID(16),
+			Source:       DecisionSourceKubo,
+			SourceKind:   SourceKindNodeConfirmation,
 			State:        StatePending,
 			Principal:    n.principal,
 			Summary:      n.summary,
@@ -292,15 +359,22 @@ func (b *Broker) reserve(n newConfirmation, limit int) (Pending, error) {
 			ExpiresAt:    now.Add(b.ttl),
 			NativePrompt: n.nativeReq,
 			Mechanism:    n.mechanism,
+			EffectDigest: n.effectDigest,
+			Destination:  cloneDestination(n.destination),
+			ActivityID:   n.activityID,
 		},
 		sid:      n.sid,
 		tool:     n.tool,
 		argsHash: n.argsHash,
+		endpoint: n.endpoint,
 		dedupe:   dedupeKey(n.sid, n.principal.BindingKey(), n.tool, n.argsHash),
 	}
+	r.Summary.Targets = slices.Clone(n.summary.Targets)
+	r.version = b.nextVersionLocked()
 	b.byID[r.ID] = r
 	b.active[r.dedupe] = r.ID
-	return r.Pending, nil
+	b.publishDecisionLocked(r.Principal.BindingKey(), r.ID, StatePending)
+	return r.snapshot(), nil
 }
 
 // setToken records the token handed out for a confirmation so that a repeated
@@ -324,7 +398,7 @@ func (b *Broker) activeFor(dedupe string) (Pending, string, bool) {
 	}
 	r := b.byID[id]
 	b.refresh(r)
-	return r.Pending, r.token, true
+	return r.snapshot(), r.token, true
 }
 
 // get returns a snapshot of one confirmation.
@@ -336,7 +410,26 @@ func (b *Broker) get(id string) (Pending, bool) {
 		return Pending{}, false
 	}
 	b.refresh(r)
-	return r.Pending, true
+	return r.snapshot(), true
+}
+
+func cloneDestination(d *Destination) *Destination {
+	if d == nil {
+		return nil
+	}
+	out := *d
+	return &out
+}
+
+func (r *record) snapshot() Pending {
+	p := r.Pending
+	p.Summary.Targets = slices.Clone(r.Summary.Targets)
+	p.Destination = cloneDestination(r.Destination)
+	p.ResolvedSurface = cloneSurface(r.ResolvedSurface)
+	if r.observation != nil && r.observation.execution.State != "" {
+		p.Execution = cloneExecution(&r.observation.execution)
+	}
+	return p
 }
 
 // forget closes a confirmation to further repeated calls once its outcome was
@@ -358,6 +451,20 @@ func (b *Broker) forget(id string) {
 // way to approve. Resolving a confirmation that is not pending, or that has
 // expired, fails.
 func (b *Broker) Resolve(id, resolver string, approve bool) error {
+	return b.ResolveReviewed(id, resolver, approve, nil)
+}
+
+// ResolveReviewed retains Resolve's authority checks and additionally rejects a
+// stale supplied review. Adapters must authenticate and authorize their caller
+// before invoking either method. Omission preserves the legacy gate.
+func (b *Broker) ResolveReviewed(id, resolver string, approve bool, reviewed *ReviewedEffect) error {
+	return b.ResolveAtSurface(id, resolver, approve, reviewed, ResolverSurface(resolver))
+}
+
+// ResolveAtSurface records attribution supplied by an already authorized
+// adapter. It retains all legacy mechanism/native/expiry checks and never uses
+// the surface to choose a resolver, principal or operation.
+func (b *Broker) ResolveAtSurface(id, resolver string, approve bool, reviewed *ReviewedEffect, surface *ResolvingSurface) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	r, ok := b.byID[id]
@@ -381,13 +488,30 @@ func (b *Broker) Resolve(id, resolver string, approve bool) error {
 	if approve && r.NativePrompt && !IsPresenceResolver(resolver) {
 		return ErrNativePromptRequired
 	}
+	if reviewed != nil && !validEffectDigest(reviewed.EffectDigest) {
+		return ErrMalformedReviewedEffect
+	}
+	if reviewed != nil && (r.EffectDigest == "" || reviewed.EffectDigest != r.EffectDigest) {
+		return ErrConfirmationDigestMismatch
+	}
+	if err := validateResolverSurface(resolver, surface); err != nil {
+		return err
+	}
 	r.Resolver = resolver
+	// Empty resolver means a system withdrawal, never a human mechanism.
+	if slices.Contains([]string{ResolverElicitation, ResolverAGUIInterrupt, ResolverDesktop, ResolverMacOSLocalAuth, ResolverLinuxPolkit, ResolverCLI}, resolver) {
+		r.ResolvedBy = resolver
+		r.ResolvedSurface = cloneSurface(surface)
+	}
 	r.ResolvedAt = b.now()
 	if approve {
 		r.State = StateApproved
 	} else {
 		r.State = StateDenied
+		b.retainNodeLocked(r)
 	}
+	r.version = b.nextVersionLocked()
+	b.publishDecisionLocked(r.Principal.BindingKey(), r.ID, r.State)
 	b.signal()
 	return nil
 }
@@ -409,9 +533,11 @@ func (b *Broker) Cancel(id string) {
 	}
 	r.State = StateDenied
 	r.ResolvedAt = b.now()
+	b.retainNodeLocked(r)
 	if b.active[r.dedupe] == id {
 		delete(b.active, r.dedupe)
 	}
+	b.publishDecisionLocked(r.Principal.BindingKey(), r.ID, StateDenied)
 	b.signal()
 }
 
@@ -423,7 +549,7 @@ func (b *Broker) Pending() []Pending {
 	for _, r := range b.byID {
 		b.refresh(r)
 		if r.State == StatePending {
-			out = append(out, r.Pending)
+			out = append(out, r.snapshot())
 		}
 	}
 	return out
@@ -433,28 +559,99 @@ func (b *Broker) Pending() []Pending {
 // caller that gets nil runs the call, every other caller is refused. When
 // nonce is not empty it is recorded as spent in the same step.
 func (b *Broker) claim(id, nonce string) error {
+	_, err := b.claimEffect(id, nonce, nil)
+	return err
+}
+
+// claimEffect atomically checks the retained operation before consuming its
+// approval. The legacy token/session/identity bindings are checked by the gate.
+func (b *Broker) claimEffect(id, nonce string, c *call) (*executionClaim, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	r, ok := b.byID[id]
+	if !ok {
+		return nil, ErrUnknownConfirmation
+	}
+	b.refresh(r)
+	if r.State != StateApproved {
+		return nil, errNotApproved
+	}
+	if c != nil && !r.matchesEffect(c) {
+		return nil, ErrConfirmationDigestMismatch
+	}
+	if nonce != "" {
+		if _, used := b.spent[nonce]; used {
+			return nil, errNotApproved
+		}
+		b.spent[nonce] = r.ExpiresAt
+	}
+	r.State = StateExecuted
+	r.ResolvedAt = b.now()
+	claim := &executionClaim{b: b, id: r.ID}
+	p := r.snapshot()
+	p.Principal.sub = "" // the private owner binding, not a subject, is retained
+	if p.EffectDigest == "" && c != nil {
+		// A legacy record may lack display metadata. Enrich only from this
+		// same v1-bound canonical call, never from a displayed summary.
+		p.EffectDigest = c.effectDigest
+		r.EffectDigest = c.effectDigest
+	}
+	e := &retainedDecision{pending: p, owner: r.Principal.BindingKey(), tool: r.tool, execution: ExecutionRecord{State: ExecutionNotStarted}, claim: claim}
+	claim.entry = e
+	r.observation = e
+	r.observedOnce = true
+	e.version = b.nextVersionLocked()
+	r.version = e.version
+	b.retained[r.ID] = e
+	if b.active[r.dedupe] == id {
+		delete(b.active, r.dedupe)
+	}
+	b.publishDecisionLocked(e.owner, r.ID, ExecutionNotStarted)
+	b.signal()
+	return claim, nil
+}
+
+// checkEffect also applies to pending calls, before any elicitation answer is
+// resolved. Callers already checked the legacy owner and operation bindings.
+func (b *Broker) checkEffect(id string, c *call) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	r, ok := b.byID[id]
 	if !ok {
 		return ErrUnknownConfirmation
 	}
-	b.refresh(r)
-	if r.State != StateApproved {
-		return errNotApproved
+	if !r.matchesEffect(c) {
+		return ErrConfirmationDigestMismatch
 	}
-	if nonce != "" {
-		if _, used := b.spent[nonce]; used {
-			return errNotApproved
-		}
-		b.spent[nonce] = r.ExpiresAt
+	return nil
+}
+
+func (r *record) matchesEffect(c *call) bool {
+	// Records prepared by older in-process callers may lack optional metadata;
+	// their authoritative tool/argument bindings remain required.
+	return r.sid == c.sid && r.Principal.BindingKey() == c.principal.BindingKey() &&
+		r.tool == c.tool.Name && r.argsHash == c.argsHash &&
+		(r.EffectDigest == "" || r.EffectDigest == c.effectDigest) &&
+		(r.endpoint == "" || r.endpoint == c.endpoint) &&
+		(c.reviewed == nil || r.EffectDigest != "" && c.reviewed.EffectDigest == r.EffectDigest)
+}
+
+func (b *Broker) checkReviewed(id string, reviewed *ReviewedEffect) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	r, ok := b.byID[id]
+	if !ok {
+		return ErrUnknownConfirmation
 	}
-	r.State = StateExecuted
-	r.ResolvedAt = b.now()
-	if b.active[r.dedupe] == id {
-		delete(b.active, r.dedupe)
+	if reviewed == nil {
+		return nil
 	}
-	b.signal()
+	if !validEffectDigest(reviewed.EffectDigest) {
+		return ErrMalformedReviewedEffect
+	}
+	if r.EffectDigest == "" || reviewed.EffectDigest != r.EffectDigest {
+		return ErrConfirmationDigestMismatch
+	}
 	return nil
 }
 

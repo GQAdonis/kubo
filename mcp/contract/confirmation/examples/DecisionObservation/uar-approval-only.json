@@ -1,0 +1,27 @@
+{
+  "id": "cf_uar_fixture1234567890",
+  "source": "uar",
+  "source_kind": "backend_approval",
+  "approval_state": "approved",
+  "summary": {
+    "tool": "uar:publish",
+    "class": "write",
+    "text": "Backend approval sent; operation outcome not reported",
+    "targets": []
+  },
+  "authority": {
+    "kind": "ui",
+    "name": "Fixture chat"
+  },
+  "created_at": "2026-10-20T12:00:00Z",
+  "resolved_by": "agui-interrupt",
+  "resolved_surface": {
+    "kind": "chat",
+    "instance": "chat_fixture_2"
+  },
+  "actions": {
+    "approve": false,
+    "deny": false,
+    "authorized_surface": "backend_host"
+  }
+}

@@ -1,0 +1,248 @@
+{
+  "formatVersion": 1,
+  "purpose": "Authored I/1.4 activity wire/correlation expectations; no runtime acceptance receipt.",
+  "schemaCases": [
+    {
+      "name": "opaque bounded server activity",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ActivityId",
+      "input": "act_fixture_01",
+      "expected": true
+    },
+    {
+      "name": "empty activity invalid",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ActivityId",
+      "input": "",
+      "expected": false
+    },
+    {
+      "name": "overlong activity invalid",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ActivityId",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expected": false
+    },
+    {
+      "name": "initial facts optional activity",
+      "schema": "agentic/run-context.schema.json",
+      "definition": "RunFactsEvent",
+      "input": {
+        "thread_id": "thread-pin-2",
+        "run_id": "run-1",
+        "activity_id": "act_fixture_01",
+        "facts": {
+          "backend": {
+            "kind": "openai"
+          },
+          "provenance": {
+            "backend": "effective_run_snapshot"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "resumed facts retain activity",
+      "schema": "agentic/run-context.schema.json",
+      "definition": "RunFactsEvent",
+      "input": {
+        "thread_id": "thread-pin-2",
+        "run_id": "run-2",
+        "activity_id": "act_fixture_01",
+        "facts": {
+          "backend": {
+            "kind": "openai"
+          },
+          "provenance": {
+            "backend": "effective_run_snapshot"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "facts-off interrupt association",
+      "schema": "fixtures/agui.schema.json",
+      "definition": "Interrupt",
+      "input": {
+        "id": "int-cf_Zr4Yt1nB6kq0HdUe",
+        "reason": "tool_call",
+        "message": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)",
+        "toolCallId": "tc-7",
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "approved"
+          ]
+        },
+        "expiresAt": "2026-10-09T12:02:00Z",
+        "metadata": {
+          "ipfs-mcp": {
+            "confirmation_id": "cf_Zr4Yt1nB6kq0HdUe",
+            "tool": "pin_add",
+            "class": "write",
+            "requires_native_prompt": false,
+            "activity_id": "act_fixture_01"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "old interrupt without activity remains valid",
+      "schema": "fixtures/agui.schema.json",
+      "definition": "Interrupt",
+      "input": {
+        "id": "int-cf_Zr4Yt1nB6kq0HdUe",
+        "reason": "tool_call",
+        "message": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)",
+        "toolCallId": "tc-7",
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "approved"
+          ]
+        },
+        "expiresAt": "2026-10-09T12:02:00Z",
+        "metadata": {
+          "ipfs-mcp": {
+            "confirmation_id": "cf_Zr4Yt1nB6kq0HdUe",
+            "tool": "pin_add",
+            "class": "write",
+            "requires_native_prompt": false
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "explicit invalid activity rejected",
+      "schema": "fixtures/agui.schema.json",
+      "definition": "Interrupt",
+      "input": {
+        "id": "int-cf_Zr4Yt1nB6kq0HdUe",
+        "reason": "tool_call",
+        "message": "Pin bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku (recursive=true)",
+        "toolCallId": "tc-7",
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "approved"
+          ]
+        },
+        "expiresAt": "2026-10-09T12:02:00Z",
+        "metadata": {
+          "ipfs-mcp": {
+            "confirmation_id": "cf_Zr4Yt1nB6kq0HdUe",
+            "tool": "pin_add",
+            "class": "write",
+            "requires_native_prompt": false,
+            "activity_id": null
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "observation shares activity",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_Zr4Yt1nB6kq0HdUe",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "pending",
+        "summary": {
+          "tool": "pin_add",
+          "class": "write",
+          "text": "Pin the selected fixture CID",
+          "targets": []
+        },
+        "authority": {
+          "kind": "ui",
+          "name": "Fixture chat"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "activity_id": "act_fixture_01",
+        "actions": {
+          "approve": false,
+          "deny": false
+        }
+      },
+      "expected": true
+    }
+  ],
+  "semanticCases": [
+    {
+      "name": "same accepted activity",
+      "input": "initial run-1, interrupt, owned resumed run-2",
+      "expected": "same server activity_id; full owner/open-ID checks unchanged"
+    },
+    {
+      "name": "new accepted message",
+      "input": "new user message in same conversation after prior activity",
+      "expected": "fresh activity_id; old decisions do not migrate"
+    },
+    {
+      "name": "rejected request",
+      "input": "malformed/unauthorized request or unaccepted message",
+      "expected": "no new accepted activity/correlation projection"
+    },
+    {
+      "name": "facts switch off",
+      "input": "agent.run_facts=false and run interrupts",
+      "expected": "no facts event; trusted interrupt activity_id equals observation.activity_id"
+    },
+    {
+      "name": "observation-only resume",
+      "input": "native wait resumes with no model invocation/new facts",
+      "expected": "retain existing activity; no fabricated run facts"
+    },
+    {
+      "name": "no custom start fields",
+      "input": "initial and resumed runs",
+      "expected": "RUN_STARTED retains standard keys; activity lives only in optional namespaced/value fields"
+    },
+    {
+      "name": "no client authority",
+      "input": "client attempts to set activity_id via top-level/generic forwarded props or UAR CUSTOM",
+      "expected": "not accepted as server activity; no privilege or association override"
+    },
+    {
+      "name": "no cross-owner grouping",
+      "input": "foreign observation uses same guessed activity_id",
+      "expected": "full identity filter excludes it; no lookup/approval based on ID"
+    },
+    {
+      "name": "no activity inference",
+      "input": "legacy/native/MCP record lacks activity_id",
+      "expected": "show association unreported; never join by tool/target/prose"
+    },
+    {
+      "name": "no feed expansion",
+      "input": "idle SSE decision changed",
+      "expected": "exact id/state/revision only; authenticated fetch obtains activity_id"
+    },
+    {
+      "name": "restart and eviction",
+      "input": "activity's in-memory record disappears",
+      "expected": "existing epoch/retention disclosure; no durable transcript or old continuation revival"
+    }
+  ]
+}

@@ -52,12 +52,13 @@ const (
 	DefaultOIDCJWKSMaxStale = 24 * time.Hour
 
 	// Routes a JWT identity may be accepted on (auth.oidc.routes).
-	OIDCRouteMCP      = "mcp"
-	OIDCRouteA2A      = "a2a"
-	OIDCRouteAGUI     = "agui"
-	OIDCRouteSettings = "settings"
-	OIDCRouteIndex    = "index"
-	OIDCRouteSession  = "session"
+	OIDCRouteMCP       = "mcp"
+	OIDCRouteA2A       = "a2a"
+	OIDCRouteAGUI      = "agui"
+	OIDCRouteSettings  = "settings"
+	OIDCRouteIndex     = "index"
+	OIDCRouteSession   = "session"
+	OIDCRouteDecisions = "decisions"
 )
 
 // DefaultOIDCRoutes are the routes that accept a JWT when auth.oidc.routes is

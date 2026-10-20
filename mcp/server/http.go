@@ -22,8 +22,9 @@ import (
 // Routes on the HTTP listener. Only /mcp is served by this package; the AG-UI
 // and A2A handlers mount themselves on the other paths through RouteMounter.
 const (
-	RouteMCP  = "/mcp"
-	RouteAGUI = "/agui"
+	RouteMCP       = "/mcp"
+	RouteDecisions = "/decisions"
+	RouteAGUI      = "/agui"
 	// RouteAGUICatalog is the A2UI catalog discovery route, named by the
 	// contract (derivations/a2ui-components.json serve.route). It mounts with
 	// /agui and only when agent.a2ui is on.
@@ -62,6 +63,8 @@ type MountOptions struct {
 	// the listener's own origin counts), and a listed origin gets exactly the
 	// headers of the policy, with Vary: Origin and no credentials header.
 	CORS *CORSPolicy
+	// NoStore also covers refusals from the surrounding protection chain.
+	NoStore bool
 }
 
 // CORSPolicy is the exact CORS answer of a strict route.
@@ -134,9 +137,10 @@ type HTTPServer struct {
 	mux     *http.ServeMux
 	bearer  func(http.Handler) http.Handler
 
-	mu     sync.Mutex
-	routes map[string]struct{}
-	ln     net.Listener
+	mu         sync.Mutex
+	routes     map[string]struct{}
+	ln         net.Listener
+	serveHooks []func(context.Context) func()
 }
 
 // NewHTTPServer prepares the listener and mounts /mcp. It does not bind. A
@@ -299,9 +303,17 @@ func (h *HTTPServer) Mount(route string, handler http.Handler, o MountOptions) e
 		return fmt.Errorf("mount: %s is already mounted", route)
 	}
 	h.routes[route] = struct{}{}
-	h.mux.Handle(route, h.protect(handler, o.Public, kinds, extra, o.CORS))
+	protected := h.protect(handler, o.Public, kinds, extra, o.CORS)
+	if o.NoStore {
+		next := protected
+		protected = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store")
+			next.ServeHTTP(w, r)
+		})
+	}
+	h.mux.Handle(route, protected)
 	// Subtree routes (for example /a2a/stream) share the protection.
-	h.mux.Handle(route+"/", h.protect(handler, o.Public, kinds, extra, o.CORS))
+	h.mux.Handle(route+"/", protected)
 	return nil
 }
 
@@ -476,6 +488,14 @@ func (h *HTTPServer) writeDenial(w http.ResponseWriter, d *Denial) {
 // run their own http.Server.
 func (h *HTTPServer) Handler() http.Handler { return h.mux }
 
+// onServe installs a lifecycle starter before Serve, without starting work on
+// construction or opening another listener. Its stop function must join work.
+func (h *HTTPServer) onServe(start func(context.Context) func()) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.serveHooks = append(h.serveHooks, start)
+}
+
 // Listen binds the listener. Call it before Serve to learn the address when
 // the port was left to the OS.
 func (h *HTTPServer) Listen() (net.Addr, error) {
@@ -513,6 +533,13 @@ func (h *HTTPServer) Serve(ctx context.Context) error {
 	// stopped, so none outlives Serve.
 	defer h.mcp.runShutdownHooks()
 	defer h.warmKeys(ctx)()
+	h.mu.Lock()
+	starters := slices.Clone(h.serveHooks)
+	h.mu.Unlock()
+	for _, start := range starters {
+		stop := start(ctx)
+		defer stop()
+	}
 	srv := &http.Server{
 		Handler:           h.mux,
 		ReadHeaderTimeout: readHeaderTimeout,

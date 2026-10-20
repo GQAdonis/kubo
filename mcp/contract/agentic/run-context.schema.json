@@ -1,0 +1,632 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bounded run references and actual run facts",
+  "description": "C/1.1 canonical typed branches and ipfs.run.facts event; see agentic/run-context.md. No implicit filesystem/network access or model authority.",
+  "$defs": {
+    "ContextReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "provenance"
+      ],
+      "description": "Visible client-provided reference only. Provenance is a display claim, not server attestation of visibility or authority; never implicitly read/fetch.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "provenance": {
+          "type": "string",
+          "enum": [
+            "page",
+            "user"
+          ]
+        },
+        "route": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^/[^\\x00-\\x1f\\x7f?#\\\\]*$",
+          "description": "Hash-app route after removing #, e.g. /files. Relative application route only; no URL, query, fragment, control/traversal or hidden credential."
+        },
+        "cid": {
+          "$ref": "../schemas/common.json#/$defs/Cid",
+          "description": "Use the existing bounded CID lexical contract and actual CID parser for syntax. No resolution, normalization, minting or default recipe change."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^/[^\\x00-\\x1f\\x7f?#\\\\]*$",
+          "description": "Decoded logical path, never a URL or host filesystem location. Semantic parser rejects //, dot/dotdot segments, encoded traversal/separators/controls and credentials/schemes."
+        },
+        "path_kind": {
+          "type": "string",
+          "enum": [
+            "ipfs",
+            "mfs"
+          ],
+          "description": "ipfs means a logical /ipfs/<CID> or /ipns/<name> content path; mfs means the connected node's logical mutable filesystem, never the host OS."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "route"
+          ]
+        },
+        {
+          "required": [
+            "cid"
+          ]
+        },
+        {
+          "required": [
+            "path"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "path"
+            ]
+          },
+          "then": {
+            "required": [
+              "path_kind"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "path_kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "path"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "path_kind"
+            ],
+            "properties": {
+              "path_kind": {
+                "const": "ipfs"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "path": {
+                "pattern": "^/(ipfs|ipns)/[^/]+(/.*)?$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "path_kind"
+            ],
+            "properties": {
+              "path_kind": {
+                "const": "mfs"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "path": {
+                "$ref": "../schemas/common.json#/$defs/MfsPath"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ContextReferences": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/ContextReference"
+      },
+      "description": "At most 16 unique reference IDs and 16 KiB UTF-8 encoded array total. Empty means send none; duplicate IDs/invalid syntax/byte overflow reject 422 before either backend receives data."
+    },
+    "SurfaceAttribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "instance"
+      ],
+      "description": "Untrusted first-party display attribution; never the resolver mechanism/principal or proof a reference was visible.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "chat",
+            "inbox"
+          ]
+        },
+        "instance": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "IpfsForwardedProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "description": "Typed authoring shape at forwardedProps.ipfs. Runtime decodes each known branch independently: invalid context/surface rejects422, invalid A2UI only disables A2UI. Unknown generic properties are never forwarded or trusted.",
+      "properties": {
+        "context": {
+          "$ref": "#/$defs/ContextReferences"
+        },
+        "a2ui": {
+          "$ref": "./ui-negotiation.schema.json#/$defs/ClientA2UICapabilities"
+        },
+        "surface": {
+          "$ref": "#/$defs/SurfaceAttribution"
+        }
+      }
+    },
+    "RunFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "description": "Optional actual facts for this run. Missing fields remain absent and render Not reported; no defaults, fabricated budget allocations or UAR completion inferences.",
+      "properties": {
+        "offered_tools": {
+          "type": "array",
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.:-]+$"
+          },
+          "description": "Exact tools actually offered in this effective run, not registry availability. Empty means positively reported none; absent is not reported."
+        },
+        "catalog_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "description": "Actual known catalog total in tool_scope; never use global registered ToolNames or Kubo catalog as a guessed UAR denominator."
+        },
+        "tool_scope": {
+          "type": "string",
+          "enum": [
+            "kubo_contract",
+            "backend_report"
+          ],
+          "description": "Scope common to any offered_tools/catalog_size facts. Kubo uses loaded contract/effective policy offer; UAR needs validated backend facts, not a local reconstruction."
+        },
+        "system_prompt_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "SHA-256 of exact UTF-8 selected run.snap.systemPrompt, including fixed safety prefix and retained continuation snapshot; no prompt text or key fingerprint. UAR only if actual final prompt reported/validated."
+        },
+        "backend": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "description": "Selected actual backend snapshot; model/placement/host only when known. Kind alone does not prove memory or tool scope.",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "openai",
+                "uar"
+              ]
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "placement": {
+              "type": "string",
+              "enum": [
+                "local",
+                "remote"
+              ]
+            },
+            "host": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9.\\[\\]:-]+$",
+              "description": "Sanitized configured actual host[:port], no credentials/path/query. Omit unknown."
+            }
+          }
+        },
+        "context_snapshot": {
+          "$ref": "#/$defs/ContextReferences"
+        },
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope"
+          ],
+          "description": "Actual established memory scope only. Absence means unreported; do not invent None for UAR.",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "process_conversation",
+                "none",
+                "backend_reported"
+              ]
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "acknowledged_hosts"
+          ],
+          "description": "Actual effective acknowledged host labels; local is an existing policy label. Omit unavailable facts; this event never grants egress acknowledgement.",
+          "properties": {
+            "acknowledged_hosts": {
+              "type": "array",
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9.\\[\\]:-]+$"
+              }
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "description": "Source provenance for every supplied fact; omit sources for unavailable fields. No raw principal binding or backend credentials.",
+          "properties": {
+            "offered_tools": {
+              "type": "string",
+              "enum": [
+                "effective_policy_offer",
+                "validated_backend_report"
+              ]
+            },
+            "catalog_size": {
+              "type": "string",
+              "enum": [
+                "loaded_contract",
+                "validated_backend_report"
+              ]
+            },
+            "system_prompt_digest": {
+              "type": "string",
+              "enum": [
+                "effective_run_snapshot",
+                "validated_backend_report"
+              ]
+            },
+            "backend": {
+              "type": "string",
+              "enum": [
+                "effective_run_snapshot"
+              ]
+            },
+            "context_snapshot": {
+              "type": "string",
+              "enum": [
+                "accepted_turn"
+              ]
+            },
+            "memory": {
+              "type": "string",
+              "enum": [
+                "effective_run_snapshot",
+                "validated_backend_report"
+              ]
+            },
+            "egress": {
+              "type": "string",
+              "enum": [
+                "effective_run_snapshot"
+              ]
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "offered_tools"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "offered_tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "catalog_size"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "catalog_size"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "system_prompt_digest"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "system_prompt_digest"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "backend"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "backend"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "context_snapshot"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "context_snapshot"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "memory"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "memory"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "egress"
+            ]
+          },
+          "then": {
+            "required": [
+              "provenance"
+            ],
+            "properties": {
+              "provenance": {
+                "required": [
+                  "egress"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "offered_tools"
+            ]
+          },
+          "then": {
+            "required": [
+              "tool_scope"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "catalog_size"
+            ]
+          },
+          "then": {
+            "required": [
+              "tool_scope"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "backend"
+            ],
+            "properties": {
+              "backend": {
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "uar"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "offered_tools": {
+                    "const": "validated_backend_report"
+                  },
+                  "catalog_size": {
+                    "const": "validated_backend_report"
+                  },
+                  "system_prompt_digest": {
+                    "const": "validated_backend_report"
+                  },
+                  "memory": {
+                    "const": "validated_backend_report"
+                  }
+                }
+              },
+              "tool_scope": {
+                "const": "backend_report"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "RunFactsEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "thread_id",
+        "run_id",
+        "facts"
+      ],
+      "description": "Value of standard AG-UI CUSTOM ipfs.run.facts, at most once per accepted run after RUN_STARTED and optional a2ui.catalog, before tool/text events. Omit if no actual run facts exist; observation-only resume may omit rather than reconstruct. Optional activity_id is assigned by the server per accepted user activity and retained across authorized resumes; it correlates with interrupt metadata/DecisionObservation, not authority. Facts-off suppresses this event, not the independent interrupt activity metadata.",
+      "properties": {
+        "thread_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "activity_id": {
+          "$ref": "../confirmation/confirmation.schema.json#/$defs/ActivityId"
+        },
+        "facts": {
+          "$ref": "#/$defs/RunFacts"
+        }
+      }
+    },
+    "InspectorEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "description": "Safe current-run UI projection of actual lifecycle events only. No raw prompt, args, content, credentials or invented phases. Retain <=1000 entries/512KiB total, virtualize after200 and disclose truncation; reset on inspected run switch.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "run_started",
+            "tool_call",
+            "waiting_approval",
+            "running",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "unknown"
+          ]
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decision_id": {
+          "$ref": "../confirmation/confirmation.schema.json#/$defs/DecisionId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

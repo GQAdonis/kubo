@@ -1,0 +1,22 @@
+{
+  "thread_id": "thread-uar-1",
+  "run_id": "run-uar-1",
+  "facts": {
+    "backend": {
+      "kind": "uar"
+    },
+    "context_snapshot": [
+      {
+        "id": "page_files",
+        "provenance": "page",
+        "route": "/files",
+        "path": "/notes",
+        "path_kind": "mfs"
+      }
+    ],
+    "provenance": {
+      "backend": "effective_run_snapshot",
+      "context_snapshot": "accepted_turn"
+    }
+  }
+}

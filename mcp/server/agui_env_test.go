@@ -56,8 +56,11 @@ type aguiEnvOpts struct {
 	noAGUI      bool
 	noBackend   bool
 	noPresence  bool
+	noAppViews  bool
 	// a2ui is AGUISettings.A2UI (nil: the default, on).
-	a2ui *bool
+	a2ui              *bool
+	runFacts          *bool
+	contextReferences *bool
 	// verifier, when set, replaces the static verifier of the test principals.
 	verifier func(*testing.T) AuthVerifier
 }
@@ -87,7 +90,8 @@ func newAGUIEnv(t *testing.T, opts aguiEnvOpts, steps ...func(modelRequest) []st
 	log := slog.New(slog.NewTextHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	e.s = mustNew(t, e.d, Options{
 		Tools: []string{"node", "content", "pin", "diag", "destructive"}, Resolvers: resolvers,
-		Transport: "http", Logger: log, now: e.clock.Now,
+		NoAppViews: opts.noAppViews,
+		Transport:  "http", Logger: log, now: e.clock.Now,
 		// Notice a clock that moved within milliseconds, not a second.
 		awaitRecheck: 10 * time.Millisecond,
 	})
@@ -98,7 +102,7 @@ func newAGUIEnv(t *testing.T, opts aguiEnvOpts, steps ...func(modelRequest) []st
 		e.s.Agent().now = e.clock.Now
 	}
 	if !opts.noAGUI {
-		require.NoError(t, e.s.EnableAGUI(AGUISettings{OriginAllowlist: opts.origins, A2UI: opts.a2ui}))
+		require.NoError(t, e.s.EnableAGUI(AGUISettings{OriginAllowlist: opts.origins, A2UI: opts.a2ui, RunFacts: opts.runFacts, ContextReferences: opts.contextReferences}))
 	}
 	v, err := NewStaticVerifier([]StaticCredential{
 		{Identity: aguiIdentity("chat", KindUI, []string{"pin"}, []string{"pin", "diag"}, []string{"local"}), Token: aguiTokChat},

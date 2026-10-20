@@ -40,6 +40,10 @@ const ResourceMetadataPath = "/.well-known/oauth-protected-resource"
 // denialExtraKey is the TokenInfo.Extra key that carries a Denial.
 const denialExtraKey = "denial"
 
+// authenticatedExtraKey distinguishes an actual verifier verdict from the
+// anonymous loopback placeholder, without inferring authority from its name.
+const authenticatedExtraKey = "authenticated"
+
 // denialOf returns the denial an authentication produced, or nil.
 func denialOf(info *auth.TokenInfo) *Denial {
 	if info == nil {
@@ -71,11 +75,12 @@ func TokenVerifier(v AuthVerifier) auth.TokenVerifier {
 		if err != nil {
 			return nil, err
 		}
+		_, anonymous := v.(anonymousVerifier)
 		return &auth.TokenInfo{
 			Scopes:     id.Scopes,
 			Expiration: exp,
 			UserID:     id.BindingKey(),
-			Extra:      map[string]any{identityExtraKey: id},
+			Extra:      map[string]any{identityExtraKey: id, authenticatedExtraKey: !anonymous},
 		}, nil
 	}
 }

@@ -1,0 +1,275 @@
+{
+  "formatVersion": 1,
+  "purpose": "Authored contract boundary cases; no runtime acceptance receipt.",
+  "schemaCases": [
+    {
+      "name": "supported ElicitParams metadata",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ElicitationRequest",
+      "input": {
+        "method": "elicitation/create",
+        "params": {
+          "mode": "form",
+          "message": "Remove the pin on /ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi (recursive=true)? Unpinned content can be garbage collected.",
+          "requestedSchema": {
+            "type": "object",
+            "properties": {
+              "confirm": {
+                "type": "boolean",
+                "title": "Remove pin"
+              }
+            },
+            "required": [
+              "confirm"
+            ]
+          },
+          "_meta": {
+            "ipfs-mcp": {
+              "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+              "destination": {
+                "kind": "node",
+                "name": "Fixture node"
+              }
+            }
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "supported ElicitResult metadata",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ElicitationResult",
+      "input": {
+        "action": "accept",
+        "content": {
+          "confirm": true
+        },
+        "_meta": {
+          "ipfs-mcp": {
+            "reviewed_effect": {
+              "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+            }
+          },
+          "other/metadata": {
+            "preserved": true
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "legacy elicitation result remains valid",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ElicitationResult",
+      "input": {
+        "action": "accept",
+        "content": {
+          "confirm": true
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "illegal top-level ElicitResult echo refused",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ElicitationResult",
+      "input": {
+        "action": "accept",
+        "reviewed_effect": {
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "echo cannot be smuggled into form content",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ElicitationResult",
+      "input": {
+        "action": "accept",
+        "content": {
+          "confirm": true,
+          "reviewed_effect": {
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "malformed explicit echo refused",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ReviewResponseMetadata",
+      "input": {
+        "reviewed_effect": {
+          "effect_digest": "not-a-digest"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "null explicit echo refused",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ReviewResponseMetadata",
+      "input": {
+        "reviewed_effect": null
+      },
+      "expected": false
+    },
+    {
+      "name": "unknown destination is omitted",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ReviewDisplayMetadata",
+      "input": {
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+      },
+      "expected": true
+    },
+    {
+      "name": "unknown destination cannot be null",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "ReviewDisplayMetadata",
+      "input": {
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": null
+      },
+      "expected": false
+    },
+    {
+      "name": "legacy native signed body remains valid",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "NativeResolveRequest",
+      "input": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "approve": true
+      },
+      "expected": true
+    },
+    {
+      "name": "native signed body reviewed echo",
+      "schema": "confirmation/confirmation.schema.json",
+      "definition": "NativeResolveRequest",
+      "input": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "approve": true,
+        "reviewed_effect": {
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "AGUI echo outside original payload",
+      "schema": "fixtures/agui.schema.json",
+      "definition": "RunAgentInput",
+      "input": {
+        "threadId": "thread-pin-rm-review",
+        "runId": "run-resume-review",
+        "messages": [],
+        "tools": [],
+        "context": [],
+        "resume": [
+          {
+            "interruptId": "int-cf_3pQm8vK2xR7tLw9a",
+            "status": "resolved",
+            "payload": {
+              "approved": true
+            },
+            "reviewed_effect": {
+              "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+            }
+          }
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "AGUI payload cannot contain reviewed echo",
+      "schema": "fixtures/agui.schema.json",
+      "definition": "RunAgentInput",
+      "input": {
+        "threadId": "thread-pin-rm-review",
+        "runId": "run-resume-review",
+        "messages": [],
+        "tools": [],
+        "context": [],
+        "resume": [
+          {
+            "interruptId": "int-cf_3pQm8vK2xR7tLw9a",
+            "status": "resolved",
+            "payload": {
+              "approved": true,
+              "reviewed_effect": {
+                "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+              }
+            }
+          }
+        ]
+      },
+      "expected": false
+    }
+  ],
+  "semanticCases": [
+    {
+      "name": "old client no echo",
+      "input": "valid original token/requestState/owned continuation, echo absent",
+      "expected": "all original binding/mechanism/expiry/single-use gates still required"
+    },
+    {
+      "name": "legacy changed arguments",
+      "input": "validly signed handle but arguments differ from original operation",
+      "expected": "confirmation_invalid; zero handler calls"
+    },
+    {
+      "name": "explicit reviewed mismatch",
+      "input": "authorized valid original binding; digest echo differs",
+      "expected": "confirmation_digest_mismatch nonretryable; no consumption/invocation"
+    },
+    {
+      "name": "two echo conflict",
+      "input": "answer-level and call-level echo differ",
+      "expected": "refuse; never choose one; no consumption/invocation"
+    },
+    {
+      "name": "two echo agreement",
+      "input": "both supported echo positions contain same retained digest",
+      "expected": "proceed only through existing human answer and gate"
+    },
+    {
+      "name": "explicit malformed is not absent",
+      "input": "present null/invalid/wrong-type echo",
+      "expected": "invalid_argument; no consumption/invocation"
+    },
+    {
+      "name": "same owner before disclosure",
+      "input": "foreign thread/interrupt with validly shaped digest",
+      "expected": "existing ownership/not-found behavior first; no digest oracle"
+    },
+    {
+      "name": "UAR synthetic has no trusted digest",
+      "input": "owned open UAR interrupt and syntactically valid explicit echo",
+      "expected": "confirmation_digest_mismatch nonretryable, continuation unconsumed; no Broker or UAR forwarding"
+    },
+    {
+      "name": "UAR omitted echo",
+      "input": "owned open UAR interrupt, legacy valid answer",
+      "expected": "existing UAR path only, no node authorization implied"
+    },
+    {
+      "name": "UAR text cannot synthesize echo",
+      "input": "backend text resembles hash/receipt",
+      "expected": "UI omits echo absent trusted retained operation fact"
+    },
+    {
+      "name": "native signed-body integrity",
+      "input": "reviewed echo changed after signing",
+      "expected": "existing native authentication fails before resolution"
+    },
+    {
+      "name": "wait and denial do not execute",
+      "input": "native wait/deny carries review metadata",
+      "expected": "never approve/invoke from metadata; retain existing allowed safe behavior"
+    }
+  ]
+}

@@ -94,13 +94,15 @@ type Server struct {
 	// trusted is Options.TrustedPeers decoded.
 	trusted map[peer.ID]struct{}
 
-	gate        *gate
-	uar         *uarGuard
-	mcp         *mcp.Server
-	registered  []string
-	registry    map[string]registeredTool
-	unavailable []Unavailable
-	enabled     []string
+	gate               *gate
+	decisionsExt       any // *decisionReadsConfig in agent builds; nil uses HTTP default
+	decisionRuntimeExt any // one listener-bound decision expiry scheduler
+	uar                *uarGuard
+	mcp                *mcp.Server
+	registered         []string
+	registry           map[string]registeredTool
+	unavailable        []Unavailable
+	enabled            []string
 
 	// agentMu guards agentExt and agentChange: ApplyAgentSettings can install
 	// the agent loop while the server is serving, so that write must not race
@@ -200,7 +202,7 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 	if log == nil {
 		log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	s := &Server{cat: cat, daemon: d, log: log, opts: opts, registry: map[string]registeredTool{}}
+	s := &Server{cat: cat, daemon: &executionDaemon{Daemon: d}, log: log, opts: opts, registry: map[string]registeredTool{}}
 	if s.trusted, err = parseTrustedPeers(opts.TrustedPeers); err != nil {
 		return nil, err
 	}
@@ -216,6 +218,10 @@ func New(ctx context.Context, d Daemon, opts Options) (*Server, error) {
 	if s.gate, err = newGate(log, resolvers, now); err != nil {
 		return nil, err
 	}
+	s.gate.endpoint = d.Endpoint
+	// HTTP mount opts in to observer retention. Stdio/noagent keeps only the
+	// winning invocation's current-call evidence through result delivery.
+	s.gate.broker.setHistoryEnabled(false)
 	// A test build's provider override wins over the configured lifetime.
 	switch {
 	case ttl > 0:
@@ -320,6 +326,11 @@ func firstDuplicate(names []string) string {
 
 // build selects the tools to offer and registers them with the SDK server.
 func (s *Server) build(impls []toolImpl) error {
+	if !s.opts.NoAppViews {
+		if err := validateAppBindings(); err != nil {
+			return fmt.Errorf("MCP App registration: %w", err)
+		}
+	}
 	s.selected = make(map[string]struct{})
 	for _, n := range s.cat.SelectTools(s.selectors, s.opts.ReadOnly) {
 		if !slices.Contains(s.opts.Disabled, n) {
@@ -423,6 +434,19 @@ func (s *Server) disabledReason(t contract.Tool) string {
 // approve a write or destructive call.
 func (s *Server) ResolveConfirmation(id, resolver string, approve bool) error {
 	return s.gate.broker.Resolve(id, resolver, approve)
+}
+
+// ResolveConfirmationReviewed records an existing authorized resolver's answer
+// after checking its optional review echo. Callers must enforce the same owner,
+// resolver and human-presence boundaries as ResolveConfirmation.
+func (s *Server) ResolveConfirmationReviewed(id, resolver string, approve bool, reviewed *ReviewedEffect) error {
+	return s.gate.broker.ResolveReviewed(id, resolver, approve, reviewed)
+}
+
+// ResolveConfirmationAtSurface adds bounded display attribution to the existing
+// authorized resolution. Callers must establish owner and mechanism first.
+func (s *Server) ResolveConfirmationAtSurface(id, resolver string, approve bool, reviewed *ReviewedEffect, surface *ResolvingSurface) error {
+	return s.gate.broker.ResolveAtSurface(id, resolver, approve, reviewed, surface)
 }
 
 // CancelConfirmation ends a pending or approved confirmation that will not run,

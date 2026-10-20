@@ -1,7 +1,9 @@
 {
   "$schema": "./a2ui-components.schema.json",
   "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
-  "catalogAliases": ["ipfs-mcp"],
+  "catalogAliases": [
+    "ipfs-mcp"
+  ],
   "serve": {
     "route": "/agui/catalog",
     "description": "Catalog discovery (change mcp-agui-a2ui-registry 1.1, decision D15). GET on this route returns the embedded mcp/ui/catalog/ipfs-mcp.catalog.json byte for byte as application/json; the catalog is embedded from that generated file and no copy of it exists anywhere else in the tree. The route lives under the AG-UI mount, so it exists only when /agui is mounted (--agui on, otherwise 404) and passes the same protection chain as /agui: Host check, Origin policy with the strict CORS answer scoped to agent.origin_allowlist, request body limit, bearer authentication, and the /agui default principal kind ui (an a2a or admin token gets 403). The catalogId above stays the A2UI identifier used in createSurface.catalogId; this route is only how an AG-UI client fetches the document. D15 scopes this phase to catalog discovery plus server-built surfaces, so the route serves the one published catalog and nothing model-composed."
@@ -9,26 +11,152 @@
   "aguiEvents": {
     "surface": "a2ui",
     "catalog": "a2ui.catalog",
-    "description": "CUSTOM event names in the AG-UI run stream (D15, resolving assessment-backend Q6: the advertisement is a CUSTOM event, not a RUN_STARTED field, so RUN_STARTED keeps the AG-UI lifecycle shape and agent.a2ui: false silences every A2UI event without touching the run lifecycle). surface carries one A2UI v0.9 message per event (createSurface, updateComponents, updateDataModel) built from a tool result by the chatRules; it must stay equal to aguiA2UIEventName in mcp/server/agui_a2ui.go. catalog is the catalog advertisement: exactly one CUSTOM event per run, emitted immediately after RUN_STARTED and only when agent.a2ui is on, with value {\"catalogId\": <catalogId>, \"catalogUrl\": <serve.route>}. A client that ignores both loses nothing: the island keeps its local ToolCallCard fallback."
+    "description": "CUSTOM surface/catalog event names stay unchanged. Emit exactly one a2ui.catalog after RUN_STARTED only for an exact negotiated tuple and enabled agent.a2ui; value carries catalogId, catalogVersion, protocolVersion and catalogUrl from this descriptor. Surface events remain A2UI v0.9 messages. Missing/invalid/unmatched offers or disabled A2UI emit neither event, preserving ordinary tool/text output; external MCP resource delivery is independent."
   },
-  "description": "A2UI component binding references. Catalog tools name a view component in ui.a2uiComponent; mcp/ui implements each component against the bound tools' output schemas and publishes the A2UI v0.9 catalog manifest. catalogId is the canonical A2UI catalog ID: a URI used only as an identifier, never fetched; it equals the manifest $id, and servers list it in supportedCatalogIds and use it in createSurface.catalogId. catalogAliases are short names for docs, logs and configuration; they are never sent as an A2UI catalogId. Chat components wrap every tool call in the agent chat; which chat elements apply to a tool is derived by the chatRules, never authored per tool.",
+  "description": "A2UI component binding references. Catalog tools name a view component in ui.a2uiComponent; mcp/ui implements each component against the bound tools' output schemas and publishes the A2UI v0.9 catalog manifest. catalogId is the canonical A2UI catalog ID: a URI used only as an identifier, never fetched; it equals the manifest $id, and servers list it in supportedCatalogIds and use it in createSurface.catalogId. catalogAliases are short names for docs, logs and configuration; they are never sent as an A2UI catalogId. Chat components wrap every tool call in the agent chat; which chat elements apply to a tool is derived by the chatRules, never authored per tool. catalogVersion and protocolVersion define the exact first-party negotiation tuple. viewBindings is the only view/URI/file/default-component/allowlist authority; per-tool catalog ui.a2uiComponent chooses within that allowlist. mfs_read intentionally uses ContentCard inside the mfs view. Generate consumers and metadata from these sources, never maintain a second handwritten mapping.",
   "components": [
-    { "name": "ContentCard", "kind": "view", "description": "File bytes, directory listing or search hit for a CID or path, with untrusted-content framing." },
-    { "name": "PinList", "kind": "view", "description": "Pins with type, name and verification state; paginated." },
-    { "name": "MfsTree", "kind": "view", "description": "MFS directory tree and file details." },
-    { "name": "DagViewer", "kind": "view", "description": "IPLD node, DAG statistics and CAR import/export results." },
-    { "name": "IpnsRecordCard", "kind": "view", "description": "IPNS name, resolved value and keystore keys (never key material)." },
-    { "name": "ConfirmationDialog", "kind": "view", "description": "Renders a confirmation Summary for elicitation-capable surfaces." },
-    { "name": "NodeStatusPanel", "kind": "view", "description": "Node identity, server status, peers, provider and peer lookups, provide announcements, bandwidth, repo and index status." },
-    { "name": "MessageStream", "kind": "chat", "description": "AG-UI text message stream." },
-    { "name": "ToolCallCard", "kind": "chat", "description": "One tool call with arguments and result; embeds the tool's view component when it has one." },
-    { "name": "ApprovalCard", "kind": "chat", "description": "Interrupt state for a write or destructive call: pending, approved, denied, expired, waiting for the system prompt. Shows no approve control when the approval is out of band." },
-    { "name": "EgressBadge", "kind": "chat", "description": "Marks results that carry node content and states which acknowledged host may receive it." }
+    {
+      "name": "ContentCard",
+      "kind": "view",
+      "description": "File bytes, directory listing or search hit for a CID or path, with untrusted-content framing."
+    },
+    {
+      "name": "PinList",
+      "kind": "view",
+      "description": "Pins with type, name and verification state; paginated."
+    },
+    {
+      "name": "MfsTree",
+      "kind": "view",
+      "description": "MFS directory tree and file details."
+    },
+    {
+      "name": "DagViewer",
+      "kind": "view",
+      "description": "IPLD node, DAG statistics and CAR import/export results."
+    },
+    {
+      "name": "IpnsRecordCard",
+      "kind": "view",
+      "description": "IPNS name, resolved value and keystore keys (never key material)."
+    },
+    {
+      "name": "ConfirmationDialog",
+      "kind": "view",
+      "description": "Renders a confirmation Summary for elicitation-capable surfaces."
+    },
+    {
+      "name": "NodeStatusPanel",
+      "kind": "view",
+      "description": "Node identity, server status, peers, provider and peer lookups, provide announcements, bandwidth, repo and index status."
+    },
+    {
+      "name": "MessageStream",
+      "kind": "chat",
+      "description": "AG-UI text message stream."
+    },
+    {
+      "name": "ToolCallCard",
+      "kind": "chat",
+      "description": "One tool call with arguments and result; embeds the tool's view component when it has one."
+    },
+    {
+      "name": "ApprovalCard",
+      "kind": "chat",
+      "description": "Eleven decision presentations derived from confirmation/confirmation.schema.json#/$defs/DecisionPresentation; real execution/receipt semantics remain distinct from approval and resolver authority."
+    },
+    {
+      "name": "EgressBadge",
+      "kind": "chat",
+      "description": "Marks results that carry node content and states which acknowledged host may receive it."
+    }
   ],
   "chatRules": {
     "ToolCallCard": "always",
     "ApprovalCard": "not-equal:confirmation:none",
     "EgressBadge": "copy:contentEgress",
     "untrustedFrame": "copy:returnsUntrustedContent"
+  },
+  "catalogVersion": "0.1.0",
+  "protocolVersion": "v0.9",
+  "negotiation": {
+    "inputPath": [
+      "forwardedProps",
+      "ipfs",
+      "a2ui"
+    ],
+    "schemaRef": "agentic/ui-negotiation.schema.json#/$defs/ClientA2UICapabilities",
+    "maxEncodedBytes": 4096,
+    "matching": "exact-id-catalog-version-protocol-version",
+    "missingOrInvalid": "disable-a2ui-only",
+    "source": "server-built-only",
+    "description": "Validate this bounded namespace independently from the rest of forwardedProps. Missing, malformed, oversize, duplicate or incompatible offers disable first-party A2UI for this run; they never select HTML or change tool execution. Keep ordinary MCP resource negotiation and AG-UI text/structured results. No untrusted UAR CUSTOM surface passthrough."
+  },
+  "viewBindings": [
+    {
+      "view": "content",
+      "component": "ContentCard",
+      "allowedComponents": [
+        "ContentCard"
+      ],
+      "uri": "ui://ipfs-mcp/content",
+      "file": "content.html",
+      "title": "IPFS content",
+      "description": "File bytes, directory listings, search hits and add receipts for content on your node."
+    },
+    {
+      "view": "pins",
+      "component": "PinList",
+      "allowedComponents": [
+        "PinList"
+      ],
+      "uri": "ui://ipfs-mcp/pins",
+      "file": "pins.html",
+      "title": "IPFS pins",
+      "description": "What your node keeps: the pin list, verification results and pin changes."
+    },
+    {
+      "view": "mfs",
+      "component": "MfsTree",
+      "allowedComponents": [
+        "MfsTree",
+        "ContentCard"
+      ],
+      "uri": "ui://ipfs-mcp/mfs",
+      "file": "mfs.html",
+      "title": "IPFS files",
+      "description": "The mutable file system on your node: listings, file details and change receipts."
+    },
+    {
+      "view": "dag",
+      "component": "DagViewer",
+      "allowedComponents": [
+        "DagViewer"
+      ],
+      "uri": "ui://ipfs-mcp/dag",
+      "file": "dag.html",
+      "title": "IPFS DAG",
+      "description": "DAG nodes, sizes and CAR transfers as a tree you can follow."
+    },
+    {
+      "view": "node-status",
+      "component": "NodeStatusPanel",
+      "allowedComponents": [
+        "NodeStatusPanel"
+      ],
+      "uri": "ui://ipfs-mcp/node-status",
+      "file": "node-status.html",
+      "title": "IPFS node status",
+      "description": "Node identity, server status, peers, bandwidth, repo usage, providers and index status."
+    }
+  ],
+  "externalApps": {
+    "mimeType": "text/html;profile=mcp-app",
+    "metadataKey": "ai.ipfs/iframe-exception",
+    "declaration": {
+      "reason": "external_mcp_app_host",
+      "transport": "standard_ext_apps"
+    },
+    "description": "Preserve standard ui:// resources, _meta.ui.resourceUri plus legacy ui/resourceUri and the pinned ext-apps SDK. The namespaced exception declaration is informational resource metadata, not a sandbox permission, authentication claim or private handshake. It may be ignored by ordinary hosts. No nonce or custom response envelope is required."
   }
 }

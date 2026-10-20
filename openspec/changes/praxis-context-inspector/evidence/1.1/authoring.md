@@ -1,0 +1,11 @@
+# C/1.1 source authoring handoff
+
+Canonical task: `agentic-ui-implementation/praxis-context-inspector/1.1`. Authoring complete; no runtime acceptance claim. No generated UI/server code changed by this task. No tests, builds, schema generation or independent production review ran. The new Go fixture tests were formatted with gofmt only.
+
+- Canonical source: `mcp/contract/agentic/run-context.schema.json`, normative `run-context.md`, AG-UI aliases/standard CUSTOM dispatcher in `mcp/contract/fixtures/agui.schema.json`, ADR0018 and this change's operative design/tasks/spec amendment.
+- Fields: ContextReference/ContextReferences, SurfaceAttribution, IpfsForwardedProps, RunFacts/RunFactsEvent and InspectorEvent. Conditional provenance, explicit run identity, accepted-turn references and optional unreported fields preserve the actual-run distinction. References reuse common CID/MfsPath constraints and add semantic validation limits.
+- Fixtures: 34 structural and 35 semantic cases in `agentic/fixtures/run-context-cases.json`; built-in/UAR/reference/422/resume examples; `fixtures/agui/read-pin-ls-context-facts.json`. `run_context_test.go` authors structural/example evaluation. Semantic assertions require the later real backend/UI scenarios.
+- Off switches: `agent.context_references` and `agent.run_facts` in the config schema, both default true; `config/examples/context-disabled.json`. D/4.2 owns generated reference/default/changelog and disabled-state integration work.
+- Reviewed-effect amendment: supported SDK metadata locations and optional native/AG-UI echoes in confirmation schema/README, D design cross-reference; four new confirmation examples and AG-UI resume example. Thirteen structural plus twelve semantic cases in `confirmation/fixtures/reviewed-wire-cases.json`. Old fixtures are unchanged. BE received exact stable placements before completing this unrelated context slice.
+
+C/1.2 then C/1.3 implement facts and reference ingestion for both backends. C/2.1 owns generated definitions/consumers, including faithful external-ref and conditional provenance conversion. No task title/checkmark or KBD/gate file was edited by this authoring slice. Final-boundary scenarios UI-108/UI-111 evaluate the production behavior; these authored fixtures are not receipts that those scenarios passed.

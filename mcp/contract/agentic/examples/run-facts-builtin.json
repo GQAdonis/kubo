@@ -1,0 +1,40 @@
+{
+  "thread_id": "thread-context-1",
+  "run_id": "run-context-1",
+  "facts": {
+    "offered_tools": [
+      "pin_ls"
+    ],
+    "tool_scope": "kubo_contract",
+    "backend": {
+      "kind": "openai",
+      "model": "fixture-model",
+      "placement": "local",
+      "host": "localhost:11434"
+    },
+    "context_snapshot": [
+      {
+        "id": "page_files",
+        "provenance": "page",
+        "route": "/files",
+        "path": "/notes",
+        "path_kind": "mfs"
+      }
+    ],
+    "memory": {
+      "scope": "process_conversation"
+    },
+    "egress": {
+      "acknowledged_hosts": [
+        "local"
+      ]
+    },
+    "provenance": {
+      "offered_tools": "effective_policy_offer",
+      "backend": "effective_run_snapshot",
+      "context_snapshot": "accepted_turn",
+      "memory": "effective_run_snapshot",
+      "egress": "effective_run_snapshot"
+    }
+  }
+}

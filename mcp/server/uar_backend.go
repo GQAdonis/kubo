@@ -95,6 +95,7 @@ func (s *Server) installUAR(set *AgentSettings) error {
 	}
 	s.agentMu.Lock()
 	s.uarExt = b
+	s.gate.broker.setDecisionSourceGeneration(b.gen)
 	s.agentMu.Unlock()
 	return nil
 }

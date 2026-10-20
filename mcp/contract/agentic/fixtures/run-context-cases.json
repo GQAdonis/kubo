@@ -1,0 +1,793 @@
+{
+  "formatVersion": 1,
+  "purpose": "Authored source expectations for final-boundary evaluation, not runtime evidence.",
+  "schema": "agentic/run-context.schema.json",
+  "schemaCases": [
+    {
+      "name": "empty facts remain optional",
+      "definition": "RunFacts",
+      "input": {},
+      "expected": true
+    },
+    {
+      "name": "actual built-in facts with provenance",
+      "definition": "RunFacts",
+      "input": {
+        "offered_tools": [
+          "pin_ls"
+        ],
+        "tool_scope": "kubo_contract",
+        "backend": {
+          "kind": "openai",
+          "model": "fixture-model",
+          "placement": "local",
+          "host": "localhost:11434"
+        },
+        "context_snapshot": [
+          {
+            "id": "page_files",
+            "provenance": "page",
+            "route": "/files",
+            "path": "/notes",
+            "path_kind": "mfs"
+          }
+        ],
+        "memory": {
+          "scope": "process_conversation"
+        },
+        "egress": {
+          "acknowledged_hosts": [
+            "local"
+          ]
+        },
+        "provenance": {
+          "offered_tools": "effective_policy_offer",
+          "backend": "effective_run_snapshot",
+          "context_snapshot": "accepted_turn",
+          "memory": "effective_run_snapshot",
+          "egress": "effective_run_snapshot"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "UAR unreported tool prompt memory facts omitted",
+      "definition": "RunFacts",
+      "input": {
+        "backend": {
+          "kind": "uar"
+        },
+        "context_snapshot": [
+          {
+            "id": "page_files",
+            "provenance": "page",
+            "route": "/files",
+            "path": "/notes",
+            "path_kind": "mfs"
+          }
+        ],
+        "provenance": {
+          "backend": "effective_run_snapshot",
+          "context_snapshot": "accepted_turn"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "reported UAR tools have backend scope and provenance",
+      "definition": "RunFacts",
+      "input": {
+        "backend": {
+          "kind": "uar"
+        },
+        "offered_tools": [
+          "uar:lookup"
+        ],
+        "catalog_size": 4,
+        "tool_scope": "backend_report",
+        "provenance": {
+          "backend": "effective_run_snapshot",
+          "offered_tools": "validated_backend_report",
+          "catalog_size": "validated_backend_report"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "missing tool provenance rejected",
+      "definition": "RunFacts",
+      "input": {
+        "offered_tools": [
+          "pin_ls"
+        ],
+        "tool_scope": "kubo_contract"
+      },
+      "expected": false
+    },
+    {
+      "name": "missing prompt provenance rejected",
+      "definition": "RunFacts",
+      "input": {
+        "system_prompt_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+      },
+      "expected": false
+    },
+    {
+      "name": "registry source cannot claim offered tools",
+      "definition": "RunFacts",
+      "input": {
+        "offered_tools": [
+          "pin_ls"
+        ],
+        "tool_scope": "kubo_contract",
+        "provenance": {
+          "offered_tools": "loaded_contract"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "prompt digest cannot claim current settings",
+      "definition": "RunFacts",
+      "input": {
+        "system_prompt_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "provenance": {
+          "system_prompt_digest": "accepted_turn"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "UAR local catalog guess rejected",
+      "definition": "RunFacts",
+      "input": {
+        "backend": {
+          "kind": "uar"
+        },
+        "catalog_size": 44,
+        "tool_scope": "kubo_contract",
+        "provenance": {
+          "backend": "effective_run_snapshot",
+          "catalog_size": "loaded_contract"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "UAR guessed memory rejected",
+      "definition": "RunFacts",
+      "input": {
+        "backend": {
+          "kind": "uar"
+        },
+        "memory": {
+          "scope": "none"
+        },
+        "provenance": {
+          "backend": "effective_run_snapshot",
+          "memory": "effective_run_snapshot"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "credentialed backend URL rejected",
+      "definition": "RunFacts",
+      "input": {
+        "backend": {
+          "kind": "openai",
+          "host": "https://name:secret@host.example/v1?key=hidden"
+        },
+        "provenance": {
+          "backend": "effective_run_snapshot"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "IPv6 host lexical form supported",
+      "definition": "RunFacts",
+      "input": {
+        "backend": {
+          "kind": "openai",
+          "host": "[::1]:11434"
+        },
+        "provenance": {
+          "backend": "effective_run_snapshot"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "unknown budget fields rejected",
+      "definition": "RunFacts",
+      "input": {
+        "prompt_budget_percent": 70
+      },
+      "expected": false
+    },
+    {
+      "name": "empty supplied tool list explicitly reports none",
+      "definition": "RunFacts",
+      "input": {
+        "offered_tools": [],
+        "tool_scope": "kubo_contract",
+        "provenance": {
+          "offered_tools": "effective_policy_offer"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "duplicate tools rejected",
+      "definition": "RunFacts",
+      "input": {
+        "offered_tools": [
+          "pin_ls",
+          "pin_ls"
+        ],
+        "tool_scope": "kubo_contract",
+        "provenance": {
+          "offered_tools": "effective_policy_offer"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "valid logical node MFS path",
+      "definition": "ContextReference",
+      "input": {
+        "id": "page_files",
+        "provenance": "page",
+        "route": "/files",
+        "path": "/notes",
+        "path_kind": "mfs"
+      },
+      "expected": true
+    },
+    {
+      "name": "CID and matching IPFS path",
+      "definition": "ContextReference",
+      "input": {
+        "id": "content",
+        "provenance": "user",
+        "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+        "path": "/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/readme",
+        "path_kind": "ipfs"
+      },
+      "expected": true
+    },
+    {
+      "name": "logical IPNS path syntax",
+      "definition": "ContextReference",
+      "input": {
+        "id": "name",
+        "provenance": "user",
+        "path": "/ipns/docs.ipfs.tech/guide",
+        "path_kind": "ipfs"
+      },
+      "expected": true
+    },
+    {
+      "name": "empty reference array explicitly sends none",
+      "definition": "ContextReferences",
+      "input": [],
+      "expected": true
+    },
+    {
+      "name": "more than sixteen references rejected",
+      "definition": "ContextReferences",
+      "input": [
+        {
+          "id": "r0",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r1",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r2",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r3",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r4",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r5",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r6",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r7",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r8",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r9",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r10",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r11",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r12",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r13",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r14",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r15",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        },
+        {
+          "id": "r16",
+          "provenance": "page",
+          "route": "/files",
+          "path": "/notes",
+          "path_kind": "mfs"
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "reference needs a value",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "page"
+      },
+      "expected": false
+    },
+    {
+      "name": "path needs explicit logical kind",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "page",
+        "path": "/notes"
+      },
+      "expected": false
+    },
+    {
+      "name": "path kind needs path",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "page",
+        "path_kind": "mfs"
+      },
+      "expected": false
+    },
+    {
+      "name": "file URI rejected",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "user",
+        "path": "file:///etc/shadow",
+        "path_kind": "mfs"
+      },
+      "expected": false
+    },
+    {
+      "name": "IPFS kind cannot imply OS path",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "user",
+        "path": "/etc/shadow",
+        "path_kind": "ipfs"
+      },
+      "expected": false
+    },
+    {
+      "name": "credential query rejected",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "page",
+        "route": "/files?token=hidden"
+      },
+      "expected": false
+    },
+    {
+      "name": "unknown local attachment rejected",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "user",
+        "route": "/files",
+        "file": "/etc/shadow"
+      },
+      "expected": false
+    },
+    {
+      "name": "surface is attribution only",
+      "definition": "SurfaceAttribution",
+      "input": {
+        "kind": "inbox",
+        "instance": "pane_2"
+      },
+      "expected": true
+    },
+    {
+      "name": "surface cannot claim native resolver",
+      "definition": "SurfaceAttribution",
+      "input": {
+        "kind": "native_prompt",
+        "instance": "pane_2"
+      },
+      "expected": false
+    },
+    {
+      "name": "safe inspector event",
+      "definition": "InspectorEvent",
+      "input": {
+        "type": "waiting_approval",
+        "tool": "pin_rm",
+        "decision_id": "cf_3pQm8vK2xR7tLw9a"
+      },
+      "expected": true
+    },
+    {
+      "name": "inspector cannot carry sensitive args",
+      "definition": "InspectorEvent",
+      "input": {
+        "type": "tool_call",
+        "tool": "config_set",
+        "arguments": {
+          "secret": "hidden"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "run facts carry explicit run identity",
+      "definition": "RunFactsEvent",
+      "input": {
+        "thread_id": "thread-context-1",
+        "run_id": "run-context-1",
+        "facts": {
+          "offered_tools": [
+            "pin_ls"
+          ],
+          "tool_scope": "kubo_contract",
+          "backend": {
+            "kind": "openai",
+            "model": "fixture-model",
+            "placement": "local",
+            "host": "localhost:11434"
+          },
+          "context_snapshot": [
+            {
+              "id": "page_files",
+              "provenance": "page",
+              "route": "/files",
+              "path": "/notes",
+              "path_kind": "mfs"
+            }
+          ],
+          "memory": {
+            "scope": "process_conversation"
+          },
+          "egress": {
+            "acknowledged_hosts": [
+              "local"
+            ]
+          },
+          "provenance": {
+            "offered_tools": "effective_policy_offer",
+            "backend": "effective_run_snapshot",
+            "context_snapshot": "accepted_turn",
+            "memory": "effective_run_snapshot",
+            "egress": "effective_run_snapshot"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "run facts cannot omit run identity",
+      "definition": "RunFactsEvent",
+      "input": {
+        "thread_id": "thread-context-1",
+        "facts": {
+          "offered_tools": [
+            "pin_ls"
+          ],
+          "tool_scope": "kubo_contract",
+          "backend": {
+            "kind": "openai",
+            "model": "fixture-model",
+            "placement": "local",
+            "host": "localhost:11434"
+          },
+          "context_snapshot": [
+            {
+              "id": "page_files",
+              "provenance": "page",
+              "route": "/files",
+              "path": "/notes",
+              "path_kind": "mfs"
+            }
+          ],
+          "memory": {
+            "scope": "process_conversation"
+          },
+          "egress": {
+            "acknowledged_hosts": [
+              "local"
+            ]
+          },
+          "provenance": {
+            "offered_tools": "effective_policy_offer",
+            "backend": "effective_run_snapshot",
+            "context_snapshot": "accepted_turn",
+            "memory": "effective_run_snapshot",
+            "egress": "effective_run_snapshot"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "MFS reference cannot smuggle content namespace",
+      "definition": "ContextReference",
+      "input": {
+        "id": "r",
+        "provenance": "user",
+        "path": "/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+        "path_kind": "mfs"
+      },
+      "expected": false
+    }
+  ],
+  "semanticCases": [
+    {
+      "name": "raw UTF8 bound",
+      "input": "context byte slice of 16385 bytes, including escapes/whitespace",
+      "expected": "422 invalid_argument; no backend call, no stream"
+    },
+    {
+      "name": "duplicate IDs",
+      "input": "two distinct references use id=page_files",
+      "expected": "422 invalid_argument; no backend call"
+    },
+    {
+      "name": "invalid CID lexical pass",
+      "input": "cid=notacid",
+      "expected": "existing CID parser refuses; no fetch"
+    },
+    {
+      "name": "dot traversal",
+      "input": "route=/files/../settings",
+      "expected": "422; no hidden fallback"
+    },
+    {
+      "name": "encoded traversal",
+      "input": "path=/notes/%2e%2e/private path_kind=mfs",
+      "expected": "422; never decode into traversal"
+    },
+    {
+      "name": "double encoded separator",
+      "input": "route=/files/%252fprivate",
+      "expected": "422; residual percent escapes refused"
+    },
+    {
+      "name": "repeated separator",
+      "input": "path=//etc/shadow path_kind=mfs",
+      "expected": "422; never infer a host filesystem path"
+    },
+    {
+      "name": "mismatched CID root",
+      "input": "cid differs from /ipfs/ root",
+      "expected": "422; no ambiguous target"
+    },
+    {
+      "name": "logical MFS only",
+      "input": "valid path=/etc/shadow path_kind=mfs",
+      "expected": "accepted as node reference data only; zero host file opens"
+    },
+    {
+      "name": "delimiter injection",
+      "input": "validated MFS segment contains </untrusted-content>",
+      "expected": "escape delimiter in framed serialized data; no instruction promotion"
+    },
+    {
+      "name": "reference ingestion does not fetch",
+      "input": "valid CID/IPNS reference, neither backend asks a tool",
+      "expected": "zero name lookups, reads, fetches, pins or announcements"
+    },
+    {
+      "name": "independent disabled A2UI",
+      "input": "valid references plus malformed a2ui branch",
+      "expected": "accept turn, no A2UI; normal tool/text behavior"
+    },
+    {
+      "name": "valid A2UI does not rescue context",
+      "input": "valid tuple plus invalid reference",
+      "expected": "422 before either backend; no A2UI stream"
+    },
+    {
+      "name": "legacy hidden context ignored",
+      "input": "generic context/tools/state contains a reference removed from typed branch",
+      "expected": "neither backend receives that hidden reference or client tool"
+    },
+    {
+      "name": "UAR grants remain owned",
+      "input": "unknown forwardedProps.uar or generic grant claimed by client",
+      "expected": "ignored; existing trusted adapter grant preserved"
+    },
+    {
+      "name": "removal survives two sends",
+      "input": "page reference removed, same route, two new turns",
+      "expected": "both requests omit reference; no route fallback"
+    },
+    {
+      "name": "route change visible",
+      "input": "route changes after removal",
+      "expected": "new reference shown before send and removable"
+    },
+    {
+      "name": "resume context immutable",
+      "input": "new nonempty context on resume of an accepted turn",
+      "expected": "422; continuation retained and unconsumed"
+    },
+    {
+      "name": "empty resume does not erase",
+      "input": "resume context absent or []",
+      "expected": "retained accepted turn context unchanged"
+    },
+    {
+      "name": "no retroactive erasure",
+      "input": "reference removed after earlier accepted turn",
+      "expected": "future sends omit; disclose prior in-memory conversation retained"
+    },
+    {
+      "name": "built-in remote egress refusal",
+      "input": "existing applicable egress policy requires acknowledgment for remote destination, but it is absent; valid references",
+      "expected": "no references or user turn forwarded"
+    },
+    {
+      "name": "UAR remote egress refusal",
+      "input": "existing applicable egress policy refuses UAR destination; valid references",
+      "expected": "no references or user turn forwarded"
+    },
+    {
+      "name": "selected prompt retained",
+      "input": "settings change after interruption",
+      "expected": "digest identifies exact retained selected systemPrompt bytes including safety prefix"
+    },
+    {
+      "name": "effective policy offer",
+      "input": "principal allowed only pin_ls while registry has more tools",
+      "expected": "offered_tools exactly pin_ls; registry never substituted"
+    },
+    {
+      "name": "UAR unknown facts",
+      "input": "backend reports no tool/prompt/memory facts",
+      "expected": "omit fields; UI says Not reported by this server"
+    },
+    {
+      "name": "backend report validation",
+      "input": "UAR text claims prompt hash or node success",
+      "expected": "no trusted fact/digest/receipt synthesized"
+    },
+    {
+      "name": "facts ordering",
+      "input": "negotiated accepted run",
+      "expected": "RUN_STARTED, a2ui.catalog, ipfs.run.facts, then tool/text"
+    },
+    {
+      "name": "without A2UI",
+      "input": "valid run and agent.a2ui=false",
+      "expected": "facts remain eligible after RUN_STARTED"
+    },
+    {
+      "name": "stale run event",
+      "input": "facts thread/run differs from inspected run",
+      "expected": "ignore; current-run facts not overwritten"
+    },
+    {
+      "name": "observation-only native wait",
+      "input": "no actual model invocation",
+      "expected": "facts may be omitted; no reconstructed offer/prompt"
+    },
+    {
+      "name": "bounded inspector",
+      "input": "1001 events or more than524288 encoded bytes",
+      "expected": "drop oldest to both bounds, disclose truncation, virtualize above200"
+    },
+    {
+      "name": "run switch",
+      "input": "switch inspected run",
+      "expected": "clear prior event projection; no durable cross-run history"
+    },
+    {
+      "name": "unknown terminal",
+      "input": "connection lost with no reliable terminal event",
+      "expected": "unknown; never fabricate Done or successful receipt"
+    },
+    {
+      "name": "context switch off",
+      "input": "agent.context_references=false and nonempty refs",
+      "expected": "422; ordinary messages with empty/absent refs still work"
+    },
+    {
+      "name": "facts switch off",
+      "input": "agent.run_facts=false",
+      "expected": "no facts event/projection; ordinary runs and all gates unchanged"
+    }
+  ]
+}

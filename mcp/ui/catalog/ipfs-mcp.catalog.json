@@ -6,9 +6,10 @@
   "description": "IPFS components for an agent that operates the person's own Kubo node. Generated from mcp/ui; do not edit. Regenerate with `pnpm gen:catalog`.",
   "x-ipfs-mcp": {
     "shortName": "ipfs-mcp",
+    "catalogVersion": "0.1.0",
     "protocolVersion": "v0.9",
     "contractVersion": "0.1.0",
-    "contractDigest": "7b1e2def8225c801"
+    "contractDigest": "4d637c7e5b29d7a9"
   },
   "instructions": "IPFS components for an agent that operates the person's own Kubo node. Each view component draws the structured output of one MCP tool: set `tool` to the tool name and bind `output` to the data model path that holds the tool's structuredContent. Output that does not match the tool's schema is not drawn. Write and destructive tools always pass a confirmation first: use ApprovalCard or ConfirmationDialog to show it, and wire approveAction only when this surface can really approve. Never imply an action ran before it did.",
   "components": {
@@ -17,6 +18,17 @@
       "properties": {
         "id": {
           "$ref": "#/$defs/ComponentId"
+        },
+        "model": {
+          "description": "Shared card model, literal or data binding. Runtime receipt/capability checks remain mandatory. Choose exactly one rich or legacy input.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ipfs_ApprovalModel"
+            },
+            {
+              "$ref": "#/$defs/DataBinding"
+            }
+          ]
         },
         "interrupt": {
           "description": "The AG-UI interrupt from RUN_FINISHED, literal or data model path.",
@@ -55,20 +67,139 @@
       },
       "required": [
         "id",
-        "interrupt",
         "component"
       ],
       "unevaluatedProperties": false,
       "x-ipfs-mcp": {
         "kind": "chat",
-        "schema": "fixtures/agui.schema.json#/$defs/Interrupt"
-      }
+        "schema": "fixtures/agui.schema.json#/$defs/Interrupt",
+        "decision": {
+          "presentations": [
+            "pending",
+            "waiting_system_prompt",
+            "approved",
+            "committed",
+            "denied",
+            "expired",
+            "invalidated",
+            "resolved_elsewhere",
+            "uncertain",
+            "needs_resubmit",
+            "failed_after_approval"
+          ],
+          "phaseProperty": "model.phase",
+          "phaseWords": {
+            "pending": {
+              "word": "Awaiting a person",
+              "tone": "warn"
+            },
+            "waiting_system_prompt": {
+              "word": "Waiting for system prompt",
+              "tone": "warn"
+            },
+            "approved": {
+              "word": "Approved, not yet run",
+              "tone": "warn"
+            },
+            "committed": {
+              "word": "Done",
+              "tone": "ok"
+            },
+            "denied": {
+              "word": "Denied. Nothing was changed.",
+              "tone": "err"
+            },
+            "expired": {
+              "word": "Expired. Nothing was changed.",
+              "tone": "err"
+            },
+            "invalidated": {
+              "word": "Changed since you saw it",
+              "tone": "warn"
+            },
+            "resolved_elsewhere": {
+              "word": "Answered on another screen",
+              "tone": "muted"
+            },
+            "uncertain": {
+              "word": "Outcome unknown, checking",
+              "tone": "warn"
+            },
+            "needs_resubmit": {
+              "word": "Can't resume. Ask again to create a new request.",
+              "tone": "warn"
+            },
+            "failed_after_approval": {
+              "word": "Failed after approval",
+              "tone": "err"
+            }
+          },
+          "modelSchema": "#/$defs/ipfs_ApprovalModel",
+          "runtimeValidation": [
+            "ApprovalModelSchema",
+            "approvalPresentation"
+          ],
+          "outcomes": {
+            "committed": "Only a matching successful operation receipt. Approval consumption is not success.",
+            "failed_after_approval": "Definite operation failure after approval; some effects may remain. No automatic retry.",
+            "uncertain": "Missing, malformed or ambiguous operation evidence; effects may have occurred. No automatic retry.",
+            "approved": "Approval is recorded, not operation success. An observed running execution says Running."
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "interrupt"
+          ],
+          "not": {
+            "required": [
+              "model"
+            ]
+          }
+        },
+        {
+          "required": [
+            "model"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "interrupt"
+                ]
+              },
+              {
+                "required": [
+                  "resolution"
+                ]
+              },
+              {
+                "required": [
+                  "expired"
+                ]
+              }
+            ]
+          }
+        }
+      ]
     },
     "ConfirmationDialog": {
       "type": "object",
       "properties": {
         "id": {
           "$ref": "#/$defs/ComponentId"
+        },
+        "model": {
+          "description": "Shared card model, literal or data binding. Runtime receipt/capability checks remain mandatory. Choose exactly one rich or legacy input.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ipfs_ApprovalModel"
+            },
+            {
+              "$ref": "#/$defs/DataBinding"
+            }
+          ]
         },
         "confirmation": {
           "description": "A ConfirmationRequired payload (ToolError.error.confirmation), literal or data model path.",
@@ -103,14 +234,117 @@
       },
       "required": [
         "id",
-        "confirmation",
         "component"
       ],
       "unevaluatedProperties": false,
       "x-ipfs-mcp": {
         "kind": "view",
-        "schema": "confirmation/confirmation.schema.json#/$defs/ConfirmationRequired"
-      }
+        "schema": "confirmation/confirmation.schema.json#/$defs/ConfirmationRequired",
+        "decision": {
+          "presentations": [
+            "pending",
+            "waiting_system_prompt",
+            "approved",
+            "committed",
+            "denied",
+            "expired",
+            "invalidated",
+            "resolved_elsewhere",
+            "uncertain",
+            "needs_resubmit",
+            "failed_after_approval"
+          ],
+          "phaseProperty": "model.phase",
+          "phaseWords": {
+            "pending": {
+              "word": "Awaiting a person",
+              "tone": "warn"
+            },
+            "waiting_system_prompt": {
+              "word": "Waiting for system prompt",
+              "tone": "warn"
+            },
+            "approved": {
+              "word": "Approved, not yet run",
+              "tone": "warn"
+            },
+            "committed": {
+              "word": "Done",
+              "tone": "ok"
+            },
+            "denied": {
+              "word": "Denied. Nothing was changed.",
+              "tone": "err"
+            },
+            "expired": {
+              "word": "Expired. Nothing was changed.",
+              "tone": "err"
+            },
+            "invalidated": {
+              "word": "Changed since you saw it",
+              "tone": "warn"
+            },
+            "resolved_elsewhere": {
+              "word": "Answered on another screen",
+              "tone": "muted"
+            },
+            "uncertain": {
+              "word": "Outcome unknown, checking",
+              "tone": "warn"
+            },
+            "needs_resubmit": {
+              "word": "Can't resume. Ask again to create a new request.",
+              "tone": "warn"
+            },
+            "failed_after_approval": {
+              "word": "Failed after approval",
+              "tone": "err"
+            }
+          },
+          "modelSchema": "#/$defs/ipfs_ApprovalModel",
+          "runtimeValidation": [
+            "ApprovalModelSchema",
+            "approvalPresentation"
+          ],
+          "outcomes": {
+            "committed": "Only a matching successful operation receipt. Approval consumption is not success.",
+            "failed_after_approval": "Definite operation failure after approval; some effects may remain. No automatic retry.",
+            "uncertain": "Missing, malformed or ambiguous operation evidence; effects may have occurred. No automatic retry.",
+            "approved": "Approval is recorded, not operation success. An observed running execution says Running."
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "confirmation"
+          ],
+          "not": {
+            "required": [
+              "model"
+            ]
+          }
+        },
+        {
+          "required": [
+            "model"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "confirmation"
+                ]
+              },
+              {
+                "required": [
+                  "resolution"
+                ]
+              }
+            ]
+          }
+        }
+      ]
     },
     "ContentCard": {
       "type": "object",
@@ -547,6 +781,37 @@
                             "text": {
                               "type": "string",
                               "description": "Chunk text. Untrusted content."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "text",
+                                "document",
+                                "code",
+                                "data",
+                                "image",
+                                "video"
+                              ],
+                              "description": "Content kind of the hit (derivations/content-kinds.json)."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "text",
+                                "extracted",
+                                "ocr",
+                                "transcript",
+                                "description"
+                              ],
+                              "description": "How the chunk text was produced: text (bytes chunked directly, as in G12), extracted (xberg Markdown), ocr (image or scanned-page text), transcript (audio track) or description (untrusted model output, see described_by)."
+                            },
+                            "mime_type": {
+                              "type": "string",
+                              "description": "Media type of the indexed file recorded at index time (file name plus content sniff). Carries the same value as the older mime field; the name matches the rest of the contract (common.json ResourceRef)."
+                            },
+                            "described_by": {
+                              "type": "string",
+                              "description": "The describer model that produced the chunk text; present only when source is description. That text is untrusted model output, labelled 'AI description by <model>' wherever it is shown (ADR-0011 V2)."
                             }
                           }
                         }
@@ -602,9 +867,14 @@
                           "too_large",
                           "already_indexed",
                           "not_a_file",
-                          "empty"
+                          "empty",
+                          "not_local",
+                          "kind_not_enabled",
+                          "extractor_unavailable",
+                          "extraction_failed",
+                          "describer_not_configured"
                         ],
-                        "description": "Why nothing was indexed; absent when chunks were stored. mime_not_allowed: the content is not UTF-8 text, contains a NUL byte, or its type is not in embeddings.policy.mime_allowlist. too_large: larger than embeddings.policy.max_bytes. already_indexed: the CID has index entries and force was false. not_a_file: the CID is a UnixFS directory or another non-file node. empty: the file is empty or only whitespace, so there is no chunk to embed. chunks_indexed is 0 whenever skipped_reason is present."
+                        "description": "Why nothing was indexed; absent when chunks were stored. mime_not_allowed: the content is not UTF-8 text, contains a NUL byte, or its type is not in embeddings.policy.mime_allowlist. too_large: larger than embeddings.policy.max_bytes (text) or embeddings.extractor.max_bytes (content routed to the extractor), the extractor's output exceeds embeddings.extractor.max_text_bytes, or the text would produce more than the 2000-chunk cap. already_indexed: the CID has index entries and force was false. not_a_file: the CID is a UnixFS directory or another non-file node. empty: the file is empty or only whitespace, so there is no chunk to embed. not_local: the read was offline and the file's blocks are not on the node; indexing never fetches from the network (ADR-0011 V4). kind_not_enabled: an extractor is configured and the content is of a listed kind with a binary signature and its type is not in embeddings.policy.mime_allowlist (for example a PDF), or a non-image, non-video kind has no stage enabled. An allowlisted image or video that no stage covers (extractor OCR or transcription off and no describer covering the kind) is describer_not_configured, not kind_not_enabled. UTF-8 text with no binary signature (JSON, CSV, XML, HTML) stays on the native path and is skipped mime_not_allowed when not allowlisted. extractor_unavailable: the kind needs the extractor and none is configured or it is unreachable. extraction_failed: no stage (extractor or describer) could produce text for the file (for example a missing model with downloads disabled, or a describer that is down or answered unusably). A stage that fails while another stage produced text is a warning under _meta[\"ai.ipfs/stage-warnings\"] (non-normative diagnostics: a stage name and a fixed reason code, never endpoint text), not a skip. describer_not_configured: the kind is covered only by the describer and no embeddings.describer block exists or its kinds list does not name the kind. chunks_indexed is 0 whenever skipped_reason is present."
                       }
                     },
                     "required": [
@@ -1786,7 +2056,10 @@
             "repo_stat",
             "repo_gc",
             "ipfs_index_status",
-            "ipfs_index_reconcile"
+            "ipfs_index_reconcile",
+            "ipfs_index_bulk_start",
+            "ipfs_index_bulk_status",
+            "ipfs_index_bulk_cancel"
           ],
           "description": "The contract tool whose structured output this view draws."
         },
@@ -2416,6 +2689,106 @@
                       },
                       "cid_indexed": {
                         "type": "boolean"
+                      },
+                      "by_kind": {
+                        "type": "object",
+                        "description": "Optional. Indexed-file count per content kind: each key is a kind from derivations/content-kinds.json (text, document, code, data, image, video) and each value is the number of indexed files of that kind. A kind with no indexed files may be omitted. Absent from responses of servers that predate it; clients treat absence as unknown, not zero.",
+                        "propertyNames": {
+                          "enum": [
+                            "text",
+                            "document",
+                            "code",
+                            "data",
+                            "image",
+                            "video"
+                          ]
+                        },
+                        "additionalProperties": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "stages": {
+                        "type": "object",
+                        "description": "Optional. Present only when a stage is unavailable. The embedder, and a remote extractor, appear only when the caller's egress_ack covers their host; the probe is then one bare GET with no credential and no content. Absent from servers that predate it; clients treat absence as all stages available.",
+                        "additionalProperties": false,
+                        "properties": {
+                          "store": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "available"
+                            ],
+                            "properties": {
+                              "available": {
+                                "type": "boolean"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "description": "Why the stage is unavailable: a fixed code, never an address, a path or process output (the server log has the detail). unreachable: nothing answered at its address. not_started: the embedded process could not be started. starting: still starting, ask again shortly. exited: the embedded process ended after it had started. auth_failed: credentials rejected. timeout: no answer in time. unavailable: any other cause.",
+                                "enum": [
+                                  "unreachable",
+                                  "not_started",
+                                  "starting",
+                                  "exited",
+                                  "auth_failed",
+                                  "timeout",
+                                  "unavailable"
+                                ]
+                              }
+                            }
+                          },
+                          "embedder": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "available"
+                            ],
+                            "properties": {
+                              "available": {
+                                "type": "boolean"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "description": "Why the stage is unavailable: a fixed code, never an address, a path or process output (the server log has the detail). unreachable: nothing answered at its address. not_started: the embedded process could not be started. starting: still starting, ask again shortly. exited: the embedded process ended after it had started. auth_failed: credentials rejected. timeout: no answer in time. unavailable: any other cause.",
+                                "enum": [
+                                  "unreachable",
+                                  "not_started",
+                                  "starting",
+                                  "exited",
+                                  "auth_failed",
+                                  "timeout",
+                                  "unavailable"
+                                ]
+                              }
+                            }
+                          },
+                          "extractor": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "available"
+                            ],
+                            "properties": {
+                              "available": {
+                                "type": "boolean"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "description": "Why the stage is unavailable: a fixed code, never an address, a path or process output (the server log has the detail). unreachable: nothing answered at its address. not_started: the embedded process could not be started. starting: still starting, ask again shortly. exited: the embedded process ended after it had started. auth_failed: credentials rejected. timeout: no answer in time. unavailable: any other cause.",
+                                "enum": [
+                                  "unreachable",
+                                  "not_started",
+                                  "starting",
+                                  "exited",
+                                  "auth_failed",
+                                  "timeout",
+                                  "unavailable"
+                                ]
+                              }
+                            }
+                          }
+                        }
                       }
                     },
                     "required": [
@@ -2491,6 +2864,331 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "tool": {
+                "const": "ipfs_index_bulk_start"
+              }
+            },
+            "required": [
+              "tool"
+            ]
+          },
+          "then": {
+            "properties": {
+              "output": {
+                "oneOf": [
+                  {
+                    "title": "ipfs_index_bulk_start output",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "run_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Identifier of the started or resumed run, persisted with the run state in the vector store."
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "running"
+                        ],
+                        "description": "A successful start or resume always leaves the run running; any other state is an error, not a result."
+                      },
+                      "resumed": {
+                        "type": "boolean",
+                        "description": "True when this call resumed a paused run rather than starting a new one."
+                      },
+                      "sources": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "pins",
+                            "mfs"
+                          ]
+                        },
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "description": "The sources in effect for the run (input, else the configured embeddings.bulk.sources)."
+                      },
+                      "mfs_root": {
+                        "type": "string",
+                        "description": "The MFS root in effect when sources includes mfs."
+                      },
+                      "caps": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "max_files",
+                          "max_bytes",
+                          "files_per_minute"
+                        ],
+                        "properties": {
+                          "max_files": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "max_bytes": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "files_per_minute": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "description": "The effective caps after clamping the input to the configured embeddings.bulk caps."
+                      },
+                      "egress_hosts": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "uniqueItems": true,
+                        "description": "Every non-loopback host the run may contact (embedder, remote store, remote extractor, describer), each covered by the calling principal's egress_ack. Absent when every stage is loopback or embedded."
+                      }
+                    },
+                    "required": [
+                      "run_id",
+                      "state",
+                      "resumed",
+                      "sources",
+                      "caps"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/DataBinding"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tool": {
+                "const": "ipfs_index_bulk_status"
+              }
+            },
+            "required": [
+              "tool"
+            ]
+          },
+          "then": {
+            "properties": {
+              "output": {
+                "oneOf": [
+                  {
+                    "title": "ipfs_index_bulk_status output",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "True when an embeddings section is configured and embeddings.bulk.enabled is not false; the bulk tools are listed only then."
+                      },
+                      "run": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "run_id",
+                          "state",
+                          "started_by",
+                          "sources",
+                          "caps",
+                          "files_seen",
+                          "files_indexed",
+                          "files_skipped",
+                          "chunks_indexed",
+                          "bytes_read"
+                        ],
+                        "properties": {
+                          "run_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "paused",
+                              "completed",
+                              "cancelled",
+                              "failed"
+                            ],
+                            "description": "running: indexing now. paused: ipfs mcp restarted mid-run; the run indexes nothing until resumed through ipfs_index_bulk_start with resume true and a new confirmation. completed, cancelled, failed: terminal."
+                          },
+                          "started_by": {
+                            "type": "string",
+                            "description": "Name of the principal that started the run (or last resumed it)."
+                          },
+                          "sources": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "pins",
+                                "mfs"
+                              ]
+                            },
+                            "uniqueItems": true,
+                            "minItems": 1
+                          },
+                          "mfs_root": {
+                            "type": "string",
+                            "description": "The MFS root in effect when sources includes mfs."
+                          },
+                          "caps": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "max_files",
+                              "max_bytes",
+                              "files_per_minute"
+                            ],
+                            "properties": {
+                              "max_files": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "max_bytes": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "files_per_minute": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "description": "The effective caps the run was started with, already clamped to the configured embeddings.bulk caps."
+                          },
+                          "files_seen": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "files_indexed": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "files_skipped": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "chunks_indexed": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "bytes_read": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Content bytes read from the node so far; every read was offline."
+                          },
+                          "skipped_by_reason": {
+                            "type": "object",
+                            "propertyNames": {
+                              "enum": [
+                                "mime_not_allowed",
+                                "too_large",
+                                "already_indexed",
+                                "not_a_file",
+                                "empty",
+                                "not_local",
+                                "kind_not_enabled",
+                                "extractor_unavailable",
+                                "extraction_failed",
+                                "describer_not_configured"
+                              ]
+                            },
+                            "additionalProperties": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "description": "Count of skipped files per reason; keys are the skipped_reason values of ipfs_index_cid. Absent when nothing was skipped."
+                          },
+                          "last_error": {
+                            "type": "string",
+                            "description": "The error that failed the run; present only when state is failed."
+                          }
+                        },
+                        "description": "The current or last bulk run, read from its persisted state in the vector store. Absent when no run exists."
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/DataBinding"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tool": {
+                "const": "ipfs_index_bulk_cancel"
+              }
+            },
+            "required": [
+              "tool"
+            ]
+          },
+          "then": {
+            "properties": {
+              "output": {
+                "oneOf": [
+                  {
+                    "title": "ipfs_index_bulk_cancel output",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "run_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "cancelled"
+                        ],
+                        "description": "A successful cancel always leaves the run cancelled."
+                      },
+                      "files_indexed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Files indexed before the cancel; they stay indexed, so a later run skips them as already_indexed."
+                      },
+                      "files_skipped": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "chunks_indexed": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "run_id",
+                      "state",
+                      "files_indexed",
+                      "files_skipped",
+                      "chunks_indexed"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/DataBinding"
+                  }
+                ]
+              }
+            }
+          }
         }
       ],
       "x-ipfs-mcp": {
@@ -2506,7 +3204,10 @@
           "repo_stat",
           "repo_gc",
           "ipfs_index_status",
-          "ipfs_index_reconcile"
+          "ipfs_index_reconcile",
+          "ipfs_index_bulk_start",
+          "ipfs_index_bulk_status",
+          "ipfs_index_bulk_cancel"
         ]
       }
     },
@@ -3156,6 +3857,204 @@
       "not": {},
       "description": "This catalog defines no functions."
     },
+    "ipfs_ApprovalModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "confirmationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "class": {
+          "$ref": "#/$defs/ipfs_confirmation_ConfirmationClass"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ipfs_confirmation_Target"
+          }
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "resolvers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ipfs_confirmation_Resolver"
+          }
+        },
+        "phase": {
+          "$ref": "#/$defs/ipfs_confirmation_DecisionPresentation"
+        },
+        "object": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tool": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "omittedToolCharacters": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "omittedDescriptionCharacters": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "tool",
+            "description",
+            "omittedToolCharacters",
+            "omittedDescriptionCharacters"
+          ],
+          "description": "Prepared previews must equal the source tool/summary; omission counts must match. Runtime checks enforce this projection."
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "targets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ipfs_confirmation_Target"
+              },
+              "maxItems": 16
+            },
+            "totalTargets": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "omittedTargets": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "targets",
+            "totalTargets",
+            "omittedTargets"
+          ],
+          "description": "Runtime checks require exact original target order and displayed + omitted = total."
+        },
+        "classInWords": {
+          "type": "string",
+          "enum": [
+            "Write",
+            "Destructive"
+          ]
+        },
+        "cardProvenance": {
+          "type": "string",
+          "enum": [
+            "confirmation_required",
+            "pending_confirmation",
+            "decision_observation",
+            "agui_interrupt"
+          ]
+        },
+        "destination": {
+          "$ref": "#/$defs/ipfs_confirmation_Destination"
+        },
+        "authority": {
+          "$ref": "#/$defs/ipfs_confirmation_DecisionAuthority"
+        },
+        "egress": {
+          "$ref": "#/$defs/ipfs_confirmation_DecisionEgress"
+        },
+        "effectDigest": {
+          "$ref": "#/$defs/ipfs_confirmation_EffectDigest",
+          "minLength": 71,
+          "maxLength": 71
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "kubo",
+            "uar"
+          ]
+        },
+        "sourceKind": {
+          "type": "string",
+          "enum": [
+            "node_confirmation",
+            "backend_approval"
+          ]
+        },
+        "approvalState": {
+          "$ref": "#/$defs/ipfs_confirmation_DecisionApprovalState"
+        },
+        "requiresNativePrompt": {
+          "type": "boolean"
+        },
+        "resolvedBy": {
+          "$ref": "#/$defs/ipfs_confirmation_Resolver"
+        },
+        "resolvedSurface": {
+          "$ref": "#/$defs/ipfs_confirmation_ResolvingSurface"
+        },
+        "execution": {
+          "$ref": "#/$defs/ipfs_confirmation_ExecutionRecord"
+        },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "unreported",
+            "valid",
+            "invalid"
+          ]
+        },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "approve": {
+              "type": "boolean"
+            },
+            "deny": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "approve",
+            "deny"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "confirmationId",
+        "tool",
+        "class",
+        "summary",
+        "targets",
+        "resolvers",
+        "phase",
+        "object",
+        "scope",
+        "classInWords",
+        "cardProvenance"
+      ],
+      "description": "Shared ApprovalModel structural data. ApprovalModelSchema additionally enforces prepared object/scope/class/source coherence. approvalPresentation validates ID/tool/full digest/time/source-correlated successful receipts before Done, distinguishes definite failure from unknown outcomes, and applies native/terminal capability restrictions. Data, actions and approval consumption never prove operation success."
+    },
     "ipfs_ByteCount": {
       "type": "integer",
       "minimum": 0,
@@ -3350,6 +4249,16 @@
                 },
                 "requires_native_prompt": {
                   "type": "boolean"
+                },
+                "activity_id": {
+                  "$ref": "#/$defs/ipfs_confirmation_ActivityId",
+                  "description": "Optional server-assigned activity correlation, stable across authorized resumes. Present independently of agent.run_facts so decisions can be associated when run facts are off. No client authority."
+                },
+                "effect_digest": {
+                  "$ref": "#/$defs/ipfs_confirmation_EffectDigest"
+                },
+                "destination": {
+                  "$ref": "#/$defs/ipfs_confirmation_Destination"
                 }
               }
             }
@@ -3418,6 +4327,12 @@
           }
         }
       }
+    },
+    "ipfs_confirmation_ActivityId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Opaque server-assigned correlation ID for a newly accepted user activity, stable across its authorized resumes. Not a client-selected run/thread ID, ownership key, authorization handle, content identifier or durable history promise. Never encode a BindingKey, principal, subject, token or sensitive arguments."
     },
     "ipfs_confirmation_ConfirmationClass": {
       "type": "string",
@@ -3489,6 +4404,18 @@
             "a2a",
             "uar"
           ]
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/ipfs_confirmation_EffectDigest"
+        },
+        "destination": {
+          "$ref": "#/$defs/ipfs_confirmation_Destination"
+        },
+        "resolved_by": {
+          "$ref": "#/$defs/ipfs_confirmation_Resolver"
+        },
+        "resolved_surface": {
+          "$ref": "#/$defs/ipfs_confirmation_ResolvingSurface"
         }
       },
       "allOf": [
@@ -3546,6 +4473,256 @@
         }
       ]
     },
+    "ipfs_confirmation_DecisionApprovalState": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "denied",
+        "expired",
+        "executed"
+      ],
+      "description": "Legacy approval lifecycle. executed means approval was consumed exactly once before invocation, not that the operation succeeded. Missing execution metadata never upgrades it to Done."
+    },
+    "ipfs_confirmation_DecisionAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "description": "Safe configured display identity. Omit unknown name. Never expose raw OIDC subject, BindingKey, session grant or credentials. Observation is filtered privately by the full identity binding across its sessions.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "human-mcp",
+            "ui",
+            "a2a",
+            "uar"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "ipfs_confirmation_DecisionEgress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "description": "Actual operation/egress-policy facts only. none requires evidence that the operation sends no content to a third-party service; absence does not imply none. This display is not an egress acknowledgement.",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "configured",
+            "not_reported"
+          ]
+        },
+        "destination": {
+          "$ref": "#/$defs/ipfs_confirmation_Destination"
+        }
+      }
+    },
+    "ipfs_confirmation_DecisionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Opaque read-side identifier, not a confirmation token or authorization handle. UAR synthetic IDs remain separate from broker confirmations."
+    },
+    "ipfs_confirmation_DecisionPresentation": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "waiting_system_prompt",
+        "approved",
+        "committed",
+        "denied",
+        "expired",
+        "invalidated",
+        "resolved_elsewhere",
+        "uncertain",
+        "needs_resubmit",
+        "failed_after_approval"
+      ],
+      "description": "Derived client presentation, not broker state or authorization. Successful receipt takes precedence over surface attribution; known failure maps to failed_after_approval, ambiguity to uncertain. Defined by confirmation/README.md; eleven values, one generated shared model."
+    },
+    "ipfs_confirmation_Destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name"
+      ],
+      "description": "Safe configured destination display label from known operation semantics, never arbitrary model text, credentialed URL or secret. Omit when unknown. It does not select an endpoint or alter the call.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "node",
+            "pinning_service",
+            "ipns_name"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "ipfs_confirmation_EffectDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Server-computed SHA-256 of canonicalJSON({arguments: validated token-free arguments actually supplied, tool: canonical tool name}). Retain existing argsDigest canonicalization and token bytes. Omitted defaults are not inserted; explicit defaults remain explicit. Exclude only top-level confirm_token from arguments; transport/session/resolver/surface metadata is outside this envelope. A digest is an effect binding, never consent."
+    },
+    "ipfs_confirmation_ExecutionRecord": {
+      "description": "At most one invocation owns this record. not_started -> running -> succeeded | failed | unknown. A later reliable correlated report may refine unknown; it never authorizes another invocation. Only succeeded has a SuccessfulReceipt. Known failure means a definite unsuccessful operation result, not no partial effects; ambiguous partial effects/transport loss stay unknown. Timestamps and receipt bindings must agree semantically. When both timestamps exist, started_at <= completed_at; equality is valid at the observed clock resolution. Clamp a backwards wall-clock completion to started_at; never invent a +1ns interval. Receipt completion equals record completion.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "not_started"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "started_at"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "started_at",
+            "completed_at",
+            "receipt"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "succeeded"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "completed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "receipt": {
+              "$ref": "#/$defs/ipfs_confirmation_SuccessfulReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "started_at",
+            "completed_at",
+            "error"
+          ],
+          "description": "Actual operation lifecycle, separate from the one-time approval claim.",
+          "properties": {
+            "state": {
+              "const": "failed"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "completed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "error": {
+              "$ref": "#/$defs/ipfs_confirmation_SafeExecutionError"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state"
+          ],
+          "description": "Dispatch/outcome evidence is insufficient; no retry or zero-effect claim.",
+          "properties": {
+            "state": {
+              "const": "unknown"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "completed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "error": {
+              "$ref": "#/$defs/ipfs_confirmation_SafeExecutionError"
+            }
+          }
+        }
+      ]
+    },
+    "ipfs_confirmation_ReceiptReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "description": "Actual confirmed result identifier, never guessed from input or arbitrary tool prose. No fetched content, secret key bytes, credentialed URL or backend response body.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "cid",
+            "content_path",
+            "mfs_path",
+            "ipns_name",
+            "job",
+            "key"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
     "ipfs_confirmation_Resolver": {
       "type": "string",
       "enum": [
@@ -3556,7 +4733,118 @@
         "linux-polkit",
         "cli"
       ],
-      "description": "Human-presence mechanisms. The confirm token is deliberately not a resolver."
+      "description": "Authorized resolver mechanisms. They are distinct from descriptive ResolvingSurface attribution. The confirm token, effect digest and observation access are deliberately not resolvers. Only macos-localauth/linux-polkit provide the native-presence factor; desktop never does."
+    },
+    "ipfs_confirmation_ResolvingSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "description": "Descriptive attribution only; instance is a bounded opaque per-surface identifier, not a principal or credential. Distinguishes two chat panes. Browser attribution never selects an authorized resolver. Trusted native/MCP adapters stamp their own kind.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "chat",
+            "inbox",
+            "mcp_host",
+            "desktop",
+            "native_prompt",
+            "cli"
+          ]
+        },
+        "instance": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "ipfs_confirmation_SafeExecutionError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "description": "Bounded public error detail. No raw RPC/backend bodies, stack traces, credentials, content bytes or sensitive arguments. Known failure does not establish zero effects.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "ipfs_confirmation_SuccessfulReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "decision_id",
+        "tool",
+        "effect_digest",
+        "completed_at",
+        "outcome",
+        "effect",
+        "provenance",
+        "result_refs"
+      ],
+      "description": "Success evidence for one immutable decision/tool/digest, created only from the actual handler result or a correlated validated backend operation report. An accepted background job proves job_accepted only. Empty result_refs is honest for success without returned identifiers. A text TOOL_CALL_RESULT or UAR RUN_FINISHED success is insufficient. Result delivery/serialization failure after recorded success does not undo it.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "decision_id": {
+          "$ref": "#/$defs/ipfs_confirmation_DecisionId"
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "effect_digest": {
+          "$ref": "#/$defs/ipfs_confirmation_EffectDigest"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "outcome": {
+          "const": "succeeded"
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "operation_completed",
+            "job_accepted"
+          ]
+        },
+        "provenance": {
+          "type": "string",
+          "enum": [
+            "node_handler",
+            "validated_backend_operation"
+          ]
+        },
+        "result_refs": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ipfs_confirmation_ReceiptReference"
+          }
+        }
+      }
     },
     "ipfs_confirmation_Summary": {
       "type": "object",

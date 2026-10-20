@@ -161,7 +161,9 @@
         "confirmation_declined",
         "confirmation_expired",
         "confirmation_invalid",
+        "confirmation_digest_mismatch",
         "confirmation_unavailable",
+        "cursor_refresh_required",
         "tool_unavailable",
         "daemon_unreachable",
         "daemon_version_unsupported",
@@ -175,7 +177,7 @@
         "rpc_error",
         "internal"
       ],
-      "description": "Machine-readable error code. Shared by every tool, transport and endpoint. The list grows additively: a client treats an unknown code as an error and uses retryable alone to decide whether to retry. Endpoint codes (ADR-0004, Round 7 amendment): session_busy (another run is in progress on the same thread, session or A2A context; retryable once it ends), failed_precondition (the target is not in a state that accepts the request: an open interrupt, a thread at its message cap, an A2A task in a terminal state; not retryable unchanged), resource_exhausted (a server-wide cap such as the session limit is reached; retryable, with Retry-After on HTTP)."
+      "description": "Machine-readable error code. Shared by every tool, transport and endpoint. The list grows additively: a client treats an unknown code as an error and uses retryable alone to decide whether to retry. Endpoint codes (ADR-0004, Round 7 amendment): session_busy (another run is in progress on the same thread, session or A2A context; retryable once it ends), failed_precondition (the target is not in a state that accepts the request: an open interrupt, a thread at its message cap, an A2A task in a terminal state; not retryable unchanged), resource_exhausted (a server-wide cap such as the session limit is reached; retryable, with Retry-After on HTTP). confirmation_digest_mismatch: a supplied reviewed effect digest differs from the immutable authorized operation; retryable=false. Re-review requires a fresh request, never a replay or automatic write retry."
     },
     "ToolError": {
       "type": "object",

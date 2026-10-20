@@ -93,6 +93,9 @@ type AgentConfig struct {
 	// A2UI is agent.a2ui: emit A2UI surface messages on /agui (on by default
 	// wherever /agui is on; nil means the default).
 	A2UI *bool `json:"a2ui"`
+	// RunFacts is agent.run_facts: emit actual sourced run facts (default true).
+	RunFacts          *bool `json:"run_facts"`
+	ContextReferences *bool `json:"context_references"`
 	// A2A is agent.a2a: serve POST /a2a and the agent card (off by default).
 	A2A bool `json:"a2a"`
 	// OriginAllowlist is agent.origin_allowlist: page origins allowed to call
@@ -100,7 +103,17 @@ type AgentConfig struct {
 	OriginAllowlist []string   `json:"origin_allowlist"`
 	Loop            LoopConfig `json:"loop"`
 	// Settings is agent.settings: the runtime settings API switches.
-	Settings SettingsConfig `json:"settings"`
+	Settings  SettingsConfig  `json:"settings"`
+	Decisions DecisionsConfig `json:"decisions"`
+}
+
+// DecisionsConfig controls the protected current-identity read surface.
+type DecisionsConfig struct {
+	Enabled *bool `json:"enabled"`
+}
+
+func (c AgentConfig) DecisionsEnabled() bool {
+	return c.Decisions.Enabled == nil || *c.Decisions.Enabled
 }
 
 // SettingsConfig is agent.settings. The settings route mounts only when an

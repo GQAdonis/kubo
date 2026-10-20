@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "cursor_refresh_required",
+    "message": "Read a new decision snapshot.",
+    "retryable": false,
+    "refresh": {
+      "server_epoch": "epoch_fixture_0001",
+      "revision": "rev_fixture_2"
+    }
+  }
+}

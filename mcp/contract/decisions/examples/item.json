@@ -1,0 +1,64 @@
+{
+  "server_epoch": "epoch_fixture_0001",
+  "revision": "rev_fixture_1",
+  "history_started_at": "2026-10-20T12:00:00Z",
+  "retention": {
+    "scope": "server",
+    "max_resolved": 200,
+    "max_age_seconds": 604800,
+    "resets_on_restart": true
+  },
+  "item": {
+    "id": "cf_3pQm8vK2xR7tLw9a",
+    "source": "kubo",
+    "source_kind": "node_confirmation",
+    "approval_state": "executed",
+    "summary": {
+      "tool": "pin_rm",
+      "class": "destructive",
+      "text": "Remove the recursive pin on the fixture CID",
+      "targets": [
+        {
+          "kind": "cid",
+          "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        }
+      ]
+    },
+    "authority": {
+      "kind": "human-mcp",
+      "name": "Fixture operator"
+    },
+    "created_at": "2026-10-20T12:00:00Z",
+    "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+    "destination": {
+      "kind": "node",
+      "name": "Fixture node"
+    },
+    "resolved_by": "desktop",
+    "resolved_surface": {
+      "kind": "desktop",
+      "instance": "window_fixture_1"
+    },
+    "execution": {
+      "state": "succeeded",
+      "started_at": "2026-10-20T12:00:02Z",
+      "completed_at": "2026-10-20T12:00:03Z",
+      "receipt": {
+        "id": "rc_fixture_success_01",
+        "decision_id": "cf_3pQm8vK2xR7tLw9a",
+        "tool": "pin_rm",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "completed_at": "2026-10-20T12:00:03Z",
+        "outcome": "succeeded",
+        "effect": "operation_completed",
+        "provenance": "node_handler",
+        "result_refs": []
+      }
+    },
+    "actions": {
+      "approve": false,
+      "deny": false,
+      "authorized_surface": "originating_mcp_host"
+    }
+  }
+}

@@ -56,15 +56,20 @@ func fixtureNames(t *testing.T) []string {
 // runs after RUN_STARTED of the fixture's run arrived and before the rest of
 // the stream is read: the person acting while a run waits.
 type aguiScenario struct {
-	files  []string
-	token  string
-	limits LoopLimits
-	during map[string]func(t *testing.T, e *aguiEnv)
+	files    []string
+	token    string
+	limits   LoopLimits
+	runFacts *bool
+	during   map[string]func(t *testing.T, e *aguiEnv)
 	// userMessages: nothing; the fixtures carry them.
 }
 
+var replayRunFactsOff = false
+
 var aguiScenarios = []aguiScenario{
 	{files: []string{"read-pin-ls.json"}},
+	{files: []string{"read-pin-ls-negotiated.json"}},
+	{files: []string{"write-interrupt-activity-facts-off.json"}, runFacts: &replayRunFactsOff},
 	{files: []string{"egress-refused.json"}, token: aguiTokNoAck},
 	{files: []string{"write-interrupt.json"}},
 	{files: []string{"write-interrupt.json", "write-resume-approved.json"}},
@@ -148,6 +153,9 @@ func TestAGUIFixturesReplay(t *testing.T) {
 		}
 	}
 	for _, name := range fixtureNames(t) {
+		if name == "read-pin-ls-context-facts.json" {
+			continue
+		} // TestContextFactsExampleUsesActualSelectedSnapshot below.
 		assert.True(t, covered[name], "fixture %s has no replay scenario", name)
 	}
 
@@ -157,7 +165,7 @@ func TestAGUIFixturesReplay(t *testing.T) {
 			for _, f := range sc.files {
 				fixtures = append(fixtures, loadAGUIFixture(t, f))
 			}
-			e := newAGUIEnv(t, aguiEnvOpts{limits: sc.limits}, modelStepsFor(fixtures)...)
+			e := newAGUIEnv(t, aguiEnvOpts{limits: sc.limits, runFacts: sc.runFacts}, modelStepsFor(fixtures)...)
 			token := sc.token
 			if token == "" {
 				token = aguiTokChat
@@ -204,6 +212,47 @@ func TestAGUIFixturesReplay(t *testing.T) {
 	}
 }
 
+// This contract example deliberately supplies synthetic model/host/tool facts.
+// Replay its actual input and all ordinary/negotiated events, then compare facts
+// to the selected source snapshot instead of asserting those sample values.
+func TestContextFactsExampleUsesActualSelectedSnapshot(t *testing.T) {
+	f := loadAGUIFixture(t, "read-pin-ls-context-facts.json")
+	e := newAGUIEnv(t, aguiEnvOpts{}, modelStepsFor([]aguiFixture{f})...)
+	r := e.post(aguiTokChat, f.Input, nil)
+	require.Equal(t, http.StatusOK, r.Status, r.Body)
+	var ordinary []aguiEvent
+	for _, event := range f.Events {
+		if event["type"] == "CUSTOM" && event["name"] == runFactsEventName {
+			validateRunFactsEvent(t, event["value"])
+			continue
+		}
+		ordinary = append(ordinary, event)
+	}
+	assert.Empty(t, replayDiff(t, ordinary, r.Events), "all non-fact event assertions still apply")
+	value := factsFromEvents(t, r.Events, f.Input["threadId"].(string), f.Input["runId"].(string))
+	facts := value["facts"].(map[string]any)
+	reqs := e.model.requests()
+	require.NotEmpty(t, reqs)
+	actual := make([]string, 0, len(reqs[0].Tools))
+	for _, tool := range reqs[0].Tools {
+		actual = append(actual, tool.Function.Name)
+	}
+	assert.ElementsMatch(t, actual, factToolNames(t, facts["offered_tools"]))
+	assert.EqualValues(t, len(e.s.cat.Tools), facts["catalog_size"])
+	assert.Equal(t, promptDigestForTest(reqs[0].Messages[0].Content), facts["system_prompt_digest"])
+	backend := facts["backend"].(map[string]any)
+	assert.Equal(t, "test-model", backend["model"])
+	assert.Equal(t, e.model.host(), backend["host"])
+	assert.NotContains(t, backend, "placement")
+	refs := f.Input["forwardedProps"].(map[string]any)["ipfs"].(map[string]any)["context"]
+	assert.JSONEq(t, string(asJSON(t, refs)), string(asJSON(t, facts["context_snapshot"])))
+	assert.Equal(t, "accepted_turn", facts["provenance"].(map[string]any)["context_snapshot"])
+	assert.Equal(t, 1, e.d.count("pin/ls"))
+	assert.Zero(t, e.d.count("files/read"))
+	assert.Zero(t, e.d.count("files/stat"))
+	validateWithAGUICore(t, []map[string]any{f.Input}, r.Events)
+}
+
 func typesOf(evs []aguiEvent) []string {
 	out := make([]string, 0, len(evs))
 	for _, e := range evs {
@@ -239,25 +288,34 @@ func (m *idMapper) get(s string) string {
 // normalizer maps the random IDs of one side to stable names in order of first
 // appearance, so two streams can be compared.
 type normalizer struct {
-	msg, intr, conf idMapper
+	msg, intr, conf, activity idMapper
 }
 
 func newNormalizer() *normalizer {
 	return &normalizer{
-		msg:  idMapper{"msg#", map[string]string{}},
-		intr: idMapper{"int#", map[string]string{}},
-		conf: idMapper{"cf#", map[string]string{}},
+		msg:      idMapper{"msg#", map[string]string{}},
+		intr:     idMapper{"int#", map[string]string{}},
+		conf:     idMapper{"cf#", map[string]string{}},
+		activity: idMapper{"act#", map[string]string{}},
 	}
 }
 
-// dropCustomEvents removes the CUSTOM events (server-built A2UI surfaces)
-// from a stream; the fixture comparison covers the authored event types only.
-func dropCustomEvents(in []aguiEvent) []aguiEvent {
-	out := in[:0]
-	for _, e := range in {
-		if e["type"] != "CUSTOM" {
-			out = append(out, e)
+// Only the newly optional, independently schema-checked run-facts event can
+// supplement a legacy fixture. Catalog/surface/unknown CUSTOM events compare.
+func withoutUnspecifiedRunFacts(t *testing.T, expected, in []aguiEvent) []aguiEvent {
+	t.Helper()
+	for _, event := range expected {
+		if event["type"] == "CUSTOM" && event["name"] == runFactsEventName {
+			return in
 		}
+	}
+	out := make([]aguiEvent, 0, len(in))
+	for _, e := range in {
+		if e["type"] == "CUSTOM" && e["name"] == runFactsEventName {
+			validateRunFactsEvent(t, e["value"])
+			continue
+		}
+		out = append(out, e)
 	}
 	return out
 }
@@ -345,11 +403,7 @@ func shapeSubset(path string, exp, act any) error {
 // differences, empty when they match.
 func replayDiff(t *testing.T, exp, act []aguiEvent) []string {
 	t.Helper()
-	// CUSTOM events carry the server-built A2UI surfaces (change
-	// mcp-agui-a2ui-registry); the authored fixtures predate them and the
-	// fixture schema's event enum has no CUSTOM, so they are checked by the
-	// A2UI tests and dropped here.
-	act = dropCustomEvents(act)
+	act = withoutUnspecifiedRunFacts(t, exp, act)
 	exp, act = mergeText(exp), mergeText(act)
 	var diffs []string
 	if len(exp) != len(act) {
@@ -358,7 +412,7 @@ func replayDiff(t *testing.T, exp, act []aguiEvent) []string {
 	en, an := newNormalizer(), newNormalizer()
 	for i := 0; i < len(exp) && i < len(act); i++ {
 		ee, ae := deepCopy(t, exp[i]), deepCopy(t, act[i])
-		if err := normalizePair(en, an, ee, ae); err != nil {
+		if err := normalizePair(t, en, an, ee, ae); err != nil {
 			diffs = append(diffs, fmt.Sprintf("event %d (%v): %v", i, exp[i]["type"], err))
 			continue
 		}
@@ -383,7 +437,7 @@ func deepCopy(t *testing.T, e aguiEvent) aguiEvent {
 // normalizePair rewrites random IDs, the time of an expiry and free text so
 // the two events compare equal when they match. It reports tool results whose
 // shape differs.
-func normalizePair(en, an *normalizer, exp, act aguiEvent) error {
+func normalizePair(t *testing.T, en, an *normalizer, exp, act aguiEvent) error {
 	for _, side := range []struct {
 		n *normalizer
 		e aguiEvent
@@ -395,6 +449,34 @@ func normalizePair(en, an *normalizer, exp, act aguiEvent) error {
 		}
 	}
 	switch exp["type"] {
+	case "CUSTOM":
+		if exp["name"] == aguiA2UIEventName {
+			ev, _ := exp["value"].(map[string]any)
+			av, _ := act["value"].(map[string]any)
+			ed, _ := ev["updateDataModel"].(map[string]any)
+			ad, _ := av["updateDataModel"].(map[string]any)
+			if ed != nil && ad != nil {
+				ecall, _ := ed["value"].(map[string]any)
+				acall, _ := ad["value"].(map[string]any)
+				for _, call := range []map[string]any{ecall, acall} {
+					if args, ok := call["arguments"].(string); ok {
+						call["arguments"] = canonArgs(args)
+					}
+				}
+				er, ok := ecall["result"].(string)
+				if !ok {
+					return fmt.Errorf("A2UI fixture result must use the existing JSON-string call wire")
+				}
+				ar, ok := acall["result"].(string)
+				if !ok {
+					return fmt.Errorf("A2UI result must be a JSON string")
+				}
+				if err := resultMatches(er, ar); err != nil {
+					return err
+				}
+				ecall["result"], acall["result"] = "<result>", "<result>"
+			}
+		}
 	case "TOOL_CALL_ARGS":
 		for _, e := range []aguiEvent{exp, act} {
 			e["delta"] = canonArgs(e["delta"].(string))
@@ -426,7 +508,7 @@ func normalizePair(en, an *normalizer, exp, act aguiEvent) error {
 			}
 		}
 	case "RUN_FINISHED":
-		if err := normalizeInterrupt(en, an, exp, act); err != nil {
+		if err := normalizeInterrupt(t, en, an, exp, act); err != nil {
 			return err
 		}
 	}
@@ -447,7 +529,7 @@ func canonArgs(s string) string {
 	return string(b)
 }
 
-func normalizeInterrupt(en, an *normalizer, exp, act aguiEvent) error {
+func normalizeInterrupt(t *testing.T, en, an *normalizer, exp, act aguiEvent) error {
 	eo, _ := exp["outcome"].(map[string]any)
 	ao, _ := act["outcome"].(map[string]any)
 	if eo == nil || ao == nil || eo["type"] != "interrupt" {
@@ -477,6 +559,23 @@ func normalizeInterrupt(en, an *normalizer, exp, act aguiEvent) error {
 			return fmt.Errorf("interrupt has no expiresAt")
 		}
 		p.m["expiresAt"] = "<time>"
+	}
+	// Legacy fixtures intentionally omit these newly optional facts.
+	// Validate every emitted value before excluding only an absent legacy
+	// counterpart; all incumbent fields and unknown fields still compare.
+	em := x["metadata"].(map[string]any)["ipfs-mcp"].(map[string]any)
+	am := y["metadata"].(map[string]any)["ipfs-mcp"].(map[string]any)
+	for field, def := range map[string]string{"effect_digest": "EffectDigest", "destination": "Destination", "activity_id": "ActivityId"} {
+		if value, emitted := am[field]; emitted {
+			validateConfirmationDef(t, def, value)
+			if _, present := em[field]; !present {
+				delete(am, field)
+			} else if field == "activity_id" {
+				validateConfirmationDef(t, def, em[field])
+				em[field] = en.activity.get(em[field].(string))
+				am[field] = an.activity.get(value.(string))
+			}
+		}
 	}
 	return nil
 }

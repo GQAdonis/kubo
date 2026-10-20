@@ -1,0 +1,225 @@
+{
+  "$schema": "../agui.schema.json",
+  "description": "Authored optional typed reference and actual run-facts shape over the negotiated pin_ls fixture; selected facts are synthetic contract inputs, not a runtime recording. ToolCallCard preserves JSON-string arguments/result and the fixture principal’s existing local egress display.",
+  "provenance": "authored-from-spec",
+  "principalKind": "ui",
+  "input": {
+    "threadId": "thread-pins-1",
+    "runId": "run-1",
+    "messages": [
+      {
+        "id": "msg-u1",
+        "role": "user",
+        "content": "Which recursive pins do I have?"
+      }
+    ],
+    "tools": [],
+    "context": [],
+    "forwardedProps": {
+      "ipfs": {
+        "a2ui": {
+          "catalogs": [
+            {
+              "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+              "catalogVersion": "0.1.0",
+              "protocolVersion": "v0.9"
+            }
+          ]
+        },
+        "context": [
+          {
+            "id": "page_files",
+            "provenance": "page",
+            "route": "/files",
+            "path": "/notes",
+            "path_kind": "mfs"
+          }
+        ],
+        "surface": {
+          "kind": "chat",
+          "instance": "fixture_chat_1"
+        }
+      }
+    }
+  },
+  "events": [
+    {
+      "type": "RUN_STARTED",
+      "threadId": "thread-pins-1",
+      "runId": "run-1"
+    },
+    {
+      "type": "CUSTOM",
+      "name": "a2ui.catalog",
+      "value": {
+        "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+        "catalogVersion": "0.1.0",
+        "protocolVersion": "v0.9",
+        "catalogUrl": "/agui/catalog"
+      }
+    },
+    {
+      "type": "CUSTOM",
+      "name": "ipfs.run.facts",
+      "value": {
+        "thread_id": "thread-pins-1",
+        "run_id": "run-1",
+        "facts": {
+          "offered_tools": [
+            "pin_ls"
+          ],
+          "tool_scope": "kubo_contract",
+          "backend": {
+            "kind": "openai",
+            "model": "fixture-model",
+            "placement": "local",
+            "host": "localhost:11434"
+          },
+          "context_snapshot": [
+            {
+              "id": "page_files",
+              "provenance": "page",
+              "route": "/files",
+              "path": "/notes",
+              "path_kind": "mfs"
+            }
+          ],
+          "memory": {
+            "scope": "process_conversation"
+          },
+          "egress": {
+            "acknowledged_hosts": [
+              "local"
+            ]
+          },
+          "provenance": {
+            "offered_tools": "effective_policy_offer",
+            "backend": "effective_run_snapshot",
+            "context_snapshot": "accepted_turn",
+            "memory": "effective_run_snapshot",
+            "egress": "effective_run_snapshot"
+          }
+        }
+      }
+    },
+    {
+      "type": "TOOL_CALL_START",
+      "toolCallId": "tc-1",
+      "toolCallName": "pin_ls",
+      "parentMessageId": "msg-a1"
+    },
+    {
+      "type": "TOOL_CALL_ARGS",
+      "toolCallId": "tc-1",
+      "delta": "{\"type\":\"recursive\",\"limit\":20}"
+    },
+    {
+      "type": "TOOL_CALL_END",
+      "toolCallId": "tc-1"
+    },
+    {
+      "type": "MESSAGES_SNAPSHOT",
+      "messages": [
+        {
+          "id": "msg-u1",
+          "role": "user",
+          "content": "Which recursive pins do I have?"
+        },
+        {
+          "id": "msg-a1",
+          "role": "assistant",
+          "toolCalls": [
+            {
+              "id": "tc-1",
+              "type": "function",
+              "function": {
+                "name": "pin_ls",
+                "arguments": "{\"type\":\"recursive\",\"limit\":20}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "TOOL_CALL_RESULT",
+      "messageId": "msg-t1",
+      "toolCallId": "tc-1",
+      "role": "tool",
+      "content": "{\"pins\":[{\"cid\":\"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\",\"type\":\"recursive\",\"name\":\"wiki\"}],\"page\":{\"has_more\":false}}"
+    },
+    {
+      "type": "CUSTOM",
+      "name": "a2ui",
+      "value": {
+        "version": "v0.9",
+        "createSurface": {
+          "surfaceId": "call-tc-1",
+          "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json"
+        }
+      }
+    },
+    {
+      "type": "CUSTOM",
+      "name": "a2ui",
+      "value": {
+        "version": "v0.9",
+        "updateComponents": {
+          "surfaceId": "call-tc-1",
+          "components": [
+            {
+              "id": "root",
+              "component": "ToolCallCard",
+              "call": {
+                "path": "/call"
+              },
+              "acknowledgedHosts": [
+                "local"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "CUSTOM",
+      "name": "a2ui",
+      "value": {
+        "version": "v0.9",
+        "updateDataModel": {
+          "surfaceId": "call-tc-1",
+          "path": "/call",
+          "value": {
+            "id": "tc-1",
+            "name": "pin_ls",
+            "arguments": "{\"type\":\"recursive\",\"limit\":20}",
+            "result": "{\"pins\":[{\"cid\":\"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\",\"type\":\"recursive\",\"name\":\"wiki\"}],\"page\":{\"has_more\":false}}",
+            "status": "done"
+          }
+        }
+      }
+    },
+    {
+      "type": "TEXT_MESSAGE_START",
+      "messageId": "msg-a2",
+      "role": "assistant"
+    },
+    {
+      "type": "TEXT_MESSAGE_CONTENT",
+      "messageId": "msg-a2",
+      "delta": "You have one recursive pin, named wiki."
+    },
+    {
+      "type": "TEXT_MESSAGE_END",
+      "messageId": "msg-a2"
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "thread-pins-1",
+      "runId": "run-1",
+      "outcome": {
+        "type": "success"
+      }
+    }
+  ]
+}

@@ -100,7 +100,7 @@ func (h *a2aHandler) settleRun(t *a2aTask, res *RunResult, err error) bool {
 		t.setStatus(a2aCompleted, "", nil, nil)
 	case OutcomeInterrupt:
 		iv := res.Interrupts[0]
-		return h.inputRequired(t, &a2aPending{confirmationID: iv.ConfirmationID, tool: iv.Tool, text: true, interruptID: iv.ID},
+		return h.inputRequired(t, &a2aPending{confirmationID: iv.ConfirmationID, tool: iv.Tool, text: true, interruptID: iv.ID, effectDigest: iv.EffectDigest, destination: cloneDestination(iv.Destination)},
 			iv.Message, iv.Class, iv.RequiresNativePrompt, iv.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z"))
 	default:
 		t.setStatus(a2aFailed, "The agent stopped before finishing: "+limitText(res.Reason)+". Nothing further was done.", nil, nil)
@@ -126,6 +126,12 @@ func errTypeName(err error) string { return fmt.Sprintf("%T", err) }
 // the confirmation.
 func (h *a2aHandler) inputRequired(t *a2aTask, p *a2aPending, summary, class string, native bool, expires string) bool {
 	info := map[string]any{"confirmation_id": p.confirmationID, "tool": p.tool, "class": class, "expires_at": expires}
+	if p.effectDigest != "" {
+		info["effect_digest"] = p.effectDigest
+	}
+	if p.destination != nil {
+		info["destination"] = cloneDestination(p.destination)
+	}
 	if native {
 		info["requires_native_prompt"] = true
 	}
@@ -165,7 +171,7 @@ func (h *a2aHandler) settleError(t *a2aTask, w a2aWork, te *ToolError) bool {
 		return false
 	case CodeConfirmRequired, CodeConfirmPending:
 		if c := te.Confirmation; c != nil {
-			return h.inputRequired(t, &a2aPending{confirmationID: c.ConfirmationID, tool: w.tool, args: w.args},
+			return h.inputRequired(t, &a2aPending{confirmationID: c.ConfirmationID, tool: w.tool, args: w.args, effectDigest: c.EffectDigest, destination: cloneDestination(c.Destination)},
 				c.Summary.Text, c.Summary.Class, c.RequiresNativePrompt, c.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z"))
 		}
 	case CodeConfirmDeclined, CodeConfirmExpired, CodeConfirmInvalid, CodeConfirmUnavailable, CodeEgressNotAcknowledged:

@@ -1,0 +1,13 @@
+{
+  "thread_id": "thread-pin-2",
+  "run_id": "run-1",
+  "activity_id": "act_fixture_01",
+  "facts": {
+    "backend": {
+      "kind": "openai"
+    },
+    "provenance": {
+      "backend": "effective_run_snapshot"
+    }
+  }
+}

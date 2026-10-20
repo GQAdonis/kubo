@@ -97,6 +97,9 @@ func newGateEnv(t *testing.T, resolvers ...Resolver) *gateEnv {
 		resolvers = []Resolver{res}
 	}
 	s := mustNew(t, d, Options{Tools: []string{"pin", "destructive"}, Resolvers: resolvers, now: clock.Now})
+	// These gate fixtures inspect retained execution evidence explicitly;
+	// production stdio does not enable observer history.
+	s.gate.broker.setHistoryEnabled(true)
 	return &gateEnv{s: s, h: newHarness(s), d: d, pins: pins, clock: clock, resolver: res, target: target}
 }
 

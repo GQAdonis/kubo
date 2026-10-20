@@ -145,3 +145,14 @@ func argsDigest(raw json.RawMessage) (digest, token string, args map[string]any,
 	sum := sha256.Sum256(canon)
 	return hex.EncodeToString(sum[:]), token, args, nil
 }
+
+// effectDigest binds the reviewed tool and the same token-free arguments used
+// by argsDigest. It deliberately does not change the v1 token's args-only hash.
+func effectDigest(tool string, args map[string]any) (string, error) {
+	canon, err := canonicalJSON(map[string]any{"arguments": args, "tool": tool})
+	if err != nil {
+		return "", fmt.Errorf("canonical effect: %w", err)
+	}
+	sum := sha256.Sum256(canon)
+	return "sha256:" + hex.EncodeToString(sum[:]), nil
+}

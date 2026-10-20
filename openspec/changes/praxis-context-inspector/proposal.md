@@ -1,45 +1,46 @@
 # Proposal: praxis-context-inspector
 
-Phase `agent-backend-settings › praxis-agentic-ux`, change 5 of 8, child plan r1, Round 3. See `.kbd-orchestrator/phases/agent-backend-settings/children/praxis-agentic-ux/plan.md`.
-
 ## Why
 
-The assessment marks these KnowMe Praxis ed. 1.2 clauses:
-
-- WS-06 visible context with provenance, removable: **X**. The chat sends no visible context list, and page context is not passed.
-- CX-01 the person can see what the agent was given: not met. The chat shows no tools-offered count, model placement or memory scope. CX-02..05 budget arithmetic stays NA for this UI (owned by the agent backend).
-- Turn anatomy (S05 §6.1): turns show a spinner, not named phases, so a person cannot tell planning from calling a tool from waiting for approval.
-
-Decisions D7 and D8 (decision-log PX-09, PX-10): a context strip with removable items and provenance, a context inspector with four sections, and a lifecycle strip with named phases.
+Send visible removable bounded route/CID/IPFS-path references and display actual built-in/UAR run facts; never invent model context, tool counts or prompt-budget calculations.
 
 ## What Changes
 
-- **Context strip (Kubo `mcp/chat` island).** Above the composer: container (current page, CID or MFS path, from the Web UI), files attached, model placement (local or the acknowledged remote host by name), memory scope ("None"), tools offered ("12 of 44 tools offered"). Each item shows where it came from (page, person, settings, server) and can be removed before send, except tools offered and model placement, which link to Settings instead.
-- **Context inspector.** Opens from the strip. Four sections: Overview (container, model placement, memory scope, egress host), Context (the items sent with the last turn, with provenance), Prompt plan (the tool list offered and the system prompt digest the server reports), Events (the AG-UI events of the current run, read-only). The inspector displays decisions the server made; it computes no budget.
-- **Lifecycle strip.** Each turn shows named phases from AG-UI events: Planning → Calling `<tool>` → Waiting for approval → Running → Done (or Failed, Cancelled). No spinner without a word.
-- **Web UI context bridge.** The Web UI passes the current route's container (route name and CID or path) to the island through the existing bridge, only when the person has not removed it.
-- **Kubo server.** The run-start response reports the offered tool names and the system prompt digest, so the strip and the inspector show server facts, not client guesses.
+Existing IDs: **1.1–1.2, 2.1–2.5, 3.1–3.2**.
+
+- Architect owns **1.1** schema extension in the actual AG-UI schema/contract definitions; UI engineer regenerates consumers. Effective facts come from principal-filtered offered tools and retained per-run prompt/backend snapshot, not global `Server.ToolNames()`.
+- **1.2** supports built-in and UAR: emit known facts only; no synthesized prompt digest/tool count for UAR when unreported.
+- Add **1.3**, architect then server engineer: bounded typed route/CID/IPFS-path references accepted by AG-UI decoder and built-in/UAR adapter. No filesystem access, implicit content fetching, uploads or authority from context strings. Resolve content only through existing authorized tools/egress checks. Frame incoming references as untrusted data.
+- **2.1–2.2, 3.1–3.2**: visible removable reference chips; removed context absent on every subsequent request until route changes. “Files attached” prototype language becomes accurate reference language; no unavailable upload control.
+- **2.3** current-run-only event list, virtualized after 200; no prompt text/secrets/raw sensitive args. **2.4** only event-supported lifecycle phases; cancellation and unknown backend facts are distinct.
+
+The operator confirmed UI-01 through UI-16 in `.kbd-orchestrator/phases/agentic-ui-implementation/decision-log.md`. The reviewed phase `plan.md`, authored `tasks.json` dependency graph and `adopted-contract.json` scenario oracles govern. Historical `docs/design` copies remain visual references; canonical amendments replace conflicting architecture and acceptance assumptions.
+
+This is a plan artifact, not production implementation. F/1.1 creates implementation architecture/ownership grants; architect-owned schema/ADR tasks execute only after readiness. No RPC/gateway/default CID/wire change, direct repository opening, silent content injection, unconfigured endpoint or new approval authority. F4/G10/E6 and ADR-0010/0013 remain authoritative.
+
+No deployment, publication, push/merge, WebUI CID bump, durable history, profile editor, trusted-peer settings, new pairing protocol, uploads or multimodal ingestion. All production/test/fixture authoring precedes one final verification boundary; prerequisite compilation is allowed, per-task QA loops are not. Baseline source identities are in phase `source-baselines.json`; capture historical screenshots only in isolated fixtures at that final boundary.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `ipfs-agent-context`: the context strip, context inspector and lifecycle strip in the chat island, and the server facts they display.
+- `ipfs-agent-context`: revised existing in-flight behavioral delta.
 
 ### Modified Capabilities
 
-None. The Web UI bridge change is outside this OpenSpec root; its acceptance is in tasks.md (PX-16).
+No main capability is renamed; existing in-flight delta paths remain unchanged.
 
 ## Impact
 
-- Owners: ui-ux-engineer (island, Web UI bridge); mcp-server-engineer (run-start facts).
-- Scope:
-  - Kubo: `mcp/chat/src/island/Composer.tsx`, `mcp/chat/src/island/Conversation.tsx`, `mcp/chat/src/island/Transcript.tsx`, `mcp/chat/src/island/timeline.ts`, `mcp/chat/src/island/session.ts`, new `mcp/chat/src/island/ContextStrip.tsx`, `ContextInspector.tsx`, `LifecycleStrip.tsx`, `mcp/chat/src/agui/**`
-  - Kubo: `mcp/server/agui_stream.go` and `mcp/server/agent_frame.go` (run-start facts: offered tool names, system prompt digest), `mcp/contract/schemas/**` (AG-UI run-start payload, additive), regenerated `mcp/ui/src/contract/generated/agui.ts`
-  - Web UI: `../ipfs-webui/src/agent-chat/bridge.js`, `src/agent-chat/island-loader.js`, `src/shell/**` (current container), `public/locales/en/*.json`
-- Stability: no `/api/v0`, HTTP Gateway, default CID recipe or wire change. The run-start payload change is additive. The container item is sent only when present in the strip; removing it removes it from the request.
-- Size: M-L.
+- `openspec/changes/praxis-context-inspector/**`
+- `mcp/contract/**`
+- `docs/mcp/**`
+- `mcp/server/**`
+- `test/cli/*mcp* (explicit scoped test grant in OpenSpec)`
+- `mcp/ui/src/contract/generated/**`
+- `mcp/chat/src/{island,agui}/** and tests/**`
+- `../ipfs-webui/src/agent-chat/**`
 
-## Dependencies
+## Planning references
 
-- Change 3 `praxis-shell-modes` (pane and current-container source).
+Library annotations: cand-001, cand-007. Exact scoped assignments: phase plan Task model assignments, `agentic-ui-implementation/praxis-context-inspector/<backend-task-id>`. Numbered task display order is not the execution graph.

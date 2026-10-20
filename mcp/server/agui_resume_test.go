@@ -188,8 +188,8 @@ func TestAGUIDenyWhileWaitingEndsTheWatchWithDeclined(t *testing.T) {
 
 	deny := e.resumeReq(aguiTokChat, "thread-rm", in["id"].(string), "resolved", map[string]any{"approved": false})
 	require.Equal(t, http.StatusOK, deny.Status)
-	assert.Equal(t, []string{"RUN_STARTED", "CUSTOM", "RUN_FINISHED"}, deny.types(), "the deny request only records the decision")
-	assert.Equal(t, map[string]any{"type": "success"}, deny.Events[2]["outcome"])
+	assert.Equal(t, []string{"RUN_STARTED", "RUN_FINISHED"}, deny.types(), "the deny request only records the decision; omitted capabilities advertise no catalog")
+	assert.Equal(t, map[string]any{"type": "success"}, deny.Events[1]["outcome"])
 
 	rest := waiter.sse.all()
 	assert.Contains(t, resultContent(t, rest, "tc-rm"), CodeConfirmDeclined, "the open watch reports it")
@@ -238,11 +238,9 @@ func TestAGUINewestWatchTakesOver(t *testing.T) {
 	f2, _ := second.sse.next()
 	require.Equal(t, "RUN_STARTED", f2["type"])
 
-	// The older watch ends without running anything: all it ever got is the
-	// catalog advertisement that follows RUN_STARTED.
-	for _, ev := range first.sse.all() {
-		assert.Equal(t, "CUSTOM", ev["type"], "%v", ev)
-	}
+	// No catalog capability was offered; replacement ends the older watch
+	// without a presentation event or operation.
+	assert.Empty(t, first.sse.all())
 	_, resolve := e.presence.last(t)
 	require.NoError(t, resolve(true))
 	rest := second.sse.all()

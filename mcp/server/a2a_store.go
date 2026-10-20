@@ -68,6 +68,8 @@ type a2aTask struct {
 type a2aPending struct {
 	confirmationID string
 	tool           string
+	effectDigest   string
+	destination    *Destination
 	// text is true when the call came from the agent loop; otherwise it is a
 	// data-part call, repeated with args after approval.
 	text bool

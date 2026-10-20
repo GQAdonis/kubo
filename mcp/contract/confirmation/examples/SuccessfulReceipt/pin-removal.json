@@ -1,0 +1,11 @@
+{
+  "id": "rc_fixture_success_01",
+  "decision_id": "cf_3pQm8vK2xR7tLw9a",
+  "tool": "pin_rm",
+  "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+  "completed_at": "2026-10-20T12:00:03Z",
+  "outcome": "succeeded",
+  "effect": "operation_completed",
+  "provenance": "node_handler",
+  "result_refs": []
+}

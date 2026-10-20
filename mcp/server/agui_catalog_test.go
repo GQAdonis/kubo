@@ -92,7 +92,7 @@ func TestAGUICatalogOffSwitch(t *testing.T) {
 // and the route.
 func TestAGUIRunAdvertisesTheCatalog(t *testing.T) {
 	e := newAGUIEnv(t, aguiEnvOpts{}, sayStep("Done."))
-	r := e.post(aguiTokChat, aguiBody("thread-cat", "r1", []any{userMsg("m1", "hi")}), nil)
+	r := e.post(aguiTokChat, offerA2UI(t, aguiBody("thread-cat", "r1", []any{userMsg("m1", "hi")})), nil)
 	require.Equal(t, http.StatusOK, r.Status, r.Body)
 	require.GreaterOrEqual(t, len(r.Events), 2, "%v", r.types())
 	require.Equal(t, "RUN_STARTED", r.Events[0]["type"])
@@ -101,7 +101,7 @@ func TestAGUIRunAdvertisesTheCatalog(t *testing.T) {
 	assert.Equal(t, "CUSTOM", ad["type"], "the advertisement follows RUN_STARTED immediately: %v", r.types())
 	f := a2uiDerivationsForTest(t)
 	assert.Equal(t, f.AguiEvents.Catalog, ad["name"])
-	assert.Equal(t, map[string]any{"catalogId": f.CatalogID, "catalogUrl": RouteAGUICatalog}, ad["value"])
+	assert.Equal(t, map[string]any{"catalogId": f.CatalogID, "catalogVersion": f.CatalogVersion, "protocolVersion": f.ProtocolVersion, "catalogUrl": RouteAGUICatalog}, ad["value"])
 
 	var ads int
 	for _, ev := range r.Events {

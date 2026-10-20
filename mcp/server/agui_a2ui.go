@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"slices"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/ipfs/kubo/mcp/contract"
+	"github.com/ipfs/kubo/mcp/ui/catalog"
 )
 
 // A2UI over AG-UI (change mcp-agui-a2ui-registry, decision D15): when a run
@@ -25,8 +28,6 @@ import (
 // EgressBadge itself, given the acknowledged hosts only the server knows).
 
 const (
-	// a2uiProtocolVersion is the A2UI version of every emitted message.
-	a2uiProtocolVersion = "v0.9"
 	// aguiA2UIEventName is the name of the AG-UI CUSTOM events that carry A2UI
 	// messages: {"type":"CUSTOM","name":"a2ui","value":<one A2UI message>}.
 	aguiA2UIEventName = "a2ui"
@@ -37,30 +38,15 @@ const (
 	a2uiEgressRule = "EgressBadge"
 )
 
-// a2uiComponentFile is derivations/a2ui-components.json.
-type a2uiComponentFile struct {
-	CatalogID string `json:"catalogId"`
-	Serve     struct {
-		Route string `json:"route"`
-	} `json:"serve"`
-	AguiEvents struct {
-		Surface string `json:"surface"`
-		Catalog string `json:"catalog"`
-	} `json:"aguiEvents"`
-	Components []struct {
-		Name string `json:"name"`
-		Kind string `json:"kind"`
-	} `json:"components"`
-	ChatRules map[string]string `json:"chatRules"`
-}
-
 // a2uiEmitter builds the surface messages of one tool result. Every component
 // name it can emit comes from the derivations' component list, which is also
 // the published catalog's: a rule naming something the list does not contain
 // fails at construction, not at stream time.
 type a2uiEmitter struct {
 	cat        *contract.Catalog
-	catalogID  string
+	tuple      catalogTuple
+	bindings   *uiBindingSet
+	outputs    map[string]*jsonschema.Resolved
 	components map[string]struct{}
 	rules      map[string]string
 	// catalogRoute is serve.route and catalogEvent aguiEvents.catalog: where
@@ -82,6 +68,13 @@ func newA2UIEmitter(cat *contract.Catalog) (*a2uiEmitter, error) {
 	if err := json.Unmarshal(data, &f); err != nil {
 		return nil, fmt.Errorf("parse a2ui derivations: %w", err)
 	}
+	bindings, err := deriveUIBindings(cat, f)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePublishedCatalog(catalog.Bytes(), f); err != nil {
+		return nil, err
+	}
 	if f.CatalogID == "" {
 		return nil, fmt.Errorf("a2ui derivations: catalogId is empty")
 	}
@@ -98,7 +91,7 @@ func newA2UIEmitter(cat *contract.Catalog) (*a2uiEmitter, error) {
 	if f.AguiEvents.Catalog == "" {
 		return nil, fmt.Errorf("a2ui derivations: aguiEvents.catalog is empty")
 	}
-	e := &a2uiEmitter{cat: cat, catalogID: f.CatalogID, rules: f.ChatRules, components: make(map[string]struct{}, len(f.Components)),
+	e := &a2uiEmitter{cat: cat, tuple: f.catalogTuple, bindings: bindings, outputs: make(map[string]*jsonschema.Resolved, len(cat.Tools)), rules: f.ChatRules, components: make(map[string]struct{}, len(f.Components)),
 		catalogRoute: f.Serve.Route, catalogEvent: f.AguiEvents.Catalog}
 	for _, c := range f.Components {
 		if c.Name == "" {
@@ -113,6 +106,15 @@ func newA2UIEmitter(cat *contract.Catalog) (*a2uiEmitter, error) {
 		return nil, fmt.Errorf("a2ui derivations: no chat rule for %s", a2uiCardRule)
 	}
 	for _, t := range cat.Tools {
+		raw, err := contract.BundleSchema(t.OutputSchema)
+		if err != nil {
+			return nil, fmt.Errorf("a2ui output schema for %s: %w", t.Name, err)
+		}
+		output, err := resolveSchema(raw)
+		if err != nil {
+			return nil, fmt.Errorf("a2ui output schema for %s: %w", t.Name, err)
+		}
+		e.outputs[t.Name] = output
 		for name, rule := range e.rules {
 			if _, err := cat.EvalRule(rule, t); err != nil {
 				return nil, fmt.Errorf("a2ui chat rule %s for %s: %w", name, t.Name, err)
@@ -120,6 +122,30 @@ func newA2UIEmitter(cat *contract.Catalog) (*a2uiEmitter, error) {
 		}
 	}
 	return e, nil
+}
+
+func validatePublishedCatalog(raw []byte, descriptor a2uiComponentFile) error {
+	var published struct {
+		ID        string `json:"$id"`
+		CatalogID string `json:"catalogId"`
+		Metadata  struct {
+			CatalogVersion  string `json:"catalogVersion"`
+			ProtocolVersion string `json:"protocolVersion"`
+		} `json:"x-ipfs-mcp"`
+		Components map[string]json.RawMessage `json:"components"`
+	}
+	if err := json.Unmarshal(raw, &published); err != nil {
+		return fmt.Errorf("parse published A2UI catalog: %w", err)
+	}
+	if published.ID != descriptor.CatalogID || published.CatalogID != descriptor.CatalogID || published.Metadata.CatalogVersion != descriptor.CatalogVersion || published.Metadata.ProtocolVersion != descriptor.ProtocolVersion {
+		return fmt.Errorf("published A2UI catalog does not match the canonical catalog tuple")
+	}
+	for _, component := range descriptor.Components {
+		if _, ok := published.Components[component.Name]; !ok {
+			return fmt.Errorf("published A2UI catalog omits component %q", component.Name)
+		}
+	}
+	return nil
 }
 
 // ruleOn reports whether the named chat rule evaluates true for the tool. The
@@ -148,9 +174,9 @@ func (e *a2uiEmitter) surfaceEvents(ev Event, ack []string) []aguiEvent {
 	if !ok || !e.ruleOn(a2uiCardRule, t) {
 		return nil
 	}
-	status := "done"
-	if ev.IsError {
-		status = "error"
+	structured, valid := e.validatedSuccess(ev)
+	if !valid {
+		return nil
 	}
 	surface := "call-" + ev.ToolCallID
 	card := map[string]any{"id": "root", "component": a2uiCardRule, "call": map[string]any{"path": "/call"}}
@@ -161,13 +187,16 @@ func (e *a2uiEmitter) surfaceEvents(ev Event, ack []string) []aguiEvent {
 		"id":        ev.ToolCallID,
 		"name":      ev.Tool,
 		"arguments": ev.Arguments,
-		"result":    ev.Content,
-		"status":    status,
+		// This is the validated producing tool's structured output. Its ordinary
+		// TOOL_CALL_RESULT/model text keeps framing and resource-link fallbacks;
+		// those delimiters are not a second JSON encoding for the view to guess.
+		"result": string(structured),
+		"status": "done",
 	}
 	msgs := []any{
-		map[string]any{"version": a2uiProtocolVersion, "createSurface": map[string]any{"surfaceId": surface, "catalogId": e.catalogID}},
-		map[string]any{"version": a2uiProtocolVersion, "updateComponents": map[string]any{"surfaceId": surface, "components": []any{card}}},
-		map[string]any{"version": a2uiProtocolVersion, "updateDataModel": map[string]any{"surfaceId": surface, "path": "/call", "value": call}},
+		map[string]any{"version": e.tuple.ProtocolVersion, "createSurface": map[string]any{"surfaceId": surface, "catalogId": e.tuple.CatalogID}},
+		map[string]any{"version": e.tuple.ProtocolVersion, "updateComponents": map[string]any{"surfaceId": surface, "components": []any{card}}},
+		map[string]any{"version": e.tuple.ProtocolVersion, "updateDataModel": map[string]any{"surfaceId": surface, "path": "/call", "value": call}},
 	}
 	out := make([]aguiEvent, 0, len(msgs))
 	for _, m := range msgs {
@@ -176,12 +205,46 @@ func (e *a2uiEmitter) surfaceEvents(ev Event, ack []string) []aguiEvent {
 	return out
 }
 
+// A tool label, isError=false or a JSON-looking text fallback cannot establish
+// producer provenance. Only the actual handler's structured result is checked.
+func (e *a2uiEmitter) validatedSuccess(ev Event) (json.RawMessage, bool) {
+	r := ev.toolResult
+	if ev.Type != EventToolResult || ev.ToolCallID == "" || ev.IsError || r == nil || r.IsError || r.InputRequests != nil || r.RequestState != "" || r.Meta[toolNameMetaKey] != ev.Tool {
+		return nil, false
+	}
+	binding, ok := e.bindings.tools[ev.Tool]
+	if !ok || binding.Component == "" {
+		return nil, false
+	}
+	if binding.View != "" {
+		view, ok := e.bindings.views[binding.View]
+		if !ok || !slices.Contains(view.AllowedComponents, binding.Component) {
+			return nil, false
+		}
+	}
+	raw, err := json.Marshal(r.StructuredContent)
+	if err != nil || len(raw) > maxToolResultBytes {
+		return nil, false
+	}
+	var value any
+	if json.Unmarshal(raw, &value) != nil {
+		return nil, false
+	}
+	output := e.outputs[ev.Tool]
+	if output == nil || output.Validate(value) != nil {
+		return nil, false
+	}
+	return raw, true
+}
+
 // catalogAdvertisement is the one CUSTOM event per run that names the catalog
 // and where to fetch it (derivations aguiEvents.catalog), sent immediately
 // after RUN_STARTED.
 func (e *a2uiEmitter) catalogAdvertisement() aguiEvent {
 	return aguiEvent{"type": "CUSTOM", "name": e.catalogEvent, "value": map[string]any{
-		"catalogId":  e.catalogID,
-		"catalogUrl": e.catalogRoute,
+		"catalogId":       e.tuple.CatalogID,
+		"catalogVersion":  e.tuple.CatalogVersion,
+		"protocolVersion": e.tuple.ProtocolVersion,
+		"catalogUrl":      e.catalogRoute,
 	}}
 }

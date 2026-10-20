@@ -164,6 +164,9 @@ func validateAgent(s *mcpSettings) error {
 // nothing is built or dialed; an enabled /agui is still mounted and answers
 // 503 backend_not_configured, while /a2a needs a backend and stays unmounted.
 func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
+	if err := srv.ConfigureDecisionReads(s.cfg.Agent.Decisions, s.cfg.Agent.OriginAllowlist); err != nil {
+		return fmt.Errorf("decision reads: %w", err)
+	}
 	wantAGUI := s.agent.agui || s.cfg.Agent.AGUI
 	wantA2A := s.agent.a2a || s.cfg.Agent.A2A
 	if s.resolved == nil {
@@ -206,7 +209,7 @@ func enableMCPAgent(srv *mcpserver.Server, s *mcpSettings) error {
 		return nil
 	}
 	if wantAGUI {
-		if err := srv.EnableAGUI(mcpserver.AGUISettings{OriginAllowlist: s.cfg.Agent.OriginAllowlist, A2UI: s.cfg.Agent.A2UI}); err != nil {
+		if err := srv.EnableAGUI(mcpserver.AGUISettings{OriginAllowlist: s.cfg.Agent.OriginAllowlist, A2UI: s.cfg.Agent.A2UI, RunFacts: s.cfg.Agent.RunFacts, ContextReferences: s.cfg.Agent.ContextReferences}); err != nil {
 			return fmt.Errorf("agui: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "ipfs mcp: AG-UI endpoint enabled at %s (%d browser origins allowed)\n", mcpserver.RouteAGUI, len(s.cfg.Agent.OriginAllowlist))

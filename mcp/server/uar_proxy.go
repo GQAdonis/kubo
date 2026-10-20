@@ -134,8 +134,11 @@ func (b *uarBackend) logHTTPFailure(he *uarHTTPError) {
 
 // uarAnswer is the answer recorded for one UAR interrupt.
 type uarAnswer struct {
-	Status  string
-	Payload map[string]any
+	Status          string
+	Payload         map[string]any
+	ResolvedBy      string
+	ResolvedSurface *ResolvingSurface
+	approved        bool
 	// filled is true for a denial recorded for an interrupt the person was never
 	// asked, because they denied another one (see reopen).
 	filled bool
@@ -146,6 +149,11 @@ type uarPending struct {
 	// ID is UAR's interrupt id, sent back on resume. ShownID is what the island
 	// sees: the same id unless it is too long for the island's contract.
 	ID, ShownID string
+	decisionID  string
+	createdAt   time.Time
+	originRun   string
+	retained    bool
+	activityID  string
 	Reason      string
 	Message     string
 	ToolCallID  string
@@ -172,8 +180,10 @@ type uarThread struct {
 	uarID  string
 	// lastRun is the run id of the UAR segment that raised the open interrupts;
 	// the resume names it as its parent.
-	lastRun string
-	pending []*uarPending
+	lastRun    string
+	activityID string
+	pending    []*uarPending
+	context    []ContextReference
 	// shown is the ShownID of the interrupt the island was asked to answer.
 	shown   string
 	tools   map[string]string
@@ -229,6 +239,7 @@ func (b *uarBackend) acquireThread(principal, owner, thread string, create bool)
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	defer b.decisionSourcesLocked("")
 	now := b.now()
 	for k, t := range b.threads {
 		if !t.running && now.Sub(t.touched) > sessionIdleTTL {
@@ -255,6 +266,7 @@ func (b *uarBackend) acquireThread(principal, owner, thread string, create bool)
 		b.mu.Lock()
 		defer b.mu.Unlock()
 		t.running, t.touched = false, b.now()
+		b.decisionSourcesLocked("")
 	}, nil
 }
 
@@ -288,6 +300,10 @@ func (b *uarBackend) makeRoomLocked(principal, owner string) error {
 func (b *uarBackend) serve(h *aguiHandler, w http.ResponseWriter, r *http.Request, id Identity) {
 	in, err := readAGUIInput(r.Body)
 	if err != nil {
+		h.reject(w, err)
+		return
+	}
+	if err := b.srv.checkContextInput(in); err != nil {
 		h.reject(w, err)
 		return
 	}
@@ -333,12 +349,18 @@ func (b *uarBackend) message(ctx context.Context, h *aguiHandler, st *aguiStream
 		h.reject(st.w, ErrInterruptOpen)
 		return
 	}
+	if refusal := contextEgressRefusal(id, HostFromURL(b.set.BaseURL), in.Context); refusal != nil {
+		h.reject(st.w, refusal)
+		return
+	}
 	if err := b.ensureProvisioned(ctx); err != nil {
 		h.reject(st.w, b.uarFailure(err))
 		return
 	}
-	body := b.runBody(th, in.RunID, "", []any{map[string]any{"id": newMessageID(), "role": "user", "content": text}}, nil)
-	b.execute(ctx, h, st, th, in, body)
+	th.activityID = "act_" + randomID(16)
+	th.context = cloneContextReferences(in.Context)
+	body := b.runBody(th, in.RunID, "", []any{map[string]any{"id": newMessageID(), "role": "user", "content": contextTurnText(text, th.context)}}, nil)
+	b.execute(ctx, h, st, th, in, body, id)
 }
 
 // resume answers the interrupt the island was shown. Every answer is recorded
@@ -352,6 +374,10 @@ func (b *uarBackend) resume(ctx context.Context, h *aguiHandler, st *aguiStream,
 	}
 	defer release()
 	entry := in.Resume[0]
+	if refusal := contextEgressRefusal(id, HostFromURL(b.set.BaseURL), th.context); refusal != nil {
+		h.reject(st.w, refusal)
+		return
+	}
 	cur := th.shownPending()
 	switch {
 	case len(th.pending) == 0:
@@ -364,9 +390,18 @@ func (b *uarBackend) resume(ctx context.Context, h *aguiHandler, st *aguiStream,
 		h.reject(st.w, errAGUIInput("{wait: true} is for an interrupt that needs the system prompt; this one is answered in the chat"))
 		return
 	}
+	if entry.ReviewedEffect != nil {
+		// This is a UAR backend approval, not a node confirmation. Without a
+		// trusted retained operation digest an explicit review cannot match;
+		// preserve the interruption and do not forward or consume the answer.
+		h.reject(st.w, digestMismatch("uar:"+cur.Tool, cur.confirmationID()))
+		return
+	}
 	approve := entry.Status == ResumeResolved && entry.Approved
 	cancelled := entry.Status == ResumeCancelled
 	cur.Answer = cur.answerFor(approve, cancelled)
+	cur.Answer.ResolvedBy = ResolverAGUIInterrupt
+	cur.Answer.ResolvedSurface = in.resolvingSurface()
 	if !approve {
 		// A denial ends the run with nothing executed: every other interrupt of
 		// the segment is denied with it.
@@ -384,11 +419,12 @@ func (b *uarBackend) resume(ctx context.Context, h *aguiHandler, st *aguiStream,
 		return
 	}
 	body := b.resumeBody(th, in.RunID)
-	b.execute(ctx, h, st, th, in, body)
+	b.execute(ctx, h, st, th, in, body, id)
 }
 
 // askNext emits a segment that carries only the next interrupt to ask.
 func (b *uarBackend) askNext(st *aguiStream, p *uarPending) {
+	st.activityID = p.activityID
 	st.startOnce()
 	st.send(evRunFinished(st.threadID, st.runID, map[string]any{
 		"type":       "interrupt",
@@ -403,6 +439,7 @@ func (s *aguiStream) startOnce() {
 	}
 	s.runStarted = true
 	s.send(evRunStarted(s.threadID, s.runID))
+	s.sendRunFacts(s.runFacts)
 }
 
 // runBody builds a RunAgentInput for the UAR path, in the shape the acceptance
@@ -484,11 +521,11 @@ func (p *uarPending) answerFor(approve, cancelled bool) *uarAnswer {
 	}
 	if p.Reason == uarReasonElicitation {
 		if approve {
-			return &uarAnswer{Status: ResumeResolved, Payload: map[string]any{"action": "accept", "content": map[string]any{p.ApproveKey: true}}}
+			return &uarAnswer{Status: ResumeResolved, Payload: map[string]any{"action": "accept", "content": map[string]any{p.ApproveKey: true}}, approved: true}
 		}
 		return &uarAnswer{Status: ResumeResolved, Payload: map[string]any{"action": "decline"}}
 	}
-	return &uarAnswer{Status: ResumeResolved, Payload: map[string]any{"approved": approve}}
+	return &uarAnswer{Status: ResumeResolved, Payload: map[string]any{"approved": approve}, approved: approve}
 }
 
 // relayResult is how one UAR request ended.
@@ -516,7 +553,12 @@ type uarBudget struct{ events, bytes int }
 // execute sends body to UAR and relays the run, looping over the interrupts
 // that need no person. It ends the island's stream or HTTP request. The
 // context carries the request's one wall-clock deadline.
-func (b *uarBackend) execute(ctx context.Context, h *aguiHandler, st *aguiStream, th *uarThread, in *aguiInput, body map[string]any) {
+func (b *uarBackend) execute(ctx context.Context, h *aguiHandler, st *aguiStream, th *uarThread, in *aguiInput, body map[string]any, id Identity) {
+	st.activityID = th.activityID
+	if b.srv.runFactsEnabled() {
+		st.runFacts = b.runFacts(id)
+		st.runFacts.setContext(th.context)
+	}
 	bud := &uarBudget{}
 	for hop := 0; hop < maxUARHops; hop++ {
 		res := b.relay(ctx, st, th, body, bud)
@@ -555,11 +597,48 @@ func (b *uarBackend) execute(ctx context.Context, h *aguiHandler, st *aguiStream
 func (b *uarBackend) settle(th *uarThread, res relayResult) {
 	switch {
 	case res.responded:
+		b.retainSettled(th, false)
 		th.pending, th.shown = nil, ""
 	case res.refused && len(th.pending) > 0:
 		b.abandonThread(th)
 	case res.err != nil && len(th.pending) > 0:
 		b.reopen(th)
+	}
+}
+
+// retainSettled keeps only safe facts about backend approval consumption or
+// withdrawal. An accepted resume is not evidence that a node tool succeeded.
+// Callers own the thread run slot; no thread lock is acquired under broker.mu.
+func (b *uarBackend) retainSettled(th *uarThread, withdrawn bool) {
+	for _, p := range th.pending {
+		if !p.NeedsUser || p.retained || p.decisionID == "" {
+			continue
+		}
+		if !withdrawn && p.Answer == nil {
+			continue
+		}
+		state := StateDenied
+		by := ""
+		var surface *ResolvingSurface
+		if p.Answer != nil {
+			by, surface = p.Answer.ResolvedBy, p.Answer.ResolvedSurface
+			if !withdrawn && p.Answer.approved {
+				state = StateExecuted
+			}
+		}
+		now := b.now().UTC()
+		observation := Pending{
+			ID: p.decisionID, Source: DecisionSourceUAR, SourceKind: SourceKindBackendApproval,
+			State: state, Principal: Principal{ID: th.principal, Kind: KindUI},
+			Summary:   Summary{Tool: p.Tool, Class: "write", Text: "UAR backend approval", Targets: []Target{}},
+			CreatedAt: p.createdAt, ResolvedAt: now, ResolvedBy: by, ResolvedSurface: cloneSurface(surface),
+			ActivityID: p.activityID,
+		}
+		if expiry, err := time.Parse(time.RFC3339, p.ExpiresAt); err == nil {
+			observation.ExpiresAt = expiry.UTC()
+		}
+		b.srv.gate.broker.retainBackendDecision(observation, th.owner)
+		p.retained = true
 	}
 }
 
@@ -591,7 +670,9 @@ func (b *uarBackend) reopen(th *uarThread) {
 // abandonThread forgets the thread's open interrupts and moves it to a fresh
 // UAR thread, so a later message does not meet the old one.
 func (b *uarBackend) abandonThread(th *uarThread) {
+	b.retainSettled(th, true)
 	th.pending, th.shown, th.lastRun = nil, "", ""
+	th.activityID = ""
 	b.mu.Lock()
 	th.uarID = uarThreadID(b.gen, b.nextThreadSeqLocked(), th.owner, th.client)
 	b.mu.Unlock()
@@ -821,6 +902,17 @@ func (b *uarBackend) parseInterrupts(th *uarThread, list []any) ([]*uarPending, 
 		}
 		p.Message = trimSnippet(scrub.text(p.Message), maxUARCardText)
 		p.Tool = scrub.text(p.Tool)
+		p.createdAt, p.originRun = b.now().UTC(), th.lastRun
+		p.activityID = th.activityID
+		// Refresh of the same owned segment preserves its synthetic identity.
+		// The original ID remains the only identifier sent back to UAR.
+		for _, prior := range th.pending {
+			if prior.ID == p.ID && prior.originRun == th.lastRun {
+				p.decisionID, p.createdAt, p.retained = prior.decisionID, prior.createdAt, prior.retained
+				p.activityID = prior.activityID
+				break
+			}
+		}
 		if _, dup := seen[p.ID]; dup {
 			return nil, &uarBackendError{"UAR sent the same interrupt twice."}
 		}
@@ -846,7 +938,7 @@ func classifyUARInterrupt(m map[string]any, tools map[string]string) (*uarPendin
 	if id == "" || len(id) > 2*maxAGUIIDLen {
 		return nil, false
 	}
-	p := &uarPending{ID: id, ShownID: id}
+	p := &uarPending{ID: id, ShownID: id, decisionID: "cf_uar_" + randomID(16)}
 	if !uarShownIDPattern.MatchString(id) {
 		sum := sha256.Sum256([]byte(id))
 		p.ShownID = "uar-" + hex.EncodeToString(sum[:16])
@@ -951,7 +1043,7 @@ func uarLabel(name, fallback string) string {
 // node, and says so three ways: the message opens with uarApprovalLabel, the
 // tool name carries the "uar:" prefix, and metadata.uar names the source. The
 // island's schema requires ipfs-mcp.confirmation_id to match ^cf_...$, so the id
-// keeps the cf_ prefix, but it is "cf_uar_" and a digest of UAR's interrupt id:
+// keeps the cf_ prefix, but it is "cf_uar_" and fresh per owned interruption:
 // no confirmation of the broker has that id, and the answer only goes to UAR,
 // whose agent then calls this server's MCP endpoint, where the confirmation
 // gate still decides every write.
@@ -960,7 +1052,6 @@ func (p *uarPending) aguiInterrupt() map[string]any {
 	if len(msg) < 5 {
 		msg = "The assistant asks to run " + p.Tool + "."
 	}
-	sum := sha256.Sum256([]byte(p.ID))
 	callID := p.ToolCallID
 	if callID == "" {
 		callID = p.ShownID
@@ -977,16 +1068,23 @@ func (p *uarPending) aguiInterrupt() map[string]any {
 		},
 		"metadata": map[string]any{
 			"ipfs-mcp": map[string]any{
-				"confirmation_id":        "cf_uar_" + hex.EncodeToString(sum[:16]),
+				"confirmation_id":        p.confirmationID(),
 				"tool":                   p.Tool,
 				"class":                  "write",
 				"requires_native_prompt": false,
 			},
-			"uar": map[string]any{"reason": p.Reason, "source": "uar", "node_confirmation": false},
+			"uar": map[string]any{"reason": p.Reason, "source": DecisionSourceUAR, "source_kind": SourceKindBackendApproval, "node_confirmation": false},
 		},
 	}
 	if t, err := time.Parse(time.RFC3339, p.ExpiresAt); err == nil {
 		out["expiresAt"] = t.UTC().Format(time.RFC3339)
 	}
+	if p.activityID != "" {
+		out["metadata"].(map[string]any)["ipfs-mcp"].(map[string]any)["activity_id"] = p.activityID
+	}
 	return out
+}
+
+func (p *uarPending) confirmationID() string {
+	return p.decisionID
 }

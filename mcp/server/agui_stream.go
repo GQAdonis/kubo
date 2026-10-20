@@ -23,11 +23,16 @@ type aguiStream struct {
 	egressAck []string
 
 	threadID, runID string
+	// activityID comes only from the accepted run or an owned open interrupt.
+	// Optional run facts use it; standard events keep their wire shape.
+	activityID string
 
 	// started is true once the SSE headers went out. runStarted is true once
 	// RUN_STARTED did.
 	started    bool
 	runStarted bool
+	factsSent  bool
+	runFacts   *RunFacts
 
 	// history is what MESSAGES_SNAPSHOT carries: the client's messages as sent,
 	// then this run's assistant replies and tool results. dirty says it changed
@@ -41,6 +46,7 @@ type aguiStream struct {
 }
 
 func newAGUIStream(w http.ResponseWriter, in *aguiInput, a2ui *a2uiEmitter, egressAck []string) *aguiStream {
+	a2ui = a2ui.negotiate(in.A2UICatalogs)
 	history := make([]any, 0, len(in.Messages)+4)
 	for _, m := range in.Messages {
 		history = append(history, m)
@@ -77,7 +83,7 @@ func (s *aguiStream) keepalive() {
 }
 
 // begin sends RUN_STARTED once, then the one-per-run A2UI catalog
-// advertisement when agent.a2ui is on (the emitter is nil when it is off).
+// advertisement when this request negotiated the enabled catalog.
 func (s *aguiStream) begin() {
 	if s.runStarted {
 		return
@@ -100,7 +106,12 @@ func newMessageID() string { return "msg-" + randomID(9) }
 func (s *aguiStream) handle(ev Event) {
 	switch ev.Type {
 	case EventRunStarted:
+		s.activityID = ev.ActivityID
+		alreadyStarted := s.runStarted
 		s.begin()
+		if !alreadyStarted {
+			s.sendRunFacts(ev.Facts)
+		}
 	case EventText:
 		s.onText(ev.Text)
 	case EventReply:

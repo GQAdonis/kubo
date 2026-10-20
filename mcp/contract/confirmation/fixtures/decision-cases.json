@@ -1,0 +1,963 @@
+{
+  "formatVersion": 1,
+  "purpose": "Authored schema/semantic expectations for the final phase boundary; not executed test receipts. All examples are synthetic.",
+  "schema": "confirmation/confirmation.schema.json",
+  "legacyPositive": "confirmation/examples/PendingConfirmation/ui-destructive.json",
+  "digestVectors": [
+    {
+      "tool": "pin_rm",
+      "arguments": {
+        "path": "/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+      },
+      "canonical": "{\"arguments\":{\"path\":\"/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\"},\"tool\":\"pin_rm\"}",
+      "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+    }
+  ],
+  "schemaCases": [
+    {
+      "name": "native observation cannot enable approval",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_Nat1veF1xture1234",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "pending",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "ui",
+          "name": "Fixture chat"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "requires_native_prompt": true,
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "actions": {
+          "approve": true,
+          "deny": true,
+          "authorized_surface": "native_system_prompt",
+          "continuation": {
+            "method": "POST",
+            "route": "/agui",
+            "thread_id": "fixture_thread",
+            "interrupt_id": "fixture_interrupt"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "observation omits tokens",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        },
+        "confirm_token": "fixture_must_not_be_projected"
+      },
+      "expected": false
+    },
+    {
+      "name": "observation omits binding keys",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        },
+        "binding_key": "fixture_private_binding"
+      },
+      "expected": false
+    },
+    {
+      "name": "UAR never masquerades as node confirmation",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_uar_fixture1234567890",
+        "source": "uar",
+        "source_kind": "node_confirmation",
+        "approval_state": "approved",
+        "summary": {
+          "tool": "uar:publish",
+          "class": "write",
+          "text": "Backend approval sent; operation outcome not reported",
+          "targets": []
+        },
+        "authority": {
+          "kind": "ui",
+          "name": "Fixture chat"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "resolved_by": "agui-interrupt",
+        "resolved_surface": {
+          "kind": "chat",
+          "instance": "chat_fixture_2"
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "backend_host"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "UAR labels retain source prefix",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_uar_fixture1234567890",
+        "source": "uar",
+        "source_kind": "backend_approval",
+        "approval_state": "approved",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "write",
+          "text": "Backend approval sent; operation outcome not reported",
+          "targets": []
+        },
+        "authority": {
+          "kind": "ui",
+          "name": "Fixture chat"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "resolved_by": "agui-interrupt",
+        "resolved_surface": {
+          "kind": "chat",
+          "instance": "chat_fixture_2"
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "backend_host"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "success needs receipt",
+      "definition": "ExecutionRecord",
+      "input": {
+        "state": "succeeded",
+        "started_at": "2026-10-20T12:00:02Z",
+        "completed_at": "2026-10-20T12:00:03Z"
+      },
+      "expected": false
+    },
+    {
+      "name": "failure cannot carry success receipt",
+      "definition": "ExecutionRecord",
+      "input": {
+        "state": "failed",
+        "started_at": "2026-10-20T12:00:02Z",
+        "completed_at": "2026-10-20T12:00:03Z",
+        "error": {
+          "code": "rpc_error",
+          "message": "The operation reported a failure; partial effects are not excluded."
+        },
+        "receipt": {
+          "id": "rc_fixture_success_01",
+          "decision_id": "cf_3pQm8vK2xR7tLw9a",
+          "tool": "pin_rm",
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "outcome": "succeeded",
+          "effect": "operation_completed",
+          "provenance": "node_handler",
+          "result_refs": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "unknown cannot carry success receipt",
+      "definition": "ExecutionRecord",
+      "input": {
+        "state": "unknown",
+        "started_at": "2026-10-20T12:00:02Z",
+        "error": {
+          "code": "timeout",
+          "message": "The connection ended after dispatch; the outcome is unknown."
+        },
+        "receipt": {
+          "id": "rc_fixture_success_01",
+          "decision_id": "cf_3pQm8vK2xR7tLw9a",
+          "tool": "pin_rm",
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "outcome": "succeeded",
+          "effect": "operation_completed",
+          "provenance": "node_handler",
+          "result_refs": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "pre-invocation denial cannot coexist with execution",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "denied",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "UAR cannot claim node-handler provenance",
+      "definition": "DecisionObservation",
+      "input": {
+        "id": "cf_uar_fixture1234567890",
+        "source": "uar",
+        "source_kind": "backend_approval",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "uar:publish",
+          "class": "write",
+          "text": "Backend approval sent; operation outcome not reported",
+          "targets": []
+        },
+        "authority": {
+          "kind": "ui",
+          "name": "Fixture chat"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "resolved_by": "agui-interrupt",
+        "resolved_surface": {
+          "kind": "chat",
+          "instance": "chat_fixture_2"
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "backend_host"
+        },
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "receipt omits raw arguments",
+      "definition": "SuccessfulReceipt",
+      "input": {
+        "id": "rc_fixture_success_01",
+        "decision_id": "cf_3pQm8vK2xR7tLw9a",
+        "tool": "pin_rm",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "completed_at": "2026-10-20T12:00:03Z",
+        "outcome": "succeeded",
+        "effect": "operation_completed",
+        "provenance": "node_handler",
+        "result_refs": [],
+        "arguments": {
+          "path": "fixture_hidden_input"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "digest excludes uppercase hex",
+      "definition": "EffectDigest",
+      "input": "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": false
+    },
+    {
+      "name": "presentation pending",
+      "definition": "DecisionPresentation",
+      "input": "pending",
+      "expected": true
+    },
+    {
+      "name": "presentation waiting_system_prompt",
+      "definition": "DecisionPresentation",
+      "input": "waiting_system_prompt",
+      "expected": true
+    },
+    {
+      "name": "presentation approved",
+      "definition": "DecisionPresentation",
+      "input": "approved",
+      "expected": true
+    },
+    {
+      "name": "presentation committed",
+      "definition": "DecisionPresentation",
+      "input": "committed",
+      "expected": true
+    },
+    {
+      "name": "presentation denied",
+      "definition": "DecisionPresentation",
+      "input": "denied",
+      "expected": true
+    },
+    {
+      "name": "presentation expired",
+      "definition": "DecisionPresentation",
+      "input": "expired",
+      "expected": true
+    },
+    {
+      "name": "presentation invalidated",
+      "definition": "DecisionPresentation",
+      "input": "invalidated",
+      "expected": true
+    },
+    {
+      "name": "presentation resolved_elsewhere",
+      "definition": "DecisionPresentation",
+      "input": "resolved_elsewhere",
+      "expected": true
+    },
+    {
+      "name": "presentation uncertain",
+      "definition": "DecisionPresentation",
+      "input": "uncertain",
+      "expected": true
+    },
+    {
+      "name": "presentation needs_resubmit",
+      "definition": "DecisionPresentation",
+      "input": "needs_resubmit",
+      "expected": true
+    },
+    {
+      "name": "presentation failed_after_approval",
+      "definition": "DecisionPresentation",
+      "input": "failed_after_approval",
+      "expected": true
+    }
+  ],
+  "semanticCases": [
+    {
+      "name": "legacy optional fields absent never bypass gate",
+      "given": "Existing legacy pending fixture without effect_digest/resolution/execution",
+      "expected": "Validate legacy shape; authorization still requires original exact identity/session/tool/arguments/expiry/resolver and one-use claim."
+    },
+    {
+      "name": "executed is approval consumption",
+      "given": {
+        "approval_state": "executed"
+      },
+      "expectedPresentation": "uncertain",
+      "receiptOffered": false
+    },
+    {
+      "name": "matching successful result",
+      "given": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        }
+      },
+      "expectedPresentation": "committed",
+      "receiptOffered": true
+    },
+    {
+      "name": "known failure after approval",
+      "given": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "failed",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "error": {
+            "code": "rpc_error",
+            "message": "The operation reported a failure; partial effects are not excluded."
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        }
+      },
+      "expectedPresentation": "failed_after_approval",
+      "receiptOffered": false,
+      "zeroEffectClaim": false
+    },
+    {
+      "name": "ambiguous transport after dispatch",
+      "given": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "unknown",
+          "started_at": "2026-10-20T12:00:02Z",
+          "error": {
+            "code": "timeout",
+            "message": "The connection ended after dispatch; the outcome is unknown."
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        }
+      },
+      "expectedPresentation": "uncertain",
+      "receiptOffered": false,
+      "automaticRetry": false
+    },
+    {
+      "name": "approved before dispatch",
+      "given": {
+        "approval_state": "approved"
+      },
+      "expectedPresentation": "approved",
+      "receiptOffered": false
+    },
+    {
+      "name": "different chat panes are distinct attribution",
+      "given": {
+        "resolved_by": "agui-interrupt",
+        "resolved_surface": {
+          "kind": "chat",
+          "instance": "chat_fixture_2"
+        },
+        "viewing_surface": {
+          "kind": "chat",
+          "instance": "chat_fixture_1"
+        }
+      },
+      "expectedPresentation": "resolved_elsewhere",
+      "grantsResolverRights": false
+    },
+    {
+      "name": "terminal success outranks answered elsewhere",
+      "given": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        }
+      },
+      "expectedPresentation": "committed",
+      "preserveResolvedSurface": true
+    },
+    {
+      "name": "terminal failure outranks answered elsewhere",
+      "given": {
+        "id": "cf_3pQm8vK2xR7tLw9a",
+        "source": "kubo",
+        "source_kind": "node_confirmation",
+        "approval_state": "executed",
+        "summary": {
+          "tool": "pin_rm",
+          "class": "destructive",
+          "text": "Remove the recursive pin on the fixture CID",
+          "targets": [
+            {
+              "kind": "cid",
+              "value": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            }
+          ]
+        },
+        "authority": {
+          "kind": "human-mcp",
+          "name": "Fixture operator"
+        },
+        "created_at": "2026-10-20T12:00:00Z",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "destination": {
+          "kind": "node",
+          "name": "Fixture node"
+        },
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_fixture_1"
+        },
+        "execution": {
+          "state": "failed",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "error": {
+            "code": "rpc_error",
+            "message": "The operation reported a failure; partial effects are not excluded."
+          }
+        },
+        "actions": {
+          "approve": false,
+          "deny": false,
+          "authorized_surface": "originating_mcp_host"
+        }
+      },
+      "expectedPresentation": "failed_after_approval",
+      "preserveResolvedSurface": true
+    },
+    {
+      "name": "receipt wrong operation",
+      "given": {
+        "receipt": {
+          "id": "rc_fixture_success_01",
+          "decision_id": "cf_3pQm8vK2xR7tLw9a",
+          "tool": "pin_add",
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "outcome": "succeeded",
+          "effect": "operation_completed",
+          "provenance": "node_handler",
+          "result_refs": []
+        }
+      },
+      "expected": "Reject semantic binding; no Done despite structurally valid receipt."
+    },
+    {
+      "name": "receipt wrong digest",
+      "given": {
+        "receipt": {
+          "id": "rc_fixture_success_01",
+          "decision_id": "cf_3pQm8vK2xR7tLw9a",
+          "tool": "pin_rm",
+          "effect_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "outcome": "succeeded",
+          "effect": "operation_completed",
+          "provenance": "node_handler",
+          "result_refs": []
+        }
+      },
+      "expected": "Reject semantic binding; no Done."
+    },
+    {
+      "name": "UAR stream success alone",
+      "given": {
+        "uar_run_finished": "success"
+      },
+      "expected": "No node success receipt; actual outcome remains not reported."
+    },
+    {
+      "name": "read or repeated approval",
+      "given": "Snapshot/item/feed/repeated resume/token/elicitation",
+      "expected": "No second invocation; no resolver rights from observation."
+    },
+    {
+      "name": "supplied review mismatch",
+      "given": {
+        "reviewed_effect_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "expected_effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5"
+      },
+      "expectedError": "confirmation_digest_mismatch",
+      "retryable": false,
+      "invocations": 0
+    },
+    {
+      "name": "missing native flag does not weaken server-derived class policy",
+      "given": "Legacy payload omits requires_native_prompt",
+      "expected": "Derive actual policy from authenticated principal/tool on the server, never permit client omission to approve."
+    },
+    {
+      "name": "snapshot recovery lost pending record",
+      "given": "Current server does not know old pending ID after restart",
+      "expectedPresentation": "needs_resubmit",
+      "oldHandleReplay": false
+    },
+    {
+      "name": "job acceptance is bounded success",
+      "given": {
+        "receipt": {
+          "id": "rc_fixture_success_01",
+          "decision_id": "cf_3pQm8vK2xR7tLw9a",
+          "tool": "pin_rm",
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "outcome": "succeeded",
+          "effect": "job_accepted",
+          "provenance": "node_handler",
+          "result_refs": [
+            {
+              "kind": "job",
+              "value": "job_fixture_1"
+            }
+          ]
+        }
+      },
+      "expected": "Done means job accepted only; no assertion all work completed."
+    },
+    {
+      "name": "legacy tool binding mismatch",
+      "given": "Authenticated caller presents v1 token/requestState for another tool",
+      "expectedError": "confirmation_invalid",
+      "invocations": 0
+    },
+    {
+      "name": "legacy argument binding mismatch",
+      "given": "Authenticated caller presents changed arguments with an old v1 token/requestState",
+      "expectedError": "confirmation_invalid",
+      "inputRetryStateCheck": "other_call",
+      "invocations": 0
+    },
+    {
+      "name": "explicit review mismatch after valid binding",
+      "given": "Original valid session/identity/tool/arguments/expiry/nonce binding; supplied ReviewedEffect differs",
+      "expectedError": "confirmation_digest_mismatch",
+      "retryable": false,
+      "invocations": 0
+    },
+    {
+      "name": "retained effect consistency fails without echo",
+      "given": "Legacy binding passes but retained prepared effect metadata disagrees",
+      "expected": "Fail closed; never skip immutable binding because new echo is absent.",
+      "invocations": 0
+    },
+    {
+      "name": "approved unclaimed expiry retains historical approver",
+      "given": {
+        "approval_state": "expired",
+        "prior_approval": "approved",
+        "invocation_claimed": false,
+        "resolved_by": "agui-interrupt",
+        "resolved_surface": {
+          "kind": "chat",
+          "instance": "pane_prior"
+        },
+        "legacy_resolver": "agui-interrupt"
+      },
+      "expectedPresentation": "expired",
+      "expected": "Retain genuine prior human attribution as historical approval provenance; actions disabled, no execution/receipt, no resolved_elsewhere or still-approved presentation, no invented expiry actor."
+    },
+    {
+      "name": "automatic withdrawal retains historical approver",
+      "given": {
+        "approval_state": "denied",
+        "prior_approval": "approved",
+        "invocation_claimed": false,
+        "automatic_withdrawal": true,
+        "resolved_by": "desktop",
+        "resolved_surface": {
+          "kind": "desktop",
+          "instance": "window_prior"
+        },
+        "legacy_resolver": "desktop"
+      },
+      "expectedPresentation": "denied",
+      "expected": "Retain actual prior approver; terminal state controls disabled actions. Never label prior approver as automatic withdrawal actor or permit replay."
+    },
+    {
+      "name": "unanswered automatic expiry has no human attribution",
+      "given": {
+        "approval_state": "expired",
+        "prior_approval": "pending",
+        "human_answered": false
+      },
+      "expectedPresentation": "expired",
+      "expected": "Omit resolved_by/resolved_surface; do not manufacture a resolver. No approval actions or execution."
+    }
+  ]
+}

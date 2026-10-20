@@ -1,0 +1,8 @@
+{
+  "state": "unknown",
+  "started_at": "2026-10-20T12:00:02Z",
+  "error": {
+    "code": "timeout",
+    "message": "The connection ended after dispatch; the outcome is unknown."
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "invalid_argument",
+    "message": "forwardedProps.ipfs.context: at most 16 references are allowed.",
+    "retryable": false
+  }
+}

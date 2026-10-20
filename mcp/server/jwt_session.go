@@ -105,6 +105,8 @@ func oidcRouteOf(p string) string {
 		return OIDCRouteIndex
 	case p == RouteAuthSession:
 		return OIDCRouteSession
+	case under(RouteDecisions):
+		return OIDCRouteDecisions
 	}
 	return ""
 }
@@ -125,6 +127,8 @@ func oidcRouteKinds(route string) []string {
 	case OIDCRouteAGUI:
 		return []string{KindUI}
 	case OIDCRouteIndex:
+		return []string{KindUI, KindHumanMCP}
+	case OIDCRouteDecisions:
 		return []string{KindUI, KindHumanMCP}
 	case OIDCRouteSettings:
 		return []string{KindAdmin}

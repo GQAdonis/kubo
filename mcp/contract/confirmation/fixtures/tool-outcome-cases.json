@@ -1,0 +1,470 @@
+{
+  "formatVersion": 1,
+  "purpose": "Authored D/1.4 metadata/schema and semantic expectations; no runtime acceptance receipt.",
+  "schemaCases": [
+    {
+      "name": "current node outcome metadata",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "equal observed instants valid",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:02Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:02Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "definite failure with bounded safe detail",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "failed",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "error": {
+            "code": "rpc_failed",
+            "message": "The operation reported a failure."
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "unknown outcome has no receipt",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "unknown",
+          "started_at": "2026-10-20T12:00:02Z",
+          "error": {
+            "code": "timeout",
+            "message": "The operation outcome is not known."
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "legacy map has no outcome namespace",
+      "definition": "ToolOutcomeResultMeta",
+      "input": {
+        "ai.ipfs/tool": "pin_ls"
+      },
+      "expected": true
+    },
+    {
+      "name": "other result metadata preserved",
+      "definition": "ToolOutcomeResultMeta",
+      "input": {
+        "ai.ipfs/tool": "pin_rm",
+        "ai.ipfs/untrusted-content": true,
+        "ipfs-mcp": {
+          "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+          "execution": {
+            "state": "succeeded",
+            "started_at": "2026-10-20T12:00:02Z",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "receipt": {
+              "id": "rc_fixture_success_01",
+              "decision_id": "cf_3pQm8vK2xR7tLw9a",
+              "tool": "pin_rm",
+              "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+              "completed_at": "2026-10-20T12:00:03Z",
+              "outcome": "succeeded",
+              "effect": "operation_completed",
+              "provenance": "node_handler",
+              "result_refs": []
+            }
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "no raw args in outcome metadata",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "arguments": {
+          "path": "hidden"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "no raw result in outcome metadata",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "result": {
+          "bytes": "hidden"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "no private binding key",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "binding_key": "private"
+      },
+      "expected": false
+    },
+    {
+      "name": "no token in outcome metadata",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "confirm_token": "private"
+      },
+      "expected": false
+    },
+    {
+      "name": "no duplicate top-level receipt",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        },
+        "receipt": {
+          "id": "rc_fixture_success_01",
+          "decision_id": "cf_3pQm8vK2xR7tLw9a",
+          "tool": "pin_rm",
+          "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "outcome": "succeeded",
+          "effect": "operation_completed",
+          "provenance": "node_handler",
+          "result_refs": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "no success without receipt",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "no receipt in failed outcome",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "failed",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "error": {
+            "code": "rpc_failed",
+            "message": "The operation reported a failure."
+          },
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "no receipt in unknown outcome",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "unknown",
+          "started_at": "2026-10-20T12:00:02Z",
+          "error": {
+            "code": "timeout",
+            "message": "The operation outcome is not known."
+          },
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "no synthetic UAR node result",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_uar_fixture1234567890",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "node_handler",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "node result cannot assert backend receipt",
+      "definition": "ToolOutcomeMetadata",
+      "input": {
+        "confirmation_id": "cf_3pQm8vK2xR7tLw9a",
+        "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+        "execution": {
+          "state": "succeeded",
+          "started_at": "2026-10-20T12:00:02Z",
+          "completed_at": "2026-10-20T12:00:03Z",
+          "receipt": {
+            "id": "rc_fixture_success_01",
+            "decision_id": "cf_3pQm8vK2xR7tLw9a",
+            "tool": "pin_rm",
+            "effect_digest": "sha256:656753d8dc435fa8ca06c92ec4606b14aae13ea4fe30ff738e77eaf3ff6ee8a5",
+            "completed_at": "2026-10-20T12:00:03Z",
+            "outcome": "succeeded",
+            "effect": "operation_completed",
+            "provenance": "validated_backend_operation",
+            "result_refs": []
+          }
+        }
+      },
+      "expected": false
+    }
+  ],
+  "semanticCases": [
+    {
+      "name": "receipt binds current call",
+      "input": "receipt tool differs from known current tool or trusted ai.ipfs/tool marker",
+      "expected": "refuse success presentation, no retry"
+    },
+    {
+      "name": "receipt ID agrees",
+      "input": "receipt.decision_id differs from envelope confirmation_id",
+      "expected": "reject semantic binding; no Done"
+    },
+    {
+      "name": "receipt digest agrees",
+      "input": "receipt.effect_digest differs from envelope.effect_digest or shown immutable operation",
+      "expected": "reject semantic binding; no Done"
+    },
+    {
+      "name": "receipt time agrees",
+      "input": "receipt.completed_at differs from execution.completed_at",
+      "expected": "reject semantic binding; no Done"
+    },
+    {
+      "name": "nondecreasing time",
+      "input": "started_at equals completed_at and receipt agrees",
+      "expected": "valid; never fabricate +1ns"
+    },
+    {
+      "name": "backwards wall clock",
+      "input": "completion clock is earlier than recorded start",
+      "expected": "producer clamps completion to start; receipt agrees"
+    },
+    {
+      "name": "inverted received time",
+      "input": "received completed_at is earlier than started_at",
+      "expected": "reject semantic outcome; no Done"
+    },
+    {
+      "name": "later delivery error",
+      "input": "operation receipt succeeded, result delivery produces isError=true",
+      "expected": "operation success remains; show delivery error separately, never retry"
+    },
+    {
+      "name": "ordinary legacy output",
+      "input": "no _meta.ipfs-mcp namespace",
+      "expected": "ordinary output remains usable; no inferred receipt/Done from bare approval"
+    },
+    {
+      "name": "no HTTP credential dependency",
+      "input": "conforming MCP App host forwards result through ui/notifications/tool-result",
+      "expected": "read validated outcome through ordinary SDK; no decisions HTTP request or credential acquisition"
+    },
+    {
+      "name": "invalid replay does not disclose",
+      "input": "invalid/replayed/losing claim receives an ordinary tool error",
+      "expected": "no detached lifecycle/receipt from retained other invocation"
+    },
+    {
+      "name": "atomic detached snapshot",
+      "input": "broker changes after result snapshot is built",
+      "expected": "returned snapshot immutable; later refinements need existing authorized observation"
+    },
+    {
+      "name": "metadata malformed",
+      "input": "untrusted malformed/conflicting namespace",
+      "expected": "fall back inertly for outcome, keep ordinary legacy payload handling; no approval/action synthesis"
+    },
+    {
+      "name": "no result body mutation",
+      "input": "successful or failed write result with metadata",
+      "expected": "content/structuredContent/isError/output schema and unrelated _meta retain their ordinary meanings"
+    },
+    {
+      "name": "no implicit receipt activity",
+      "input": "valid safe result_refs in receipt",
+      "expected": "display/copy only; no automatic URL fetch, CID read or operation"
+    }
+  ]
+}

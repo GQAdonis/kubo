@@ -69,6 +69,8 @@ func interruptOf(tc ChatToolCall, t contract.Tool, c *ConfirmationRequired) *Int
 		ExpiresAt:            c.ExpiresAt,
 		RequiresNativePrompt: c.RequiresNativePrompt,
 		Resolvers:            append([]string(nil), c.Resolvers...),
+		EffectDigest:         c.EffectDigest,
+		Destination:          cloneDestination(c.Destination),
 	}
 }
 

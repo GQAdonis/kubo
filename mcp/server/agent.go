@@ -92,6 +92,9 @@ type Interrupt struct {
 	ExpiresAt            time.Time
 	RequiresNativePrompt bool
 	Resolvers            []string
+	EffectDigest         string
+	Destination          *Destination
+	ActivityID           string
 }
 
 // ResumeEntry answers one interrupt. The loop never approves anything: Approved
@@ -112,7 +115,11 @@ type RunInput struct {
 	// the ID. A session belongs to the principal that created it.
 	SessionID string
 	Message   string
-	Resume    []ResumeEntry
+	Context   []ContextReference
+	// contextValidated is set only by the typed AG-UI decoder, preserving its
+	// exact raw-array byte bound without re-counting a different JSON encoding.
+	contextValidated bool
+	Resume           []ResumeEntry
 	// ContinueOnly makes a new message run only on a session that exists: it
 	// never creates one, and a session that is gone (idle TTL, the session
 	// cap) is ErrSessionNotFound. A transport that promises its peer a
@@ -124,6 +131,7 @@ type RunInput struct {
 // RunResult is how a run ended.
 type RunResult struct {
 	SessionID  string
+	ActivityID string
 	Outcome    string
 	Reason     string
 	Interrupts []Interrupt
@@ -161,6 +169,9 @@ type CallInfo struct {
 
 // Event is one thing that happened during a run.
 type Event struct {
+	ActivityID string
+	// Facts describes the selected run only; no prompt, argument or credential.
+	Facts     *RunFacts
 	Type      EventType
 	SessionID string
 	// Text is a content delta of the model's reply (EventText).
@@ -177,8 +188,11 @@ type Event struct {
 	Content   string
 	IsError   bool
 	ErrorCode string
-	Interrupt *Interrupt
-	Result    *RunResult
+	// toolResult is supplied only by the actual shared handler after policy and
+	// gate checks. Presentation validation never infers success from model text.
+	toolResult *mcp.CallToolResult
+	Interrupt  *Interrupt
+	Result     *RunResult
 }
 
 // systemPromptSafetyPrefix is the fixed part of the system prompt: the safety
@@ -289,6 +303,7 @@ func (s *Server) EnableAgent(set *AgentSettings) error {
 	s.agentMu.Lock()
 	s.agentExt = a
 	s.uarExt = nil
+	s.gate.broker.setDecisionSourceGeneration("")
 	s.agentMu.Unlock()
 	return nil
 }
@@ -348,6 +363,7 @@ func (s *Server) ApplyAgentSettings(set *AgentSettings) error {
 		s.agentExt = na
 	}
 	s.uarExt = nil
+	s.gate.broker.setDecisionSourceGeneration("")
 	hook := s.agentChange
 	s.agentMu.Unlock()
 	if hook != nil {
@@ -572,6 +588,17 @@ func (a *Agent) Run(ctx context.Context, id Identity, in RunInput, emit func(Eve
 	if len(in.Message) > maxUserMessageBytes {
 		return nil, ErrMessageTooLarge
 	}
+	refs := cloneContextReferences(in.Context)
+	if !in.contextValidated {
+		validated, err := typedContextReferences(refs)
+		if err != nil {
+			return nil, err
+		}
+		refs = validated
+	}
+	if len(refs) > 0 && (!a.srv.contextReferencesEnabled() || len(in.Resume) > 0) {
+		return nil, contextError(-1, "new references are not accepted for this request.")
+	}
 	eff, refusal := a.srv.applyPolicy(ctx, id, false)
 	if refusal != nil {
 		return nil, refusal
@@ -609,6 +636,13 @@ func (a *Agent) Run(ctx context.Context, id Identity, in RunInput, emit func(Eve
 	// session that already retains a snapshot (its interrupt is still open and
 	// this run never touched it) keeps its own.
 	defer a.retainOrRelease(sess, snap)
+	forwardedRefs := refs
+	if len(in.Resume) > 0 {
+		forwardedRefs = sess.context
+	}
+	if refusal := contextEgressRefusal(eff, snap.backendHost, forwardedRefs); refusal != nil {
+		return nil, refusal
+	}
 
 	ctx = WithIdentity(WithPrincipal(ctx, eff.Principal), eff)
 	ctx = context.WithValue(ctx, sessionIDKey{}, agentSessionPrefix+sess.id)
@@ -627,16 +661,32 @@ func (a *Agent) Run(ctx context.Context, id Identity, in RunInput, emit func(Eve
 			return nil, err
 		}
 	} else {
-		if err := a.acceptMessage(run, in.Message); err != nil {
+		if err := a.acceptMessage(run, contextTurnText(in.Message, refs)); err != nil {
 			return nil, err
 		}
+		sess.context = cloneContextReferences(refs)
+		sess.activityID = "act_" + randomID(16)
 	}
-	run.emit(Event{Type: EventRunStarted, SessionID: sess.id})
+	// This context replaces any caller-supplied correlation. Only the owned
+	// accepted run's server state can attribute a subsequent broker decision.
+	ctx = context.WithValue(ctx, activityIDKey{}, sess.activityID)
+	parent = context.WithValue(parent, activityIDKey{}, sess.activityID)
+	sink := run.emit
+	run.emit = func(ev Event) {
+		ev.ActivityID = sess.activityID
+		sink(ev)
+	}
+	var facts *RunFacts
+	if a.srv.runFactsEnabled() {
+		facts = a.runFacts(run)
+	}
+	run.emit(Event{Type: EventRunStarted, SessionID: sess.id, Facts: facts})
 	res, err := a.loop(ctx, parent, run)
 	if err != nil {
 		return nil, err
 	}
 	res.SessionID = sess.id
+	res.ActivityID = sess.activityID
 	run.emit(Event{Type: EventRunFinished, SessionID: sess.id, Result: res})
 	a.log.Debug("agent run finished", "outcome", res.Outcome, "reason", res.Reason, "steps", res.Steps, "tokens", res.Tokens)
 	return res, nil
@@ -800,6 +850,7 @@ func (a *Agent) drain(ctx context.Context, run *runCtx) *RunResult {
 		q := s.queue[0]
 		out := a.execute(ctx, run, q)
 		if out.interrupt != nil {
+			out.interrupt.ActivityID = s.activityID
 			s.interrupt = out.interrupt
 			run.emit(Event{Type: EventInterrupt, SessionID: s.id, ToolCallID: q.call.ID, Tool: q.call.Function.Name, Interrupt: out.interrupt})
 			return &RunResult{Outcome: OutcomeInterrupt, Interrupts: []Interrupt{*out.interrupt}, Steps: run.steps, Tokens: run.tokens}
@@ -807,7 +858,7 @@ func (a *Agent) drain(ctx context.Context, run *runCtx) *RunResult {
 		run.retry = nil
 		s.queue = s.queue[1:]
 		s.messages = append(s.messages, toolMessage(q.call, out.content))
-		run.emit(Event{Type: EventToolResult, SessionID: s.id, ToolCallID: q.call.ID, Tool: q.call.Function.Name, Arguments: q.call.Function.Arguments, Content: out.content, IsError: out.isError, ErrorCode: out.code})
+		run.emit(Event{Type: EventToolResult, SessionID: s.id, ToolCallID: q.call.ID, Tool: q.call.Function.Name, Arguments: q.call.Function.Arguments, Content: out.content, IsError: out.isError, ErrorCode: out.code, toolResult: out.toolResult})
 	}
 	return nil
 }
@@ -819,10 +870,11 @@ func toolMessage(tc ChatToolCall, content string) ChatMessage {
 // outcome is what one tool call produced for the model, or the interrupt that
 // ends the run.
 type outcome struct {
-	content   string
-	isError   bool
-	code      string
-	interrupt *Interrupt
+	content    string
+	isError    bool
+	code       string
+	interrupt  *Interrupt
+	toolResult *mcp.CallToolResult
 }
 
 func failed(tool, code, msg string) outcome {
@@ -950,5 +1002,5 @@ func (a *Agent) fromResult(run *runCtx, tc ChatToolCall, t contract.Tool, res *m
 	if v, ok := res.Meta[contract.UntrustedContentMetaKey].(bool); ok && v {
 		untrusted = true
 	}
-	return outcome{content: frame(t.Name, text, untrusted)}
+	return outcome{content: frame(t.Name, text, untrusted), toolResult: res}
 }

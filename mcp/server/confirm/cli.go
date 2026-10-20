@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ipfs/kubo/mcp/server"
 	"golang.org/x/term"
 )
 
@@ -109,9 +110,16 @@ func choose(pending []PendingView, id string) (*PendingView, error) {
 // argument, so each is sanitized: an escape sequence or a carriage return must
 // not overwrite the operation the person is about to approve.
 func renderPending(p PendingView) string {
-	return fmt.Sprintf("Confirmation %s (%s, %s)\n  %s\n  expires %s\n",
+	text := fmt.Sprintf("Confirmation %s (%s, %s)\n  %s\n  expires %s\n",
 		sanitizeText(p.ID), sanitizeText(p.Tool), sanitizeText(p.Class), sanitizeText(p.Summary),
 		p.ExpiresAt.Local().Format(time.TimeOnly))
+	if p.Destination != nil {
+		text += "  destination " + sanitizeText(p.Destination.Name) + "\n"
+	}
+	if p.EffectDigest != "" {
+		text += "  effect " + sanitizeText(p.EffectDigest) + "\n"
+	}
+	return text
 }
 
 // ErrAnswerExpired is returned when the confirmation expired before an answer.
@@ -163,7 +171,11 @@ func decide(ctx context.Context, c *cliClient, p PendingView, o CLIOptions) erro
 		return err
 	}
 	approve := strings.EqualFold(strings.TrimSpace(line), "yes")
-	if err := c.resolve(ctx, p.ID, approve); err != nil {
+	var reviewed *server.ReviewedEffect
+	if p.EffectDigest != "" {
+		reviewed = &server.ReviewedEffect{EffectDigest: p.EffectDigest}
+	}
+	if err := c.resolveReviewed(ctx, p.ID, approve, reviewed); err != nil {
 		return err
 	}
 	if approve {
@@ -227,7 +239,15 @@ func (c *cliClient) pending(ctx context.Context) ([]PendingView, error) {
 }
 
 func (c *cliClient) resolve(ctx context.Context, id string, approve bool) error {
-	resp, err := c.do(ctx, http.MethodPost, resolvePath, map[string]any{"id": id, "approve": approve})
+	return c.resolveReviewed(ctx, id, approve, nil)
+}
+
+func (c *cliClient) resolveReviewed(ctx context.Context, id string, approve bool, reviewed *server.ReviewedEffect) error {
+	body := map[string]any{"id": id, "approve": approve}
+	if reviewed != nil {
+		body["reviewed_effect"] = reviewed
+	}
+	resp, err := c.do(ctx, http.MethodPost, resolvePath, body)
 	if err != nil {
 		return err
 	}

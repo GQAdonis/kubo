@@ -1,0 +1,421 @@
+{
+  "formatVersion": 1,
+  "purpose": "Authored synthetic UI-106 expectations, not executed schema/host/browser receipts.",
+  "schema": "agentic/ui-negotiation.schema.json",
+  "tupleSource": "derivations/a2ui-components.json",
+  "schemaCases": [
+    {
+      "name": "exact offer",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "empty offers",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": []
+      },
+      "expected": true
+    },
+    {
+      "name": "well-formed unsupported version",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "9.0.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "offer count bounded",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.0.0",
+            "protocolVersion": "v0.9"
+          },
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "1.0.0",
+            "protocolVersion": "v0.9"
+          },
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "2.0.0",
+            "protocolVersion": "v0.9"
+          },
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "3.0.0",
+            "protocolVersion": "v0.9"
+          },
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "4.0.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "duplicate offer",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          },
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "missing catalog version",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "private HTML selector rejected",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ],
+        "htmlUrl": "https://invalid.example/view"
+      },
+      "expected": false
+    },
+    {
+      "name": "oversize ID",
+      "definition": "ClientA2UICapabilities",
+      "input": {
+        "catalogs": [
+          {
+            "catalogId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "ordinary resource declaration",
+      "definition": "IframeException",
+      "input": {
+        "reason": "external_mcp_app_host",
+        "transport": "standard_ext_apps"
+      },
+      "expected": true
+    },
+    {
+      "name": "fallback text remains inert",
+      "definition": "InertResult",
+      "input": {
+        "kind": "inert_result",
+        "label": "This result can't be shown here. Nothing in it runs.",
+        "tool": "pin_ls",
+        "text": "<script>run()</script> [open](https://invalid.example) javascript:run()",
+        "reason": "invalid_output"
+      },
+      "expected": true
+    },
+    {
+      "name": "fallback cannot keep action",
+      "definition": "InertResult",
+      "input": {
+        "kind": "inert_result",
+        "label": "This result can't be shown here. Nothing in it runs.",
+        "tool": "pin_ls",
+        "text": "fixture",
+        "reason": "unknown_component",
+        "approveAction": {
+          "tool": "pin_rm"
+        }
+      },
+      "expected": false
+    }
+  ],
+  "selectionCases": [
+    {
+      "name": "exact offer and enabled",
+      "offer": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "agentA2ui": true,
+      "source": "built_in",
+      "expected": "a2ui",
+      "catalogEventCount": 1
+    },
+    {
+      "name": "missing offer",
+      "agentA2ui": true,
+      "expected": "normal_tool_text",
+      "catalogEventCount": 0
+    },
+    {
+      "name": "unknown catalog",
+      "offer": {
+        "catalogs": [
+          {
+            "catalogId": "https://invalid.example/unknown.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "agentA2ui": true,
+      "expected": "normal_tool_text",
+      "networkFetches": 0
+    },
+    {
+      "name": "unsupported catalog version",
+      "offer": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "9.0.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "agentA2ui": true,
+      "expected": "normal_tool_text"
+    },
+    {
+      "name": "unsupported protocol version",
+      "offer": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v9.0"
+          }
+        ]
+      },
+      "agentA2ui": true,
+      "expected": "normal_tool_text"
+    },
+    {
+      "name": "malformed namespace",
+      "offer": {
+        "catalogs": "not_an_array"
+      },
+      "agentA2ui": true,
+      "expected": "normal_tool_text",
+      "runRefusedForCapability": false
+    },
+    {
+      "name": "aggregate namespace exceeds 4096 bytes",
+      "encodedNamespaceBytes": 4097,
+      "agentA2ui": true,
+      "expected": "normal_tool_text"
+    },
+    {
+      "name": "feature disabled",
+      "offer": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "agentA2ui": false,
+      "expected": "normal_tool_text",
+      "catalogEventCount": 0
+    },
+    {
+      "name": "UAR untrusted surface passthrough",
+      "offer": {
+        "catalogs": [
+          {
+            "catalogId": "https://github.com/GQAdonis/kubo/blob/master/mcp/ui/catalog/ipfs-mcp.catalog.json",
+            "catalogVersion": "0.1.0",
+            "protocolVersion": "v0.9"
+          }
+        ]
+      },
+      "source": "uar_custom_event",
+      "expected": "reject_surface",
+      "grantNodeAuthority": false
+    },
+    {
+      "name": "ordinary external MCP App",
+      "firstPartyOfferAbsent": true,
+      "resource": "ui://ipfs-mcp/pins",
+      "mimeType": "text/html;profile=mcp-app",
+      "expected": "standard_sdk_resource",
+      "privateNonceRequired": false
+    }
+  ],
+  "mappingCases": [
+    {
+      "name": "pins primary",
+      "tool": "pin_ls",
+      "view": "pins",
+      "component": "PinList",
+      "expected": "render_after_output_schema_validation"
+    },
+    {
+      "name": "MFS directory",
+      "tool": "mfs_ls",
+      "view": "mfs",
+      "component": "MfsTree",
+      "expected": "render_after_output_schema_validation"
+    },
+    {
+      "name": "MFS content exception",
+      "tool": "mfs_read",
+      "view": "mfs",
+      "component": "ContentCard",
+      "expected": "render_after_output_schema_validation"
+    },
+    {
+      "name": "do not default MFS read to tree",
+      "tool": "mfs_read",
+      "view": "mfs",
+      "component": "MfsTree",
+      "expected": "inert_fallback"
+    },
+    {
+      "name": "cross-view component",
+      "tool": "pin_ls",
+      "view": "pins",
+      "component": "DagViewer",
+      "expected": "inert_fallback"
+    },
+    {
+      "name": "unknown component",
+      "tool": "pin_ls",
+      "view": "pins",
+      "component": "ExecutableHtml",
+      "expected": "inert_fallback"
+    },
+    {
+      "name": "schema-invalid pins",
+      "tool": "pin_ls",
+      "output": {
+        "pins": "not_an_array"
+      },
+      "expected": "inert_fallback"
+    },
+    {
+      "name": "ambiguous producer",
+      "view": "node-status",
+      "matchingToolCount": 2,
+      "expected": "inert_fallback"
+    },
+    {
+      "name": "unmapped IPNS HTML view",
+      "tool": "ipns_resolve",
+      "view": "ipns",
+      "expected": "retain_existing_text_structured_result"
+    }
+  ],
+  "hostCases": [
+    {
+      "name": "foreign source",
+      "origin": "expected_host_origin",
+      "source": "foreign_window",
+      "responseId": "outstanding_id",
+      "expected": "ignore_no_state_or_tool_call"
+    },
+    {
+      "name": "wrong origin",
+      "origin": "untrusted_origin",
+      "source": "trusted_parent",
+      "responseId": "outstanding_id",
+      "expected": "ignore_no_state_or_tool_call"
+    },
+    {
+      "name": "unmatched response",
+      "source": "trusted_parent",
+      "responseId": "unknown_id",
+      "expected": "ignore_no_state_or_tool_call"
+    },
+    {
+      "name": "stale response",
+      "source": "trusted_parent",
+      "responseId": "completed_id",
+      "expected": "ignore_no_state_or_tool_call"
+    },
+    {
+      "name": "valid standard parent",
+      "source": "trusted_parent",
+      "origin": "bootstrap_established_origin",
+      "responseId": "outstanding_id",
+      "expected": "standard_sdk_exchange_without_private_field"
+    },
+    {
+      "name": "legitimate opaque-origin host",
+      "source": "trusted_parent",
+      "origin": "null",
+      "bootstrap": "actual supported SDK sandbox lifecycle",
+      "expected": "valid_standard_exchange_after_supported_bootstrap"
+    },
+    {
+      "name": "foreign opaque-origin window",
+      "source": "foreign_window",
+      "origin": "null",
+      "expected": "ignore_no_state_or_tool_call"
+    }
+  ],
+  "fallbackAssertions": {
+    "label": "This result can't be shown here. Nothing in it runs.",
+    "allowedControls": [
+      "copy_text"
+    ],
+    "htmlParsed": false,
+    "markdownParsed": false,
+    "autolinks": false,
+    "navigation": false,
+    "toolCalls": false,
+    "remoteFetches": 0,
+    "partialComponentActions": false
+  },
+  "consumerEvidence": "A/1.1 generates mapping consumers; A/2.2 inspects and authors actual pinned SDK transport fixtures; final UI-106 executes ordinary-host/first-party/negative controls."
+}
