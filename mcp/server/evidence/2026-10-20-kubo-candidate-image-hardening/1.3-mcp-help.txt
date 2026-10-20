@@ -1,0 +1,270 @@
+WARNING:   EXPERIMENTAL, command may change in future releases
+
+USAGE
+  ipfs mcp - Serve a running Kubo node to AI agents over MCP.
+
+SYNOPSIS
+  ipfs mcp [--tools=<tools>] [--read-only] [--api-auth-env=<api-auth-env>]
+           [--api-auth-file=<api-auth-file>] [--llm-base-url=<llm-base-url>]
+           [--llm-model=<llm-model>] [--llm-api-key-env=<llm-api-key-env>]
+           [--llm-api-key-file=<llm-api-key-file>] [--a2a] [--agui]
+           [--settings-dir=<settings-dir>] [--confirm=<confirm>] [--http]
+           [--mcp-config=<mcp-config>] [--auth-token-env=<auth-token-env>]
+           [--auth-token-file=<auth-token-file>] [--no-app-views]
+           [--print-rpc-allowed-paths]
+
+OPTIONS
+
+  --tools                    string - Comma-separated tool groups to enable;
+                                      add 'destructive' to enable destructive
+                                      tools.
+  --read-only                bool   - Offer only tools that do not change
+                                      anything. Default: false.
+  --api-auth-env             string - Name of an environment variable holding
+                                      the API.Authorizations secret (for
+                                      example bearer:<secret>) for the daemon's
+                                      RPC API.
+  --api-auth-file            string - Absolute path of a file holding the
+                                      API.Authorizations secret for the
+                                      daemon's RPC API.
+  --llm-base-url             string - Base URL of an OpenAI-compatible model
+                                      server for the agent loop. No default;
+                                      unset means no agent.
+  --llm-model                string - Model name sent to the model server. No
+                                      default.
+  --llm-api-key-env          string - NAME of the environment variable that
+                                      holds the model server's API key. A
+                                      literal key is rejected.
+  --llm-api-key-file         string - Absolute path of a file that holds the
+                                      model server's API key.
+  --a2a                      bool   - Serve the A2A endpoint POST /a2a and the
+                                      agent card on the --http listener (also
+                                      agent.a2a in --mcp-config). Needs a model
+                                      backend. Off by default. Default: false.
+  --agui                     bool   - Serve the AG-UI endpoint POST /agui on
+                                      the --http listener (also agent.agui in
+                                      --mcp-config). With no model backend it
+                                      answers 503 backend_not_configured. Off
+                                      by default. Default: false.
+  --settings-dir             string - Directory for the settings overlay (also
+                                      agent.settings.dir in --mcp-config; the
+                                      flag wins). Writes through the settings
+                                      API persist there as 0600 files. Unset:
+                                      nothing is persisted.
+  --confirm                  string - Out-of-band confirmation for clients that
+                                      cannot elicit: native, desktop, cli, none
+                                      (comma separated). Default: native.
+                                      desktop and cli are opt-in.
+  --http                     bool   - Serve Streamable HTTP instead of stdio.
+                                      Optionally name the address:
+                                      --http=127.0.0.1:5050 (default; also
+                                      IPFS_MCP_HTTP_LISTEN). Loopback only
+                                      unless a bearer token is configured.
+  --mcp-config               string - Path of the ipfs mcp JSON config file
+                                      (also IPFS_MCP_CONFIG; the flag wins).
+                                      Not the Kubo repo config.
+  --auth-token-env           string - Name of an environment variable holding a
+                                      bearer token that grants the operator
+                                      full access over HTTP.
+  --auth-token-file          string - Absolute path of a file holding a bearer
+                                      token that grants the operator full
+                                      access over HTTP.
+  --no-app-views             bool   - Turn the MCP App views off: no ui://
+                                      resource and no _meta.ui on tools (also
+                                      tools.app_views false in --mcp-config).
+                                      Default: false.
+  --print-rpc-allowed-paths  bool   - Print an API.Authorizations entry that
+                                      allows only the RPC commands of the
+                                      enabled tools, then exit. Default: false.
+
+DESCRIPTION
+
+  Finding the daemon, in order:
+  
+    --api <multiaddr or URL>   for example /ip4/127.0.0.1/tcp/5001
+    $IPFS_PATH/api             the api file written by 'ipfs daemon'
+    ~/.ipfs/api                when IPFS_PATH is not set
+  
+  When the daemon's RPC API requires an API.Authorizations secret, give it with
+  --api-auth-env NAME (an environment variable) or --api-auth-file /abs/path.
+  --api-auth <secret> also works but puts the secret in the process list, where
+  other local users can read it, and prints a warning. Prefer a dedicated secret
+  whose AllowedPaths list only the commands of the enabled tools.
+  
+  The daemon must be Kubo 0.29.0 or newer. The server refuses to start below
+  that. When a daemon lacks the RPC command a tool needs, that tool is left
+  out of tools/list and ipfs_node_status reports it as unavailable.
+  
+  Tool groups: node, content, pin, mfs, names, dag, routing, diag, index.
+  By default every group is enabled, except the destructive tools. Use
+  --tools to choose groups (comma separated). Name 'destructive' to also
+  enable the destructive tools, the ones that can remove or overwrite data;
+  every such call still needs confirmation. --read-only offers only tools
+  that change nothing.
+  
+  Confirmation. Every write tool and every destructive tool is confirmed before
+  it runs, on every transport. The server asks the client's user through MCP
+  elicitation. A client that cannot elicit gets a refusal
+  (confirmation_unavailable) and nothing changes, unless an out-of-band
+  confirmation prompt is available. A confirm token the server returns is a
+  binding handle and never consent.
+  
+  Streamable HTTP. --http (off by default) serves MCP on HTTP instead of
+  stdin and stdout, at http://127.0.0.1:5050/mcp. Name another address with
+  --http=<host:port> or IPFS_MCP_HTTP_LISTEN. Ports of other local services
+  (4000, 4001, 5001, 8080 and others) are refused. A non-loopback address needs
+  a bearer token and is refused without one. Requests must carry a loopback Host
+  header and no foreign Origin (DNS rebinding and cross-origin protection).
+  
+  A bearer token is read from an environment variable or a file, never from the
+  command line: --auth-token-env NAME or --auth-token-file /abs/path grants the
+  operator every group. --mcp-config (or IPFS_MCP_CONFIG; the flag wins) names a
+  JSON file that declares named principals, each with its own credential
+  reference, tool groups, and write_groups and destructive_groups grants. A
+  principal is read-only until a group is granted by name; destructive tools
+  stay off until granted. The file is validated against the contract schema
+  (mcp/contract/config). Without any credential, a loopback listener serves
+  the read-only tools to local processes. Put TLS in a reverse proxy.
+  
+  --print-rpc-allowed-paths prints an API.Authorizations entry whose
+  AllowedPaths list only the RPC commands of the enabled tools (honors --tools
+  and --read-only), then exits. Kubo matches AllowedPaths by string prefix, so a
+  shorter path grants more than it appears to.
+  
+  Principals. Each principal in the config file may carry an egress_ack: the
+  model and embedder hosts (or "local") its content may be forwarded to. Without
+  one, every tool that returns node content (contentEgress) is refused to it
+  with egress_not_acknowledged. A principal of kind uar names its UAR instance
+  in a uar block; ipfs mcp checks that instance at startup and at every session
+  initialize (see "ipfs mcp check-uar --help") and disables the principal, or
+  withdraws its write groups, when the check fails. No published UAR release
+  documents a settings endpoint yet, so "check": "verify" refuses a uar
+  principal until one is pinned; "check": "assert" records that you verified the
+  instance yourself. With cli confirmation (--confirm=cli or confirmation.cli),
+  a principal with
+  write groups also needs shell_capable: false; the --auth-token-* operator
+  identity is not exempt, so give writes under cli confirmation to a principal
+  of kind human-mcp with its own credential, write_groups and
+  shell_capable: false. The stdio session cannot assert shell_capable: false, so
+  cli confirmation never approves its calls (it needs elicitation or another
+  resolver). A client that identifies itself as UAR on stdio is refused content
+  tools. Nothing is contacted unless the config names it.
+  
+  MCP App views. Tools that have a view carry _meta.ui, and the views are served
+  as ui:// resources from bundles embedded in the binary. --no-app-views (or
+  "app_views": false under "tools" in the config file) serves neither; every
+  tool is still offered and returns the same result.
+  
+  Embeddings. The "embeddings" section of --mcp-config is absent by default, and
+  then no SurrealDB process is started, no store is opened and no embedder is
+  contacted. With "mode": "embedded", ipfs mcp starts and stops a SurrealDB
+  process from the binary at the absolute path in embedded.surreal_binary (never
+  looked up on PATH, never downloaded), bound to 127.0.0.1 on an ephemeral port,
+  with credentials generated for each start and kept in a 0600 file in
+  embedded.data_dir. With "mode": "remote" it connects to remote.endpoint, whose
+  credential is read from an environment variable or file. Text is sent to the
+  OpenAI-compatible embedder.base_url only when the host is in the egress_ack of
+  the identity that triggered it; the operator identity has no egress_ack and so
+  never triggers it. Credentials are references, never literals.
+  
+  Search index. With an embeddings section, the ipfs_index_search,
+  ipfs_index_cid, ipfs_index_status and ipfs_index_reconcile tools are
+  offered; without one they are not. "policy": {"auto": true} also indexes
+  text that an agent adds with ipfs_add (off by default);
+  policy.mime_allowlist, max_bytes and chunk_chars limit what is indexed.
+  Indexing only reads content you added; it never adds, pins or announces
+  anything. Vectors of a CID are deleted after pin_rm or repo_gc only when no
+  pin of any type covers it, and ipfs_index_reconcile removes those of content
+  you unpinned elsewhere.
+  
+  Extractor. Without an embeddings.extractor block only plain text and Markdown
+  are indexed and no extractor process or request exists. With one, the types
+  you add to embeddings.policy.mime_allowlist (PDF and Office documents, source
+  code, JSON or CSV data, and images or video when OCR or transcription is on)
+  are turned into Markdown by xberg (https://github.com/Know-Me-Tools/xberg), a
+  separate service that ipfs mcp calls over HTTP and never links; text stays on
+  the native path. "mode": "embedded" runs the binary at the absolute path in
+  extractor.embedded.xberg_binary (never looked up on PATH, never downloaded) on
+  127.0.0.1 with an ephemeral port, behind a token-protected loopback proxy that
+  only ipfs mcp uses, with model downloads from the Hugging Face Hub off unless
+  allow_model_downloads is true; it stops when ipfs mcp exits. Its cache_dir
+  must be owned by you and not writable by others, and one ipfs mcp at a time
+  may use it. "mode": "remote" calls extractor.remote.base_url (https, or a
+  loopback address), whose host must be in the egress_ack of the identity that
+  triggers it. extractor.max_bytes bounds a file sent and
+  extractor.max_text_bytes the text taken back. Extraction adds, pins and
+  announces nothing.
+  
+  Agent backend. The agent loop is off unless you name a model server: it has
+  no default endpoint and no default model, and without both no model call is
+  ever made. --llm-base-url and --llm-model (or the llm section of --mcp-config)
+  name an OpenAI-compatible server, for example one you run locally. The API key
+  is never a literal: --llm-api-key-env takes the NAME of an environment
+  variable and --llm-api-key-file an absolute path (or llm.api_key in the config
+  file). Node content reaches the model only when the server's host is in the
+  principal's egress_ack. Remove the agent code at build time with:
+  make build GOTAGS=noagent
+  
+  Settings API. With a principal of kind admin in --mcp-config (and
+  agent.settings.enabled not false), GET and PUT /agent/settings on the --http
+  listener read and change the backend, model and system prompt without a
+  restart; the admin token reaches no other route. Writes persist in
+  --settings-dir (or agent.settings.dir; the flag wins) as a 0600 overlay file
+  that applies flags > overlay > config at every start; an API key written
+  through the API becomes a 0600 file there, and agent.settings.accept_secrets
+  false refuses key fields entirely. Without a settings directory, writes hold
+  until the process exits. A write that moves the model backend to a host the
+  admin principal's egress_ack does not cover is refused with
+  egress_confirmation_required unless it carries egress_confirmation naming
+  exactly that host, and then extends that egress_ack with that host only.
+  
+  UAR backend. "kind": "uar" in the llm section makes the backend a Universal
+  Agent Runtime instance instead of an OpenAI-compatible server: llm.base_url is
+  the UAR instance, llm.api_key the credential ipfs mcp presents to it, and the
+  llm.uar section names the agent, the kubo principal UAR calls back as, and the
+  skills directory. On the first run ipfs mcp creates or updates that agent
+  (kubo's system prompt, a binding to this server, the skills) and proxies each
+  /agui run to it; a write still needs your confirmation. It is accepted only
+  while the contract pins a published UAR release, never contacts UAR unless
+  configured, and serves /agui only (not --a2a). Set "kind" back to "openai" or
+  remove it to turn it off.
+  
+  AG-UI. --agui (or "agui": true under "agent" in the config file) also
+  serves POST /agui on the --http listener, for chat UIs such as the Web UI
+  chat. It is off by default and mounted only with --http; without --agui the
+  path answers 404. With no model backend the mounted endpoint answers every
+  run request 503 backend_not_configured until one is configured, which the
+  settings API can do without a restart. It accepts only a bearer token of a
+  principal of kind ui. A write the chat asks for ends the run with an
+  interrupt, and only a user gesture in the chat approves it; a destructive
+  call also needs the system prompt. A browser page may call it only from an
+  origin listed in "origin_allowlist" under "agent" (none by default). Tool
+  results are also streamed as A2UI surface messages; set "a2ui": false under
+  "agent" to turn those off (the run stream is otherwise unchanged).
+  
+  A2A. --a2a (or "a2a": true under "agent" in the config file) also serves the
+  A2A 1.0 JSON-RPC endpoint POST /a2a and the agent card at
+  /.well-known/agent-card.json on the --http listener, so other agents can
+  delegate IPFS work to this node. It is off by default and mounted only with
+  --http and a model backend; otherwise both paths answer 404. /a2a accepts only
+  a bearer token of a principal of kind a2a, read-only unless the config file
+  grants write groups. A2A peers can never approve a change: a write or
+  destructive call leaves the task input-required until a person approves it on
+  this machine (the system prompt or the paired Desktop window).
+  Remove the command at build time with: make build GOTAGS=nomcp
+  
+  Example client configuration (Claude Code):
+  
+    claude mcp add ipfs -- ipfs mcp
+  
+  Specification: https://modelcontextprotocol.io/specification
+
+EXPERIMENTAL SUBCOMMANDS
+  ipfs mcp check-uar [<url>] - Check a UAR instance against the rules for a uar
+                               principal.
+  ipfs mcp confirm [<id>]    - Approve or deny a pending MCP confirmation from
+                               a terminal.
+  ipfs mcp pair              - Create the pairing key for the IPFS Desktop
+                               confirmation window.
+
+

@@ -81,6 +81,74 @@ When the Web UI runs inside IPFS Desktop with Desktop's chat bridge present, the
 
 This path is **not usable yet**: Desktop cannot obtain a token until pairing is delivered (see [What works today](#what-works-today-and-what-does-not)). `ipfs mcp pair` exists for the separate confirmation window, which Desktop does not provide yet either.
 
+## The LKE console (cloud node)
+
+On the know-me LKE cluster, `ipfs mcp` runs as the `ipfs-mcp` container of pod `ipfs-0` in namespace `ipfs`, listening on port 5050 (container port name `mcp`). The chat is served on `https://console.prometheusags.ai` under the session policy of [ADR-0013](0013-console-session-auth.md). The deployment is change `lke-agent-settings` in the know-me-cluster repository; until its PR merges (OG-13), the console has no `/agui` rule and this section describes the configuration it ships.
+
+### How the console chat authenticates
+
+The console chat uses the signed-in session, not a stored token:
+
+- You sign in at `/webui/` through Hydra with Kratos login. The gateway (SecurityPolicy `ipfs-webui-auth`: OIDC, JWT, an RBAC allowlist on `sub`, CSRF) holds the session and forwards the ID token to `ipfs mcp` as `Authorization: Bearer`.
+- `ipfs mcp` verifies that token itself and maps its `sub` to the `console-ui` principal (kind `ui`, `subjects` only, no `credential`). `auth.oidc.routes` is exactly `["session", "agui"]`, so a session token is accepted on `/auth/session` and `/agui` and nowhere else; `agent.origin_allowlist` is exactly `["https://console.prometheusags.ai"]`, and `auth.oidc.require_origin` stays at its default, `true`.
+- The Web UI detects session mode from `GET /auth/session`. It then calls `/agui` same-origin with no `Authorization` header, and it stores no chat token in `localStorage`. The **Access token** step of [Web UI side](#web-ui-side) does not apply on the console, and no `ui` bearer token exists for the console.
+
+### Confirmation on LKE
+
+The pod has no desktop, no system prompt and no paired Desktop window, so the LKE configuration sets `confirmation.modes: []`: no out-of-band resolver runs. Per-call confirmation still applies, and cannot be turned off. With `confirmation.modes: []` there are three cases:
+
+| Who calls | Write tools | Destructive tools |
+|---|---|---|
+| An MCP client on `/mcp` (`https://ipfs.prometheusags.ai/mcp`, static bearer) | Confirmed only through MCP elicitation. A client that does not support elicitation is refused with `confirmation_unavailable` and nothing runs. | Same as writes: elicitation, else `confirmation_unavailable`. |
+| The console chat (`/agui`, signed-in session) | The run stops at an interrupt; the chat island shows the approval card, and the call runs only after you answer it with a click (a user gesture). Deny, or let it expire, and nothing changes. | Refused with `confirmation_unavailable`. A chat answer alone cannot approve a destructive call; it needs a native system prompt, and the pod has none. |
+
+To delete or unpin on the cloud node, use an MCP client that supports elicitation on `/mcp`, or the Kubo RPC API through the console's existing `/api/v0` route.
+
+### Settings on LKE: port-forward only
+
+By operator ruling (2026-10-20, "Port-forward only"; ADR-0013 decision 3, option (c)) the console has no settings route, and no session identity is an admin:
+
+- No rule on HTTPRoute `ipfs-webui` (or any other HTTPRoute on a public host) routes `/agent/settings` to `ipfs-mcp:5050`. On the console that path gets no answer from `ipfs mcp`.
+- The `admin` principal has no `subjects`, so no Hydra `sub` maps to it, and `settings` is not in `auth.oidc.routes`, so a session token is refused on the settings route in any case. `GET /auth/session` reports the admin state `not_eligible` for every console user.
+- The `admin` principal's only credential is a static bearer read from a file in an out-of-band admin Secret, mounted with `optional: true`. The operator creates that Secret by hand; it is never in git, and agents never create, read or print it. With the Secret absent, the chat and `/auth/session` keep working and no request can pass the settings route's admin check.
+- `agent.settings.accept_secrets` is `false`: a settings write that carries a model key is refused with `secrets_not_accepted`. The model key comes only from the out-of-band LLM key Secret through `llm.api_key`.
+
+To read or change settings, the operator runs, from a machine with the `know-me` kube context:
+
+1. Forward a non-default local port (not 5050, 5001, 4001 or 8080, which a local node or `ipfs mcp` may hold) to the pod. `kubectl port-forward` binds `127.0.0.1` only:
+
+   ```bash
+   kubectl --context know-me -n ipfs port-forward pod/ipfs-0 15050:5050
+   ```
+
+2. In a second terminal, put the admin bearer into a header file only you can read. Use your own copy of the token, the file you created it from (the admin Secret `ipfs-mcp-admin-token`, key `token`, is created from it with `--from-file`). The token is never echoed, typed into a browser or pasted into the console:
+
+   ```bash
+   umask 077
+   hdr="$(mktemp)"
+   printf 'Authorization: Bearer %s\n' "$(tr -d '\r\n' < ~/.ipfs-mcp-admin-token)" > "$hdr"
+   ```
+
+   With the admin Secret absent, the `admin` principal is disabled (the sidecar logs a warning) and the route answers 401 to every request.
+
+3. Call the settings route on the forwarded port, passing the header from the file so the token is in no command line:
+
+   ```bash
+   curl -sS -H @"$hdr" http://127.0.0.1:15050/agent/settings                # read
+   curl -sS -H @"$hdr" -X PUT -H 'Content-Type: application/json' \
+     --data @settings.json http://127.0.0.1:15050/agent/settings           # write
+   ```
+
+   Without the header, the route answers 401. A write that moves the backend to a new host needs the typed host confirmation, as on any node.
+
+4. Remove the header file and stop the port-forward:
+
+   ```bash
+   rm -f "$hdr"
+   ```
+
+Writes are persisted in the settings directory (`--settings-dir=/mcp-settings`, on PVC `ipfs-mcp-settings`). To reset them, delete the overlay file `overlay.json` there. To turn the route off, set `agent.settings.enabled: false` (404) or remove the `admin` principal or its Secret.
+
 ## Defaults in this fork
 
 This fork ships its agent features enabled, each with an off switch (AGENTS.md, User Agency). Nothing below enables a third-party service: the model backend, embedder, extractor and describer stay unconfigured until you name them. A default-on migration fills only keys that are absent; a stored `false` is kept.
