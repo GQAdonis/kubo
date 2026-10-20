@@ -1,0 +1,4 @@
+# Binary design assets: never apply text/eol conversion
+*.woff2 binary
+*.jpg binary
+*.png binary
