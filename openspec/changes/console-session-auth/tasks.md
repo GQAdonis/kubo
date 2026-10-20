@@ -129,5 +129,5 @@ Prerequisite: task 1.5 is done (go-jose at least `v4.1.6` in all three `go.mod` 
 
 ## 8. Independent review at the phase boundary (security-reviewer, reviewer)
 
-- [ ] 8.1 Security review of the merged `ipfs mcp` verifier (2.x) and the contract (1.2, 1.3), in a separate context from the builders. Acceptance: a findings file with no open CRITICAL or HIGH, or the operator's verbatim ruling on each one.
-- [ ] 8.2 Quality and compatibility review. It confirms there is no `/api/v0`, gateway or CID change and that every new key has an off switch. Acceptance: findings file under `.agent-team/kubo-ipfs-agentic/findings/review/` with no blocking finding.
+- [x] 8.1 Security review of the merged `ipfs mcp` verifier (2.x) and the contract (1.2, 1.3), in a separate context from the builders. Acceptance: a findings file with no open CRITICAL or HIGH, or the operator's verbatim ruling on each one.
+- [x] 8.2 Quality and compatibility review. It confirms there is no `/api/v0`, gateway or CID change and that every new key has an off switch. Acceptance: findings file under `.agent-team/kubo-ipfs-agentic/findings/review/` with no blocking finding.
